@@ -6,6 +6,7 @@ import (
 	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
 	"log"
+	"math"
 	"time"
 )
 
@@ -18,11 +19,13 @@ type TraderService struct {
 func (t *TraderService) CalculateSMA(candles []ExchangeModel.Candle) float64 {
 	var sum float64
 
-	for _, candle := range candles {
+	slice := candles
+
+	for _, candle := range slice {
 		sum += candle.Price
 	}
 
-	return sum / float64(len(candles))
+	return sum / float64(len(slice))
 }
 
 func (t *TraderService) GetByAndSellVolume(candles []ExchangeModel.Candle) (float64, float64) {
@@ -45,25 +48,31 @@ func (t *TraderService) GetByAndSellVolume(candles []ExchangeModel.Candle) (floa
 
 func (t *TraderService) Trade(candle ExchangeModel.Candle) {
 	t.candles = append(t.candles, candle)
-	period := 50
+	sellPeriod := 15
+	buyPeriod := 60
+	maxPeriod := int(math.Max(float64(sellPeriod), float64(buyPeriod)))
 
-	if len(t.candles) < period {
+	if len(t.candles) < maxPeriod {
 		return
 	}
 
-	last := t.candles[len(t.candles)-period:]
+	last := t.candles[len(t.candles)-maxPeriod:]
 	t.candles = last // override to avoid memory leaks
 
-	sma := t.CalculateSMA(last)
-	buyVolume, sellVolume := t.GetByAndSellVolume(last)
+	sellSma := t.CalculateSMA(last[len(last)-sellPeriod:])
+	buySma := t.CalculateSMA(last[len(last)-buyPeriod:])
+
+	buyVolumeS, sellVolumeS := t.GetByAndSellVolume(last[len(last)-sellPeriod:])
+	buyVolumeB, sellVolumeB := t.GetByAndSellVolume(last[len(last)-buyPeriod:])
 	logFunction := func() {
-		log.Printf("SMA: %f\n", sma)
-		log.Printf("Buy: %f, Sell: %f\n", buyVolume, sellVolume)
+		log.Printf("Sell SMA: %f\n", sellSma)
+		log.Printf("Buy SMA: %f\n", buySma)
+		log.Printf("Buy Volume S: %f, Sell Volume S: %f\n", buyVolumeS, sellVolumeS)
+		log.Printf("Buy Volume B: %f, Sell Volume B: %f\n", buyVolumeB, sellVolumeB)
 	}
+	buyIndicator := buyVolumeB / sellVolumeB
 
-	buyIndicator := buyVolume / sellVolume
-
-	if buyIndicator > 2 && sma < candle.Price {
+	if buyIndicator > 50 && buySma < candle.Price {
 		logFunction()
 		log.Println("BUY!!!")
 		order, err := t.OrderRepository.GetOpenedOrder(candle.Symbol, "buy")
@@ -71,7 +80,7 @@ func (t *TraderService) Trade(candle ExchangeModel.Candle) {
 		if err != nil {
 			fmt.Println(err)
 			// todo: calculate quantity by available balance...
-			err = t.Buy(candle, 0.2, sellVolume, buyVolume, sma)
+			err = t.Buy(candle, 0.2, sellVolumeB, buyVolumeB, buySma)
 			if err != nil {
 				log.Println(err)
 			}
@@ -80,9 +89,9 @@ func (t *TraderService) Trade(candle ExchangeModel.Candle) {
 		}
 	}
 
-	sellIndicator := sellVolume / buyVolume
+	sellIndicator := sellVolumeS / buyVolumeS
 
-	if sellIndicator > 2 && sma > candle.Price {
+	if sellIndicator > 5 && sellSma > candle.Price {
 		logFunction()
 		log.Println("SELL!!!")
 
@@ -91,7 +100,7 @@ func (t *TraderService) Trade(candle ExchangeModel.Candle) {
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			err = t.Sell(order, candle, order.Quantity, sellVolume, buyVolume, sma)
+			err = t.Sell(order, candle, order.Quantity, sellVolumeS, buyVolumeS, sellSma)
 
 			if err != nil {
 				log.Println(err)
@@ -130,7 +139,7 @@ func (t *TraderService) Buy(candle ExchangeModel.Candle, quantity float64, sellV
 }
 
 func (t *TraderService) Sell(opened ExchangeModel.Order, candle ExchangeModel.Candle, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
-	if opened.Price > candle.Price {
+	if opened.Price >= candle.Price {
 		return errors.New("bad deal, wait for positive profit")
 	}
 

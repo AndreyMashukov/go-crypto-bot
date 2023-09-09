@@ -1,0 +1,40 @@
+version: '3.5'
+
+services:
+  writer:
+    build: '.'
+    container_name: go_crypto_bot
+    networks:
+      - bot-net
+
+    restart: always
+    depends_on:
+      - mysql
+    #environment:
+      # your backend here
+    #volumes:
+    #  - .env.dist:/go/src/app/.env
+
+  mysql:
+    platform: linux/x86_64
+    image: mysql:5.7
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    networks:
+      - bot-net
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: go_crypto_bot
+      MYSQL_USER: go_crypto_bot
+      MYSQL_PASSWORD: go_crypto_bot
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+networks:
+  bot-net:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    name: go_crypto_bot_mysql_data

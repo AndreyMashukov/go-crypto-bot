@@ -22,7 +22,9 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 		SELECT
 		    tl.id as Id,
 		    tl.symbol as Symbol,
-		    tl.usdt_limit as USDTLimit
+		    tl.usdt_limit as USDTLimit,
+		    tl.min_price as MinPrice,
+		    tl.min_quantity as MinQuantity
 		FROM trade_limit tl
 	`)
 	defer res.Close()
@@ -35,7 +37,13 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 
 	for res.Next() {
 		var tradeLimit model.TradeLimit
-		err := res.Scan(&tradeLimit.Id, &tradeLimit.Symbol, &tradeLimit.USDTLimit)
+		err := res.Scan(
+			&tradeLimit.Id,
+			&tradeLimit.Symbol,
+			&tradeLimit.USDTLimit,
+			&tradeLimit.MinPrice,
+			&tradeLimit.MinQuantity,
+		)
 
 		if err != nil {
 			log.Fatal(err)

@@ -24,6 +24,7 @@ type TraderService struct {
 	SellHighestOnly    bool
 	Trades             map[string][]ExchangeModel.Trade
 	TradesMapMutex     sync.RWMutex
+	TradeLockMutex     sync.RWMutex
 }
 
 func (t *TraderService) CalculateSMA(trades []ExchangeModel.Trade) float64 {
@@ -62,6 +63,8 @@ func (t *TraderService) Trade(trade ExchangeModel.Trade) {
 	maxPeriod := int(math.Max(float64(sellPeriod), float64(buyPeriod)))
 
 	t.TradesMapMutex.Lock()
+	t.Trades[trade.Symbol] = append(t.Trades[trade.Symbol], trade)
+
 	if len(t.Trades[trade.Symbol]) < maxPeriod {
 		t.TradesMapMutex.Unlock()
 		return
@@ -78,20 +81,20 @@ func (t *TraderService) Trade(trade ExchangeModel.Trade) {
 
 	buyVolumeS, sellVolumeS := t.GetByAndSellVolume(tradeSlice[len(tradeSlice)-sellPeriod:])
 	buyVolumeB, sellVolumeB := t.GetByAndSellVolume(tradeSlice[len(tradeSlice)-buyPeriod:])
-	logFunction := func(trade ExchangeModel.Trade) {
-		log.Printf("[%s] Sell SMA: %f\n", trade.Symbol, sellSma)
-		log.Printf("[%s] Buy SMA: %f\n", trade.Symbol, buySma)
-		log.Printf("[%s] Buy Volume S: %f, Sell Volume S: %f\n", trade.Symbol, buyVolumeS, sellVolumeS)
-		log.Printf("[%s] Buy Volume B: %f, Sell Volume B: %f\n", trade.Symbol, buyVolumeB, sellVolumeB)
-	}
+	//logFunction := func(trade ExchangeModel.Trade) {
+	//	log.Printf("[%s] Sell SMA: %f\n", trade.Symbol, sellSma)
+	//	log.Printf("[%s] Buy SMA: %f\n", trade.Symbol, buySma)
+	//	log.Printf("[%s] Buy Volume S: %f, Sell Volume S: %f\n", trade.Symbol, buyVolumeS, sellVolumeS)
+	//	log.Printf("[%s] Buy Volume B: %f, Sell Volume B: %f\n", trade.Symbol, buyVolumeB, sellVolumeB)
+	//}
 
 	buyIndicator := buyVolumeB / sellVolumeB
 
 	if buyIndicator > 50 && buySma < trade.Price {
-		log.Printf("[%s] BUY!!!", trade.Symbol)
+		log.Printf("[%s] BUY!!! Price = %f, indicator = %.2f", trade.Symbol, trade.Price, buyIndicator)
 		tradeLimit := t._GetLimit(trade.Symbol)
 		if tradeLimit != nil {
-			logFunction(trade)
+			//logFunction(trade)
 			order, err := t.OrderRepository.GetOpenedOrder(trade.Symbol, "buy")
 
 			if err != nil {
@@ -112,11 +115,11 @@ func (t *TraderService) Trade(trade ExchangeModel.Trade) {
 
 	sellIndicator := sellVolumeS / buyVolumeS
 
-	if sellIndicator > 5 && sellSma > trade.Price {
-		log.Printf("[%s] SELL!!!", trade.Symbol)
+	if sellIndicator > 15 && sellSma > trade.Price {
+		log.Printf("[%s] SELL!!! Price = %f, indicator = %.2f", trade.Symbol, trade.Price, sellIndicator)
 		tradeLimit := t._GetLimit(trade.Symbol)
 		if tradeLimit != nil {
-			logFunction(trade)
+			//logFunction(trade)
 
 			order, err := t.OrderRepository.GetOpenedOrder(trade.Symbol, "buy")
 
@@ -353,7 +356,9 @@ func (t *TraderService) _WaitExecution(binanceOrder *ExchangeModel.BinanceOrder,
 }
 
 func (t *TraderService) _IsTradeLocked(symbol string) bool {
+	t.TradeLockMutex.Lock()
 	isLocked, _ := t.Lock[symbol]
+	t.TradeLockMutex.Unlock()
 
 	return isLocked
 }

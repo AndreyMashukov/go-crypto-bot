@@ -166,7 +166,11 @@ func (t *TraderService) Buy(tradeLimit ExchangeModel.TradeLimit, trade ExchangeM
 	}
 
 	if 0.00 == lowestPrice {
-		return errors.New(fmt.Sprintf("[%s] No ASKs on the market", trade.Symbol))
+		if t.BuyLowestOnly {
+			return errors.New(fmt.Sprintf("[%s] No ASKs on the market", trade.Symbol))
+		} else {
+			lowestPrice = finalPrice
+		}
 	}
 
 	// apply allowed correction

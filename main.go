@@ -56,7 +56,7 @@ func main() {
 		TradeLockMutex:     sync.RWMutex{},
 	}
 
-	file, _ := os.Create("trade.log")
+	file, _ := os.OpenFile("trade.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 
 	go func() {
 		for {

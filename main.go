@@ -53,6 +53,7 @@ func main() {
 		Trades:             make(map[string][]ExchangeModel.Trade),
 		Lock:               make(map[string]bool),
 		TradesMapMutex:     sync.RWMutex{},
+		TradeLockMutex:     sync.RWMutex{},
 	}
 
 	file, _ := os.Create("trade.log")
@@ -60,38 +61,21 @@ func main() {
 	go func() {
 		for {
 			lock := <-lockTradeChannel
+			traderService.TradeLockMutex.Lock()
 			traderService.Lock[lock.Symbol] = lock.IsLocked
+			traderService.TradeLockMutex.Unlock()
 		}
 	}()
-
-	traderChannelMap := make(map[string]chan ExchangeModel.Trade)
 
 	go func() {
 		for {
 			// Read the channel
 			trade := <-tradeChannel
-			traderService.TradesMapMutex.Lock()
-			traderService.Trades[trade.Symbol] = append(traderService.Trades[trade.Symbol], trade)
-			traderService.TradesMapMutex.Unlock()
 
-			symbolChannel, isExist := traderChannelMap[trade.Symbol]
-
-			if !isExist {
-				// create channel for specific currency
-				symbolChannel = make(chan ExchangeModel.Trade)
-				traderChannelMap[trade.Symbol] = symbolChannel
-				go func() {
-					for {
-						// read currency channel
-						symbolTrade := <-symbolChannel
-						// log.Printf("Trade [%s]: S:%s, P:%f, Q:%f, O:%s\n", symbolTrade.GetDate(), symbolTrade.Symbol, symbolTrade.Price, symbolTrade.Quantity, symbolTrade.GetOperation())
-						traderService.Trade(symbolTrade)
-					}
-				}()
-			}
-
-			// write to currency channel
-			symbolChannel <- trade
+			go func() {
+				// log.Printf("Trade [%s]: S:%s, P:%f, Q:%f, O:%s\n", symbolTrade.GetDate(), symbolTrade.Symbol, symbolTrade.Price, symbolTrade.Quantity, symbolTrade.GetOperation())
+				traderService.Trade(trade)
+			}()
 
 			go func() {
 				logChannel <- trade

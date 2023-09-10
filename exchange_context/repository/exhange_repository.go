@@ -33,7 +33,7 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 
 	list := make([]model.TradeLimit, 0)
 
-	if res.Next() {
+	for res.Next() {
 		var tradeLimit model.TradeLimit
 		err := res.Scan(&tradeLimit.Id, &tradeLimit.Symbol, &tradeLimit.USDTLimit)
 

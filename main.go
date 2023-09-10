@@ -49,6 +49,8 @@ func main() {
 		LockChannel:        &lockTradeChannel,
 		BuyLowestOnly:      false,
 		SellHighestOnly:    false,
+		Trades:             make(map[string][]ExchangeModel.Trade),
+		Lock:               make(map[string]bool),
 	}
 
 	file, _ := os.Create("trade.log")
@@ -64,10 +66,11 @@ func main() {
 		for {
 			// Read the channel
 			trade := <-tradeChannel
-			log.Printf("Trade [%s]: S:%s, P:%f, Q:%f, O:%s\n", trade.GetDate(), trade.Symbol, trade.Price, trade.Quantity, trade.GetOperation())
-			//go func() {
-			traderService.Trade(trade)
-			//}()
+			traderService.Trades[trade.Symbol] = append(traderService.Trades[trade.Symbol], trade)
+			//log.Printf("Trade [%s]: S:%s, P:%f, Q:%f, O:%s\n", trade.GetDate(), trade.Symbol, trade.Price, trade.Quantity, trade.GetOperation())
+			go func() {
+				traderService.Trade(trade)
+			}()
 
 			go func() {
 				logChannel <- trade
@@ -91,8 +94,10 @@ func main() {
 		fmt.Println(symbol)
 	}
 
-	// /ltcusdt@aggTrade/ethusdt@aggTrade/perpusdt@aggTrade/solusdt@aggTrade
-	wsConnection := ExchangeClient.Listen("wss://fstream.binance.com/stream?streams=btcusdt@aggTrade", tradeChannel)
+	// todo: sync existed orders in Binance with bot database...
+
+	// /perpusdt@aggTrade
+	wsConnection := ExchangeClient.Listen("wss://fstream.binance.com/stream?streams=btcusdt@aggTrade/ltcusdt@aggTrade/ethusdt@aggTrade/solusdt@aggTrade", tradeChannel)
 	defer wsConnection.Close()
 
 	http.ListenAndServe(":8080", nil)

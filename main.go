@@ -41,11 +41,13 @@ func main() {
 		}
 	}()
 
-	WebsocketClient.Listen("wss://fstream.binance.com/stream?streams=btcusdt@aggTrade/ltcusdt@aggTrade/ethusdt@aggTrade", tradeChannel)
-
+	// todo: concatenate streams...
 	for _, symbol := range ExchangeRepository.GetSubscribedSymbols() {
 		fmt.Println(symbol)
 	}
+
+	wsConnection := WebsocketClient.Listen("wss://fstream.binance.com/stream?streams=btcusdt@aggTrade/ltcusdt@aggTrade/ethusdt@aggTrade/perpusdt@aggTrade/solusdt@aggTrade", tradeChannel)
+	defer wsConnection.Close()
 
 	http.ListenAndServe(":8080", nil)
 }

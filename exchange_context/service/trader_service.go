@@ -13,32 +13,32 @@ import (
 type TraderService struct {
 	OrderRepository *ExchangeRepository.OrderRepository
 
-	candles []ExchangeModel.Candle
+	trades map[string][]ExchangeModel.Trade
 }
 
-func (t *TraderService) CalculateSMA(candles []ExchangeModel.Candle) float64 {
+func (t *TraderService) CalculateSMA(trades []ExchangeModel.Trade) float64 {
 	var sum float64
 
-	slice := candles
+	slice := trades
 
-	for _, candle := range slice {
-		sum += candle.Price
+	for _, trade := range slice {
+		sum += trade.Price
 	}
 
 	return sum / float64(len(slice))
 }
 
-func (t *TraderService) GetByAndSellVolume(candles []ExchangeModel.Candle) (float64, float64) {
+func (t *TraderService) GetByAndSellVolume(trades []ExchangeModel.Trade) (float64, float64) {
 	var buyVolume float64
 	var sellVolume float64
 
-	for _, candle := range candles {
-		switch candle.GetOperation() {
+	for _, trade := range trades {
+		switch trade.GetOperation() {
 		case "BUY":
-			buyVolume += candle.Price * candle.Quantity
+			buyVolume += trade.Price * trade.Quantity
 			break
 		case "SELL":
-			sellVolume += candle.Price * candle.Quantity
+			sellVolume += trade.Price * trade.Quantity
 			break
 		}
 	}
@@ -46,24 +46,28 @@ func (t *TraderService) GetByAndSellVolume(candles []ExchangeModel.Candle) (floa
 	return buyVolume, sellVolume
 }
 
-func (t *TraderService) Trade(candle ExchangeModel.Candle) {
-	t.candles = append(t.candles, candle)
+func (t *TraderService) Trade(trade ExchangeModel.Trade) {
+	if t.trades == nil {
+		t.trades = make(map[string][]ExchangeModel.Trade)
+	}
+
+	t.trades[trade.Symbol] = append(t.trades[trade.Symbol], trade)
 	sellPeriod := 15
 	buyPeriod := 60
 	maxPeriod := int(math.Max(float64(sellPeriod), float64(buyPeriod)))
 
-	if len(t.candles) < maxPeriod {
+	if len(t.trades[trade.Symbol]) < maxPeriod {
 		return
 	}
 
-	last := t.candles[len(t.candles)-maxPeriod:]
-	t.candles = last // override to avoid memory leaks
+	tradeSlice := t.trades[trade.Symbol][len(t.trades[trade.Symbol])-maxPeriod:]
+	t.trades[trade.Symbol] = tradeSlice // override to avoid memory leaks
 
-	sellSma := t.CalculateSMA(last[len(last)-sellPeriod:])
-	buySma := t.CalculateSMA(last[len(last)-buyPeriod:])
+	sellSma := t.CalculateSMA(tradeSlice[len(tradeSlice)-sellPeriod:])
+	buySma := t.CalculateSMA(tradeSlice[len(tradeSlice)-buyPeriod:])
 
-	buyVolumeS, sellVolumeS := t.GetByAndSellVolume(last[len(last)-sellPeriod:])
-	buyVolumeB, sellVolumeB := t.GetByAndSellVolume(last[len(last)-buyPeriod:])
+	buyVolumeS, sellVolumeS := t.GetByAndSellVolume(tradeSlice[len(tradeSlice)-sellPeriod:])
+	buyVolumeB, sellVolumeB := t.GetByAndSellVolume(tradeSlice[len(tradeSlice)-buyPeriod:])
 	logFunction := func() {
 		log.Printf("Sell SMA: %f\n", sellSma)
 		log.Printf("Buy SMA: %f\n", buySma)
@@ -72,15 +76,15 @@ func (t *TraderService) Trade(candle ExchangeModel.Candle) {
 	}
 	buyIndicator := buyVolumeB / sellVolumeB
 
-	if buyIndicator > 50 && buySma < candle.Price {
+	if buyIndicator > 50 && buySma < trade.Price {
 		logFunction()
 		log.Println("BUY!!!")
-		order, err := t.OrderRepository.GetOpenedOrder(candle.Symbol, "buy")
+		order, err := t.OrderRepository.GetOpenedOrder(trade.Symbol, "buy")
 
 		if err != nil {
 			fmt.Println(err)
 			// todo: calculate quantity by available balance...
-			err = t.Buy(candle, 0.2, sellVolumeB, buyVolumeB, buySma)
+			err = t.Buy(trade, 0.2, sellVolumeB, buyVolumeB, buySma)
 			if err != nil {
 				log.Println(err)
 			}
@@ -91,16 +95,16 @@ func (t *TraderService) Trade(candle ExchangeModel.Candle) {
 
 	sellIndicator := sellVolumeS / buyVolumeS
 
-	if sellIndicator > 5 && sellSma > candle.Price {
+	if sellIndicator > 5 && sellSma > trade.Price {
 		logFunction()
 		log.Println("SELL!!!")
 
-		order, err := t.OrderRepository.GetOpenedOrder(candle.Symbol, "buy")
+		order, err := t.OrderRepository.GetOpenedOrder(trade.Symbol, "buy")
 
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			err = t.Sell(order, candle, order.Quantity, sellVolumeS, buyVolumeS, sellSma)
+			err = t.Sell(order, trade, order.Quantity, sellVolumeS, buyVolumeS, sellSma)
 
 			if err != nil {
 				log.Println(err)
@@ -109,11 +113,11 @@ func (t *TraderService) Trade(candle ExchangeModel.Candle) {
 	}
 }
 
-func (t *TraderService) Buy(candle ExchangeModel.Candle, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
+func (t *TraderService) Buy(trade ExchangeModel.Trade, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
 	var order = ExchangeModel.Order{
-		Symbol:     candle.Symbol,
+		Symbol:     trade.Symbol,
 		Quantity:   quantity,
-		Price:      candle.Price,
+		Price:      trade.Price,
 		CreatedAt:  time.Now().Format("2006-01-02 15:04:05"),
 		SellVolume: sellVolume,
 		BuyVolume:  buyVolume,
@@ -138,15 +142,15 @@ func (t *TraderService) Buy(candle ExchangeModel.Candle, quantity float64, sellV
 	return nil
 }
 
-func (t *TraderService) Sell(opened ExchangeModel.Order, candle ExchangeModel.Candle, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
-	if opened.Price >= candle.Price {
+func (t *TraderService) Sell(opened ExchangeModel.Order, trade ExchangeModel.Trade, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
+	if opened.Price >= trade.Price {
 		return errors.New("bad deal, wait for positive profit")
 	}
 
 	var order = ExchangeModel.Order{
-		Symbol:     candle.Symbol,
+		Symbol:     trade.Symbol,
 		Quantity:   quantity,
-		Price:      candle.Price,
+		Price:      trade.Price,
 		CreatedAt:  time.Now().Format("2006-01-02 15:04:05"),
 		SellVolume: sellVolume,
 		BuyVolume:  buyVolume,

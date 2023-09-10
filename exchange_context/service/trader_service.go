@@ -19,8 +19,7 @@ type TraderService struct {
 	Lock               map[string]bool
 	BuyLowestOnly      bool
 	SellHighestOnly    bool
-
-	trades map[string][]ExchangeModel.Trade
+	Trades             map[string][]ExchangeModel.Trade
 }
 
 func (t *TraderService) CalculateSMA(trades []ExchangeModel.Trade) float64 {
@@ -54,43 +53,38 @@ func (t *TraderService) GetByAndSellVolume(trades []ExchangeModel.Trade) (float6
 }
 
 func (t *TraderService) Trade(trade ExchangeModel.Trade) {
-	if t.trades == nil {
-		t.trades = make(map[string][]ExchangeModel.Trade)
-	}
-
 	if t.Lock == nil {
 		t.Lock = make(map[string]bool)
 	}
 
-	t.trades[trade.Symbol] = append(t.trades[trade.Symbol], trade)
 	sellPeriod := 15
 	buyPeriod := 60
 	maxPeriod := int(math.Max(float64(sellPeriod), float64(buyPeriod)))
 
-	if len(t.trades[trade.Symbol]) < maxPeriod {
+	if len(t.Trades[trade.Symbol]) < maxPeriod {
 		return
 	}
 
-	tradeSlice := t.trades[trade.Symbol][len(t.trades[trade.Symbol])-maxPeriod:]
-	t.trades[trade.Symbol] = tradeSlice // override to avoid memory leaks
+	tradeSlice := t.Trades[trade.Symbol][len(t.Trades[trade.Symbol])-maxPeriod:]
+	t.Trades[trade.Symbol] = tradeSlice // override to avoid memory leaks
 
 	sellSma := t.CalculateSMA(tradeSlice[len(tradeSlice)-sellPeriod:])
 	buySma := t.CalculateSMA(tradeSlice[len(tradeSlice)-buyPeriod:])
 
 	buyVolumeS, sellVolumeS := t.GetByAndSellVolume(tradeSlice[len(tradeSlice)-sellPeriod:])
 	buyVolumeB, sellVolumeB := t.GetByAndSellVolume(tradeSlice[len(tradeSlice)-buyPeriod:])
-	logFunction := func() {
-		log.Printf("Sell SMA: %f\n", sellSma)
-		log.Printf("Buy SMA: %f\n", buySma)
-		log.Printf("Buy Volume S: %f, Sell Volume S: %f\n", buyVolumeS, sellVolumeS)
-		log.Printf("Buy Volume B: %f, Sell Volume B: %f\n", buyVolumeB, sellVolumeB)
+	logFunction := func(trade ExchangeModel.Trade) {
+		log.Printf("[%s] BUY!!!", trade.Symbol)
+		log.Printf("[%s] Sell SMA: %f\n", trade.Symbol, sellSma)
+		log.Printf("[%s] Buy SMA: %f\n", trade.Symbol, buySma)
+		log.Printf("[%s] Buy Volume S: %f, Sell Volume S: %f\n", trade.Symbol, buyVolumeS, sellVolumeS)
+		log.Printf("[%s] Buy Volume B: %f, Sell Volume B: %f\n", trade.Symbol, buyVolumeB, sellVolumeB)
 	}
 
 	buyIndicator := buyVolumeB / sellVolumeB
 
 	if buyIndicator > 50 && buySma < trade.Price {
-		logFunction()
-		log.Println("BUY!!!")
+		logFunction(trade)
 		order, err := t.OrderRepository.GetOpenedOrder(trade.Symbol, "buy")
 
 		if err != nil {
@@ -108,7 +102,7 @@ func (t *TraderService) Trade(trade ExchangeModel.Trade) {
 	sellIndicator := sellVolumeS / buyVolumeS
 
 	if sellIndicator > 5 && sellSma > trade.Price {
-		logFunction()
+		logFunction(trade)
 		log.Println("SELL!!!")
 
 		order, err := t.OrderRepository.GetOpenedOrder(trade.Symbol, "buy")
@@ -320,13 +314,13 @@ func (t *TraderService) GetBuyQuantity(trade ExchangeModel.Trade) float64 {
 
 // todo: order has to be Interface
 func (t *TraderService) _TryLimitOrder(order ExchangeModel.Order, operation string) (*ExchangeModel.BinanceOrder, error) {
-	binanceOrder, err := t.Binance.LimitOrder(order, operation)
+	binanceOrder, err := t._FindOrCreateOrder(order, operation)
 
 	if err != nil {
 		return nil, err
 	}
 
-	binanceOrder, err = t._WaitExecution(binanceOrder, 30)
+	binanceOrder, err = t._WaitExecution(binanceOrder, 15)
 
 	if err != nil {
 		return nil, err
@@ -338,6 +332,7 @@ func (t *TraderService) _TryLimitOrder(order ExchangeModel.Order, operation stri
 func (t *TraderService) _WaitExecution(binanceOrder *ExchangeModel.BinanceOrder, seconds int) (*ExchangeModel.BinanceOrder, error) {
 	for i := 0; i <= seconds; i++ {
 		queryOrder, err := t.Binance.QueryOrder(binanceOrder.Symbol, binanceOrder.OrderId)
+		log.Printf("[%s] Wait order execution %d", binanceOrder.Symbol, binanceOrder.OrderId)
 
 		if err == nil && queryOrder != nil && queryOrder.Status == "FILLED" {
 			log.Printf("Order [%d] is executed [%s]", queryOrder.OrderId, queryOrder.Status)
@@ -372,4 +367,28 @@ func (t *TraderService) _AcquireLock(symbol string) {
 
 func (t *TraderService) _ReleaseLock(symbol string) {
 	*t.LockChannel <- ExchangeModel.Lock{IsLocked: false, Symbol: symbol}
+}
+
+func (t *TraderService) _FindOrCreateOrder(order ExchangeModel.Order, operation string) (*ExchangeModel.BinanceOrder, error) {
+	openedOrders, err := t.Binance.GetOpenedOrders()
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, opened := range *openedOrders {
+		if opened.Side == operation && opened.Symbol == order.Symbol {
+			log.Printf("[%s] Found opened %s order %d in binance", order.Symbol, operation, opened.OrderId)
+			return &opened, nil
+		}
+	}
+
+	binanceOrder, err := t.Binance.LimitOrder(order, operation)
+	log.Printf("[%s] %s Order created %d", binanceOrder.Symbol, operation, binanceOrder.OrderId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return binanceOrder, nil
 }

@@ -100,6 +100,33 @@ func (b *Binance) CancelOrder(symbol string, orderId int64) (*Model.BinanceOrder
 	return &binanceOrder, nil
 }
 
+func (b *Binance) GetOpenedOrders() (*[]Model.BinanceOrder, error) {
+	queryString := fmt.Sprintf(
+		"timestamp=%d",
+		time.Now().UTC().Unix()*1000,
+	)
+	request, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v3/openOrders?%s&signature=%s", b.DestinationURI, queryString, b._Sign(queryString)), nil)
+	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
+	request.Header.Set("X-MBX-APIKEY", b.ApiKey)
+
+	response, err := b.HttpClient.Do(request)
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+	body, err := ioutil.ReadAll(response.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var binanceOrders []Model.BinanceOrder
+	json.Unmarshal(body, &binanceOrders)
+
+	return &binanceOrders, nil
+}
+
 func (b *Binance) LimitOrder(order Model.Order, operation string) (*Model.BinanceOrder, error) {
 	queryString := fmt.Sprintf(
 		"symbol=%s&side=%s&type=LIMIT&timeInForce=GTC&quantity=%f&price=%f&timestamp=%d",

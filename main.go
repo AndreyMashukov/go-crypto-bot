@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 )
 
 func main() {
@@ -51,6 +52,7 @@ func main() {
 		SellHighestOnly:    false,
 		Trades:             make(map[string][]ExchangeModel.Trade),
 		Lock:               make(map[string]bool),
+		TradesMapMutex:     sync.RWMutex{},
 	}
 
 	file, _ := os.Create("trade.log")
@@ -68,7 +70,9 @@ func main() {
 		for {
 			// Read the channel
 			trade := <-tradeChannel
+			traderService.TradesMapMutex.Lock()
 			traderService.Trades[trade.Symbol] = append(traderService.Trades[trade.Symbol], trade)
+			traderService.TradesMapMutex.Unlock()
 
 			symbolChannel, isExist := traderChannelMap[trade.Symbol]
 
@@ -80,7 +84,7 @@ func main() {
 					for {
 						// read currency channel
 						symbolTrade := <-symbolChannel
-						log.Printf("Trade [%s]: S:%s, P:%f, Q:%f, O:%s\n", symbolTrade.GetDate(), symbolTrade.Symbol, symbolTrade.Price, symbolTrade.Quantity, symbolTrade.GetOperation())
+						// log.Printf("Trade [%s]: S:%s, P:%f, Q:%f, O:%s\n", symbolTrade.GetDate(), symbolTrade.Symbol, symbolTrade.Price, symbolTrade.Quantity, symbolTrade.GetOperation())
 						traderService.Trade(symbolTrade)
 					}
 				}()

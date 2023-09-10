@@ -1,7 +1,6 @@
 create table `orders`
 (
-    id          int auto_increment
-        primary key,
+    id          int auto_increment primary key,
     symbol      CHAR(20)                                      not null,
     quantity    double                                        not null,
     price       double                                        not null,

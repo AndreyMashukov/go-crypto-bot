@@ -11,7 +11,8 @@ import (
 )
 
 type TraderService struct {
-	OrderRepository *ExchangeRepository.OrderRepository
+	OrderRepository    *ExchangeRepository.OrderRepository
+	ExchangeRepository *ExchangeRepository.ExchangeRepository
 
 	trades map[string][]ExchangeModel.Trade
 }
@@ -83,8 +84,8 @@ func (t *TraderService) Trade(trade ExchangeModel.Trade) {
 
 		if err != nil {
 			fmt.Println(err)
-			// todo: calculate quantity by available balance...
-			err = t.Buy(trade, 0.2, sellVolumeB, buyVolumeB, buySma)
+			quantity := t.GetBuyQuantity(trade)
+			err = t.Buy(trade, quantity, sellVolumeB, buyVolumeB, buySma)
 			if err != nil {
 				log.Println(err)
 			}
@@ -114,6 +115,12 @@ func (t *TraderService) Trade(trade ExchangeModel.Trade) {
 }
 
 func (t *TraderService) Buy(trade ExchangeModel.Trade, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
+	if quantity <= 0.00 {
+		return errors.New(fmt.Sprintf("Available quantity is %f", quantity))
+	}
+
+	// todo: check min quantity
+
 	var order = ExchangeModel.Order{
 		Symbol:     trade.Symbol,
 		Quantity:   quantity,
@@ -191,4 +198,23 @@ func (t *TraderService) Sell(opened ExchangeModel.Order, trade ExchangeModel.Tra
 	}
 
 	return nil
+}
+
+func (t *TraderService) GetBuyQuantity(trade ExchangeModel.Trade) float64 {
+	limit := 0.00
+
+	// todo: use cache
+	tradeLimits := t.ExchangeRepository.GetTradeLimits()
+	for _, tradeLimit := range tradeLimits {
+		if tradeLimit.Symbol == trade.Symbol {
+			limit = tradeLimit.USDTLimit
+			break
+		}
+	}
+
+	if limit > 0 {
+		return limit / trade.Price
+	}
+
+	return 0.00
 }

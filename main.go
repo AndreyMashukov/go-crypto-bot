@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	WebsocketClient "gitlab.com/open-soft/go-crypto-bot/exchange_context/client"
@@ -11,6 +12,7 @@ import (
 	ExchangeService "gitlab.com/open-soft/go-crypto-bot/exchange_context/service"
 	"log"
 	"net/http"
+	"os"
 )
 
 func main() {
@@ -25,12 +27,19 @@ func main() {
 	orderRepository := ExchangeRepository.OrderRepository{
 		DB: db,
 	}
+	exchangeRepository := ExchangeRepository.ExchangeRepository{
+		DB: db,
+	}
 
 	traderService := ExchangeService.TraderService{
-		OrderRepository: &orderRepository,
+		OrderRepository:    &orderRepository,
+		ExchangeRepository: &exchangeRepository,
 	}
 
 	tradeChannel := make(chan ExchangeModel.Trade)
+	logChannel := make(chan ExchangeModel.Trade)
+
+	file, _ := os.Create("trade.log")
 
 	go func() {
 		for {
@@ -38,11 +47,26 @@ func main() {
 			trade := <-tradeChannel
 			log.Printf("Trade [%s]: S:%s, P:%f, Q:%f, O:%s\n", trade.GetDate(), trade.Symbol, trade.Price, trade.Quantity, trade.GetOperation())
 			traderService.Trade(trade)
+
+			go func() {
+				logChannel <- trade
+			}()
+		}
+	}()
+
+	go func() {
+		for {
+			trade := <-logChannel
+			encoded, err := json.Marshal(trade)
+
+			if err == nil {
+				file.WriteString(fmt.Sprintf("%s\n", encoded))
+			}
 		}
 	}()
 
 	// todo: concatenate streams...
-	for _, symbol := range ExchangeRepository.GetSubscribedSymbols() {
+	for _, symbol := range exchangeRepository.GetSubscribedSymbols() {
 		fmt.Println(symbol)
 	}
 

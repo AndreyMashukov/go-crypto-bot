@@ -30,10 +30,18 @@ func main() {
 		OrderRepository: &orderRepository,
 	}
 
-	WebsocketClient.Listen("wss://fstream.binance.com/stream?streams=btcusdt@aggTrade", func(candle ExchangeModel.Candle) {
-		log.Printf("Candle [%s]: S:%s, P:%f, Q:%f, O:%s\n", candle.GetDate(), candle.Symbol, candle.Price, candle.Quantity, candle.GetOperation())
-		traderService.Trade(candle)
-	})
+	tradeChannel := make(chan ExchangeModel.Trade)
+
+	go func() {
+		for {
+			// Read the channel
+			trade := <-tradeChannel
+			log.Printf("Trade [%s]: S:%s, P:%f, Q:%f, O:%s\n", trade.GetDate(), trade.Symbol, trade.Price, trade.Quantity, trade.GetOperation())
+			traderService.Trade(trade)
+		}
+	}()
+
+	WebsocketClient.Listen("wss://fstream.binance.com/stream?streams=btcusdt@aggTrade/ltcusdt@aggTrade/ethusdt@aggTrade", tradeChannel)
 
 	for _, symbol := range ExchangeRepository.GetSubscribedSymbols() {
 		fmt.Println(symbol)

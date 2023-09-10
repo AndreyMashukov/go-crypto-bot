@@ -20,7 +20,7 @@ func (u *UnixTime) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type Candle struct {
+type Trade struct {
 	Price        float64  `json:"p,string"`
 	Symbol       string   `json:"s"`
 	Quantity     float64  `json:"q,string"`
@@ -28,7 +28,7 @@ type Candle struct {
 	Timestamp    UnixTime `json:"T"`
 }
 
-func (c *Candle) GetOperation() string {
+func (c *Trade) GetOperation() string {
 	if c.IsBuyerMaker {
 		return "SELL"
 	}
@@ -36,6 +36,6 @@ func (c *Candle) GetOperation() string {
 	return "BUY"
 }
 
-func (c *Candle) GetDate() string {
+func (c *Trade) GetDate() string {
 	return c.Timestamp.Time.Format("2006-01-02 15:04:05")
 }

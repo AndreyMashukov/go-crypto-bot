@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func Listen(address string, callback func(candle exchange_context.Candle)) *websocket.Conn {
+func Listen(address string, tradeChannel chan<- exchange_context.Trade) *websocket.Conn {
 	connection, _, err := websocket.DefaultDialer.Dial(address, nil)
 	if err != nil {
 		log.Fatal("dial:", err)
@@ -25,7 +25,7 @@ func Listen(address string, callback func(candle exchange_context.Candle)) *webs
 
 			var decodedModel exchange_context.Event
 			json.Unmarshal(message, &decodedModel)
-			callback(decodedModel.Candle)
+			tradeChannel <- decodedModel.Trade
 		}
 	}()
 

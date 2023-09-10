@@ -8,6 +8,8 @@ import (
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
 	"log"
 	"math"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -53,10 +55,6 @@ func (t *TraderService) GetByAndSellVolume(trades []ExchangeModel.Trade) (float6
 }
 
 func (t *TraderService) Trade(trade ExchangeModel.Trade) {
-	if t.Lock == nil {
-		t.Lock = make(map[string]bool)
-	}
-
 	sellPeriod := 15
 	buyPeriod := 60
 	maxPeriod := int(math.Max(float64(sellPeriod), float64(buyPeriod)))
@@ -74,7 +72,6 @@ func (t *TraderService) Trade(trade ExchangeModel.Trade) {
 	buyVolumeS, sellVolumeS := t.GetByAndSellVolume(tradeSlice[len(tradeSlice)-sellPeriod:])
 	buyVolumeB, sellVolumeB := t.GetByAndSellVolume(tradeSlice[len(tradeSlice)-buyPeriod:])
 	logFunction := func(trade ExchangeModel.Trade) {
-		log.Printf("[%s] BUY!!!", trade.Symbol)
 		log.Printf("[%s] Sell SMA: %f\n", trade.Symbol, sellSma)
 		log.Printf("[%s] Buy SMA: %f\n", trade.Symbol, buySma)
 		log.Printf("[%s] Buy Volume S: %f, Sell Volume S: %f\n", trade.Symbol, buyVolumeS, sellVolumeS)
@@ -84,42 +81,54 @@ func (t *TraderService) Trade(trade ExchangeModel.Trade) {
 	buyIndicator := buyVolumeB / sellVolumeB
 
 	if buyIndicator > 50 && buySma < trade.Price {
-		logFunction(trade)
-		order, err := t.OrderRepository.GetOpenedOrder(trade.Symbol, "buy")
+		log.Printf("[%s] BUY!!!", trade.Symbol)
+		tradeLimit := t._GetLimit(trade.Symbol)
+		if tradeLimit != nil {
+			logFunction(trade)
+			order, err := t.OrderRepository.GetOpenedOrder(trade.Symbol, "buy")
 
-		if err != nil {
-			fmt.Println(err)
-			quantity := t.GetBuyQuantity(trade)
-			err = t.Buy(trade, quantity, sellVolumeB, buyVolumeB, buySma)
 			if err != nil {
-				log.Println(err)
+				fmt.Println(err)
+				quantity := t._FormatQuantity(*tradeLimit, tradeLimit.USDTLimit/trade.Price)
+				log.Printf("[%s] Quantity is %f", trade.Symbol, quantity)
+				err = t.Buy(*tradeLimit, trade, quantity, sellVolumeB, buyVolumeB, buySma)
+				if err != nil {
+					log.Println(err)
+				}
+			} else {
+				fmt.Printf("[%s] Order already opened: %d, price: %f/%f", order.Symbol, order.Id, order.Price, order.Quantity)
 			}
 		} else {
-			fmt.Printf("[%s] Order already opened: %d, price: %f/%f", order.Symbol, order.Id, order.Price, order.Quantity)
+			fmt.Printf("[%s] Trade limits is not configured\n", trade.Symbol)
 		}
 	}
 
 	sellIndicator := sellVolumeS / buyVolumeS
 
 	if sellIndicator > 5 && sellSma > trade.Price {
-		logFunction(trade)
-		log.Println("SELL!!!")
+		log.Printf("[%s] SELL!!!", trade.Symbol)
+		tradeLimit := t._GetLimit(trade.Symbol)
+		if tradeLimit != nil {
+			logFunction(trade)
 
-		order, err := t.OrderRepository.GetOpenedOrder(trade.Symbol, "buy")
-
-		if err != nil {
-			fmt.Println(err)
-		} else {
-			err = t.Sell(order, trade, order.Quantity, sellVolumeS, buyVolumeS, sellSma)
+			order, err := t.OrderRepository.GetOpenedOrder(trade.Symbol, "buy")
 
 			if err != nil {
-				log.Println(err)
+				fmt.Println(err)
+			} else {
+				err = t.Sell(*tradeLimit, order, trade, order.Quantity, sellVolumeS, buyVolumeS, sellSma)
+
+				if err != nil {
+					log.Println(err)
+				}
 			}
+		} else {
+			fmt.Printf("[%s] Trade limits is not configured\n", trade.Symbol)
 		}
 	}
 }
 
-func (t *TraderService) Buy(trade ExchangeModel.Trade, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
+func (t *TraderService) Buy(tradeLimit ExchangeModel.TradeLimit, trade ExchangeModel.Trade, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
 	if t._IsTradeLocked(trade.Symbol) {
 		return errors.New(fmt.Sprintf("Operation Buy is Locked %s", trade.Symbol))
 	}
@@ -155,7 +164,7 @@ func (t *TraderService) Buy(trade ExchangeModel.Trade, quantity float64, sellVol
 		if t.BuyLowestOnly {
 			return errors.New(fmt.Sprintf("[%s] Can't buy price %f the lowest price is %f", trade.Symbol, finalPrice, lowestPrice))
 		} else {
-			finalPrice = (finalPrice + lowestPrice) / 2
+			finalPrice = t._FormatPrice(tradeLimit, (finalPrice+lowestPrice)/2)
 		}
 	}
 
@@ -198,7 +207,7 @@ func (t *TraderService) Buy(trade ExchangeModel.Trade, quantity float64, sellVol
 	return nil
 }
 
-func (t *TraderService) Sell(opened ExchangeModel.Order, trade ExchangeModel.Trade, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
+func (t *TraderService) Sell(tradeLimit ExchangeModel.TradeLimit, opened ExchangeModel.Order, trade ExchangeModel.Trade, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
 	if t._IsTradeLocked(trade.Symbol) {
 		return errors.New(fmt.Sprintf("Operation Sell is Locked %s", trade.Symbol))
 	}
@@ -227,7 +236,7 @@ func (t *TraderService) Sell(opened ExchangeModel.Order, trade ExchangeModel.Tra
 		if t.SellHighestOnly {
 			return errors.New(fmt.Sprintf("[%s] Can't sell price %f the highest price is %f", trade.Symbol, finalPrice, highestPrice))
 		} else {
-			finalPrice = (finalPrice + highestPrice) / 2
+			finalPrice = t._FormatPrice(tradeLimit, (finalPrice+highestPrice)/2)
 		}
 	}
 
@@ -291,25 +300,6 @@ func (t *TraderService) Sell(opened ExchangeModel.Order, trade ExchangeModel.Tra
 	}
 
 	return nil
-}
-
-func (t *TraderService) GetBuyQuantity(trade ExchangeModel.Trade) float64 {
-	limit := 0.00
-
-	// todo: use cache
-	tradeLimits := t.ExchangeRepository.GetTradeLimits()
-	for _, tradeLimit := range tradeLimits {
-		if tradeLimit.Symbol == trade.Symbol {
-			limit = tradeLimit.USDTLimit
-			break
-		}
-	}
-
-	if limit > 0 {
-		return limit / trade.Price
-	}
-
-	return 0.00
 }
 
 // todo: order has to be Interface
@@ -384,11 +374,44 @@ func (t *TraderService) _FindOrCreateOrder(order ExchangeModel.Order, operation 
 	}
 
 	binanceOrder, err := t.Binance.LimitOrder(order, operation)
-	log.Printf("[%s] %s Order created %d", binanceOrder.Symbol, operation, binanceOrder.OrderId)
+	log.Printf("[%s] %s Order created %d", order.Symbol, operation, binanceOrder.OrderId)
 
 	if err != nil {
 		return nil, err
 	}
 
 	return binanceOrder, nil
+}
+
+func (t *TraderService) _GetLimit(symbol string) *ExchangeModel.TradeLimit {
+	tradeLimits := t.ExchangeRepository.GetTradeLimits()
+	for _, tradeLimit := range tradeLimits {
+		if tradeLimit.Symbol == symbol {
+			return &tradeLimit
+		}
+	}
+
+	return nil
+}
+
+func (t *TraderService) _FormatPrice(limit ExchangeModel.TradeLimit, price float64) float64 {
+	if price < limit.MinPrice {
+		return limit.MinPrice
+	}
+
+	split := strings.Split(fmt.Sprintf("%s", strconv.FormatFloat(limit.MinPrice, 'f', -1, 64)), ".")
+	precision := len(split[1])
+	ratio := math.Pow(10, float64(precision))
+	return math.Round(price*ratio) / ratio
+}
+
+func (t *TraderService) _FormatQuantity(limit ExchangeModel.TradeLimit, quantity float64) float64 {
+	if quantity < limit.MinQuantity {
+		return limit.MinQuantity
+	}
+
+	split := strings.Split(fmt.Sprintf("%s", strconv.FormatFloat(limit.MinQuantity, 'f', -1, 64)), ".")
+	precision := len(split[1])
+	ratio := math.Pow(10, float64(precision))
+	return math.Round(quantity*ratio) / ratio
 }

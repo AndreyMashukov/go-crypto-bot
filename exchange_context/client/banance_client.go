@@ -4,10 +4,12 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	Model "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -34,6 +36,10 @@ func (b *Binance) GetDepth(symbol string) (*Model.MarketDepth, error) {
 
 	if err != nil {
 		return nil, err
+	}
+
+	if response.StatusCode != 200 {
+		return nil, errors.New(string(body))
 	}
 
 	var depth Model.MarketDepth
@@ -65,6 +71,10 @@ func (b *Binance) QueryOrder(symbol string, orderId int64) (*Model.BinanceOrder,
 		return nil, err
 	}
 
+	if response.StatusCode != 200 {
+		return nil, errors.New(string(body))
+	}
+
 	var binanceOrder Model.BinanceOrder
 	json.Unmarshal(body, &binanceOrder)
 
@@ -94,6 +104,10 @@ func (b *Binance) CancelOrder(symbol string, orderId int64) (*Model.BinanceOrder
 		return nil, err
 	}
 
+	if response.StatusCode != 200 {
+		return nil, errors.New(string(body))
+	}
+
 	var binanceOrder Model.BinanceOrder
 	json.Unmarshal(body, &binanceOrder)
 
@@ -121,6 +135,10 @@ func (b *Binance) GetOpenedOrders() (*[]Model.BinanceOrder, error) {
 		return nil, err
 	}
 
+	if response.StatusCode != 200 {
+		return nil, errors.New(string(body))
+	}
+
 	var binanceOrders []Model.BinanceOrder
 	json.Unmarshal(body, &binanceOrders)
 
@@ -129,11 +147,11 @@ func (b *Binance) GetOpenedOrders() (*[]Model.BinanceOrder, error) {
 
 func (b *Binance) LimitOrder(order Model.Order, operation string) (*Model.BinanceOrder, error) {
 	queryString := fmt.Sprintf(
-		"symbol=%s&side=%s&type=LIMIT&timeInForce=GTC&quantity=%f&price=%f&timestamp=%d",
+		"symbol=%s&side=%s&type=LIMIT&timeInForce=GTC&quantity=%s&price=%s&timestamp=%d",
 		order.Symbol,
 		operation,
-		order.Quantity,
-		order.Price,
+		strconv.FormatFloat(order.Quantity, 'f', -1, 64),
+		strconv.FormatFloat(order.Price, 'f', -1, 64),
 		time.Now().UTC().Unix()*1000,
 	)
 	request, _ := http.NewRequest("POST", fmt.Sprintf("%s/api/v3/order?%s&signature=%s", b.DestinationURI, queryString, b._Sign(queryString)), nil)
@@ -150,6 +168,10 @@ func (b *Binance) LimitOrder(order Model.Order, operation string) (*Model.Binanc
 
 	if err != nil {
 		return nil, err
+	}
+
+	if response.StatusCode != 200 {
+		return nil, errors.New(string(body))
 	}
 
 	var binanceOrder Model.BinanceOrder

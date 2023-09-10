@@ -12,8 +12,8 @@ services:
       - mysql
     #environment:
       # your backend here
-    #volumes:
-    #  - .env.dist:/go/src/app/.env
+    volumes:
+      - ./trade.log:/go/src/app/trade.log
 
   mysql:
     platform: linux/x86_64

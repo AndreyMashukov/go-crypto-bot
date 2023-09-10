@@ -10,6 +10,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -22,6 +23,7 @@ type TraderService struct {
 	BuyLowestOnly      bool
 	SellHighestOnly    bool
 	Trades             map[string][]ExchangeModel.Trade
+	TradesMapMutex     sync.RWMutex
 }
 
 func (t *TraderService) CalculateSMA(trades []ExchangeModel.Trade) float64 {
@@ -59,12 +61,17 @@ func (t *TraderService) Trade(trade ExchangeModel.Trade) {
 	buyPeriod := 60
 	maxPeriod := int(math.Max(float64(sellPeriod), float64(buyPeriod)))
 
+	t.TradesMapMutex.Lock()
 	if len(t.Trades[trade.Symbol]) < maxPeriod {
+		t.TradesMapMutex.Unlock()
 		return
 	}
+	t.TradesMapMutex.Unlock()
 
+	t.TradesMapMutex.Lock()
 	tradeSlice := t.Trades[trade.Symbol][len(t.Trades[trade.Symbol])-maxPeriod:]
 	t.Trades[trade.Symbol] = tradeSlice // override to avoid memory leaks
+	t.TradesMapMutex.Unlock()
 
 	sellSma := t.CalculateSMA(tradeSlice[len(tradeSlice)-sellPeriod:])
 	buySma := t.CalculateSMA(tradeSlice[len(tradeSlice)-buyPeriod:])

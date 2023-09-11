@@ -13,7 +13,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
+	"time"
 )
 
 func main() {
@@ -39,21 +41,25 @@ func main() {
 		DB: db,
 	}
 
-	tradeChannel := make(chan ExchangeModel.Trade)
+	eventChannel := make(chan []byte)
 	logChannel := make(chan ExchangeModel.Trade)
 	lockTradeChannel := make(chan ExchangeModel.Lock)
 
-	traderService := ExchangeService.TraderService{
+	makerService := ExchangeService.MakerService{
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,
 		Binance:            &binance,
 		LockChannel:        &lockTradeChannel,
 		BuyLowestOnly:      false,
 		SellHighestOnly:    false,
-		Trades:             make(map[string][]ExchangeModel.Trade),
 		Lock:               make(map[string]bool),
-		TradesMapMutex:     sync.RWMutex{},
 		TradeLockMutex:     sync.RWMutex{},
+	}
+
+	baseKLineStrategy := ExchangeService.BaseKLineStrategy{}
+	smaStrategy := ExchangeService.SmaTradeStrategy{
+		Trades:         make(map[string][]ExchangeModel.Trade),
+		TradesMapMutex: sync.RWMutex{},
 	}
 
 	file, _ := os.OpenFile("trade.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
@@ -61,25 +67,74 @@ func main() {
 	go func() {
 		for {
 			lock := <-lockTradeChannel
-			traderService.TradeLockMutex.Lock()
-			traderService.Lock[lock.Symbol] = lock.IsLocked
-			traderService.TradeLockMutex.Unlock()
+			makerService.TradeLockMutex.Lock()
+			makerService.Lock[lock.Symbol] = lock.IsLocked
+			makerService.TradeLockMutex.Unlock()
 		}
 	}()
+
+	decisionLock := sync.RWMutex{}
+	smaDecisions := make(map[string]ExchangeModel.Decision)
+	baseKLineDecisions := make(map[string]ExchangeModel.Decision)
+
+	tradeLimits := exchangeRepository.GetTradeLimits()
+
+	for _, limit := range tradeLimits {
+		go func(symbol string) {
+			for {
+				currentDecisions := make([]ExchangeModel.Decision, 0)
+				decisionLock.Lock()
+				smaDecision, smaExists := smaDecisions[symbol]
+				kLineDecision, klineExists := baseKLineDecisions[symbol]
+				decisionLock.Unlock()
+
+				if smaExists {
+					currentDecisions = append(currentDecisions, smaDecision)
+				}
+
+				if klineExists {
+					currentDecisions = append(currentDecisions, kLineDecision)
+				}
+
+				if len(currentDecisions) > 0 {
+					makerService.Make(symbol, currentDecisions)
+				}
+
+				time.Sleep(time.Millisecond * 500)
+			}
+		}(limit.Symbol)
+	}
 
 	go func() {
 		for {
 			// Read the channel
-			trade := <-tradeChannel
+			message := <-eventChannel
+			var eventModel ExchangeModel.Event
+			json.Unmarshal(message, &eventModel)
 
-			go func() {
-				// log.Printf("Trade [%s]: S:%s, P:%f, Q:%f, O:%s\n", symbolTrade.GetDate(), symbolTrade.Symbol, symbolTrade.Price, symbolTrade.Quantity, symbolTrade.GetOperation())
-				traderService.Trade(trade)
-			}()
+			decisionLock.Lock()
+			switch true {
+			case strings.Contains(eventModel.Stream, "@aggTrade"):
+				var tradeEvent ExchangeModel.TradeEvent
+				json.Unmarshal(message, &tradeEvent)
+				trade := tradeEvent.Trade
+				smaDecision := smaStrategy.Decide(trade)
+				smaDecisions[trade.Symbol] = smaDecision
 
-			go func() {
-				logChannel <- trade
-			}()
+				go func() {
+					logChannel <- tradeEvent.Trade
+				}()
+				break
+			case strings.Contains(eventModel.Stream, "@kline_1m"):
+				var klineEvent ExchangeModel.KlineEvent
+				json.Unmarshal(message, &klineEvent)
+				kLine := klineEvent.KlineData.Kline
+				// todo: kline decisions..
+				baseKLineDecision := baseKLineStrategy.Decide(kLine)
+				baseKLineDecisions[kLine.Symbol] = baseKLineDecision
+				break
+			}
+			decisionLock.Unlock()
 		}
 	}()
 
@@ -101,8 +156,18 @@ func main() {
 
 	// todo: sync existed orders in Binance with bot database...
 
-	// /perpusdt@aggTrade
-	wsConnection := ExchangeClient.Listen("wss://fstream.binance.com/stream?streams=btcusdt@aggTrade/ltcusdt@aggTrade/ethusdt@aggTrade/solusdt@aggTrade", tradeChannel)
+	streams := []string{}
+	events := [2]string{"@aggTrade", "@kline_1m"}
+
+	for _, tradeLimit := range tradeLimits {
+		for i := 0; i < len(events); i++ {
+			event := events[i]
+			streams = append(streams, fmt.Sprintf("%s%s", strings.ToLower(tradeLimit.Symbol), event))
+		}
+	}
+
+	// ltcusdt@aggTrade/ethusdt@aggTrade/solusdt@aggTrade /perpusdt@aggTrade
+	wsConnection := ExchangeClient.Listen(fmt.Sprintf("wss://fstream.binance.com/stream?streams=%s", strings.Join(streams[:], "/")), eventChannel)
 	defer wsConnection.Close()
 
 	http.ListenAndServe(":8080", nil)

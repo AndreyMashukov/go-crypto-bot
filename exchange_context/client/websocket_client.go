@@ -1,14 +1,12 @@
 package client
 
 import (
-	"encoding/json"
 	"github.com/gorilla/websocket"
-	exchange_context "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	"log"
 	"os"
 )
 
-func Listen(address string, tradeChannel chan<- exchange_context.Trade) *websocket.Conn {
+func Listen(address string, tradeChannel chan<- []byte) *websocket.Conn {
 	connection, _, err := websocket.DefaultDialer.Dial(address, nil)
 	if err != nil {
 		log.Fatal("dial:", err)
@@ -23,9 +21,7 @@ func Listen(address string, tradeChannel chan<- exchange_context.Trade) *websock
 				os.Exit(1)
 			}
 
-			var decodedModel exchange_context.Event
-			json.Unmarshal(message, &decodedModel)
-			tradeChannel <- decodedModel.Trade
+			tradeChannel <- message
 		}
 	}()
 

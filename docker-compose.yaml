@@ -20,7 +20,7 @@ services:
     image: mysql:5.7
     restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "3366:3306"
     networks:
       - bot-net
     environment:

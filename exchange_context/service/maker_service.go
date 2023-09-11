@@ -299,7 +299,7 @@ func (m *MakerService) _TryLimitOrder(order ExchangeModel.Order, operation strin
 		return binanceOrder, err
 	}
 
-	binanceOrder, err = m._WaitExecution(binanceOrder, 15)
+	binanceOrder, err = m._WaitExecution(binanceOrder, 25)
 
 	if err != nil {
 		return binanceOrder, err

@@ -24,7 +24,9 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 		    tl.symbol as Symbol,
 		    tl.usdt_limit as USDTLimit,
 		    tl.min_price as MinPrice,
-		    tl.min_quantity as MinQuantity
+		    tl.min_quantity as MinQuantity,
+		    tl.min_profit_percent as MinProfitPercent,
+		    tl.is_enabled as IsEnabled
 		FROM trade_limit tl
 	`)
 	defer res.Close()
@@ -43,6 +45,8 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 			&tradeLimit.USDTLimit,
 			&tradeLimit.MinPrice,
 			&tradeLimit.MinQuantity,
+			&tradeLimit.MinProfitPercent,
+			&tradeLimit.IsEnabled,
 		)
 
 		if err != nil {
@@ -63,7 +67,9 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		    tl.symbol as Symbol,
 		    tl.usdt_limit as USDTLimit,
 		    tl.min_price as MinPrice,
-		    tl.min_quantity as MinQuantity
+		    tl.min_quantity as MinQuantity,
+		    tl.min_profit_percent as MinProfitPercent,
+		    tl.is_enabled as IsEnabled
 		FROM trade_limit tl
 		WHERE tl.symbol = ?
 	`,
@@ -74,6 +80,8 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		&tradeLimit.USDTLimit,
 		&tradeLimit.MinPrice,
 		&tradeLimit.MinQuantity,
+		&tradeLimit.MinProfitPercent,
+		&tradeLimit.IsEnabled,
 	)
 	if err != nil {
 		return tradeLimit, err

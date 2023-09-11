@@ -116,6 +116,10 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 }
 
 func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, price float64, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
+	if !tradeLimit.IsEnabled {
+		return errors.New(fmt.Sprintf("[%s] BUY operation is disabled", symbol))
+	}
+
 	if m._IsTradeLocked(symbol) {
 		return errors.New(fmt.Sprintf("Operation Buy is Locked %s", symbol))
 	}
@@ -239,9 +243,30 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 	// Or you place an order to sell 10 ETH for 3,452.55 USDT each:
 	// Trading fee = (10 ETH * 3,452.55 USDT) * 0.1% = 34.5255 USDT
 
+	profit := (finalPrice - opened.Price) * quantity
+
 	// loose money control
 	if opened.Price >= finalPrice {
-		return errors.New(fmt.Sprintf("[%s] Bad deal, wait for positive profit (%.6f)", symbol, (finalPrice-opened.Price)*quantity))
+		return errors.New(fmt.Sprintf(
+			"[%s] Bad deal, wait for positive profit: %.6f [o:%.6f, c:%.6f]",
+			symbol,
+			profit,
+			opened.Price,
+			finalPrice,
+		))
+	}
+
+	profitPercent := (finalPrice * 100 / opened.Price) - 100
+
+	if profitPercent < tradeLimit.MinProfitPercent {
+		return errors.New(fmt.Sprintf(
+			"[%s] Minimum profit is not reached: %.6f of %.6f [o:%.6f, c:%.6f]",
+			symbol,
+			profitPercent,
+			tradeLimit.MinProfitPercent,
+			opened.Price,
+			finalPrice,
+		))
 	}
 
 	var order = ExchangeModel.Order{

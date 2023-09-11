@@ -14,6 +14,7 @@ services:
       # your backend here
     volumes:
       - ./trade.log:/go/src/app/trade.log
+      - ./kline.log:/go/src/app/kline.log
 
   mysql:
     platform: linux/x86_64

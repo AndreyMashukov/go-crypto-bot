@@ -42,7 +42,8 @@ func main() {
 	}
 
 	eventChannel := make(chan []byte)
-	logChannel := make(chan ExchangeModel.Trade)
+	tradeLogChannel := make(chan ExchangeModel.Trade)
+	kLineLogChannel := make(chan ExchangeModel.KLine)
 	lockTradeChannel := make(chan ExchangeModel.Lock)
 
 	makerService := ExchangeService.MakerService{
@@ -55,6 +56,7 @@ func main() {
 		Lock:               make(map[string]bool),
 		TradeLockMutex:     sync.RWMutex{},
 		MinDecisions:       3.00,
+		TriggerScore:       75.00,
 	}
 
 	baseKLineStrategy := ExchangeService.BaseKLineStrategy{}
@@ -66,7 +68,8 @@ func main() {
 		TradesMapMutex: sync.RWMutex{},
 	}
 
-	file, _ := os.OpenFile("trade.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	tradeFile, _ := os.OpenFile("trade.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	klineFile, _ := os.OpenFile("kline.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 
 	go func() {
 		for {
@@ -130,7 +133,7 @@ func main() {
 				smaDecisions[trade.Symbol] = smaDecision
 
 				go func() {
-					logChannel <- tradeEvent.Trade
+					tradeLogChannel <- tradeEvent.Trade
 				}()
 				break
 			case strings.Contains(eventModel.Stream, "@kline_1m"):
@@ -141,6 +144,9 @@ func main() {
 				negPosDecision := negativePositiveStrategy.Decide(kLine)
 				baseKLineDecisions[kLine.Symbol] = baseKLineDecision
 				negativePositiveDecisions[kLine.Symbol] = negPosDecision
+				go func() {
+					kLineLogChannel <- kLine
+				}()
 				break
 			}
 			decisionLock.Unlock()
@@ -149,11 +155,22 @@ func main() {
 
 	go func() {
 		for {
-			trade := <-logChannel
+			trade := <-tradeLogChannel
 			encoded, err := json.Marshal(trade)
 
 			if err == nil {
-				file.WriteString(fmt.Sprintf("%s\n", encoded))
+				tradeFile.WriteString(fmt.Sprintf("%s\n", encoded))
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			kline := <-kLineLogChannel
+			encoded, err := json.Marshal(kline)
+
+			if err == nil {
+				klineFile.WriteString(fmt.Sprintf("%s\n", encoded))
 			}
 		}
 	}()

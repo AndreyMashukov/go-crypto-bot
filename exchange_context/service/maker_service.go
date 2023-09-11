@@ -23,6 +23,7 @@ type MakerService struct {
 	BuyLowestOnly      bool
 	SellHighestOnly    bool
 	TradeLockMutex     sync.RWMutex
+	MinDecisions       float64
 }
 
 func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
@@ -40,8 +41,6 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 	for _, decision := range decisions {
 		if decision.Timestamp < (currentUnixTime - 5) {
-			log.Printf("[%s] Decision: %s is deprecated\n", symbol, decision.StrategyName)
-
 			continue
 		}
 
@@ -67,13 +66,13 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		}
 	}
 
-	log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
-
-	if holdScore >= 50 {
+	if amount != m.MinDecisions {
 		return
 	}
 
-	if amount == 0 {
+	log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
+
+	if holdScore >= 50 {
 		return
 	}
 
@@ -299,7 +298,7 @@ func (m *MakerService) _TryLimitOrder(order ExchangeModel.Order, operation strin
 		return binanceOrder, err
 	}
 
-	binanceOrder, err = m._WaitExecution(binanceOrder, 10)
+	binanceOrder, err = m._WaitExecution(binanceOrder, 15)
 
 	if err != nil {
 		return binanceOrder, err

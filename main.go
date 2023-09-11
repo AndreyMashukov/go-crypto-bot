@@ -54,6 +54,7 @@ func main() {
 		SellHighestOnly:    false,
 		Lock:               make(map[string]bool),
 		TradeLockMutex:     sync.RWMutex{},
+		MinDecisions:       3.00,
 	}
 
 	baseKLineStrategy := ExchangeService.BaseKLineStrategy{}

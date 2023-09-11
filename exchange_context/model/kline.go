@@ -27,3 +27,11 @@ type KLine struct {
 	//      "Q": "1331459.78300",
 	//      "B": "0"
 }
+
+func (k *KLine) IsNegative() bool {
+	return k.Close < k.Open
+}
+
+func (k *KLine) IsPositive() bool {
+	return k.Close > k.Open
+}

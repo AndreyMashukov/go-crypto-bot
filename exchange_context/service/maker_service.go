@@ -314,7 +314,7 @@ func (m *MakerService) _WaitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 		log.Printf("[%s] Wait order execution %d", binanceOrder.Symbol, binanceOrder.OrderId)
 
 		if err == nil && queryOrder.Status == "FILLED" {
-			log.Printf("Order [%d] is executed [%s]", queryOrder.OrderId, queryOrder.Status)
+			log.Printf("[%s] Order [%d] is executed [%s]", binanceOrder.Symbol, queryOrder.OrderId, queryOrder.Status)
 
 			return queryOrder, nil
 		}
@@ -365,11 +365,12 @@ func (m *MakerService) _FindOrCreateOrder(order ExchangeModel.Order, operation s
 	}
 
 	binanceOrder, err := m.Binance.LimitOrder(order, operation)
-	log.Printf("[%s] %s Order created %d", order.Symbol, operation, binanceOrder.OrderId)
 
 	if err != nil {
 		return binanceOrder, err
 	}
+
+	log.Printf("[%s] %s Order created %d", order.Symbol, operation, binanceOrder.OrderId)
 
 	return binanceOrder, nil
 }

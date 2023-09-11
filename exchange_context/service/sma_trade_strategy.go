@@ -25,7 +25,7 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 
 		return ExchangeModel.Decision{
 			StrategyName: "sma_trade_strategy",
-			Score:        50.00,
+			Score:        33.33,
 			Operation:    "HOLD",
 			Timestamp:    time.Now().Unix(),
 			Price:        trade.Price,
@@ -51,7 +51,7 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 	if buyIndicator > 50 && buySma < trade.Price {
 		return ExchangeModel.Decision{
 			StrategyName: "sma_trade_strategy",
-			Score:        50.00,
+			Score:        33.33,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
 			Price:        trade.Price,
@@ -64,7 +64,7 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 	if sellIndicator > 15 && sellSma > trade.Price {
 		return ExchangeModel.Decision{
 			StrategyName: "sma_trade_strategy",
-			Score:        50.00,
+			Score:        33.33,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
 			Price:        trade.Price,
@@ -74,11 +74,11 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 
 	return ExchangeModel.Decision{
 		StrategyName: "sma_trade_strategy",
-		Score:        50.00,
+		Score:        33.33,
 		Operation:    "HOLD",
 		Timestamp:    time.Now().Unix(),
 		Price:        trade.Price,
-		Params:       [3]float64{0, 0, 0},
+		Params:       [3]float64{buyVolumeS, sellVolumeS, sellSma},
 	}
 }
 

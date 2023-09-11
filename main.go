@@ -57,6 +57,9 @@ func main() {
 	}
 
 	baseKLineStrategy := ExchangeService.BaseKLineStrategy{}
+	negativePositiveStrategy := ExchangeService.NegativePositiveStrategy{
+		LastKline: make(map[string]ExchangeModel.KLine),
+	}
 	smaStrategy := ExchangeService.SmaTradeStrategy{
 		Trades:         make(map[string][]ExchangeModel.Trade),
 		TradesMapMutex: sync.RWMutex{},
@@ -76,6 +79,7 @@ func main() {
 	decisionLock := sync.RWMutex{}
 	smaDecisions := make(map[string]ExchangeModel.Decision)
 	baseKLineDecisions := make(map[string]ExchangeModel.Decision)
+	negativePositiveDecisions := make(map[string]ExchangeModel.Decision)
 
 	tradeLimits := exchangeRepository.GetTradeLimits()
 
@@ -86,14 +90,17 @@ func main() {
 				decisionLock.Lock()
 				smaDecision, smaExists := smaDecisions[symbol]
 				kLineDecision, klineExists := baseKLineDecisions[symbol]
+				negPosDecision, negPosExists := negativePositiveDecisions[symbol]
 				decisionLock.Unlock()
 
 				if smaExists {
 					currentDecisions = append(currentDecisions, smaDecision)
 				}
-
 				if klineExists {
 					currentDecisions = append(currentDecisions, kLineDecision)
+				}
+				if negPosExists {
+					currentDecisions = append(currentDecisions, negPosDecision)
 				}
 
 				if len(currentDecisions) > 0 {
@@ -129,9 +136,10 @@ func main() {
 				var klineEvent ExchangeModel.KlineEvent
 				json.Unmarshal(message, &klineEvent)
 				kLine := klineEvent.KlineData.Kline
-				// todo: kline decisions..
 				baseKLineDecision := baseKLineStrategy.Decide(kLine)
+				negPosDecision := negativePositiveStrategy.Decide(kLine)
 				baseKLineDecisions[kLine.Symbol] = baseKLineDecision
+				negativePositiveDecisions[kLine.Symbol] = negPosDecision
 				break
 			}
 			decisionLock.Unlock()

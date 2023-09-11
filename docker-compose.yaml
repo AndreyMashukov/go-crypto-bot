@@ -24,7 +24,7 @@ services:
     networks:
       - bot-net
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: go_crypto_bot
       MYSQL_DATABASE: go_crypto_bot
       MYSQL_USER: go_crypto_bot
       MYSQL_PASSWORD: go_crypto_bot

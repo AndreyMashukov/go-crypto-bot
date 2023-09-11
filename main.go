@@ -19,7 +19,7 @@ import (
 )
 
 func main() {
-	db, err := sql.Open("mysql", "root:root@tcp(mysql:3306)/go_crypto_bot")
+	db, err := sql.Open("mysql", "root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot")
 	defer db.Close()
 
 	if err != nil {

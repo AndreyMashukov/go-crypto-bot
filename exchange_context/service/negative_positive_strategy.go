@@ -18,7 +18,7 @@ func (n *NegativePositiveStrategy) Decide(kLine ExchangeModel.KLine) ExchangeMod
 	if !hasKline {
 		return ExchangeModel.Decision{
 			StrategyName: "negative_positive_strategy",
-			Score:        33.33,
+			Score:        25.00,
 			Operation:    "HOLD",
 			Timestamp:    time.Now().Unix(),
 			Price:        kLine.Close,
@@ -29,7 +29,7 @@ func (n *NegativePositiveStrategy) Decide(kLine ExchangeModel.KLine) ExchangeMod
 	if lastKLine.IsNegative() && kLine.IsPositive() {
 		return ExchangeModel.Decision{
 			StrategyName: "negative_positive_strategy",
-			Score:        33.33,
+			Score:        25.00,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
 			Price:        kLine.Close,
@@ -40,7 +40,7 @@ func (n *NegativePositiveStrategy) Decide(kLine ExchangeModel.KLine) ExchangeMod
 	if lastKLine.IsPositive() && kLine.IsNegative() {
 		return ExchangeModel.Decision{
 			StrategyName: "negative_positive_strategy",
-			Score:        33.33,
+			Score:        25.00,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
 			Price:        kLine.Close,
@@ -50,7 +50,7 @@ func (n *NegativePositiveStrategy) Decide(kLine ExchangeModel.KLine) ExchangeMod
 
 	return ExchangeModel.Decision{
 		StrategyName: "negative_positive_strategy",
-		Score:        33.33,
+		Score:        25.00,
 		Operation:    "HOLD",
 		Timestamp:    time.Now().Unix(),
 		Price:        kLine.Close,

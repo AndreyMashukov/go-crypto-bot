@@ -24,6 +24,7 @@ type MakerService struct {
 	SellHighestOnly    bool
 	TradeLockMutex     sync.RWMutex
 	MinDecisions       float64
+	TriggerScore       float64
 }
 
 func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
@@ -72,13 +73,13 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 	log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
 
-	if holdScore >= 50 {
+	if holdScore >= m.TriggerScore {
 		return
 	}
 
 	price := priceSum / amount
 
-	if sellScore > buyScore {
+	if sellScore >= m.TriggerScore {
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
 		if err == nil {
@@ -96,7 +97,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		return
 	}
 
-	if buyScore > sellScore {
+	if buyScore > m.TriggerScore {
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
 		if err == nil {

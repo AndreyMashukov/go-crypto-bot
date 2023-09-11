@@ -12,7 +12,7 @@ func (k *BaseKLineStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Deci
 	if kLine.IsPositive() && kLine.Close < (kLine.High+kLine.Open)/2 {
 		return ExchangeModel.Decision{
 			StrategyName: "base_kline_strategy",
-			Score:        33.33,
+			Score:        25.00,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
 			Price:        kLine.Close,
@@ -23,7 +23,7 @@ func (k *BaseKLineStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Deci
 	if kLine.IsNegative() {
 		return ExchangeModel.Decision{
 			StrategyName: "base_kline_strategy",
-			Score:        33.33,
+			Score:        25.00,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
 			Price:        kLine.Close,
@@ -33,7 +33,7 @@ func (k *BaseKLineStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Deci
 
 	return ExchangeModel.Decision{
 		StrategyName: "base_kline_strategy",
-		Score:        33.33,
+		Score:        25.00,
 		Operation:    "HOLD",
 		Timestamp:    time.Now().Unix(),
 		Price:        kLine.Close,

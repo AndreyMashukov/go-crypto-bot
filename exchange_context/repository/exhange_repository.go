@@ -54,3 +54,30 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 
 	return list
 }
+
+func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, error) {
+	var tradeLimit model.TradeLimit
+	err := e.DB.QueryRow(`
+		SELECT
+		    tl.id as Id,
+		    tl.symbol as Symbol,
+		    tl.usdt_limit as USDTLimit,
+		    tl.min_price as MinPrice,
+		    tl.min_quantity as MinQuantity
+		FROM trade_limit tl
+		WHERE tl.symbol = ?
+	`,
+		symbol,
+	).Scan(
+		&tradeLimit.Id,
+		&tradeLimit.Symbol,
+		&tradeLimit.USDTLimit,
+		&tradeLimit.MinPrice,
+		&tradeLimit.MinQuantity,
+	)
+	if err != nil {
+		return tradeLimit, err
+	}
+
+	return tradeLimit, nil
+}

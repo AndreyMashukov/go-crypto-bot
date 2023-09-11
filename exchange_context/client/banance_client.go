@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -48,7 +49,7 @@ func (b *Binance) GetDepth(symbol string) (*Model.MarketDepth, error) {
 	return &depth, nil
 }
 
-func (b *Binance) QueryOrder(symbol string, orderId int64) (*Model.BinanceOrder, error) {
+func (b *Binance) QueryOrder(symbol string, orderId int64) (Model.BinanceOrder, error) {
 	queryString := fmt.Sprintf(
 		"symbol=%s&orderId=%d&timestamp=%d",
 		symbol,
@@ -60,28 +61,28 @@ func (b *Binance) QueryOrder(symbol string, orderId int64) (*Model.BinanceOrder,
 	request.Header.Set("X-MBX-APIKEY", b.ApiKey)
 
 	response, err := b.HttpClient.Do(request)
+	var binanceOrder Model.BinanceOrder
 	if err != nil {
-		return nil, err
+		return binanceOrder, err
 	}
 
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
 
 	if err != nil {
-		return nil, err
+		return binanceOrder, err
 	}
 
 	if response.StatusCode != 200 {
-		return nil, errors.New(string(body))
+		return binanceOrder, errors.New(string(body))
 	}
 
-	var binanceOrder Model.BinanceOrder
 	json.Unmarshal(body, &binanceOrder)
 
-	return &binanceOrder, nil
+	return binanceOrder, nil
 }
 
-func (b *Binance) CancelOrder(symbol string, orderId int64) (*Model.BinanceOrder, error) {
+func (b *Binance) CancelOrder(symbol string, orderId int64) (Model.BinanceOrder, error) {
 	queryString := fmt.Sprintf(
 		"symbol=%s&orderId=%d&timestamp=%d",
 		symbol,
@@ -93,25 +94,25 @@ func (b *Binance) CancelOrder(symbol string, orderId int64) (*Model.BinanceOrder
 	request.Header.Set("X-MBX-APIKEY", b.ApiKey)
 
 	response, err := b.HttpClient.Do(request)
+	var binanceOrder Model.BinanceOrder
 	if err != nil {
-		return nil, err
+		return binanceOrder, err
 	}
 
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
 
 	if err != nil {
-		return nil, err
+		return binanceOrder, err
 	}
 
 	if response.StatusCode != 200 {
-		return nil, errors.New(string(body))
+		return binanceOrder, errors.New(string(body))
 	}
 
-	var binanceOrder Model.BinanceOrder
 	json.Unmarshal(body, &binanceOrder)
 
-	return &binanceOrder, nil
+	return binanceOrder, nil
 }
 
 func (b *Binance) GetOpenedOrders() (*[]Model.BinanceOrder, error) {
@@ -145,7 +146,7 @@ func (b *Binance) GetOpenedOrders() (*[]Model.BinanceOrder, error) {
 	return &binanceOrders, nil
 }
 
-func (b *Binance) LimitOrder(order Model.Order, operation string) (*Model.BinanceOrder, error) {
+func (b *Binance) LimitOrder(order Model.Order, operation string) (Model.BinanceOrder, error) {
 	queryString := fmt.Sprintf(
 		"symbol=%s&side=%s&type=LIMIT&timeInForce=GTC&quantity=%s&price=%s&timestamp=%d",
 		order.Symbol,
@@ -159,25 +160,29 @@ func (b *Binance) LimitOrder(order Model.Order, operation string) (*Model.Binanc
 	request.Header.Set("X-MBX-APIKEY", b.ApiKey)
 
 	response, err := b.HttpClient.Do(request)
+	var binanceOrder Model.BinanceOrder
 	if err != nil {
-		return nil, err
+		return binanceOrder, err
 	}
 
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
 
+	if strings.Contains(string(body), "Account has insufficient balance for requested action") {
+		return binanceOrder, errors.New(fmt.Sprintf("[%s] Account has insufficient balance for requested action", order.Symbol))
+	}
+
 	if err != nil {
-		return nil, err
+		return binanceOrder, err
 	}
 
 	if response.StatusCode != 200 {
-		return nil, errors.New(string(body))
+		return binanceOrder, errors.New(string(body))
 	}
 
-	var binanceOrder Model.BinanceOrder
 	json.Unmarshal(body, &binanceOrder)
 
-	return &binanceOrder, nil
+	return binanceOrder, nil
 }
 
 func (b *Binance) _Sign(url string) string {

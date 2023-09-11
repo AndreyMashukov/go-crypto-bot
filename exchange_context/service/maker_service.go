@@ -24,7 +24,7 @@ type MakerService struct {
 	SellHighestOnly    bool
 	TradeLockMutex     sync.RWMutex
 	MinDecisions       float64
-	TriggerScore       float64
+	HoldScore          float64
 }
 
 func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
@@ -73,13 +73,13 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 	log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
 
-	if holdScore >= m.TriggerScore {
+	if holdScore >= m.HoldScore {
 		return
 	}
 
 	price := priceSum / amount
 
-	if sellScore >= m.TriggerScore {
+	if sellScore >= buyScore {
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
 		if err == nil {
@@ -97,7 +97,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		return
 	}
 
-	if buyScore > m.TriggerScore {
+	if buyScore > sellScore {
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
 		if err == nil {
@@ -158,6 +158,10 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 			finalPrice = m._FormatPrice(tradeLimit, (finalPrice+lowestPrice)/2)
 		}
 	}
+
+	// todo: commission
+	// You place an order to buy 10 ETH for 3,452.55 USDT each:
+	// Trading fee = 10 ETH * 0.1% = 0.01 ETH
 
 	// todo: check min quantity
 
@@ -230,6 +234,10 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 			finalPrice = m._FormatPrice(tradeLimit, (finalPrice+highestPrice)/2)
 		}
 	}
+
+	// todo: commission
+	// Or you place an order to sell 10 ETH for 3,452.55 USDT each:
+	// Trading fee = (10 ETH * 3,452.55 USDT) * 0.1% = 34.5255 USDT
 
 	// loose money control
 	if opened.Price >= finalPrice {
@@ -311,7 +319,13 @@ func (m *MakerService) _TryLimitOrder(order ExchangeModel.Order, operation strin
 func (m *MakerService) _WaitExecution(binanceOrder ExchangeModel.BinanceOrder, seconds int) (ExchangeModel.BinanceOrder, error) {
 	for i := 0; i <= seconds; i++ {
 		queryOrder, err := m.Binance.QueryOrder(binanceOrder.Symbol, binanceOrder.OrderId)
-		log.Printf("[%s] Wait order execution %d", binanceOrder.Symbol, binanceOrder.OrderId)
+		log.Printf("[%s] Wait order execution %d, current status is [%s]", binanceOrder.Symbol, binanceOrder.OrderId, queryOrder.Status)
+
+		if err == nil && queryOrder.Status == "PARTIALLY_FILLED" {
+			time.Sleep(time.Second)
+			seconds++
+			continue
+		}
 
 		if err == nil && queryOrder.Status == "FILLED" {
 			log.Printf("[%s] Order [%d] is executed [%s]", binanceOrder.Symbol, queryOrder.OrderId, queryOrder.Status)

@@ -56,7 +56,7 @@ func main() {
 		Lock:               make(map[string]bool),
 		TradeLockMutex:     sync.RWMutex{},
 		MinDecisions:       3.00,
-		TriggerScore:       75.00,
+		HoldScore:          75.00,
 	}
 
 	baseKLineStrategy := ExchangeService.BaseKLineStrategy{}

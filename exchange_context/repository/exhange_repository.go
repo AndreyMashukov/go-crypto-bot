@@ -26,7 +26,9 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 		    tl.min_price as MinPrice,
 		    tl.min_quantity as MinQuantity,
 		    tl.min_profit_percent as MinProfitPercent,
-		    tl.is_enabled as IsEnabled
+		    tl.is_enabled as IsEnabled,
+		    tl.usdt_extra_budget as USDTExtraBudget,
+		    tl.buy_on_fall_percent as BuyOnFallPercent
 		FROM trade_limit tl
 	`)
 	defer res.Close()
@@ -47,6 +49,8 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 			&tradeLimit.MinQuantity,
 			&tradeLimit.MinProfitPercent,
 			&tradeLimit.IsEnabled,
+			&tradeLimit.USDTExtraBudget,
+			&tradeLimit.BuyOnFallPercent,
 		)
 
 		if err != nil {
@@ -69,7 +73,9 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		    tl.min_price as MinPrice,
 		    tl.min_quantity as MinQuantity,
 		    tl.min_profit_percent as MinProfitPercent,
-		    tl.is_enabled as IsEnabled
+		    tl.is_enabled as IsEnabled,
+		    tl.usdt_extra_budget as USDTExtraBudget,
+		    tl.buy_on_fall_percent as BuyOnFallPercent
 		FROM trade_limit tl
 		WHERE tl.symbol = ?
 	`,
@@ -82,6 +88,8 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		&tradeLimit.MinQuantity,
 		&tradeLimit.MinProfitPercent,
 		&tradeLimit.IsEnabled,
+		&tradeLimit.USDTExtraBudget,
+		&tradeLimit.BuyOnFallPercent,
 	)
 	if err != nil {
 		return tradeLimit, err

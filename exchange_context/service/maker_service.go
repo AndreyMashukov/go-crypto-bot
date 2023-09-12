@@ -115,6 +115,14 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 	}
 }
 
+func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64) error {
+	// todo: buy extra
+	// todo: validate extra buy
+	// todo: merge new order with existing
+	// todo: calculate average price for merged order
+	return nil
+}
+
 func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, price float64, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
 	if !tradeLimit.IsEnabled {
 		return errors.New(fmt.Sprintf("[%s] BUY operation is disabled", symbol))

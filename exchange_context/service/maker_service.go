@@ -66,18 +66,6 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		return
 	}
 
-	//marketDepth := m.GetDepth(symbol)
-	//if marketDepth != nil {
-	//	log.Printf(
-	//		"[%s] Bid: %.6f[%.4f] Ask: %.6f[%.4f]\n",
-	//		symbol,
-	//		marketDepth.GetBestBid(),
-	//		marketDepth.GetBidVolume(),
-	//		marketDepth.GetBestAsk(),
-	//		marketDepth.GetAskVolume(),
-	//	)
-	//}
-
 	if holdScore >= m.HoldScore {
 		return
 	}
@@ -144,7 +132,8 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit) f
 		return bestPrice
 	}
 
-	return m.formatPrice(tradeLimit, bestPrice*1.0025) // +0.25% higher than best Bid
+	amendment := 1.00 + (tradeLimit.MinProfitPercent / 100)
+	return m.formatPrice(tradeLimit, bestPrice*amendment) // ~ +0.25% higher than best Bid
 }
 
 func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) float64 {
@@ -159,7 +148,8 @@ func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) fl
 		return bestPrice
 	}
 
-	return m.formatPrice(tradeLimit, bestPrice*0.9975) // -0.25% lower than best Ask
+	amendment := 1.00 - (tradeLimit.MinProfitPercent / 100)
+	return m.formatPrice(tradeLimit, bestPrice*amendment) // ~ -0.25% lower than best Ask
 }
 
 func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64) error {

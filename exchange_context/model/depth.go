@@ -45,6 +45,30 @@ func (d *Depth) GetBestAsk() float64 {
 	return topPrice
 }
 
+func (d *Depth) GetAvgAsk() float64 {
+	sum := 0.00
+	amount := 0.00
+
+	for _, ask := range d.Asks {
+		sum += ask[0].Value
+		amount++
+	}
+
+	return sum / amount
+}
+
+func (d *Depth) GetAvgBid() float64 {
+	sum := 0.00
+	amount := 0.00
+
+	for _, bid := range d.Bids {
+		sum += bid[0].Value
+		amount++
+	}
+
+	return sum / amount
+}
+
 func (d *Depth) GetBidVolume() float64 {
 	volume := 0.00
 

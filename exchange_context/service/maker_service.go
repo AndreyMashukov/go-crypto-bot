@@ -138,14 +138,11 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 		return bestPrice
 	}
 
-	amendment := 1.00 + (tradeLimit.MinProfitPercent / 100) // ~ +0.25% higher than best Bid
-	price := m.formatPrice(tradeLimit, bestPrice*amendment)
-
-	if price <= order.Price {
-		return m.formatPrice(tradeLimit, order.Price*amendment)
+	if bestPrice < order.Price {
+		bestPrice = order.Price
 	}
 
-	return price
+	return m.formatPrice(tradeLimit, bestPrice*(100+tradeLimit.MinProfitPercent)/100) // ~ +0.25% lower than best Ask
 }
 
 func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) float64 {
@@ -160,8 +157,7 @@ func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) fl
 		return bestPrice
 	}
 
-	amendment := 1.00 - (tradeLimit.MinProfitPercent / 100)
-	return m.formatPrice(tradeLimit, bestPrice*amendment) // ~ -0.25% lower than best Ask
+	return m.formatPrice(tradeLimit, bestPrice*(100-tradeLimit.MinProfitPercent)/100) // ~ -0.25% lower than best Ask
 }
 
 func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64) error {
@@ -257,16 +253,14 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 		))
 	}
 
-	profitPercent := (price * 100 / opened.Price) - 100
+	minPrice := m.formatPrice(tradeLimit, opened.Price*(100+tradeLimit.MinProfitPercent)/100)
 
-	if profitPercent < tradeLimit.MinProfitPercent {
+	if price < minPrice {
 		return errors.New(fmt.Sprintf(
-			"[%s] Minimum profit is not reached: %.6f of %.6f [o:%.6f, c:%.6f]",
+			"[%s] Minimum profit is not reached, Price %.6f < %.6f",
 			symbol,
-			profitPercent,
-			tradeLimit.MinProfitPercent,
-			opened.Price,
 			price,
+			minPrice,
 		))
 	}
 
@@ -412,7 +406,7 @@ func (m *MakerService) findOrCreateOrder(order ExchangeModel.Order, operation st
 		return binanceOrder, err
 	}
 
-	log.Printf("[%s] %s Order created %d, price: %.6f", order.Symbol, operation, binanceOrder.OrderId, binanceOrder.Price)
+	log.Printf("[%s] %s Order created %d, Price: %.6f", order.Symbol, operation, binanceOrder.OrderId, binanceOrder.Price)
 
 	return binanceOrder, nil
 }

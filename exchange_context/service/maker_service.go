@@ -410,7 +410,7 @@ func (m *MakerService) findOrCreateOrder(order ExchangeModel.Order, operation st
 		return binanceOrder, err
 	}
 
-	log.Printf("[%s] %s Order created %d", order.Symbol, operation, binanceOrder.OrderId)
+	log.Printf("[%s] %s Order created %d, price: %.6f", order.Symbol, operation, binanceOrder.OrderId, binanceOrder.Price)
 
 	return binanceOrder, nil
 }

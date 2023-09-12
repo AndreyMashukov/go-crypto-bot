@@ -25,7 +25,7 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 
 		return ExchangeModel.Decision{
 			StrategyName: "sma_trade_strategy",
-			Score:        50.00,
+			Score:        999.00,
 			Operation:    "HOLD",
 			Timestamp:    time.Now().Unix(),
 			Price:        trade.Price,

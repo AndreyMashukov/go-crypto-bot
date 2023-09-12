@@ -56,7 +56,7 @@ func (b *Binance) QueryOrder(symbol string, orderId int64) (Model.BinanceOrder, 
 		orderId,
 		time.Now().UTC().Unix()*1000,
 	)
-	request, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v3/order?%s&signature=%s", b.DestinationURI, queryString, b._Sign(queryString)), nil)
+	request, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v3/order?%s&signature=%s", b.DestinationURI, queryString, b.sign(queryString)), nil)
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	request.Header.Set("X-MBX-APIKEY", b.ApiKey)
 
@@ -89,7 +89,7 @@ func (b *Binance) CancelOrder(symbol string, orderId int64) (Model.BinanceOrder,
 		orderId,
 		time.Now().UTC().Unix()*1000,
 	)
-	request, _ := http.NewRequest("DELETE", fmt.Sprintf("%s/api/v3/order?%s&signature=%s", b.DestinationURI, queryString, b._Sign(queryString)), nil)
+	request, _ := http.NewRequest("DELETE", fmt.Sprintf("%s/api/v3/order?%s&signature=%s", b.DestinationURI, queryString, b.sign(queryString)), nil)
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	request.Header.Set("X-MBX-APIKEY", b.ApiKey)
 
@@ -120,7 +120,7 @@ func (b *Binance) GetOpenedOrders() (*[]Model.BinanceOrder, error) {
 		"timestamp=%d",
 		time.Now().UTC().Unix()*1000,
 	)
-	request, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v3/openOrders?%s&signature=%s", b.DestinationURI, queryString, b._Sign(queryString)), nil)
+	request, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v3/openOrders?%s&signature=%s", b.DestinationURI, queryString, b.sign(queryString)), nil)
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	request.Header.Set("X-MBX-APIKEY", b.ApiKey)
 
@@ -155,7 +155,7 @@ func (b *Binance) LimitOrder(order Model.Order, operation string) (Model.Binance
 		strconv.FormatFloat(order.Price, 'f', -1, 64),
 		time.Now().UTC().Unix()*1000,
 	)
-	request, _ := http.NewRequest("POST", fmt.Sprintf("%s/api/v3/order?%s&signature=%s", b.DestinationURI, queryString, b._Sign(queryString)), nil)
+	request, _ := http.NewRequest("POST", fmt.Sprintf("%s/api/v3/order?%s&signature=%s", b.DestinationURI, queryString, b.sign(queryString)), nil)
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	request.Header.Set("X-MBX-APIKEY", b.ApiKey)
 
@@ -185,7 +185,7 @@ func (b *Binance) LimitOrder(order Model.Order, operation string) (Model.Binance
 	return binanceOrder, nil
 }
 
-func (b *Binance) _Sign(url string) string {
+func (b *Binance) sign(url string) string {
 	mac := hmac.New(sha256.New, []byte(b.ApiSecret))
 	mac.Write([]byte(url))
 	signingKey := fmt.Sprintf("%x", mac.Sum(nil))

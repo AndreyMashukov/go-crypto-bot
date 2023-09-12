@@ -82,6 +82,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 				price := m.calculateSellPrice(tradeLimit, order)
 
 				if price > 0 {
+					// todo: calculate limit order ttl!
 					err = m.Sell(tradeLimit, order, symbol, price, order.Quantity, sellVolume, buyVolume, smaValue)
 					if err != nil {
 						log.Println(err)

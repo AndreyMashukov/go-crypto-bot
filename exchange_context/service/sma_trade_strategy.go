@@ -48,7 +48,7 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 
 	buyIndicator := buyVolumeB / sellVolumeB
 
-	if buyIndicator > 50 && buySma < trade.Price {
+	if buyIndicator > 150 && buySma < trade.Price {
 		return ExchangeModel.Decision{
 			StrategyName: "sma_trade_strategy",
 			Score:        50.00,
@@ -61,7 +61,7 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 
 	sellIndicator := sellVolumeS / buyVolumeS
 
-	if sellIndicator > 15 && sellSma > trade.Price {
+	if sellIndicator > 50 && sellSma > trade.Price {
 		return ExchangeModel.Decision{
 			StrategyName: "sma_trade_strategy",
 			Score:        50.00,

@@ -59,6 +59,7 @@ func main() {
 		HoldScore:          75.00,
 	}
 
+	// todo: BuyExtraOnMarketFallStrategy
 	baseKLineStrategy := ExchangeService.BaseKLineStrategy{}
 	negativePositiveStrategy := ExchangeService.NegativePositiveStrategy{
 		LastKline: make(map[string]ExchangeModel.KLine),
@@ -118,7 +119,7 @@ func main() {
 
 	go func() {
 		for {
-			// Read the channel
+			// Read the channel, todo -> better to use select: https://go.dev/tour/concurrency/5
 			message := <-eventChannel
 			var eventModel ExchangeModel.Event
 			json.Unmarshal(message, &eventModel)

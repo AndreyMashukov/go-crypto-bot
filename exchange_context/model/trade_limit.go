@@ -8,4 +8,8 @@ type TradeLimit struct {
 	MinQuantity      float64
 	MinProfitPercent float64
 	IsEnabled        bool
+
+	// Extra budget for market fall
+	USDTExtraBudget  float64
+	BuyOnFallPercent float64
 }

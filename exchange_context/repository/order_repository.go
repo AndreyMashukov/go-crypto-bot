@@ -26,7 +26,8 @@ func (repo *OrderRepository) GetOpenedOrder(symbol string, operation string) (Ex
 			o.buy_volume as BuyVolume,
 			o.sma_value as SmaValue,
 			o.external_id as ExternalId,
-			o.closed_by as ClosedBy
+			o.closed_by as ClosedBy,
+			o.used_extra_budget as UsedExtraBudget
 		FROM orders o
 		WHERE o.status = ? AND o.symbol = ? AND o.operation = ?`, "opened", symbol, operation,
 	).Scan(
@@ -42,6 +43,7 @@ func (repo *OrderRepository) GetOpenedOrder(symbol string, operation string) (Ex
 		&order.SmaValue,
 		&order.ExternalId,
 		&order.ClosedBy,
+		&order.UsedExtraBudget,
 	)
 
 	if err != nil {
@@ -64,7 +66,8 @@ func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
 		    operation = ?,
 		    status = ?,
 		    external_id = ?,
-		    closed_by = ?
+		    closed_by = ?,
+			used_extra_budget = ?
 	`,
 		order.Symbol,
 		order.Quantity,
@@ -77,6 +80,7 @@ func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
 		order.Status,
 		order.ExternalId,
 		order.ClosedBy,
+		order.UsedExtraBudget,
 	)
 
 	if err != nil {
@@ -103,7 +107,8 @@ func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
 		    o.operation = ?,
 		    o.status = ?,
 		    o.external_id = ?,
-		    o.closed_by = ?
+		    o.closed_by = ?,
+			o.used_extra_budget = ?
 		WHERE o.id = ?
 	`,
 		order.Symbol,
@@ -117,6 +122,7 @@ func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
 		order.Status,
 		order.ExternalId,
 		order.ClosedBy,
+		order.UsedExtraBudget,
 		order.Id,
 	)
 
@@ -144,7 +150,8 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 			o.buy_volume as BuyVolume,
 			o.sma_value as SmaValue,
 			o.external_id as ExternalId,
-			o.closed_by as ClosedBy
+			o.closed_by as ClosedBy,
+			o.used_extra_budget as UsedExtraBudget
 		FROM orders o
 		WHERE o.id = ?`, id,
 	).Scan(
@@ -160,6 +167,7 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 		&order.SmaValue,
 		&order.ExternalId,
 		&order.ClosedBy,
+		&order.UsedExtraBudget,
 	)
 
 	if err != nil {

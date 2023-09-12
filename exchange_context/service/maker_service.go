@@ -83,7 +83,6 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 				smaFormatted := m.formatPrice(tradeLimit, smaValue)
 
 				if price > 0 {
-					// todo: calculate limit order ttl!
 					err = m.Sell(tradeLimit, order, symbol, price, order.Quantity, sellVolume, buyVolume, smaFormatted)
 					if err != nil {
 						log.Println(err)
@@ -130,36 +129,38 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order) float64 {
 	marketDepth := m.GetDepth(tradeLimit.Symbol)
-	bestPrice := 0.00
+	avgPrice := 0.00
 
 	if marketDepth != nil {
-		bestPrice = marketDepth.GetBestAsk()
+		avgPrice = marketDepth.GetAvgAsk()
 	}
 
-	if 0.00 == bestPrice {
-		return bestPrice
+	if 0.00 == avgPrice {
+		return avgPrice
 	}
 
-	if bestPrice < order.Price {
-		bestPrice = order.Price
+	minPrice := m.formatPrice(tradeLimit, order.Price*(100+tradeLimit.MinProfitPercent)/100)
+
+	if avgPrice < minPrice {
+		return minPrice
 	}
 
-	return m.formatPrice(tradeLimit, bestPrice*(100+tradeLimit.MinProfitPercent)/100) // ~ +0.25% lower than best Ask
+	return m.formatPrice(tradeLimit, avgPrice)
 }
 
 func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) float64 {
 	marketDepth := m.GetDepth(tradeLimit.Symbol)
-	bestPrice := 0.00
+	avgPrice := 0.00
 
 	if marketDepth != nil {
-		bestPrice = marketDepth.GetBestBid()
+		avgPrice = marketDepth.GetAvgBid()
 	}
 
-	if 0.00 == bestPrice {
-		return bestPrice
+	if 0.00 == avgPrice {
+		return avgPrice
 	}
 
-	return m.formatPrice(tradeLimit, bestPrice*(100-tradeLimit.MinProfitPercent)/100) // ~ -0.25% lower than best Ask
+	return m.formatPrice(tradeLimit, avgPrice)
 }
 
 func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64) error {

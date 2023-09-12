@@ -45,25 +45,23 @@ func main() {
 	tradeLogChannel := make(chan ExchangeModel.Trade)
 	kLineLogChannel := make(chan ExchangeModel.KLine)
 	lockTradeChannel := make(chan ExchangeModel.Lock)
+	depthChannel := make(chan ExchangeModel.Depth)
 
 	makerService := ExchangeService.MakerService{
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,
 		Binance:            &binance,
 		LockChannel:        &lockTradeChannel,
-		BuyLowestOnly:      false,
-		SellHighestOnly:    false,
 		Lock:               make(map[string]bool),
 		TradeLockMutex:     sync.RWMutex{},
 		MinDecisions:       3.00,
 		HoldScore:          75.00,
+		DepthMap:           make(map[string]ExchangeModel.Depth),
 	}
 
 	// todo: BuyExtraOnMarketFallStrategy
 	baseKLineStrategy := ExchangeService.BaseKLineStrategy{}
-	negativePositiveStrategy := ExchangeService.NegativePositiveStrategy{
-		LastKline: make(map[string]ExchangeModel.KLine),
-	}
+	marketDepthStrategy := ExchangeService.MarketDepthStrategy{}
 	smaStrategy := ExchangeService.SmaTradeStrategy{
 		Trades:         make(map[string][]ExchangeModel.Trade),
 		TradesMapMutex: sync.RWMutex{},
@@ -84,7 +82,7 @@ func main() {
 	decisionLock := sync.RWMutex{}
 	smaDecisions := make(map[string]ExchangeModel.Decision)
 	baseKLineDecisions := make(map[string]ExchangeModel.Decision)
-	negativePositiveDecisions := make(map[string]ExchangeModel.Decision)
+	marketDepthDecisions := make(map[string]ExchangeModel.Decision)
 
 	tradeLimits := exchangeRepository.GetTradeLimits()
 
@@ -95,7 +93,7 @@ func main() {
 				decisionLock.Lock()
 				smaDecision, smaExists := smaDecisions[symbol]
 				kLineDecision, klineExists := baseKLineDecisions[symbol]
-				negPosDecision, negPosExists := negativePositiveDecisions[symbol]
+				negPosDecision, negPosExists := marketDepthDecisions[symbol]
 				decisionLock.Unlock()
 
 				if smaExists {
@@ -142,11 +140,20 @@ func main() {
 				json.Unmarshal(message, &klineEvent)
 				kLine := klineEvent.KlineData.Kline
 				baseKLineDecision := baseKLineStrategy.Decide(kLine)
-				negPosDecision := negativePositiveStrategy.Decide(kLine)
 				baseKLineDecisions[kLine.Symbol] = baseKLineDecision
-				negativePositiveDecisions[kLine.Symbol] = negPosDecision
 				go func() {
 					kLineLogChannel <- kLine
+				}()
+				break
+			case strings.Contains(eventModel.Stream, "@depth"):
+				var depthEvent ExchangeModel.DepthEvent
+				json.Unmarshal(message, &depthEvent)
+				depth := depthEvent.Depth
+				depthDecision := marketDepthStrategy.Decide(depth)
+				marketDepthDecisions[depth.Symbol] = depthDecision
+				// todo call strategies...
+				go func() {
+					depthChannel <- depth
 				}()
 				break
 			}
@@ -162,6 +169,13 @@ func main() {
 			if err == nil {
 				tradeFile.WriteString(fmt.Sprintf("%s\n", encoded))
 			}
+		}
+	}()
+
+	go func() {
+		for {
+			depth := <-depthChannel
+			makerService.SetDepth(depth)
 		}
 	}()
 
@@ -184,7 +198,7 @@ func main() {
 	// todo: sync existed orders in Binance with bot database...
 
 	streams := []string{}
-	events := [2]string{"@aggTrade", "@kline_1m"}
+	events := [3]string{"@aggTrade", "@kline_1m", "@depth"}
 
 	for _, tradeLimit := range tradeLimits {
 		for i := 0; i < len(events); i++ {

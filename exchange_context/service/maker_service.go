@@ -20,11 +20,10 @@ type MakerService struct {
 	Binance            *ExchangeClient.Binance
 	LockChannel        *chan ExchangeModel.Lock
 	Lock               map[string]bool
-	BuyLowestOnly      bool
-	SellHighestOnly    bool
 	TradeLockMutex     sync.RWMutex
 	MinDecisions       float64
 	HoldScore          float64
+	DepthMap           map[string]ExchangeModel.Depth
 }
 
 func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
@@ -36,7 +35,6 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 	buyVolume := 0.00
 	smaValue := 0.00
 	amount := 0.00
-	priceSum := 0.00
 
 	currentUnixTime := time.Now().Unix()
 
@@ -54,15 +52,12 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		switch decision.Operation {
 		case "BUY":
 			buyScore += decision.Score
-			priceSum += decision.Price
 			break
 		case "SELL":
 			sellScore += decision.Score
-			priceSum += decision.Price
 			break
 		case "HOLD":
 			holdScore += decision.Score
-			priceSum += decision.Price
 			break
 		}
 	}
@@ -71,23 +66,38 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		return
 	}
 
-	log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
+	//marketDepth := m.GetDepth(symbol)
+	//if marketDepth != nil {
+	//	log.Printf(
+	//		"[%s] Bid: %.6f[%.4f] Ask: %.6f[%.4f]\n",
+	//		symbol,
+	//		marketDepth.GetBestBid(),
+	//		marketDepth.GetBidVolume(),
+	//		marketDepth.GetBestAsk(),
+	//		marketDepth.GetAskVolume(),
+	//	)
+	//}
 
 	if holdScore >= m.HoldScore {
 		return
 	}
 
-	price := priceSum / amount
-
 	if sellScore >= buyScore {
+		log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
 		if err == nil {
 			order, err := m.OrderRepository.GetOpenedOrder(symbol, "BUY")
 			if err == nil {
-				err = m.Sell(tradeLimit, order, symbol, price, order.Quantity, sellVolume, buyVolume, smaValue)
-				if err != nil {
-					log.Println(err)
+				price := m.calculateSellPrice(tradeLimit)
+
+				if price > 0 {
+					err = m.Sell(tradeLimit, order, symbol, price, order.Quantity, sellVolume, buyVolume, smaValue)
+					if err != nil {
+						log.Println(err)
+					}
+				} else {
+					log.Printf("[%s] No BIDs on the market", symbol)
 				}
 			} else {
 				log.Printf("[%s] Nothing to sell\n", symbol)
@@ -98,21 +108,58 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 	}
 
 	if buyScore > sellScore {
+		log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
 		if err == nil {
 			_, err := m.OrderRepository.GetOpenedOrder(symbol, "BUY")
 			if err != nil {
-				quantity := m._FormatQuantity(tradeLimit, tradeLimit.USDTLimit/price)
-				err = m.Buy(tradeLimit, symbol, price, quantity, sellVolume, buyVolume, smaValue)
-				if err != nil {
-					log.Println(err)
+				price := m.calculateBuyPrice(tradeLimit)
+
+				if price > 0 {
+					quantity := m._FormatQuantity(tradeLimit, tradeLimit.USDTLimit/price)
+					err = m.Buy(tradeLimit, symbol, price, quantity, sellVolume, buyVolume, smaValue)
+					if err != nil {
+						log.Println(err)
+					}
+				} else {
+					log.Printf("[%s] No ASKs on the market", symbol)
 				}
 			}
 		}
 
 		return
 	}
+}
+
+func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit) float64 {
+	marketDepth := m.GetDepth(tradeLimit.Symbol)
+	bestPrice := 0.00
+
+	if marketDepth != nil {
+		bestPrice = marketDepth.GetBestBid()
+	}
+
+	if 0.00 == bestPrice {
+		return bestPrice
+	}
+
+	return m._FormatPrice(tradeLimit, bestPrice*1.005) // 0.5% higher than best Bid
+}
+
+func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) float64 {
+	marketDepth := m.GetDepth(tradeLimit.Symbol)
+	bestPrice := 0.00
+
+	if marketDepth != nil {
+		bestPrice = marketDepth.GetBestAsk()
+	}
+
+	if 0.00 == bestPrice {
+		return bestPrice
+	}
+
+	return m._FormatPrice(tradeLimit, bestPrice*0.995) // 0.5% lower than best Ask
 }
 
 func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64) error {
@@ -140,37 +187,6 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 	m._AcquireLock(symbol)
 	defer m._ReleaseLock(symbol)
 
-	marketDepth, _ := m.Binance.GetDepth(symbol)
-	lowestPrice := 0.00
-	finalQuantity := quantity
-	finalPrice := price
-
-	// todo: validate with Asks...
-	if marketDepth != nil {
-		for _, ask := range marketDepth.Asks {
-			if ask[1].Value >= quantity && (0.00 == lowestPrice || ask[0].Value <= lowestPrice) {
-				lowestPrice = ask[0].Value
-			}
-		}
-	}
-
-	if 0.00 == lowestPrice {
-		if m.BuyLowestOnly {
-			return errors.New(fmt.Sprintf("[%s] No ASKs on the market", symbol))
-		} else {
-			lowestPrice = finalPrice
-		}
-	}
-
-	// apply allowed correction
-	if lowestPrice > finalPrice {
-		if m.BuyLowestOnly {
-			return errors.New(fmt.Sprintf("[%s] Can't buy price %f the lowest price is %f", symbol, finalPrice, lowestPrice))
-		} else {
-			finalPrice = m._FormatPrice(tradeLimit, (finalPrice+lowestPrice)/2)
-		}
-	}
-
 	// todo: commission
 	// You place an order to buy 10 ETH for 3,452.55 USDT each:
 	// Trading fee = 10 ETH * 0.1% = 0.01 ETH
@@ -179,8 +195,8 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 
 	var order = ExchangeModel.Order{
 		Symbol:     symbol,
-		Quantity:   finalQuantity,
-		Price:      finalPrice,
+		Quantity:   quantity,
+		Price:      price,
 		CreatedAt:  time.Now().Format("2006-01-02 15:04:05"),
 		SellVolume: sellVolume,
 		BuyVolume:  buyVolume,
@@ -222,49 +238,24 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 	m._AcquireLock(symbol)
 	defer m._ReleaseLock(symbol)
 
-	marketDepth, _ := m.Binance.GetDepth(symbol)
-	highestPrice := 0.00
-	finalPrice := price
-
-	// todo: validate with Bids...
-	if marketDepth != nil {
-		for _, bid := range marketDepth.Bids {
-			if bid[1].Value >= quantity && (0.00 == highestPrice || bid[0].Value >= highestPrice) {
-				highestPrice = bid[0].Value
-			}
-		}
-	}
-
-	if 0.00 == highestPrice {
-		return errors.New(fmt.Sprintf("[%s] No BIDs on the market", symbol))
-	}
-
-	if highestPrice < finalPrice {
-		if m.SellHighestOnly {
-			return errors.New(fmt.Sprintf("[%s] Can't sell price %f the highest price is %f", symbol, finalPrice, highestPrice))
-		} else {
-			finalPrice = m._FormatPrice(tradeLimit, (finalPrice+highestPrice)/2)
-		}
-	}
-
 	// todo: commission
 	// Or you place an order to sell 10 ETH for 3,452.55 USDT each:
 	// Trading fee = (10 ETH * 3,452.55 USDT) * 0.1% = 34.5255 USDT
 
-	profit := (finalPrice - opened.Price) * quantity
+	profit := (price - opened.Price) * quantity
 
 	// loose money control
-	if opened.Price >= finalPrice {
+	if opened.Price >= price {
 		return errors.New(fmt.Sprintf(
 			"[%s] Bad deal, wait for positive profit: %.6f [o:%.6f, c:%.6f]",
 			symbol,
 			profit,
 			opened.Price,
-			finalPrice,
+			price,
 		))
 	}
 
-	profitPercent := (finalPrice * 100 / opened.Price) - 100
+	profitPercent := (price * 100 / opened.Price) - 100
 
 	if profitPercent < tradeLimit.MinProfitPercent {
 		return errors.New(fmt.Sprintf(
@@ -273,14 +264,14 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 			profitPercent,
 			tradeLimit.MinProfitPercent,
 			opened.Price,
-			finalPrice,
+			price,
 		))
 	}
 
 	var order = ExchangeModel.Order{
 		Symbol:     symbol,
 		Quantity:   quantity,
-		Price:      finalPrice,
+		Price:      price,
 		CreatedAt:  time.Now().Format("2006-01-02 15:04:05"),
 		SellVolume: sellVolume,
 		BuyVolume:  buyVolume,
@@ -453,4 +444,22 @@ func (m *MakerService) _FormatQuantity(limit ExchangeModel.TradeLimit, quantity 
 	precision := len(split[1])
 	ratio := math.Pow(10, float64(precision))
 	return math.Round(quantity*ratio) / ratio
+}
+
+func (m *MakerService) SetDepth(depth ExchangeModel.Depth) {
+	m.TradeLockMutex.Lock()
+	m.DepthMap[depth.Symbol] = depth
+	m.TradeLockMutex.Unlock()
+}
+
+func (m *MakerService) GetDepth(symbol string) *ExchangeModel.Depth {
+	m.TradeLockMutex.Lock()
+	depth, exists := m.DepthMap[symbol]
+	m.TradeLockMutex.Unlock()
+
+	if !exists {
+		return nil
+	}
+
+	return &depth
 }

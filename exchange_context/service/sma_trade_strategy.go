@@ -40,11 +40,11 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 	s.Trades[trade.Symbol] = tradeSlice // override to avoid memory leaks
 	s.TradesMapMutex.Unlock()
 
-	sellSma := s._CalculateSMA(tradeSlice[len(tradeSlice)-sellPeriod:])
-	buySma := s._CalculateSMA(tradeSlice[len(tradeSlice)-buyPeriod:])
+	sellSma := s.calculateSMA(tradeSlice[len(tradeSlice)-sellPeriod:])
+	buySma := s.calculateSMA(tradeSlice[len(tradeSlice)-buyPeriod:])
 
-	buyVolumeS, sellVolumeS := s._GetByAndSellVolume(tradeSlice[len(tradeSlice)-sellPeriod:])
-	buyVolumeB, sellVolumeB := s._GetByAndSellVolume(tradeSlice[len(tradeSlice)-buyPeriod:])
+	buyVolumeS, sellVolumeS := s.getByAndSellVolume(tradeSlice[len(tradeSlice)-sellPeriod:])
+	buyVolumeB, sellVolumeB := s.getByAndSellVolume(tradeSlice[len(tradeSlice)-buyPeriod:])
 
 	buyIndicator := buyVolumeB / sellVolumeB
 
@@ -82,7 +82,7 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 	}
 }
 
-func (s *SmaTradeStrategy) _CalculateSMA(trades []ExchangeModel.Trade) float64 {
+func (s *SmaTradeStrategy) calculateSMA(trades []ExchangeModel.Trade) float64 {
 	var sum float64
 
 	slice := trades
@@ -94,7 +94,7 @@ func (s *SmaTradeStrategy) _CalculateSMA(trades []ExchangeModel.Trade) float64 {
 	return sum / float64(len(slice))
 }
 
-func (s *SmaTradeStrategy) _GetByAndSellVolume(trades []ExchangeModel.Trade) (float64, float64) {
+func (s *SmaTradeStrategy) getByAndSellVolume(trades []ExchangeModel.Trade) (float64, float64) {
 	var buyVolume float64
 	var sellVolume float64
 

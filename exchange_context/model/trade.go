@@ -1,4 +1,4 @@
-package exchange_context
+package model
 
 type Trade struct {
 	Price        float64  `json:"p,string"`

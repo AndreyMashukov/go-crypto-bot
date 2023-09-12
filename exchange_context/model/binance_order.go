@@ -1,4 +1,4 @@
-package exchange_context
+package model
 
 type BinanceOrder struct {
 	OrderId             int64   `json:"orderId"`

@@ -1,4 +1,4 @@
-package exchange_context
+package model
 
 type Decision struct {
 	Operation    string

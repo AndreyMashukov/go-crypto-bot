@@ -1,4 +1,4 @@
-package exchange_context
+package service
 
 import (
 	"errors"
@@ -117,7 +117,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 				price := m.calculateBuyPrice(tradeLimit)
 
 				if price > 0 {
-					quantity := m._FormatQuantity(tradeLimit, tradeLimit.USDTLimit/price)
+					quantity := m.formatQuantity(tradeLimit, tradeLimit.USDTLimit/price)
 					err = m.Buy(tradeLimit, symbol, price, quantity, sellVolume, buyVolume, smaValue)
 					if err != nil {
 						log.Println(err)
@@ -144,7 +144,7 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit) f
 		return bestPrice
 	}
 
-	return m._FormatPrice(tradeLimit, bestPrice*1.005) // 0.5% higher than best Bid
+	return m.formatPrice(tradeLimit, bestPrice*1.005) // 0.5% higher than best Bid
 }
 
 func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) float64 {
@@ -159,7 +159,7 @@ func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) fl
 		return bestPrice
 	}
 
-	return m._FormatPrice(tradeLimit, bestPrice*0.995) // 0.5% lower than best Ask
+	return m.formatPrice(tradeLimit, bestPrice*0.995) // 0.5% lower than best Ask
 }
 
 func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64) error {
@@ -175,7 +175,7 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 		return errors.New(fmt.Sprintf("[%s] BUY operation is disabled", symbol))
 	}
 
-	if m._IsTradeLocked(symbol) {
+	if m.isTradeLocked(symbol) {
 		return errors.New(fmt.Sprintf("Operation Buy is Locked %s", symbol))
 	}
 
@@ -184,8 +184,8 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 	}
 
 	// to avoid concurrent map writes
-	m._AcquireLock(symbol)
-	defer m._ReleaseLock(symbol)
+	m.acquireLock(symbol)
+	defer m.releaseLock(symbol)
 
 	// todo: commission
 	// You place an order to buy 10 ETH for 3,452.55 USDT each:
@@ -208,7 +208,7 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 		// todo: add commission???
 	}
 
-	binanceOrder, err := m._TryLimitOrder(order, "BUY")
+	binanceOrder, err := m.tryLimitOrder(order, "BUY")
 
 	if err != nil {
 		return err
@@ -231,12 +231,12 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 }
 
 func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened ExchangeModel.Order, symbol string, price float64, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
-	if m._IsTradeLocked(symbol) {
+	if m.isTradeLocked(symbol) {
 		return errors.New(fmt.Sprintf("Operation Sell is Locked %s", symbol))
 	}
 
-	m._AcquireLock(symbol)
-	defer m._ReleaseLock(symbol)
+	m.acquireLock(symbol)
+	defer m.releaseLock(symbol)
 
 	// todo: commission
 	// Or you place an order to sell 10 ETH for 3,452.55 USDT each:
@@ -283,7 +283,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 		// todo: add commission???
 	}
 
-	binanceOrder, err := m._TryLimitOrder(order, "SELL")
+	binanceOrder, err := m.tryLimitOrder(order, "SELL")
 
 	if err != nil {
 		return err
@@ -324,14 +324,14 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 }
 
 // todo: order has to be Interface
-func (m *MakerService) _TryLimitOrder(order ExchangeModel.Order, operation string) (ExchangeModel.BinanceOrder, error) {
-	binanceOrder, err := m._FindOrCreateOrder(order, operation)
+func (m *MakerService) tryLimitOrder(order ExchangeModel.Order, operation string) (ExchangeModel.BinanceOrder, error) {
+	binanceOrder, err := m.findOrCreateOrder(order, operation)
 
 	if err != nil {
 		return binanceOrder, err
 	}
 
-	binanceOrder, err = m._WaitExecution(binanceOrder, 10)
+	binanceOrder, err = m.waitExecution(binanceOrder, 10)
 
 	if err != nil {
 		return binanceOrder, err
@@ -340,7 +340,7 @@ func (m *MakerService) _TryLimitOrder(order ExchangeModel.Order, operation strin
 	return binanceOrder, nil
 }
 
-func (m *MakerService) _WaitExecution(binanceOrder ExchangeModel.BinanceOrder, seconds int) (ExchangeModel.BinanceOrder, error) {
+func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, seconds int) (ExchangeModel.BinanceOrder, error) {
 	for i := 0; i <= seconds; i++ {
 		queryOrder, err := m.Binance.QueryOrder(binanceOrder.Symbol, binanceOrder.OrderId)
 		log.Printf("[%s] Wait order execution %d, current status is [%s]", binanceOrder.Symbol, binanceOrder.OrderId, queryOrder.Status)
@@ -374,7 +374,7 @@ func (m *MakerService) _WaitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 	return cancelOrder, errors.New(fmt.Sprintf("Order %d was cancelled", binanceOrder.OrderId))
 }
 
-func (m *MakerService) _IsTradeLocked(symbol string) bool {
+func (m *MakerService) isTradeLocked(symbol string) bool {
 	m.TradeLockMutex.Lock()
 	isLocked, _ := m.Lock[symbol]
 	m.TradeLockMutex.Unlock()
@@ -382,15 +382,15 @@ func (m *MakerService) _IsTradeLocked(symbol string) bool {
 	return isLocked
 }
 
-func (m *MakerService) _AcquireLock(symbol string) {
+func (m *MakerService) acquireLock(symbol string) {
 	*m.LockChannel <- ExchangeModel.Lock{IsLocked: true, Symbol: symbol}
 }
 
-func (m *MakerService) _ReleaseLock(symbol string) {
+func (m *MakerService) releaseLock(symbol string) {
 	*m.LockChannel <- ExchangeModel.Lock{IsLocked: false, Symbol: symbol}
 }
 
-func (m *MakerService) _FindOrCreateOrder(order ExchangeModel.Order, operation string) (ExchangeModel.BinanceOrder, error) {
+func (m *MakerService) findOrCreateOrder(order ExchangeModel.Order, operation string) (ExchangeModel.BinanceOrder, error) {
 	openedOrders, err := m.Binance.GetOpenedOrders()
 
 	if err != nil {
@@ -415,7 +415,7 @@ func (m *MakerService) _FindOrCreateOrder(order ExchangeModel.Order, operation s
 	return binanceOrder, nil
 }
 
-func (m *MakerService) _GetLimit(symbol string) *ExchangeModel.TradeLimit {
+func (m *MakerService) tradeLimit(symbol string) *ExchangeModel.TradeLimit {
 	tradeLimits := m.ExchangeRepository.GetTradeLimits()
 	for _, tradeLimit := range tradeLimits {
 		if tradeLimit.Symbol == symbol {
@@ -426,7 +426,7 @@ func (m *MakerService) _GetLimit(symbol string) *ExchangeModel.TradeLimit {
 	return nil
 }
 
-func (m *MakerService) _FormatPrice(limit ExchangeModel.TradeLimit, price float64) float64 {
+func (m *MakerService) formatPrice(limit ExchangeModel.TradeLimit, price float64) float64 {
 	if price < limit.MinPrice {
 		return limit.MinPrice
 	}
@@ -437,7 +437,7 @@ func (m *MakerService) _FormatPrice(limit ExchangeModel.TradeLimit, price float6
 	return math.Round(price*ratio) / ratio
 }
 
-func (m *MakerService) _FormatQuantity(limit ExchangeModel.TradeLimit, quantity float64) float64 {
+func (m *MakerService) formatQuantity(limit ExchangeModel.TradeLimit, quantity float64) float64 {
 	if quantity < limit.MinQuantity {
 		return limit.MinQuantity
 	}

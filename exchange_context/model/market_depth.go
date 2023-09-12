@@ -1,4 +1,4 @@
-package exchange_context
+package model
 
 type MarketDepth struct {
 	LastUpdateId int64       `json:"lastUpdateId"`

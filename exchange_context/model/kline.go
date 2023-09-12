@@ -1,4 +1,4 @@
-package exchange_context
+package model
 
 type KLine struct {
 	Symbol    string   `json:"s"`

@@ -1,4 +1,4 @@
-package exchange_context
+package model
 
 import (
 	"encoding/json"

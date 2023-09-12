@@ -1,4 +1,4 @@
-package exchange_context
+package service
 
 import (
 	ExchangeModel "github.com/AndreyMashukov/go-crypto-bot/server/exchange_context/model"

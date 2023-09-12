@@ -144,7 +144,7 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit) f
 		return bestPrice
 	}
 
-	return m.formatPrice(tradeLimit, bestPrice*1.005) // 0.5% higher than best Bid
+	return m.formatPrice(tradeLimit, bestPrice*1.0025) // +0.25% higher than best Bid
 }
 
 func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) float64 {
@@ -159,7 +159,7 @@ func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) fl
 		return bestPrice
 	}
 
-	return m.formatPrice(tradeLimit, bestPrice*0.995) // 0.5% lower than best Ask
+	return m.formatPrice(tradeLimit, bestPrice*0.9975) // -0.25% lower than best Ask
 }
 
 func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64) error {

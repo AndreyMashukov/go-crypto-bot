@@ -1,4 +1,4 @@
-package exchange_context
+package model
 
 type Depth struct {
 	Symbol    string      `json:"s"`
@@ -18,7 +18,7 @@ func (d *Depth) GetBestBid() float64 {
 	}
 
 	for _, bid := range d.Bids {
-		if (0.00 == topPrice || bid[0].Value < topPrice) && bid[0].Value >= (priceSum/bidCount)/1.5 {
+		if (0.00 == topPrice || bid[0].Value > topPrice) && bid[0].Value >= (priceSum/bidCount)/1.2 {
 			topPrice = bid[0].Value
 		}
 	}
@@ -37,7 +37,7 @@ func (d *Depth) GetBestAsk() float64 {
 	}
 
 	for _, ask := range d.Asks {
-		if (0.00 == topPrice || ask[0].Value <= topPrice) && ask[0].Value <= (priceSum/bidCount)*1.2 {
+		if (0.00 == topPrice || ask[0].Value < topPrice) && ask[0].Value <= (priceSum/bidCount)*1.2 {
 			topPrice = ask[0].Value
 		}
 	}

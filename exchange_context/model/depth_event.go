@@ -1,4 +1,4 @@
-package exchange_context
+package model
 
 type DepthEvent struct {
 	Stream string `json:"stream"`

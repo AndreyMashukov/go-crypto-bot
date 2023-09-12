@@ -1,4 +1,4 @@
-package exchange_context
+package model
 
 type KlineEvent struct {
 	Stream    string    `json:"stream"`

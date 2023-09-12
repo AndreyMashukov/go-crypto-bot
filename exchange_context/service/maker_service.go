@@ -137,7 +137,7 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit) f
 	bestPrice := 0.00
 
 	if marketDepth != nil {
-		bestPrice = marketDepth.GetBestBid()
+		bestPrice = marketDepth.GetBestAsk()
 	}
 
 	if 0.00 == bestPrice {
@@ -152,7 +152,7 @@ func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) fl
 	bestPrice := 0.00
 
 	if marketDepth != nil {
-		bestPrice = marketDepth.GetBestAsk()
+		bestPrice = marketDepth.GetBestBid()
 	}
 
 	if 0.00 == bestPrice {
@@ -366,6 +366,8 @@ func (m *MakerService) _WaitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 		log.Println(err)
 		return binanceOrder, err
 	}
+
+	// handle cancel error and get again
 
 	log.Printf("Order [%d] is cancelled [%s]", cancelOrder.OrderId, cancelOrder.Status)
 

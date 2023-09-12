@@ -80,10 +80,11 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			order, err := m.OrderRepository.GetOpenedOrder(symbol, "BUY")
 			if err == nil {
 				price := m.calculateSellPrice(tradeLimit, order)
+				smaFormatted := m.formatPrice(tradeLimit, smaValue)
 
 				if price > 0 {
 					// todo: calculate limit order ttl!
-					err = m.Sell(tradeLimit, order, symbol, price, order.Quantity, sellVolume, buyVolume, smaValue)
+					err = m.Sell(tradeLimit, order, symbol, price, order.Quantity, sellVolume, buyVolume, smaFormatted)
 					if err != nil {
 						log.Println(err)
 					}
@@ -106,16 +107,16 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			_, err := m.OrderRepository.GetOpenedOrder(symbol, "BUY")
 			if err != nil {
 				price := m.calculateBuyPrice(tradeLimit)
-				avgPrice := m.formatPrice(tradeLimit, priceSum/amount)
+				smaFormatted := m.formatPrice(tradeLimit, smaValue)
 
-				if price > avgPrice {
-					log.Printf("[%s] Bad BUY price! Avg: %.6f, Price: %.6f\n", symbol, avgPrice, price)
+				if price > smaFormatted {
+					log.Printf("[%s] Bad BUY price! SMA: %.6f, Price: %.6f\n", symbol, smaFormatted, price)
 					return
 				}
 
 				if price > 0 {
 					quantity := m.formatQuantity(tradeLimit, tradeLimit.USDTLimit/price)
-					err = m.Buy(tradeLimit, symbol, price, quantity, sellVolume, buyVolume, smaValue)
+					err = m.Buy(tradeLimit, symbol, price, quantity, sellVolume, buyVolume, smaFormatted)
 					if err != nil {
 						log.Println(err)
 					}

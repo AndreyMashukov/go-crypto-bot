@@ -106,7 +106,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			_, err := m.OrderRepository.GetOpenedOrder(symbol, "BUY")
 			if err != nil {
 				price := m.calculateBuyPrice(tradeLimit)
-				avgPrice := priceSum / amount
+				avgPrice := m.formatPrice(tradeLimit, priceSum/amount)
 
 				if price > avgPrice {
 					log.Printf("[%s] Bad BUY price! Avg: %.6f, Price: %.6f\n", symbol, avgPrice, price)
@@ -207,7 +207,7 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 		// todo: add commission???
 	}
 
-	binanceOrder, err := m.tryLimitOrder(order, "BUY")
+	binanceOrder, err := m.tryLimitOrder(order, "BUY", 40)
 
 	if err != nil {
 		return err
@@ -280,7 +280,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 		// todo: add commission???
 	}
 
-	binanceOrder, err := m.tryLimitOrder(order, "SELL")
+	binanceOrder, err := m.tryLimitOrder(order, "SELL", 20)
 
 	if err != nil {
 		return err
@@ -321,14 +321,14 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 }
 
 // todo: order has to be Interface
-func (m *MakerService) tryLimitOrder(order ExchangeModel.Order, operation string) (ExchangeModel.BinanceOrder, error) {
+func (m *MakerService) tryLimitOrder(order ExchangeModel.Order, operation string, ttl int) (ExchangeModel.BinanceOrder, error) {
 	binanceOrder, err := m.findOrCreateOrder(order, operation)
 
 	if err != nil {
 		return binanceOrder, err
 	}
 
-	binanceOrder, err = m.waitExecution(binanceOrder, 20)
+	binanceOrder, err = m.waitExecution(binanceOrder, ttl)
 
 	if err != nil {
 		return binanceOrder, err

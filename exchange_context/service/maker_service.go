@@ -35,6 +35,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 	buyVolume := 0.00
 	smaValue := 0.00
 	amount := 0.00
+	priceSum := 0.00
 
 	currentUnixTime := time.Now().Unix()
 
@@ -60,6 +61,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			holdScore += decision.Score
 			break
 		}
+		priceSum += decision.Price
 	}
 
 	if amount != m.MinDecisions {
@@ -77,7 +79,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		if err == nil {
 			order, err := m.OrderRepository.GetOpenedOrder(symbol, "BUY")
 			if err == nil {
-				price := m.calculateSellPrice(tradeLimit)
+				price := m.calculateSellPrice(tradeLimit, order)
 
 				if price > 0 {
 					err = m.Sell(tradeLimit, order, symbol, price, order.Quantity, sellVolume, buyVolume, smaValue)
@@ -103,6 +105,12 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			_, err := m.OrderRepository.GetOpenedOrder(symbol, "BUY")
 			if err != nil {
 				price := m.calculateBuyPrice(tradeLimit)
+				avgPrice := priceSum / amount
+
+				if price > avgPrice {
+					log.Printf("[%s] Bad BUY price! Avg: %.6f, Price: %.6f\n", symbol, avgPrice, price)
+					return
+				}
 
 				if price > 0 {
 					quantity := m.formatQuantity(tradeLimit, tradeLimit.USDTLimit/price)
@@ -115,12 +123,10 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 				}
 			}
 		}
-
-		return
 	}
 }
 
-func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit) float64 {
+func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order) float64 {
 	marketDepth := m.GetDepth(tradeLimit.Symbol)
 	bestPrice := 0.00
 
@@ -132,8 +138,14 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit) f
 		return bestPrice
 	}
 
-	amendment := 1.00 + (tradeLimit.MinProfitPercent / 100)
-	return m.formatPrice(tradeLimit, bestPrice*amendment) // ~ +0.25% higher than best Bid
+	amendment := 1.00 + (tradeLimit.MinProfitPercent / 100) // ~ +0.25% higher than best Bid
+	price := m.formatPrice(tradeLimit, bestPrice*amendment)
+
+	if price <= order.Price {
+		return m.formatPrice(tradeLimit, order.Price*amendment)
+	}
+
+	return price
 }
 
 func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) float64 {

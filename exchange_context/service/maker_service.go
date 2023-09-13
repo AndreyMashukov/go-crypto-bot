@@ -350,24 +350,23 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 	}
 	log.Printf("[%s] Order Book start position is [%d] %.6f\n", binanceOrder.Symbol, currentPosition, book[0])
 
-	orderStatus := binanceOrder.Status
+	executedQty := 0.00
 	for i := 0; i <= seconds; i++ {
 		queryOrder, err := m.Binance.QueryOrder(binanceOrder.Symbol, binanceOrder.OrderId)
 		log.Printf("[%s] Wait order execution %d, current status is [%s]", binanceOrder.Symbol, binanceOrder.OrderId, queryOrder.Status)
 
-		// wait only 5 minutes for `PARTIALLY_FILLED` orders, then cancel it!
 		if err == nil && queryOrder.Status == "PARTIALLY_FILLED" {
 			time.Sleep(time.Second)
-			if orderStatus != queryOrder.Status {
+			// Add 5 minutes more if ExecutedQty moves up!
+			if queryOrder.ExecutedQty > executedQty {
 				seconds = seconds + (60 * 5)
 			}
 
-			orderStatus = queryOrder.Status
+			executedQty = queryOrder.ExecutedQty
 			continue
 		}
 
 		// todo: handle EXPIRED status...
-		orderStatus = queryOrder.Status
 
 		if err == nil && queryOrder.Status == "FILLED" {
 			log.Printf("[%s] Order [%d] is executed [%s]", binanceOrder.Symbol, queryOrder.OrderId, queryOrder.Status)

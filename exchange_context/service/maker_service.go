@@ -380,6 +380,14 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			continue
 		}
 
+		if err == nil && queryOrder.Status == "EXPIRED" {
+			break
+		}
+
+		if err == nil && queryOrder.Status == "CANCELED" {
+			break
+		}
+
 		// todo: handle EXPIRED status...
 
 		if err == nil && queryOrder.Status == "FILLED" {
@@ -421,9 +429,9 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 
 	// handle cancel error and get again
 
-	log.Printf("Order [%d] is cancelled [%s]", cancelOrder.OrderId, cancelOrder.Status)
+	log.Printf("Order [%d] is CANCELED [%s]", cancelOrder.OrderId, cancelOrder.Status)
 
-	return cancelOrder, errors.New(fmt.Sprintf("Order %d was cancelled", binanceOrder.OrderId))
+	return cancelOrder, errors.New(fmt.Sprintf("Order %d was CANCELED", binanceOrder.OrderId))
 }
 
 func (m *MakerService) isTradeLocked(symbol string) bool {

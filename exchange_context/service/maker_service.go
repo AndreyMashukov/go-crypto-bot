@@ -209,7 +209,7 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 		// todo: add commission???
 	}
 
-	binanceOrder, err := m.tryLimitOrder(order, "BUY", 40)
+	binanceOrder, err := m.tryLimitOrder(order, "BUY", 15)
 
 	if err != nil {
 		return err
@@ -282,7 +282,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 		// todo: add commission???
 	}
 
-	binanceOrder, err := m.tryLimitOrder(order, "SELL", 20)
+	binanceOrder, err := m.tryLimitOrder(order, "SELL", 15)
 
 	if err != nil {
 		return err
@@ -342,14 +342,12 @@ func (m *MakerService) tryLimitOrder(order ExchangeModel.Order, operation string
 func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, seconds int) (ExchangeModel.BinanceOrder, error) {
 	depth := m.GetDepth(binanceOrder.Symbol)
 	var currentPosition int
-	//var initialPosition int
 	var book [2]ExchangeModel.Number
 	if "BUY" == binanceOrder.Side {
 		currentPosition, book = depth.GetBidPosition(binanceOrder.Price)
 	} else {
 		currentPosition, book = depth.GetAskPosition(binanceOrder.Price)
 	}
-	//initialPosition = currentPosition
 	log.Printf("[%s] Order Book start position is [%d] %.6f\n", binanceOrder.Symbol, currentPosition, book[0])
 
 	for i := 0; i <= seconds; i++ {
@@ -377,18 +375,11 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			bookPosition, book = depth.GetAskPosition(binanceOrder.Price)
 		}
 
-		// todo: handle zero book, when nothing...
-		// todo: check depth position and if it goes up than increase wait time
 		if bookPosition < currentPosition {
-			seconds += 5
+			seconds += seconds
 			currentPosition = bookPosition
 			log.Printf("[%s] Order Book position decrease [%d] %.6f!!! Ttl has extended\n", binanceOrder.Symbol, bookPosition, book[0])
 		}
-
-		// todo: debug...
-		//if bookPosition > initialPosition+2 {
-		//	log.Printf("[%s] Order Book position increase [%d] %.6f, break\n", binanceOrder.Symbol, bookPosition, book[0])
-		//}
 
 		time.Sleep(time.Second)
 	}

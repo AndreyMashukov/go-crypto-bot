@@ -1,5 +1,7 @@
 package model
 
+import "sort"
+
 type Depth struct {
 	Symbol    string      `json:"s"`
 	Timestamp UnixTime    `json:"T"`
@@ -69,6 +71,57 @@ func (d *Depth) GetAvgBid() float64 {
 	return sum / amount
 }
 
+func (d *Depth) GetMaxQtyAsk() float64 {
+	value := 0.00
+	qty := 0.00
+
+	for _, ask := range d.Asks {
+		if 0.00 == qty || ask[1].Value > qty {
+			qty = ask[1].Value
+			value = ask[0].Value
+		}
+	}
+
+	return value
+}
+
+func (d *Depth) GetMaxQtyBid() float64 {
+	value := 0.00
+	qty := 0.00
+
+	for _, bid := range d.Bids {
+		if 0.00 == qty || bid[1].Value > qty {
+			qty = bid[1].Value
+			value = bid[0].Value
+		}
+	}
+
+	return value
+}
+func (d *Depth) GetAvgVolAsk() float64 {
+	sumVolume := 0.00
+	sumQty := 0.00
+
+	for _, ask := range d.Asks {
+		sumVolume += ask[0].Value * ask[1].Value
+		sumQty += ask[1].Value
+	}
+
+	return sumVolume / sumQty
+}
+
+func (d *Depth) GetAvgVolBid() float64 {
+	sumVolume := 0.00
+	sumQty := 0.00
+
+	for _, bid := range d.Bids {
+		sumVolume += bid[0].Value * bid[1].Value
+		sumQty += bid[1].Value
+	}
+
+	return sumVolume / sumQty
+}
+
 func (d *Depth) GetBidVolume() float64 {
 	volume := 0.00
 
@@ -87,4 +140,32 @@ func (d *Depth) GetAskVolume() float64 {
 	}
 
 	return volume
+}
+
+func (d *Depth) GetBidPosition(price float64) (int, [2]Number) {
+	sort.SliceStable(d.Bids, func(i int, j int) bool {
+		return d.Bids[i][0].Value > d.Bids[j][0].Value
+	})
+
+	for index, bid := range d.Bids {
+		if bid[0].Value >= price && len(d.Bids) > index+1 && d.Bids[index+1][0].Value < price {
+			return index, bid
+		}
+	}
+
+	return 0, [2]Number{{Value: 0.00}, {Value: 0.00}}
+}
+
+func (d *Depth) GetAskPosition(price float64) (int, [2]Number) {
+	sort.SliceStable(d.Asks, func(i int, j int) bool {
+		return d.Asks[i][0].Value < d.Asks[j][0].Value
+	})
+
+	for index, ask := range d.Asks {
+		if ask[0].Value <= price && len(d.Asks) > index+1 && d.Asks[index+1][0].Value > price {
+			return index, ask
+		}
+	}
+
+	return 0, [2]Number{{Value: 0.00}, {Value: 0.00}}
 }

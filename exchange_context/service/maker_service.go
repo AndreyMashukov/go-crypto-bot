@@ -340,6 +340,18 @@ func (m *MakerService) tryLimitOrder(order ExchangeModel.Order, operation string
 }
 
 func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, seconds int) (ExchangeModel.BinanceOrder, error) {
+	depth := m.GetDepth(binanceOrder.Symbol)
+	var currentPosition int
+	//var initialPosition int
+	var book [2]ExchangeModel.Number
+	if "BUY" == binanceOrder.Side {
+		currentPosition, book = depth.GetBidPosition(binanceOrder.Price)
+	} else {
+		currentPosition, book = depth.GetAskPosition(binanceOrder.Price)
+	}
+	//initialPosition = currentPosition
+	log.Printf("[%s] Order Book start position is [%d] %.6f\n", binanceOrder.Symbol, currentPosition, book[0])
+
 	for i := 0; i <= seconds; i++ {
 		queryOrder, err := m.Binance.QueryOrder(binanceOrder.Symbol, binanceOrder.OrderId)
 		log.Printf("[%s] Wait order execution %d, current status is [%s]", binanceOrder.Symbol, binanceOrder.OrderId, queryOrder.Status)
@@ -355,6 +367,28 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 
 			return queryOrder, nil
 		}
+
+		depth := m.GetDepth(binanceOrder.Symbol)
+		var bookPosition int
+		var book [2]ExchangeModel.Number
+		if "BUY" == binanceOrder.Side {
+			bookPosition, book = depth.GetBidPosition(binanceOrder.Price)
+		} else {
+			bookPosition, book = depth.GetAskPosition(binanceOrder.Price)
+		}
+
+		// todo: handle zero book, when nothing...
+		// todo: check depth position and if it goes up than increase wait time
+		if bookPosition < currentPosition {
+			seconds += 5
+			currentPosition = bookPosition
+			log.Printf("[%s] Order Book position decrease [%d] %.6f!!! Ttl has extended\n", binanceOrder.Symbol, bookPosition, book[0])
+		}
+
+		// todo: debug...
+		//if bookPosition > initialPosition+2 {
+		//	log.Printf("[%s] Order Book position increase [%d] %.6f, break\n", binanceOrder.Symbol, bookPosition, book[0])
+		//}
 
 		time.Sleep(time.Second)
 	}

@@ -23,7 +23,6 @@ type MakerService struct {
 	TradeLockMutex     sync.RWMutex
 	MinDecisions       float64
 	HoldScore          float64
-	DepthMap           map[string]ExchangeModel.Depth
 }
 
 func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
@@ -37,13 +36,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 	amount := 0.00
 	priceSum := 0.00
 
-	currentUnixTime := time.Now().Unix()
-
 	for _, decision := range decisions {
-		if decision.Timestamp < (currentUnixTime - 5) {
-			continue
-		}
-
 		if decision.StrategyName == "sma_trade_strategy" {
 			buyVolume = decision.Params[0]
 			sellVolume = decision.Params[1]
@@ -509,19 +502,9 @@ func (m *MakerService) formatQuantity(limit ExchangeModel.TradeLimit, quantity f
 }
 
 func (m *MakerService) SetDepth(depth ExchangeModel.Depth) {
-	m.TradeLockMutex.Lock()
-	m.DepthMap[depth.Symbol] = depth
-	m.TradeLockMutex.Unlock()
+	m.ExchangeRepository.SetDepth(depth)
 }
 
 func (m *MakerService) GetDepth(symbol string) *ExchangeModel.Depth {
-	m.TradeLockMutex.Lock()
-	depth, exists := m.DepthMap[symbol]
-	m.TradeLockMutex.Unlock()
-
-	if !exists {
-		return nil
-	}
-
-	return &depth
+	return m.ExchangeRepository.GetDepth(symbol)
 }

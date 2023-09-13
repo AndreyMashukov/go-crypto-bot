@@ -1,17 +1,17 @@
 package model
 
 type Order struct {
-	Id              int64
-	Symbol          string
-	Price           float64
-	Quantity        float64
-	CreatedAt       string
-	SellVolume      float64
-	BuyVolume       float64
-	SmaValue        float64
-	Operation       string
-	Status          string
-	ExternalId      *int64
-	ClosedBy        *int64 // order here
-	UsedExtraBudget float64
+	Id              int64   `json:"id"`
+	Symbol          string  `json:"symbol"`
+	Price           float64 `json:"price"`
+	Quantity        float64 `json:"quantity"`
+	CreatedAt       string  `json:"createdAt"`
+	SellVolume      float64 `json:"sellVolume"`
+	BuyVolume       float64 `json:"buyVolume"`
+	SmaValue        float64 `json:"smaValue"`
+	Operation       string  `json:"operation"`
+	Status          string  `json:"status"`
+	ExternalId      *int64  `json:"externalId"`
+	ClosedBy        *int64  `json:"closedBy"` // sell order here
+	UsedExtraBudget float64 `json:"usedExtraBudget"`
 }

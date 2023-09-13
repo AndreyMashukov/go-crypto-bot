@@ -4,7 +4,7 @@ import "sort"
 
 type Depth struct {
 	Symbol    string      `json:"s"`
-	Timestamp UnixTime    `json:"T"`
+	Timestamp int         `json:"T,int"`
 	Bids      [][2]Number `json:"b"`
 	Asks      [][2]Number `json:"a"`
 }

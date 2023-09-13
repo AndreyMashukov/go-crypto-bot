@@ -143,29 +143,45 @@ func (d *Depth) GetAskVolume() float64 {
 }
 
 func (d *Depth) GetBidPosition(price float64) (int, [2]Number) {
-	sort.SliceStable(d.Bids, func(i int, j int) bool {
-		return d.Bids[i][0].Value > d.Bids[j][0].Value
+	bids := make([][2]Number, len(d.Bids))
+	copy(bids, d.Bids)
+	sort.SliceStable(bids, func(i int, j int) bool {
+		return bids[i][0].Value > bids[j][0].Value
 	})
 
-	for index, bid := range d.Bids {
-		if bid[0].Value >= price && len(d.Bids) > index+1 && d.Bids[index+1][0].Value < price {
+	for index, bid := range bids {
+		if bid[0].Value >= price && len(bids) > index+1 && bids[index+1][0].Value < price {
 			return index, bid
 		}
 	}
 
-	return 0, [2]Number{{Value: 0.00}, {Value: 0.00}}
+	if 0 == len(bids) {
+		return 100, [2]Number{{Value: 0.00}, {Value: 0.00}}
+	}
+
+	lastPosition := bids[len(d.Bids)-1]
+
+	return len(bids) - 1, lastPosition
 }
 
 func (d *Depth) GetAskPosition(price float64) (int, [2]Number) {
-	sort.SliceStable(d.Asks, func(i int, j int) bool {
-		return d.Asks[i][0].Value < d.Asks[j][0].Value
+	asks := make([][2]Number, len(d.Asks))
+	copy(asks, d.Asks)
+	sort.SliceStable(asks, func(i int, j int) bool {
+		return asks[i][0].Value < asks[j][0].Value
 	})
 
-	for index, ask := range d.Asks {
-		if ask[0].Value <= price && len(d.Asks) > index+1 && d.Asks[index+1][0].Value > price {
+	for index, ask := range asks {
+		if ask[0].Value <= price && len(asks) > index+1 && asks[index+1][0].Value > price {
 			return index, ask
 		}
 	}
 
-	return 0, [2]Number{{Value: 0.00}, {Value: 0.00}}
+	if 0 == len(asks) {
+		return 100, [2]Number{{Value: 0.00}, {Value: 0.00}}
+	}
+
+	lastPosition := asks[len(asks)-1]
+
+	return len(asks) - 1, lastPosition
 }

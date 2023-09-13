@@ -34,10 +34,10 @@ func TestShouldAllowToGetDepthAskAndBid(t *testing.T) {
 	assert.Equal([2]ExchangeModel.Number{{Value: 1598.9}, {Value: 0.059}}, ask)
 
 	bidIndex, bid = depth.Depth.GetBidPosition(100.00)
-	assert.Equal(0, bidIndex)
-	assert.Equal([2]ExchangeModel.Number{{Value: 0}, {Value: 0}}, bid)
+	assert.Equal(34, bidIndex)
+	assert.Equal([2]ExchangeModel.Number{{Value: 500}, {Value: 199.277}}, bid)
 
 	askIndex, ask = depth.Depth.GetAskPosition(999999999.99)
-	assert.Equal(0, askIndex)
-	assert.Equal([2]ExchangeModel.Number{{Value: 0}, {Value: 0}}, ask)
+	assert.Equal(40, askIndex)
+	assert.Equal([2]ExchangeModel.Number{{Value: 2000.25}, {Value: 2.038}}, ask)
 }

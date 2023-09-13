@@ -7,7 +7,7 @@ services:
     networks:
       - bot-net
     ports:
-      - "80:8080"
+      - "8090:8080"
     restart: always
     depends_on:
       - mysql

@@ -348,17 +348,25 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 	} else {
 		currentPosition, book = depth.GetAskPosition(binanceOrder.Price)
 	}
-	log.Printf("[%s] Order Book start position is [%d] %.6f\n", binanceOrder.Symbol, currentPosition, book[0])
+	log.Printf(
+		"[%s] Order Book start position is [%d] %.6f\n",
+		binanceOrder.Symbol,
+		currentPosition,
+		book[0],
+	)
 
 	executedQty := 0.00
 	for i := 0; i <= seconds; i++ {
 		queryOrder, err := m.Binance.QueryOrder(binanceOrder.Symbol, binanceOrder.OrderId)
 		log.Printf(
-			"[%s] Wait order execution %d, current status is: [%s], executed Qty: %.6f",
+			"[%s] Wait %s [%.6f] order execution %d, current status is: [%s], ExecutedQty: %.6f of %.6f",
 			binanceOrder.Symbol,
+			binanceOrder.Side,
+			binanceOrder.Price,
 			binanceOrder.OrderId,
 			queryOrder.Status,
 			executedQty,
+			queryOrder.OrigQty,
 		)
 
 		if err == nil && queryOrder.Status == "PARTIALLY_FILLED" {
@@ -391,8 +399,14 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 
 		if bookPosition < currentPosition {
 			seconds += seconds
+			log.Printf(
+				"[%s] Order Book position decrease [%d]->[%d] %.6f!!! Ttl has extended\n",
+				binanceOrder.Symbol,
+				currentPosition,
+				bookPosition,
+				book[0],
+			)
 			currentPosition = bookPosition
-			log.Printf("[%s] Order Book position decrease [%d] %.6f!!! Ttl has extended\n", binanceOrder.Symbol, bookPosition, book[0])
 		}
 
 		time.Sleep(time.Second)

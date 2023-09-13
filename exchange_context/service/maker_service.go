@@ -353,7 +353,13 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 	executedQty := 0.00
 	for i := 0; i <= seconds; i++ {
 		queryOrder, err := m.Binance.QueryOrder(binanceOrder.Symbol, binanceOrder.OrderId)
-		log.Printf("[%s] Wait order execution %d, current status is [%s]", binanceOrder.Symbol, binanceOrder.OrderId, queryOrder.Status)
+		log.Printf(
+			"[%s] Wait order execution %d, current status is: [%s], executed Qty: %.6f",
+			binanceOrder.Symbol,
+			binanceOrder.OrderId,
+			queryOrder.Status,
+			executedQty,
+		)
 
 		if err == nil && queryOrder.Status == "PARTIALLY_FILLED" {
 			time.Sleep(time.Second)

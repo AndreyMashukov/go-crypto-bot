@@ -1,13 +1,21 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
+	"github.com/redis/go-redis/v9"
 	model "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	"log"
+	"slices"
+	"time"
 )
 
 type ExchangeRepository struct {
-	DB *sql.DB
+	DB  *sql.DB
+	RDB *redis.Client
+	Ctx *context.Context
 }
 
 func (e *ExchangeRepository) GetSubscribedSymbols() []model.Symbol {
@@ -96,4 +104,78 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 	}
 
 	return tradeLimit, nil
+}
+
+func (e *ExchangeRepository) AddKLine(kLine model.KLine) {
+	encoded, _ := json.Marshal(kLine)
+	e.RDB.LPush(*e.Ctx, fmt.Sprintf("k-lines-%s", kLine.Symbol), string(encoded))
+	e.RDB.LTrim(*e.Ctx, fmt.Sprintf("k-lines-%s", kLine.Symbol), 0, 5000)
+}
+
+func (e *ExchangeRepository) KLineList(symbol string) []model.KLine {
+	res := e.RDB.LRange(*e.Ctx, fmt.Sprintf("k-lines-%s", symbol), 0, 5000).Val()
+	list := make([]model.KLine, 0)
+
+	for _, str := range res {
+		var dto model.KLine
+		json.Unmarshal([]byte(str), &dto)
+		list = append(list, dto)
+	}
+
+	slices.Reverse(list)
+	return list
+}
+
+func (e *ExchangeRepository) SetDepth(depth model.Depth) {
+	encoded, _ := json.Marshal(depth)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("depth-%s", depth.Symbol), string(encoded), time.Second*5)
+}
+
+func (e *ExchangeRepository) GetDepth(symbol string) *model.Depth {
+	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("depth-%s", symbol)).Val()
+	if len(res) == 0 {
+		return nil
+	}
+
+	var dto model.Depth
+	json.Unmarshal([]byte(res), &dto)
+
+	return &dto
+}
+
+func (e *ExchangeRepository) AddTrade(trade model.Trade) {
+	encoded, _ := json.Marshal(trade)
+	e.RDB.LPush(*e.Ctx, fmt.Sprintf("trades-%s", trade.Symbol), string(encoded))
+	e.RDB.LTrim(*e.Ctx, fmt.Sprintf("trades-%s", trade.Symbol), 0, 100)
+}
+
+func (e *ExchangeRepository) TradeList(symbol string) []model.Trade {
+	res := e.RDB.LRange(*e.Ctx, fmt.Sprintf("trades-%s", symbol), 0, 100).Val()
+	list := make([]model.Trade, 0)
+
+	for _, str := range res {
+		var dto model.Trade
+		json.Unmarshal([]byte(str), &dto)
+		list = append(list, dto)
+	}
+
+	slices.Reverse(list)
+	return list
+}
+
+func (e *ExchangeRepository) SetDecision(decision model.Decision) {
+	encoded, _ := json.Marshal(decision)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("decision-%s", decision.StrategyName), string(encoded), time.Second*5)
+}
+
+func (e *ExchangeRepository) GetDecision(strategy string) *model.Decision {
+	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("decision-%s", strategy)).Val()
+	if len(res) == 0 {
+		return nil
+	}
+
+	var dto model.Decision
+	json.Unmarshal([]byte(res), &dto)
+
+	return &dto
 }

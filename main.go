@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/redis/go-redis/v9"
 	ExchangeClient "gitlab.com/open-soft/go-crypto-bot/exchange_context/client"
-	ExchangeController "gitlab.com/open-soft/go-crypto-bot/exchange_context/controller"
+	"gitlab.com/open-soft/go-crypto-bot/exchange_context/controller"
 	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
 	ExchangeService "gitlab.com/open-soft/go-crypto-bot/exchange_context/service"
@@ -26,7 +28,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	http.HandleFunc("/hello", ExchangeController.Hello)
+	var ctx = context.Background()
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "redis:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+
 	httpClient := http.Client{}
 	binance := ExchangeClient.Binance{
 		ApiKey:         "0XVVs5VRWyjJH1fMReQyVUS614C8FlF1rnmvCZN2iK3UDhwncqpGYzF1jgV8KPLM",
@@ -38,8 +46,22 @@ func main() {
 		DB: db,
 	}
 	exchangeRepository := ExchangeRepository.ExchangeRepository{
-		DB: db,
+		DB:  db,
+		RDB: rdb,
+		Ctx: &ctx,
 	}
+
+	exchangeController := controller.ExchangeController{
+		ExchangeRepository: &exchangeRepository,
+	}
+	orderController := controller.OrderController{
+		OrderRepository: &orderRepository,
+	}
+
+	http.HandleFunc("/kline/list/", exchangeController.GetKlineListAction)
+	http.HandleFunc("/depth/", exchangeController.GetDepthAction)
+	http.HandleFunc("/trade/list/", exchangeController.GetTradeListAction)
+	http.HandleFunc("/order/list", orderController.GetOrderListAction)
 
 	eventChannel := make(chan []byte)
 	tradeLogChannel := make(chan ExchangeModel.Trade)
@@ -56,15 +78,13 @@ func main() {
 		TradeLockMutex:     sync.RWMutex{},
 		MinDecisions:       3.00,
 		HoldScore:          75.00,
-		DepthMap:           make(map[string]ExchangeModel.Depth),
 	}
 
 	// todo: BuyExtraOnMarketFallStrategy
 	baseKLineStrategy := ExchangeService.BaseKLineStrategy{}
 	marketDepthStrategy := ExchangeService.MarketDepthStrategy{}
 	smaStrategy := ExchangeService.SmaTradeStrategy{
-		Trades:         make(map[string][]ExchangeModel.Trade),
-		TradesMapMutex: sync.RWMutex{},
+		ExchangeRepository: exchangeRepository,
 	}
 
 	tradeFile, _ := os.OpenFile("trade.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
@@ -79,31 +99,24 @@ func main() {
 		}
 	}()
 
-	decisionLock := sync.RWMutex{}
-	smaDecisions := make(map[string]ExchangeModel.Decision)
-	baseKLineDecisions := make(map[string]ExchangeModel.Decision)
-	marketDepthDecisions := make(map[string]ExchangeModel.Decision)
-
 	tradeLimits := exchangeRepository.GetTradeLimits()
 
 	for _, limit := range tradeLimits {
 		go func(symbol string) {
 			for {
 				currentDecisions := make([]ExchangeModel.Decision, 0)
-				decisionLock.Lock()
-				smaDecision, smaExists := smaDecisions[symbol]
-				kLineDecision, klineExists := baseKLineDecisions[symbol]
-				negPosDecision, negPosExists := marketDepthDecisions[symbol]
-				decisionLock.Unlock()
+				smaDecision := exchangeRepository.GetDecision("sma_trade_strategy")
+				kLineDecision := exchangeRepository.GetDecision("base_kline_strategy")
+				marketDepthDecision := exchangeRepository.GetDecision("market_depth_strategy")
 
-				if smaExists {
-					currentDecisions = append(currentDecisions, smaDecision)
+				if smaDecision != nil {
+					currentDecisions = append(currentDecisions, *smaDecision)
 				}
-				if klineExists {
-					currentDecisions = append(currentDecisions, kLineDecision)
+				if kLineDecision != nil {
+					currentDecisions = append(currentDecisions, *kLineDecision)
 				}
-				if negPosExists {
-					currentDecisions = append(currentDecisions, negPosDecision)
+				if marketDepthDecision != nil {
+					currentDecisions = append(currentDecisions, *marketDepthDecision)
 				}
 
 				if len(currentDecisions) > 0 {
@@ -122,14 +135,13 @@ func main() {
 			var eventModel ExchangeModel.Event
 			json.Unmarshal(message, &eventModel)
 
-			decisionLock.Lock()
 			switch true {
 			case strings.Contains(eventModel.Stream, "@aggTrade"):
 				var tradeEvent ExchangeModel.TradeEvent
 				json.Unmarshal(message, &tradeEvent)
 				trade := tradeEvent.Trade
 				smaDecision := smaStrategy.Decide(trade)
-				smaDecisions[trade.Symbol] = smaDecision
+				exchangeRepository.SetDecision(smaDecision)
 
 				go func() {
 					tradeLogChannel <- tradeEvent.Trade
@@ -139,8 +151,9 @@ func main() {
 				var klineEvent ExchangeModel.KlineEvent
 				json.Unmarshal(message, &klineEvent)
 				kLine := klineEvent.KlineData.Kline
+				exchangeRepository.AddKLine(kLine)
 				baseKLineDecision := baseKLineStrategy.Decide(kLine)
-				baseKLineDecisions[kLine.Symbol] = baseKLineDecision
+				exchangeRepository.SetDecision(baseKLineDecision)
 				go func() {
 					kLineLogChannel <- kLine
 				}()
@@ -150,14 +163,12 @@ func main() {
 				json.Unmarshal(message, &depthEvent)
 				depth := depthEvent.Depth
 				depthDecision := marketDepthStrategy.Decide(depth)
-				marketDepthDecisions[depth.Symbol] = depthDecision
-				// todo call strategies...
+				exchangeRepository.SetDecision(depthDecision)
 				go func() {
 					depthChannel <- depth
 				}()
 				break
 			}
-			decisionLock.Unlock()
 		}
 	}()
 

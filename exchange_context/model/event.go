@@ -2,24 +2,9 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
-	"time"
 )
-
-type UnixTime struct {
-	time.Time
-}
-
-// UnmarshalJSON is the method that satisfies the Unmarshaller interface
-func (u *UnixTime) UnmarshalJSON(b []byte) error {
-	var timestamp int64
-	err := json.Unmarshal(b, &timestamp)
-	if err != nil {
-		return err
-	}
-	u.Time = time.Unix(timestamp/1000, 0)
-	return nil
-}
 
 type Event struct {
 	Stream string `json:"stream"`
@@ -44,4 +29,8 @@ func (p *Number) UnmarshalJSON(b []byte) error {
 
 	p.Value = result
 	return nil
+}
+
+func (p *Number) MarshalJSON() ([]byte, error) {
+	return json.Marshal(fmt.Sprintf("%.8f", p.Value))
 }

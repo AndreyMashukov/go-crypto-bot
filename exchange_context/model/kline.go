@@ -1,14 +1,14 @@
 package model
 
 type KLine struct {
-	Symbol    string   `json:"s"`
-	Open      float64  `json:"o,string"`
-	Close     float64  `json:"c,string"`
-	Low       float64  `json:"l,string"`
-	High      float64  `json:"h,string"`
-	Interval  string   `json:"i"`
-	Timestamp UnixTime `json:"T"`
-	Volume    float64  `json:"v,string"`
+	Symbol    string  `json:"s"`
+	Open      float64 `json:"o,string"`
+	Close     float64 `json:"c,string"`
+	Low       float64 `json:"l,string"`
+	High      float64 `json:"h,string"`
+	Interval  string  `json:"i"`
+	Timestamp int     `json:"T,int"`
+	Volume    float64 `json:"v,string"`
 	// 		"t": 1694420820000,
 	//      "T": 1694420879999,
 	//      "s": "BTCUSDT",

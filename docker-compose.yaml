@@ -6,7 +6,8 @@ services:
     container_name: go_crypto_bot
     networks:
       - bot-net
-
+    ports:
+      - "80:8080"
     restart: always
     depends_on:
       - mysql
@@ -31,6 +32,19 @@ services:
       MYSQL_PASSWORD: go_crypto_bot
     volumes:
       - mysql-data:/var/lib/mysql
+
+    # Redis
+  redis:
+    image: redis:5.0.5-alpine
+    networks:
+      - bot-net
+    volumes:
+      - ./.docker/data/redis:/data:delegated
+#    ports:
+#      - 6379:6379
+    cap_add:
+      - SYS_TIME
+    restart: always
 
 networks:
   bot-net:

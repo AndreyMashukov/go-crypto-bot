@@ -2,14 +2,13 @@ package service
 
 import (
 	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
+	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
 	"math"
-	"sync"
 	"time"
 )
 
 type SmaTradeStrategy struct {
-	Trades         map[string][]ExchangeModel.Trade
-	TradesMapMutex sync.RWMutex
+	ExchangeRepository ExchangeRepository.ExchangeRepository
 }
 
 func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decision {
@@ -17,12 +16,10 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 	buyPeriod := 60
 	maxPeriod := int(math.Max(float64(sellPeriod), float64(buyPeriod)))
 
-	s.TradesMapMutex.Lock()
-	s.Trades[trade.Symbol] = append(s.Trades[trade.Symbol], trade)
+	s.ExchangeRepository.AddTrade(trade)
+	list := s.ExchangeRepository.TradeList(trade.Symbol)
 
-	if len(s.Trades[trade.Symbol]) < maxPeriod {
-		s.TradesMapMutex.Unlock()
-
+	if len(list) < maxPeriod {
 		return ExchangeModel.Decision{
 			StrategyName: "sma_trade_strategy",
 			Score:        999.00,
@@ -33,12 +30,7 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 		}
 	}
 
-	s.TradesMapMutex.Unlock()
-
-	s.TradesMapMutex.Lock()
-	tradeSlice := s.Trades[trade.Symbol][len(s.Trades[trade.Symbol])-maxPeriod:]
-	s.Trades[trade.Symbol] = tradeSlice // override to avoid memory leaks
-	s.TradesMapMutex.Unlock()
+	tradeSlice := list[len(list)-maxPeriod:]
 
 	sellSma := s.calculateSMA(tradeSlice[len(tradeSlice)-sellPeriod:])
 	buySma := s.calculateSMA(tradeSlice[len(tradeSlice)-buyPeriod:])

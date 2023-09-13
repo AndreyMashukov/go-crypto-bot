@@ -176,3 +176,57 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 
 	return order, nil
 }
+
+func (repo *OrderRepository) GetList() []ExchangeModel.Order {
+	res, err := repo.DB.Query(`
+		SELECT
+		    o.id as Id, 
+			o.symbol as Symbol, 
+			o.quantity as Quantity,
+			o.price as Price,
+			o.created_at as CreatedAt,
+			o.operation as Operation,
+			o.status as Status,
+			o.sell_volume as SellVolume,
+			o.buy_volume as BuyVolume,
+			o.sma_value as SmaValue,
+			o.external_id as ExternalId,
+			o.closed_by as ClosedBy,
+			o.used_extra_budget as UsedExtraBudget
+		FROM orders o
+	`)
+	defer res.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	list := make([]ExchangeModel.Order, 0)
+
+	for res.Next() {
+		var order ExchangeModel.Order
+		err := res.Scan(
+			&order.Id,
+			&order.Symbol,
+			&order.Quantity,
+			&order.Price,
+			&order.CreatedAt,
+			&order.Operation,
+			&order.Status,
+			&order.SellVolume,
+			&order.BuyVolume,
+			&order.SmaValue,
+			&order.ExternalId,
+			&order.ClosedBy,
+			&order.UsedExtraBudget,
+		)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		list = append(list, order)
+	}
+
+	return list
+}

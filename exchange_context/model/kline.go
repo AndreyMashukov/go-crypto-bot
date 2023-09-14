@@ -7,7 +7,7 @@ type KLine struct {
 	Low       float64 `json:"l,string"`
 	High      float64 `json:"h,string"`
 	Interval  string  `json:"i"`
-	Timestamp int     `json:"T,int"`
+	Timestamp int64   `json:"T,int"`
 	Volume    float64 `json:"v,string"`
 	// 		"t": 1694420820000,
 	//      "T": 1694420879999,

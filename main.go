@@ -53,8 +53,13 @@ func main() {
 		Ctx: &ctx,
 	}
 
+	chartService := ExchangeService.ChartService{
+		ExchangeRepository: &exchangeRepository,
+		OrderRepository:    &orderRepository,
+	}
 	exchangeController := controller.ExchangeController{
 		ExchangeRepository: &exchangeRepository,
+		ChartService:       &chartService,
 	}
 	orderController := controller.OrderController{
 		OrderRepository: &orderRepository,
@@ -64,6 +69,7 @@ func main() {
 	http.HandleFunc("/depth/", exchangeController.GetDepthAction)
 	http.HandleFunc("/trade/list/", exchangeController.GetTradeListAction)
 	http.HandleFunc("/order/list", orderController.GetOrderListAction)
+	http.HandleFunc("/chart", exchangeController.GetChartAction)
 
 	eventChannel := make(chan []byte)
 	tradeLogChannel := make(chan ExchangeModel.Trade)

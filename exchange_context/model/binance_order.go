@@ -12,4 +12,5 @@ type BinanceOrder struct {
 	Type                string  `json:"type"`
 	Side                string  `json:"side"`
 	WorkingTime         int64   `json:"workingTime"`
+	Timestamp           int64   `json:"time"`
 }

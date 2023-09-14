@@ -76,12 +76,16 @@ func (e *ChartService) GetCharts() []map[string][]any {
 
 			binanceBuyOrder := e.OrderRepository.GetBinanceOrder(symbol, "BUY")
 			if binanceBuyOrder != nil {
-				buyPendingPoint.YAxis = binanceBuyOrder.Price
+				if binanceBuyOrder.Timestamp >= kLine.Timestamp && len(kLines) > kLineIndex && binanceBuyOrder.Timestamp < kLines[kLineIndex+1].Timestamp {
+					buyPendingPoint.YAxis = binanceBuyOrder.Price
+				}
 			}
 
 			binanceSellOrder := e.OrderRepository.GetBinanceOrder(symbol, "SELL")
 			if binanceSellOrder != nil {
-				sellPendingPoint.YAxis = binanceSellOrder.Price
+				if binanceSellOrder.Timestamp >= kLine.Timestamp && len(kLines) > kLineIndex && binanceSellOrder.Timestamp < kLines[kLineIndex+1].Timestamp {
+					sellPendingPoint.YAxis = binanceBuyOrder.Price
+				}
 			}
 
 			klineKey := fmt.Sprintf("kline-%s", symbol)

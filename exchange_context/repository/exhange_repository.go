@@ -107,7 +107,7 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 }
 
 func (e *ExchangeRepository) AddKLine(kLine model.KLine) {
-	list := e.KLineList(kLine.Symbol, false)
+	list := e.KLineList(kLine.Symbol, false, 1)
 
 	if len(list) > 0 {
 		firstKLine := list[0]
@@ -121,8 +121,8 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine) {
 	e.RDB.LTrim(*e.Ctx, fmt.Sprintf("k-lines-%s", kLine.Symbol), 0, 2880)
 }
 
-func (e *ExchangeRepository) KLineList(symbol string, reverse bool) []model.KLine {
-	res := e.RDB.LRange(*e.Ctx, fmt.Sprintf("k-lines-%s", symbol), 0, 2880).Val()
+func (e *ExchangeRepository) KLineList(symbol string, reverse bool, size int64) []model.KLine {
+	res := e.RDB.LRange(*e.Ctx, fmt.Sprintf("k-lines-%s", symbol), 0, size).Val()
 	list := make([]model.KLine, 0)
 
 	for _, str := range res {

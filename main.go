@@ -43,7 +43,9 @@ func main() {
 		HttpClient:     &httpClient,
 	}
 	orderRepository := ExchangeRepository.OrderRepository{
-		DB: db,
+		DB:  db,
+		RDB: rdb,
+		Ctx: &ctx,
 	}
 	exchangeRepository := ExchangeRepository.ExchangeRepository{
 		DB:  db,

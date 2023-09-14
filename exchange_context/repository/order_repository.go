@@ -1,13 +1,46 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
+	"github.com/redis/go-redis/v9"
 	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	"log"
+	"strings"
+	"time"
 )
 
 type OrderRepository struct {
-	DB *sql.DB
+	DB  *sql.DB
+	RDB *redis.Client
+	Ctx *context.Context
+}
+
+func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation string) (ExchangeModel.Order, error) {
+	res := repo.RDB.Get(*repo.Ctx, fmt.Sprintf("opened-order-%s-%s", symbol, strings.ToLower(operation))).Val()
+	if len(res) > 0 {
+		var dto ExchangeModel.Order
+		json.Unmarshal([]byte(res), &dto)
+
+		return dto, nil
+	}
+
+	order, err := repo.GetOpenedOrder(symbol, operation)
+
+	if err != nil {
+		return order, err
+	}
+
+	encoded, _ := json.Marshal(order)
+	repo.RDB.Set(*repo.Ctx, fmt.Sprintf("opened-order-%s-%s", symbol, operation), string(encoded), time.Minute*60)
+
+	return order, nil
+}
+
+func (repo *OrderRepository) DeleteOpenedOrderCache(order ExchangeModel.Order) {
+	repo.RDB.Del(*repo.Ctx, fmt.Sprintf("opened-order-%s-%s", order.Symbol, strings.ToLower(order.Operation)))
 }
 
 func (repo *OrderRepository) GetOpenedOrder(symbol string, operation string) (ExchangeModel.Order, error) {
@@ -95,6 +128,7 @@ func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
 }
 
 func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
+	repo.DeleteOpenedOrderCache(order)
 	_, err := repo.DB.Exec(`
 		UPDATE orders o SET
 	  		o.symbol = ?,
@@ -229,4 +263,25 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 	}
 
 	return list
+}
+
+func (repo *OrderRepository) SetBinanceOrder(order ExchangeModel.BinanceOrder) {
+	encoded, _ := json.Marshal(order)
+	repo.RDB.Set(*repo.Ctx, fmt.Sprintf("binance-order-%s-%s", order.Symbol, strings.ToLower(order.Side)), string(encoded), time.Hour*24*90)
+}
+
+func (repo *OrderRepository) GetBinanceOrder(symbol string, operation string) *ExchangeModel.BinanceOrder {
+	res := repo.RDB.Get(*repo.Ctx, fmt.Sprintf("binance-order-%s-%s", symbol, strings.ToLower(operation))).Val()
+	if len(res) == 0 {
+		return nil
+	}
+
+	var dto ExchangeModel.BinanceOrder
+	json.Unmarshal([]byte(res), &dto)
+
+	return &dto
+}
+
+func (repo *OrderRepository) DeleteBinanceOrder(order ExchangeModel.BinanceOrder) {
+	repo.RDB.Del(*repo.Ctx, fmt.Sprintf("binance-order-%s-%s", order.Symbol, strings.ToLower(order.Side)))
 }

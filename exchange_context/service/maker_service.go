@@ -70,7 +70,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
 		if err == nil {
-			order, err := m.OrderRepository.GetOpenedOrder(symbol, "BUY")
+			order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 			if err == nil {
 				price := m.calculateSellPrice(tradeLimit, order)
 				smaFormatted := m.formatPrice(tradeLimit, smaValue)
@@ -202,7 +202,7 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 		// todo: add commission???
 	}
 
-	binanceOrder, err := m.tryLimitOrder(order, "BUY", 15)
+	binanceOrder, err := m.tryLimitOrder(order, "BUY", 30)
 
 	if err != nil {
 		return err
@@ -275,7 +275,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 		// todo: add commission???
 	}
 
-	binanceOrder, err := m.tryLimitOrder(order, "SELL", 15)
+	binanceOrder, err := m.tryLimitOrder(order, "SELL", 30)
 
 	if err != nil {
 		return err
@@ -333,6 +333,8 @@ func (m *MakerService) tryLimitOrder(order ExchangeModel.Order, operation string
 }
 
 func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, seconds int) (ExchangeModel.BinanceOrder, error) {
+	m.OrderRepository.SetBinanceOrder(binanceOrder)
+
 	depth := m.GetDepth(binanceOrder.Symbol)
 	var currentPosition int
 	var book [2]ExchangeModel.Number
@@ -386,6 +388,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 		if err == nil && queryOrder.Status == "FILLED" {
 			log.Printf("[%s] Order [%d] is executed [%s]", binanceOrder.Symbol, queryOrder.OrderId, queryOrder.Status)
 
+			m.OrderRepository.DeleteBinanceOrder(queryOrder)
 			return queryOrder, nil
 		}
 
@@ -414,6 +417,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 	}
 
 	cancelOrder, err := m.Binance.CancelOrder(binanceOrder.Symbol, binanceOrder.OrderId)
+	m.OrderRepository.DeleteBinanceOrder(cancelOrder)
 
 	if err != nil {
 		log.Println(err)
@@ -444,6 +448,14 @@ func (m *MakerService) releaseLock(symbol string) {
 }
 
 func (m *MakerService) findOrCreateOrder(order ExchangeModel.Order, operation string) (ExchangeModel.BinanceOrder, error) {
+	cached := m.OrderRepository.GetBinanceOrder(order.Symbol, operation)
+
+	if cached != nil {
+		log.Printf("[%s] Found cached %s order %d in binance", order.Symbol, operation, cached.OrderId)
+
+		return *cached, nil
+	}
+
 	openedOrders, err := m.Binance.GetOpenedOrders()
 
 	if err != nil {

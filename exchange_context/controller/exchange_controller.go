@@ -17,7 +17,7 @@ type ExchangeController struct {
 func (e *ExchangeController) GetKlineListAction(w http.ResponseWriter, req *http.Request) {
 	symbol := strings.TrimPrefix(req.URL.Path, "/kline/list/")
 
-	list := e.ExchangeRepository.KLineList(symbol, true)
+	list := e.ExchangeRepository.KLineList(symbol, true, 200)
 	encoded, _ := json.Marshal(list)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")

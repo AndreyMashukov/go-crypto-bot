@@ -31,7 +31,7 @@ func (e *ChartService) GetCharts() []map[string][]model.ChartPoint {
 	for _, symbol := range symbols {
 		list := make(map[string][]model.ChartPoint, 0)
 		symbolOrders := orderMap[symbol]
-		kLines := e.ExchangeRepository.KLineList(symbol, true)
+		kLines := e.ExchangeRepository.KLineList(symbol, true, 200)
 
 		for kLineIndex, kLine := range kLines {
 			klinePoint := model.ChartPoint{

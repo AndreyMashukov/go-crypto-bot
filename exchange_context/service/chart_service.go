@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/AndreyMashukov/go-crypto-bot/server/exchange_context/model"
 	ExchangeRepository "github.com/AndreyMashukov/go-crypto-bot/server/exchange_context/repository"
+	"strings"
 	"time"
 )
 
@@ -66,7 +67,7 @@ func (e *ChartService) GetCharts() []map[string][]any {
 				orderTimestamp := date.UnixMilli() // convert date to timestamp
 
 				if orderTimestamp >= kLine.Timestamp && len(kLines) > kLineIndex && orderTimestamp < kLines[kLineIndex+1].Timestamp {
-					if symbolOrder.Operation == "BUY" {
+					if strings.ToUpper(symbolOrder.Operation) == "BUY" {
 						buyPoint.YAxis = symbolOrder.Price
 					} else {
 						sellPoint.YAxis = symbolOrder.Price

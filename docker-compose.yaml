@@ -17,6 +17,17 @@ services:
       - ./trade.log:/go/src/app/trade.log
       - ./kline.log:/go/src/app/kline.log
 
+  front:
+    image: 'registry.gitlab.com/open-soft/crypto-bot-front'
+    container_name: go_crypto_bot_front
+    networks:
+      - bot-net
+    ports:
+      - "8010:3000"
+    restart: always
+    depends_on:
+      - writer
+
   mysql:
     platform: linux/x86_64
     image: mysql:5.7

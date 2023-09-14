@@ -82,7 +82,7 @@ func (e *ChartService) GetCharts() []map[string][]any {
 
 			binanceSellOrder := e.OrderRepository.GetBinanceOrder(symbol, "SELL")
 			if binanceSellOrder != nil {
-				sellPendingPoint.YAxis = binanceBuyOrder.Price
+				sellPendingPoint.YAxis = binanceSellOrder.Price
 			}
 
 			klineKey := fmt.Sprintf("kline-%s", symbol)

@@ -19,7 +19,9 @@ func (e *ExchangeController) GetKlineListAction(w http.ResponseWriter, req *http
 
 	list := e.ExchangeRepository.KLineList(symbol, true)
 	encoded, _ := json.Marshal(list)
-	w.Header().Set("content-type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, string(encoded))
 }
 
@@ -28,7 +30,9 @@ func (e *ExchangeController) GetDepthAction(w http.ResponseWriter, req *http.Req
 
 	list := e.ExchangeRepository.GetDepth(symbol)
 	encoded, _ := json.Marshal(list)
-	w.Header().Set("content-type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, string(encoded))
 }
 
@@ -37,13 +41,17 @@ func (e *ExchangeController) GetTradeListAction(w http.ResponseWriter, req *http
 
 	list := e.ExchangeRepository.TradeList(symbol)
 	encoded, _ := json.Marshal(list)
-	w.Header().Set("content-type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, string(encoded))
 }
 
 func (e *ExchangeController) GetChartListAction(w http.ResponseWriter, req *http.Request) {
 	chart := e.ChartService.GetCharts()
 	encoded, _ := json.Marshal(chart)
-	w.Header().Set("content-type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, string(encoded))
 }

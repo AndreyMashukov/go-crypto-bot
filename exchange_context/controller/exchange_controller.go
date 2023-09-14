@@ -41,8 +41,8 @@ func (e *ExchangeController) GetTradeListAction(w http.ResponseWriter, req *http
 	fmt.Fprintf(w, string(encoded))
 }
 
-func (e *ExchangeController) GetChartAction(w http.ResponseWriter, req *http.Request) {
-	chart := e.ChartService.GetChart()
+func (e *ExchangeController) GetChartListAction(w http.ResponseWriter, req *http.Request) {
+	chart := e.ChartService.GetCharts()
 	encoded, _ := json.Marshal(chart)
 	w.Header().Set("content-type", "application/json")
 	fmt.Fprintf(w, string(encoded))

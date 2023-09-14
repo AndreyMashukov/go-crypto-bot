@@ -69,7 +69,7 @@ func main() {
 	http.HandleFunc("/depth/", exchangeController.GetDepthAction)
 	http.HandleFunc("/trade/list/", exchangeController.GetTradeListAction)
 	http.HandleFunc("/order/list", orderController.GetOrderListAction)
-	http.HandleFunc("/chart", exchangeController.GetChartAction)
+	http.HandleFunc("/chart/list", exchangeController.GetChartListAction)
 
 	eventChannel := make(chan []byte)
 	tradeLogChannel := make(chan ExchangeModel.Trade)

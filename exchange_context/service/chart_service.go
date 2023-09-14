@@ -12,8 +12,8 @@ type ChartService struct {
 	OrderRepository    *ExchangeRepository.OrderRepository
 }
 
-func (e *ChartService) GetChart() map[string][]model.ChartPoint {
-	list := make(map[string][]model.ChartPoint, 0)
+func (e *ChartService) GetCharts() []map[string][]model.ChartPoint {
+	charts := make([]map[string][]model.ChartPoint, 0)
 
 	orders := e.OrderRepository.GetList()
 	orderMap := make(map[string][]model.Order)
@@ -29,6 +29,7 @@ func (e *ChartService) GetChart() map[string][]model.ChartPoint {
 	}
 
 	for _, symbol := range symbols {
+		list := make(map[string][]model.ChartPoint, 0)
 		symbolOrders := orderMap[symbol]
 		kLines := e.ExchangeRepository.KLineList(symbol, true)
 
@@ -56,7 +57,8 @@ func (e *ChartService) GetChart() map[string][]model.ChartPoint {
 			list[klineKey] = append(list[klineKey], klinePoint)
 			list[orderKey] = append(list[orderKey], orderPoint)
 		}
+		charts = append(charts, list)
 	}
 
-	return list
+	return charts
 }

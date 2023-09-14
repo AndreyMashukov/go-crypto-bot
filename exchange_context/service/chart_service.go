@@ -12,8 +12,8 @@ type ChartService struct {
 	OrderRepository    *ExchangeRepository.OrderRepository
 }
 
-func (e *ChartService) GetCharts() []map[string][]model.ChartPoint {
-	charts := make([]map[string][]model.ChartPoint, 0)
+func (e *ChartService) GetCharts() []map[string][]any {
+	charts := make([]map[string][]any, 0)
 
 	orders := e.OrderRepository.GetList()
 	orderMap := make(map[string][]model.Order)
@@ -29,33 +29,71 @@ func (e *ChartService) GetCharts() []map[string][]model.ChartPoint {
 	}
 
 	for _, symbol := range symbols {
-		list := make(map[string][]model.ChartPoint, 0)
+		list := make(map[string][]any, 0)
 		symbolOrders := orderMap[symbol]
 		kLines := e.ExchangeRepository.KLineList(symbol, true, 200)
 
 		for kLineIndex, kLine := range kLines {
-			klinePoint := model.ChartPoint{
+			klinePoint := model.FinancialPoint{
 				XAxis: kLine.Timestamp,
-				YAxis: kLine.Close,
+				High:  kLine.High,
+				Close: kLine.Close,
+				Open:  kLine.Open,
+				Low:   kLine.Low,
 			}
-			orderPoint := model.ChartPoint{
+
+			sellPoint := model.ChartPoint{
 				XAxis: kLine.Timestamp,
 				YAxis: 0,
 			}
+			buyPoint := model.ChartPoint{
+				XAxis: kLine.Timestamp,
+				YAxis: 0,
+			}
+			sellPendingPoint := model.ChartPoint{
+				XAxis: kLine.Timestamp,
+				YAxis: 0,
+			}
+			buyPendingPoint := model.ChartPoint{
+				XAxis: kLine.Timestamp,
+				YAxis: 0,
+			}
+
+			// todo: add current sell and buy limit orders...
 
 			for _, symbolOrder := range symbolOrders {
 				date, _ := time.Parse("2006-01-02 15:04:05", symbolOrder.CreatedAt)
 				orderTimestamp := date.UnixMilli() // convert date to timestamp
 
-				if orderTimestamp >= kLine.Timestamp && len(kLines) > kLineIndex && orderTimestamp <= kLines[kLineIndex+1].Timestamp {
-					orderPoint.YAxis = symbolOrder.Price
+				if orderTimestamp >= kLine.Timestamp && len(kLines) > kLineIndex && orderTimestamp < kLines[kLineIndex+1].Timestamp {
+					if symbolOrder.Operation == "BUY" {
+						buyPoint.YAxis = symbolOrder.Price
+					} else {
+						sellPoint.YAxis = symbolOrder.Price
+					}
 				}
 			}
 
+			binanceBuyOrder := e.OrderRepository.GetBinanceOrder(symbol, "BUY")
+			if binanceBuyOrder != nil {
+				buyPendingPoint.YAxis = binanceBuyOrder.Price
+			}
+
+			binanceSellOrder := e.OrderRepository.GetBinanceOrder(symbol, "SELL")
+			if binanceSellOrder != nil {
+				sellPendingPoint.YAxis = binanceSellOrder.Price
+			}
+
 			klineKey := fmt.Sprintf("kline-%s", symbol)
-			orderKey := fmt.Sprintf("order-%s", symbol)
+			orderBuyKey := fmt.Sprintf("order-buy-%s", symbol)
+			orderSellKey := fmt.Sprintf("order-sell-%s", symbol)
+			orderBuyPendingKey := fmt.Sprintf("order-buy-pending-%s", symbol)
+			orderSellPendingKey := fmt.Sprintf("order-sell-pending-%s", symbol)
 			list[klineKey] = append(list[klineKey], klinePoint)
-			list[orderKey] = append(list[orderKey], orderPoint)
+			list[orderBuyKey] = append(list[orderBuyKey], buyPoint)
+			list[orderSellKey] = append(list[orderSellKey], sellPoint)
+			list[orderBuyPendingKey] = append(list[orderBuyPendingKey], buyPendingPoint)
+			list[orderSellPendingKey] = append(list[orderSellPendingKey], sellPendingPoint)
 		}
 		charts = append(charts, list)
 	}

@@ -108,6 +108,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 				if price > 0 {
 					quantity := m.formatQuantity(tradeLimit, tradeLimit.USDTLimit/price)
+					// todo: do not BUY if order book (depth) length is too small!!!
 					err = m.Buy(tradeLimit, symbol, price, quantity, sellVolume, buyVolume, smaFormatted)
 					if err != nil {
 						log.Println(err)

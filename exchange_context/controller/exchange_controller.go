@@ -4,18 +4,20 @@ import (
 	"encoding/json"
 	"fmt"
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
+	"gitlab.com/open-soft/go-crypto-bot/exchange_context/service"
 	"net/http"
 	"strings"
 )
 
 type ExchangeController struct {
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
+	ChartService       *service.ChartService
 }
 
 func (e *ExchangeController) GetKlineListAction(w http.ResponseWriter, req *http.Request) {
 	symbol := strings.TrimPrefix(req.URL.Path, "/kline/list/")
 
-	list := e.ExchangeRepository.KLineList(symbol)
+	list := e.ExchangeRepository.KLineList(symbol, true)
 	encoded, _ := json.Marshal(list)
 	w.Header().Set("content-type", "application/json")
 	fmt.Fprintf(w, string(encoded))
@@ -35,6 +37,13 @@ func (e *ExchangeController) GetTradeListAction(w http.ResponseWriter, req *http
 
 	list := e.ExchangeRepository.TradeList(symbol)
 	encoded, _ := json.Marshal(list)
+	w.Header().Set("content-type", "application/json")
+	fmt.Fprintf(w, string(encoded))
+}
+
+func (e *ExchangeController) GetChartAction(w http.ResponseWriter, req *http.Request) {
+	chart := e.ChartService.GetChart()
+	encoded, _ := json.Marshal(chart)
 	w.Header().Set("content-type", "application/json")
 	fmt.Fprintf(w, string(encoded))
 }

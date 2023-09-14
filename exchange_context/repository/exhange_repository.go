@@ -107,12 +107,21 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 }
 
 func (e *ExchangeRepository) AddKLine(kLine model.KLine) {
+	list := e.KLineList(kLine.Symbol, false)
+
+	if len(list) > 0 {
+		firstKLine := list[0]
+		if firstKLine.Timestamp == kLine.Timestamp {
+			e.RDB.LPop(*e.Ctx, fmt.Sprintf("k-lines-%s", kLine.Symbol)).Val()
+		}
+	}
+
 	encoded, _ := json.Marshal(kLine)
 	e.RDB.LPush(*e.Ctx, fmt.Sprintf("k-lines-%s", kLine.Symbol), string(encoded))
 	e.RDB.LTrim(*e.Ctx, fmt.Sprintf("k-lines-%s", kLine.Symbol), 0, 5000)
 }
 
-func (e *ExchangeRepository) KLineList(symbol string) []model.KLine {
+func (e *ExchangeRepository) KLineList(symbol string, reverse bool) []model.KLine {
 	res := e.RDB.LRange(*e.Ctx, fmt.Sprintf("k-lines-%s", symbol), 0, 5000).Val()
 	list := make([]model.KLine, 0)
 
@@ -122,7 +131,10 @@ func (e *ExchangeRepository) KLineList(symbol string) []model.KLine {
 		list = append(list, dto)
 	}
 
-	slices.Reverse(list)
+	if reverse {
+		slices.Reverse(list)
+	}
+
 	return list
 }
 

@@ -69,6 +69,12 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
+		marketDepth := m.GetDepth(tradeLimit.Symbol)
+		if len(marketDepth.Asks) < 20 {
+			log.Printf("[%s] Too small ASKs amount: %d\n", symbol, len(marketDepth.Asks))
+			return
+		}
+
 		if err == nil {
 			order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 			if err == nil {
@@ -94,6 +100,12 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 	if buyScore > sellScore {
 		log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
+
+		marketDepth := m.GetDepth(tradeLimit.Symbol)
+		if len(marketDepth.Bids) < 20 {
+			log.Printf("[%s] Too small BIDs amount: %d\n", symbol, len(marketDepth.Bids))
+			return
+		}
 
 		if err == nil {
 			_, err := m.OrderRepository.GetOpenedOrder(symbol, "BUY")

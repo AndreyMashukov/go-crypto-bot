@@ -174,7 +174,7 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 	orderHours := (time.Now().Unix() - date.Unix()) / 3600
 
 	if orderHours >= 5.00 {
-		log.Printf("[%s] Order is opened for %.2f hours, sell price is min: %.6f\n", tradeLimit.Symbol, orderHours, minPrice)
+		log.Printf("[%s] Order is opened for %d hours, sell price is min: %.6f\n", tradeLimit.Symbol, orderHours, minPrice)
 		return m.formatPrice(tradeLimit, minPrice)
 	}
 

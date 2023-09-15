@@ -60,6 +60,8 @@ func main() {
 	exchangeController := controller.ExchangeController{
 		ExchangeRepository: &exchangeRepository,
 		ChartService:       &chartService,
+		RDB:                rdb,
+		Ctx:                &ctx,
 	}
 	orderController := controller.OrderController{
 		OrderRepository: &orderRepository,

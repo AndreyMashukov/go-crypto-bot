@@ -70,7 +70,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
 		marketDepth := m.GetDepth(tradeLimit.Symbol)
-		if len(marketDepth.Asks) < 20 {
+		if len(marketDepth.Asks) < 5 {
 			log.Printf("[%s] Too small ASKs amount: %d\n", symbol, len(marketDepth.Asks))
 			return
 		}
@@ -108,7 +108,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
 		marketDepth := m.GetDepth(tradeLimit.Symbol)
-		if len(marketDepth.Bids) < 20 {
+		if len(marketDepth.Bids) < 5 {
 			log.Printf("[%s] Too small BIDs amount: %d\n", symbol, len(marketDepth.Bids))
 			return
 		}

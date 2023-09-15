@@ -75,6 +75,12 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			return
 		}
 
+		kLines := m.ExchangeRepository.KLineList(tradeLimit.Symbol, false, 1)
+		if len(kLines) == 0 {
+			log.Printf("[%s] No information about current price", symbol)
+			return
+		}
+
 		if err == nil {
 			order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 			if err == nil {
@@ -147,8 +153,33 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 
 	minPrice := m.formatPrice(tradeLimit, order.Price*(100+tradeLimit.MinProfitPercent)/100)
 
+	kLines := m.ExchangeRepository.KLineList(tradeLimit.Symbol, false, 1)
+	if len(kLines) == 0 {
+		return 0.00
+	}
+
+	currentPrice := kLines[0].Close
+
+	if minPrice < currentPrice {
+		minPrice = currentPrice
+	}
+
+	openedOrder, err := m.OrderRepository.GetOpenedOrder(tradeLimit.Symbol, "BUY")
+
+	if err != nil {
+		return 0.00
+	}
+
+	date, _ := time.Parse("2006-01-02 15:04:05", openedOrder.CreatedAt)
+	orderHours := (time.Now().Unix() - date.Unix()) / 3600
+
+	if orderHours >= 5.00 {
+		log.Printf("[%s] Order is opened for %.2f hours, sell price is min: %.6f\n", tradeLimit.Symbol, minPrice)
+		return m.formatPrice(tradeLimit, minPrice)
+	}
+
 	if avgPrice < minPrice {
-		return minPrice
+		return m.formatPrice(tradeLimit, minPrice)
 	}
 
 	return m.formatPrice(tradeLimit, avgPrice)

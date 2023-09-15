@@ -154,6 +154,19 @@ func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) fl
 		return avgPrice
 	}
 
+	kLines := m.ExchangeRepository.KLineList(tradeLimit.Symbol, true, 200)
+	minPrice := 0.00
+	for _, kLine := range kLines {
+		if 0.00 == minPrice || kLine.Low < minPrice {
+			minPrice = kLine.Low
+		}
+	}
+
+	// Do not BUY higher than last minimum price
+	if 0.00 != minPrice && avgPrice > minPrice {
+		return m.formatPrice(tradeLimit, minPrice)
+	}
+
 	return m.formatPrice(tradeLimit, avgPrice)
 }
 

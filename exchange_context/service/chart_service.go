@@ -42,7 +42,10 @@ func (e *ChartService) GetCharts() []map[string][]any {
 				Open:  kLine.Open,
 				Low:   kLine.Low,
 			}
-
+			openedBuyPoint := model.ChartPoint{
+				XAxis: kLine.Timestamp,
+				YAxis: 0,
+			}
 			sellPoint := model.ChartPoint{
 				XAxis: kLine.Timestamp,
 				YAxis: 0,
@@ -75,6 +78,15 @@ func (e *ChartService) GetCharts() []map[string][]any {
 				}
 			}
 
+			openedBuyOrder, err := e.OrderRepository.GetOpenedOrder(symbol, "BUY")
+			if err == nil {
+				date, _ := time.Parse("2006-01-02 15:04:05", openedBuyOrder.CreatedAt)
+				openedOrderTimestamp := date.UnixMilli() // convert date to timestamp
+				if openedOrderTimestamp < kLine.Timestamp {
+					openedBuyPoint.YAxis = openedBuyOrder.Price
+				}
+			}
+
 			binanceBuyOrder := e.OrderRepository.GetBinanceOrder(symbol, "BUY")
 			if binanceBuyOrder != nil {
 				buyPendingPoint.YAxis = binanceBuyOrder.Price
@@ -90,11 +102,13 @@ func (e *ChartService) GetCharts() []map[string][]any {
 			orderSellKey := fmt.Sprintf("order-sell-%s", symbol)
 			orderBuyPendingKey := fmt.Sprintf("order-buy-pending-%s", symbol)
 			orderSellPendingKey := fmt.Sprintf("order-sell-pending-%s", symbol)
+			openedOrderBuyKey := fmt.Sprintf("order-buy-opened-%s", symbol)
 			list[klineKey] = append(list[klineKey], klinePoint)
 			list[orderBuyKey] = append(list[orderBuyKey], buyPoint)
 			list[orderSellKey] = append(list[orderSellKey], sellPoint)
 			list[orderBuyPendingKey] = append(list[orderBuyPendingKey], buyPendingPoint)
 			list[orderSellPendingKey] = append(list[orderSellPendingKey], sellPendingPoint)
+			list[openedOrderBuyKey] = append(list[openedOrderBuyKey], openedBuyPoint)
 		}
 		charts = append(charts, list)
 	}

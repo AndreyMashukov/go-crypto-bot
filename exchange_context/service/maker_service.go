@@ -474,7 +474,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 	}
 
 	cancelOrder, err := m.Binance.CancelOrder(binanceOrder.Symbol, binanceOrder.OrderId)
-	m.OrderRepository.DeleteBinanceOrder(cancelOrder)
+	m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 
 	if err != nil {
 		log.Println(err)

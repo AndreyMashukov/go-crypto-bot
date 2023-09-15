@@ -78,7 +78,7 @@ func (e *ChartService) GetCharts() []map[string][]any {
 				}
 			}
 
-			openedBuyOrder, err := e.OrderRepository.GetOpenedOrder(symbol, "BUY")
+			openedBuyOrder, err := e.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 			if err == nil {
 				date, _ := time.Parse("2006-01-02 15:04:05", openedBuyOrder.CreatedAt)
 				openedOrderTimestamp := date.UnixMilli() // convert date to timestamp

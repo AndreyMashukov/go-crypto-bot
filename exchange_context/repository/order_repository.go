@@ -50,7 +50,7 @@ func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation strin
 }
 
 func (repo *OrderRepository) DeleteOpenedOrderCache(order ExchangeModel.Order) {
-	repo.RDB.Del(*repo.Ctx, fmt.Sprintf("opened-order-%s-%s", order.Symbol, strings.ToLower(order.Operation)))
+	repo.RDB.Del(*repo.Ctx, fmt.Sprintf("opened-order-%s-%s", order.Symbol, strings.ToLower(order.Operation))).Val()
 }
 
 func (repo *OrderRepository) getOpenedOrder(symbol string, operation string) (ExchangeModel.Order, error) {
@@ -293,5 +293,5 @@ func (repo *OrderRepository) GetBinanceOrder(symbol string, operation string) *E
 }
 
 func (repo *OrderRepository) DeleteBinanceOrder(order ExchangeModel.BinanceOrder) {
-	repo.RDB.Del(*repo.Ctx, fmt.Sprintf("binance-order-%s-%s", order.Symbol, strings.ToLower(order.Side)))
+	repo.RDB.Del(*repo.Ctx, fmt.Sprintf("binance-order-%s-%s", order.Symbol, strings.ToLower(order.Side))).Val()
 }

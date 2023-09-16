@@ -70,6 +70,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
 		marketDepth := m.GetDepth(tradeLimit.Symbol)
+
 		if len(marketDepth.Asks) < 5 {
 			log.Printf("[%s] Too small ASKs amount: %d\n", symbol, len(marketDepth.Asks))
 			return
@@ -108,6 +109,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
 		marketDepth := m.GetDepth(tradeLimit.Symbol)
+
 		if len(marketDepth.Bids) < 5 {
 			log.Printf("[%s] Too small BIDs amount: %d\n", symbol, len(marketDepth.Bids))
 			return
@@ -141,11 +143,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order) float64 {
 	marketDepth := m.GetDepth(tradeLimit.Symbol)
-	avgPrice := 0.00
-
-	if marketDepth != nil {
-		avgPrice = marketDepth.GetAvgAsk()
-	}
+	avgPrice := marketDepth.GetAvgAsk()
 
 	if 0.00 == avgPrice {
 		return avgPrice
@@ -187,11 +185,7 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 
 func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) float64 {
 	marketDepth := m.GetDepth(tradeLimit.Symbol)
-	avgPrice := 0.00
-
-	if marketDepth != nil {
-		avgPrice = marketDepth.GetAvgBid()
-	}
+	avgPrice := marketDepth.GetAvgBid()
 
 	if 0.00 == avgPrice {
 		return avgPrice
@@ -391,6 +385,7 @@ func (m *MakerService) tryLimitOrder(order ExchangeModel.Order, operation string
 
 func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, seconds int) (ExchangeModel.BinanceOrder, error) {
 	depth := m.GetDepth(binanceOrder.Symbol)
+
 	var currentPosition int
 	var book [2]ExchangeModel.Number
 	if "BUY" == binanceOrder.Side {
@@ -453,6 +448,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 		}
 
 		depth := m.GetDepth(binanceOrder.Symbol)
+
 		var bookPosition int
 		var book [2]ExchangeModel.Number
 		if "BUY" == binanceOrder.Side {
@@ -580,6 +576,6 @@ func (m *MakerService) SetDepth(depth ExchangeModel.Depth) {
 	m.ExchangeRepository.SetDepth(depth)
 }
 
-func (m *MakerService) GetDepth(symbol string) *ExchangeModel.Depth {
+func (m *MakerService) GetDepth(symbol string) ExchangeModel.Depth {
 	return m.ExchangeRepository.GetDepth(symbol)
 }

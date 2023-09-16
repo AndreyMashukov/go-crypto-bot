@@ -24,6 +24,10 @@ func main() {
 	db, err := sql.Open("mysql", "root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot")
 	defer db.Close()
 
+	db.SetMaxIdleConns(64)
+	db.SetMaxOpenConns(64)
+	db.SetConnMaxLifetime(time.Minute)
+
 	if err != nil {
 		log.Fatal(err)
 	}

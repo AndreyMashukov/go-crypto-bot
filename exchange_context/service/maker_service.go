@@ -114,7 +114,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		}
 
 		if err == nil {
-			_, err := m.OrderRepository.GetOpenedOrder(symbol, "BUY")
+			_, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 			if err != nil {
 				price := m.calculateBuyPrice(tradeLimit)
 				smaFormatted := m.formatPrice(tradeLimit, smaValue)
@@ -164,7 +164,7 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 		minPrice = currentPrice
 	}
 
-	openedOrder, err := m.OrderRepository.GetOpenedOrder(tradeLimit.Symbol, "BUY")
+	openedOrder, err := m.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
 
 	if err != nil {
 		return 0.00

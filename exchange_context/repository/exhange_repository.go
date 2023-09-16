@@ -143,16 +143,21 @@ func (e *ExchangeRepository) SetDepth(depth model.Depth) {
 	e.RDB.Set(*e.Ctx, fmt.Sprintf("depth-%s", depth.Symbol), string(encoded), time.Second*5)
 }
 
-func (e *ExchangeRepository) GetDepth(symbol string) *model.Depth {
+func (e *ExchangeRepository) GetDepth(symbol string) model.Depth {
 	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("depth-%s", symbol)).Val()
 	if len(res) == 0 {
-		return nil
+		return model.Depth{
+			Asks:      make([][2]model.Number, 0),
+			Bids:      make([][2]model.Number, 0),
+			Symbol:    symbol,
+			Timestamp: time.Now().UnixMilli(),
+		}
 	}
 
 	var dto model.Depth
 	json.Unmarshal([]byte(res), &dto)
 
-	return &dto
+	return dto
 }
 
 func (e *ExchangeRepository) AddTrade(trade model.Trade) {

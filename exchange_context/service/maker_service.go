@@ -390,8 +390,6 @@ func (m *MakerService) tryLimitOrder(order ExchangeModel.Order, operation string
 }
 
 func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, seconds int) (ExchangeModel.BinanceOrder, error) {
-	m.OrderRepository.SetBinanceOrder(binanceOrder)
-
 	depth := m.GetDepth(binanceOrder.Symbol)
 	var currentPosition int
 	var book [2]ExchangeModel.Number
@@ -429,14 +427,19 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			}
 
 			executedQty = queryOrder.ExecutedQty
+			m.OrderRepository.SetBinanceOrder(queryOrder)
 			continue
 		}
 
 		if err == nil && queryOrder.Status == "EXPIRED" {
+			m.OrderRepository.DeleteBinanceOrder(queryOrder)
+
 			break
 		}
 
 		if err == nil && queryOrder.Status == "CANCELED" {
+			m.OrderRepository.DeleteBinanceOrder(queryOrder)
+
 			break
 		}
 
@@ -522,6 +525,8 @@ func (m *MakerService) findOrCreateOrder(order ExchangeModel.Order, operation st
 	for _, opened := range *openedOrders {
 		if opened.Side == operation && opened.Symbol == order.Symbol {
 			log.Printf("[%s] Found opened %s order %d in binance", order.Symbol, operation, opened.OrderId)
+			m.OrderRepository.SetBinanceOrder(opened)
+
 			return opened, nil
 		}
 	}
@@ -533,6 +538,7 @@ func (m *MakerService) findOrCreateOrder(order ExchangeModel.Order, operation st
 	}
 
 	log.Printf("[%s] %s Order created %d, Price: %.6f", order.Symbol, operation, binanceOrder.OrderId, binanceOrder.Price)
+	m.OrderRepository.SetBinanceOrder(binanceOrder)
 
 	return binanceOrder, nil
 }

@@ -252,7 +252,7 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 		// todo: add commission???
 	}
 
-	binanceOrder, err := m.tryLimitOrder(extraOrder, "BUY", 30)
+	binanceOrder, err := m.tryLimitOrder(extraOrder, "BUY", 5)
 
 	if err != nil {
 		return err
@@ -337,7 +337,7 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 		// todo: add commission???
 	}
 
-	binanceOrder, err := m.tryLimitOrder(order, "BUY", 30)
+	binanceOrder, err := m.tryLimitOrder(order, "BUY", 5)
 
 	if err != nil {
 		return err
@@ -410,7 +410,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 		// todo: add commission???
 	}
 
-	binanceOrder, err := m.tryLimitOrder(order, "SELL", 30)
+	binanceOrder, err := m.tryLimitOrder(order, "SELL", 5)
 
 	if err != nil {
 		return err

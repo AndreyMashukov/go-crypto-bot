@@ -106,12 +106,21 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 	return tradeLimit, nil
 }
 
-func (e *ExchangeRepository) AddKLine(kLine model.KLine) {
-	list := e.KLineList(kLine.Symbol, false, 1)
+func (e *ExchangeRepository) GetLastKLine(symbol string) *model.KLine {
+	list := e.KLineList(symbol, false, 1)
 
 	if len(list) > 0 {
-		firstKLine := list[0]
-		if firstKLine.Timestamp == kLine.Timestamp {
+		return &list[0]
+	}
+
+	return nil
+}
+
+func (e *ExchangeRepository) AddKLine(kLine model.KLine) {
+	lastKline := e.GetLastKLine(kLine.Symbol)
+
+	if lastKline != nil {
+		if lastKline.Timestamp == kLine.Timestamp {
 			e.RDB.LPop(*e.Ctx, fmt.Sprintf("k-lines-%s", kLine.Symbol)).Val()
 		}
 	}

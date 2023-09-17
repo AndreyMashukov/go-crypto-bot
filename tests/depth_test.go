@@ -18,6 +18,8 @@ func TestShouldAllowToGetDepthAskAndBid(t *testing.T) {
 	assert.Equal(1552.26, depth.Depth.GetBestAsk())
 	assert.Equal(1490.8960000000004, depth.Depth.GetAvgBid())
 	assert.Equal(1571.989268292683, depth.Depth.GetAvgAsk())
+	assert.Equal(1542.5830303030307, depth.Depth.GetBestAvgBid())
+	assert.Equal(1561.28275, depth.Depth.GetBestAvgAsk())
 	assert.Equal(1552.25, depth.Depth.GetMaxQtyBid())
 	assert.Equal(1552.73, depth.Depth.GetMaxQtyAsk())
 	assert.Equal(1555.0616926763482, depth.Depth.GetAvgVolAsk())

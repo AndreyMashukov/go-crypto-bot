@@ -152,7 +152,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order) float64 {
 	marketDepth := m.GetDepth(tradeLimit.Symbol)
-	avgPrice := marketDepth.GetAvgAsk()
+	avgPrice := marketDepth.GetBestAvgAsk()
 
 	if 0.00 == avgPrice {
 		return avgPrice
@@ -194,7 +194,7 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 
 func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) float64 {
 	marketDepth := m.GetDepth(tradeLimit.Symbol)
-	avgPrice := marketDepth.GetAvgBid()
+	avgPrice := marketDepth.GetBestAvgBid()
 
 	if 0.00 == avgPrice {
 		return avgPrice

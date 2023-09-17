@@ -207,6 +207,17 @@ func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) fl
 		return m.formatPrice(tradeLimit, minPrice)
 	}
 
+	// check existing order and extra buy action
+	order, err := m.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
+
+	if err == nil {
+		profit, _ := m.getCurrentProfitPercent(order)
+		if tradeLimit.BuyOnFallPercent != 0.00 && profit < tradeLimit.BuyOnFallPercent {
+			lastKline := m.ExchangeRepository.GetLastKLine(order.Symbol)
+			return m.formatPrice(tradeLimit, lastKline.Close)
+		}
+	}
+
 	return m.formatPrice(tradeLimit, avgPrice)
 }
 

@@ -76,8 +76,8 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			return
 		}
 
-		kLines := m.ExchangeRepository.KLineList(tradeLimit.Symbol, false, 1)
-		if len(kLines) == 0 {
+		lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+		if lastKline == nil {
 			log.Printf("[%s] No information about current price", symbol)
 			return
 		}
@@ -116,9 +116,9 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		}
 
 		if err == nil {
-			_, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
+			order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
+			price := m.calculateBuyPrice(tradeLimit)
 			if err != nil {
-				price := m.calculateBuyPrice(tradeLimit)
 				smaFormatted := m.formatPrice(tradeLimit, smaValue)
 
 				if price > smaFormatted {
@@ -136,6 +136,15 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 				} else {
 					log.Printf("[%s] No ASKs on the market", symbol)
 				}
+			} else {
+				profit, err := m.getCurrentProfitPercent(order)
+
+				if err == nil && profit <= 0.00 {
+					err = m.BuyExtra(tradeLimit, order, price, sellVolume, buyVolume, smaValue)
+					if err != nil {
+						log.Println(err)
+					}
+				}
 			}
 		}
 	}
@@ -151,12 +160,12 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 
 	minPrice := m.formatPrice(tradeLimit, order.Price*(100+tradeLimit.MinProfitPercent)/100)
 
-	kLines := m.ExchangeRepository.KLineList(tradeLimit.Symbol, false, 1)
-	if len(kLines) == 0 {
+	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+	if lastKline == nil {
 		return 0.00
 	}
 
-	currentPrice := kLines[0].Close
+	currentPrice := lastKline.Close
 
 	if minPrice < currentPrice {
 		minPrice = currentPrice
@@ -207,12 +216,87 @@ func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) fl
 	return m.formatPrice(tradeLimit, avgPrice)
 }
 
-func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64) error {
-	// todo: buy extra
-	// todo: validate extra buy
-	// todo: merge new order with existing
-	// todo: calculate average price for merged order
+func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64, sellVolume float64, buyVolume float64, smaValue float64) error {
+	if tradeLimit.BuyOnFallPercent >= 0.00 {
+		return errors.New(fmt.Sprintf("[%s] Extra buy is disabled", tradeLimit.Symbol))
+	}
+
+	availableExtraBudget := tradeLimit.USDTExtraBudget - order.UsedExtraBudget
+
+	if availableExtraBudget <= 0.00 {
+		return errors.New(fmt.Sprintf("[%s] Not enough budget to buy more", tradeLimit.Symbol))
+	}
+
+	profit, _ := m.getCurrentProfitPercent(order)
+
+	if profit > tradeLimit.BuyOnFallPercent {
+		return errors.New(fmt.Sprintf("[%s] Extra buy percent is not reached %.2f of %.2f", tradeLimit.Symbol, profit, tradeLimit.BuyOnFallPercent))
+	}
+
+	m.acquireLock(order.Symbol)
+	defer m.releaseLock(order.Symbol)
+	quantity := m.formatQuantity(tradeLimit, tradeLimit.USDTExtraBudget/price)
+
+	var extraOrder = ExchangeModel.Order{
+		Symbol:     order.Symbol,
+		Quantity:   quantity,
+		Price:      price,
+		CreatedAt:  time.Now().Format("2006-01-02 15:04:05"),
+		SellVolume: sellVolume,
+		BuyVolume:  buyVolume,
+		SmaValue:   smaValue,
+		Status:     "closed",
+		Operation:  "buy",
+		ExternalId: nil,
+		ClosedBy:   nil,
+		// todo: add commission???
+	}
+
+	binanceOrder, err := m.tryLimitOrder(extraOrder, "BUY", 30)
+
+	if err != nil {
+		return err
+	}
+
+	// fill from API
+	extraOrder.ExternalId = &binanceOrder.OrderId
+	extraOrder.Quantity = binanceOrder.ExecutedQty
+	extraOrder.Price = binanceOrder.Price
+
+	order.Quantity = extraOrder.Quantity + order.Quantity
+	order.Price = m.getAvgPrice(order, extraOrder)
+	order.UsedExtraBudget = extraOrder.Price * extraOrder.Quantity
+
+	// change QTY to zero for extra order
+	extraOrder.Quantity = 0.00
+
+	_, err = m.OrderRepository.Create(extraOrder)
+	if err != nil {
+		return err
+	}
+
+	err = m.OrderRepository.Update(order)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (m *MakerService) getCurrentProfitPercent(order ExchangeModel.Order) (float64, error) {
+	lastKline := m.ExchangeRepository.GetLastKLine(order.Symbol)
+
+	if lastKline == nil {
+		return 0.00, errors.New(fmt.Sprintf("[%s] Do not have info about the price", order.Symbol))
+	}
+
+	diff := lastKline.Close - order.Price
+
+	return math.Round(diff*100/order.Price*100) / 100, nil
+}
+
+func (m *MakerService) getAvgPrice(opened ExchangeModel.Order, extra ExchangeModel.Order) float64 {
+	return ((opened.Quantity * opened.Price) + (extra.Quantity * extra.Price)) / (opened.Quantity + extra.Quantity)
 }
 
 func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, price float64, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {

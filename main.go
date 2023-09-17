@@ -96,6 +96,10 @@ func main() {
 
 	// todo: BuyExtraOnMarketFallStrategy
 	baseKLineStrategy := ExchangeService.BaseKLineStrategy{}
+	orderBasedStrategy := ExchangeService.OrderBasedStrategy{
+		ExchangeRepository: exchangeRepository,
+		OrderRepository:    orderRepository,
+	}
 	marketDepthStrategy := ExchangeService.MarketDepthStrategy{}
 	smaStrategy := ExchangeService.SmaTradeStrategy{
 		ExchangeRepository: exchangeRepository,
@@ -122,6 +126,7 @@ func main() {
 				smaDecision := exchangeRepository.GetDecision("sma_trade_strategy")
 				kLineDecision := exchangeRepository.GetDecision("base_kline_strategy")
 				marketDepthDecision := exchangeRepository.GetDecision("market_depth_strategy")
+				orderBasedDecision := exchangeRepository.GetDecision("order_based_strategy")
 
 				if smaDecision != nil {
 					currentDecisions = append(currentDecisions, *smaDecision)
@@ -131,6 +136,9 @@ func main() {
 				}
 				if marketDepthDecision != nil {
 					currentDecisions = append(currentDecisions, *marketDepthDecision)
+				}
+				if orderBasedDecision != nil {
+					currentDecisions = append(currentDecisions, *orderBasedDecision)
 				}
 
 				if len(currentDecisions) > 0 {
@@ -168,6 +176,9 @@ func main() {
 				exchangeRepository.AddKLine(kLine)
 				baseKLineDecision := baseKLineStrategy.Decide(kLine)
 				exchangeRepository.SetDecision(baseKLineDecision)
+				orderBasedDecision := orderBasedStrategy.Decide(kLine)
+				exchangeRepository.SetDecision(orderBasedDecision)
+
 				go func() {
 					kLineLogChannel <- kLine
 				}()

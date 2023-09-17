@@ -147,6 +147,18 @@ func (e *ExchangeRepository) KLineList(symbol string, reverse bool, size int64) 
 	return list
 }
 
+func (e *ExchangeRepository) GetPeriodMinPrice(symbol string, period int64) float64 {
+	kLines := e.KLineList(symbol, true, period)
+	minPrice := 0.00
+	for _, kLine := range kLines {
+		if 0.00 == minPrice || kLine.Low < minPrice {
+			minPrice = kLine.Low
+		}
+	}
+
+	return minPrice
+}
+
 func (e *ExchangeRepository) SetDepth(depth model.Depth) {
 	encoded, _ := json.Marshal(depth)
 	e.RDB.Set(*e.Ctx, fmt.Sprintf("depth-%s", depth.Symbol), string(encoded), time.Second*5)

@@ -58,7 +58,7 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 	if tradeLimit.BuyOnFallPercent != 0.00 && profitPercent <= tradeLimit.BuyOnFallPercent && periodMinPrice != 0.00 && kLine.Low <= periodMinPrice {
 		return ExchangeModel.Decision{
 			StrategyName: "order_based_strategy",
-			Score:        60.00,
+			Score:        75.00,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
 			Price:        kLine.Close,

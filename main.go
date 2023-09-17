@@ -90,7 +90,7 @@ func main() {
 		LockChannel:        &lockTradeChannel,
 		Lock:               make(map[string]bool),
 		TradeLockMutex:     sync.RWMutex{},
-		MinDecisions:       3.00,
+		MinDecisions:       4.00,
 		HoldScore:          75.00,
 	}
 

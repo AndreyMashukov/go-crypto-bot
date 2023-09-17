@@ -81,7 +81,7 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 
 	return ExchangeModel.Decision{
 		StrategyName: "order_based_strategy",
-		Score:        0.00,
+		Score:        99.00,
 		Operation:    "HOLD",
 		Timestamp:    time.Now().Unix(),
 		Price:        kLine.Close,

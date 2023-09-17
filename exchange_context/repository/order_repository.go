@@ -25,7 +25,7 @@ func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation strin
 		json.Unmarshal([]byte(res), &dto)
 
 		cached := repo.GetBinanceOrder(symbol, operation)
-		if cached != nil {
+		if cached != nil && cached.OrderId == *dto.ExternalId {
 			repo.DeleteBinanceOrder(*cached)
 		}
 
@@ -42,7 +42,7 @@ func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation strin
 	repo.RDB.Set(*repo.Ctx, fmt.Sprintf("opened-order-%s-%s", symbol, operation), string(encoded), time.Minute*60)
 
 	cached := repo.GetBinanceOrder(symbol, operation)
-	if cached != nil {
+	if cached != nil && cached.OrderId == *order.ExternalId {
 		repo.DeleteBinanceOrder(*cached)
 	}
 

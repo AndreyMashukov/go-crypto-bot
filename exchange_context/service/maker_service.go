@@ -270,6 +270,7 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 	extraOrder.Quantity = binanceOrder.ExecutedQty
 	extraOrder.Price = binanceOrder.Price
 	extraOrder.ClosedBy = &order.Id
+	extraOrder.CreatedAt = time.Now().Format("2006-01-02 15:04:05")
 
 	order.Quantity = extraOrder.Quantity + order.Quantity
 	order.Price = m.getAvgPrice(order, extraOrder)
@@ -355,6 +356,7 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 	order.ExternalId = &binanceOrder.OrderId
 	order.Quantity = binanceOrder.ExecutedQty
 	order.Price = binanceOrder.Price
+	order.CreatedAt = time.Now().Format("2006-01-02 15:04:05")
 
 	_, err = m.OrderRepository.Create(order)
 
@@ -428,6 +430,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 	order.ExternalId = &binanceOrder.OrderId
 	order.Quantity = binanceOrder.ExecutedQty
 	order.Price = binanceOrder.Price
+	order.CreatedAt = time.Now().Format("2006-01-02 15:04:05")
 
 	lastId, err := m.OrderRepository.Create(order)
 

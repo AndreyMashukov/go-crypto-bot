@@ -7,6 +7,7 @@ import (
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/service"
 	"net/http"
+	"slices"
 )
 
 type OrderController struct {
@@ -38,6 +39,13 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 	err := json.NewDecoder(req.Body).Decode(&manual)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	allowedOperations := []string{"BUY", "SELL"}
+	if !slices.Contains(allowedOperations, manual.Operation) {
+		http.Error(w, "Поддерживаются только операции BUY/SELL", http.StatusBadRequest)
 
 		return
 	}

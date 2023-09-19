@@ -84,7 +84,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 		marketDepth := m.GetDepth(tradeLimit.Symbol)
 
-		if len(marketDepth.Asks) < 3 {
+		if len(marketDepth.Asks) < 3 && manualOrder == nil {
 			log.Printf("[%s] Too small ASKs amount: %d\n", symbol, len(marketDepth.Asks))
 			return
 		}
@@ -127,7 +127,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 		marketDepth := m.GetDepth(tradeLimit.Symbol)
 
-		if len(marketDepth.Bids) < 3 {
+		if len(marketDepth.Bids) < 3 && manualOrder == nil {
 			log.Printf("[%s] Too small BIDs amount: %d\n", symbol, len(marketDepth.Bids))
 			return
 		}

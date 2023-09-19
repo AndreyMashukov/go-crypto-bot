@@ -28,11 +28,16 @@ func (o *OrderController) GetOrderListAction(w http.ResponseWriter, req *http.Re
 func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "OPTIONS" {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, "OK")
 		return
 	}
 
 	if req.Method != "POST" {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Content-Type", "application/json")
 		http.Error(w, "Разрешены только POST методы", http.StatusMethodNotAllowed)
 
 		return
@@ -44,6 +49,9 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 	// respond to the client with the error message and a 400 status code.
 	err := json.NewDecoder(req.Body).Decode(&manual)
 	if err != nil {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Content-Type", "application/json")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 
 		return
@@ -51,6 +59,9 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 
 	allowedOperations := []string{"BUY", "SELL"}
 	if !slices.Contains(allowedOperations, manual.Operation) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Content-Type", "application/json")
 		http.Error(w, "Поддерживаются только операции BUY/SELL", http.StatusBadRequest)
 
 		return
@@ -58,6 +69,9 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 
 	tradeLimit, err := o.ExchangeRepository.GetTradeLimit(manual.Symbol)
 	if err != nil {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Content-Type", "application/json")
 		http.Error(w, fmt.Sprintf("%s не поддерживается", manual.Symbol), http.StatusBadRequest)
 
 		return
@@ -67,6 +81,9 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 	if err == nil && manual.Operation == "SELL" {
 		minPrice := o.Formatter.FormatPrice(tradeLimit, opened.Price*(100+tradeLimit.MinProfitPercent)/100)
 		if minPrice > manual.Price {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			w.Header().Set("Content-Type", "application/json")
 			http.Error(w, fmt.Sprintf("Цена не может быть ниже %.6f", minPrice), http.StatusBadRequest)
 
 			return
@@ -74,12 +91,18 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 	}
 
 	if err != nil && manual.Operation == "SELL" {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Content-Type", "application/json")
 		http.Error(w, "Нет открытых ордеров", http.StatusBadRequest)
 
 		return
 	}
 
 	if err == nil && manual.Operation == "BUY" {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Content-Type", "application/json")
 		http.Error(w, "Докупать вручную временно запрещено", http.StatusBadRequest)
 
 		return
@@ -88,6 +111,9 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 	binanceOrder := o.OrderRepository.GetBinanceOrder(manual.Symbol, manual.Operation)
 
 	if binanceOrder != nil && binanceOrder.Status == "PARTIALLY_FILLED" {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Content-Type", "application/json")
 		http.Error(w, "Ордер исполняется, дождитесь завершения операции", http.StatusBadRequest)
 
 		return

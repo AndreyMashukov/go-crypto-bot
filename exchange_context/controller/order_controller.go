@@ -59,6 +59,12 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 		}
 	}
 
+	if err != nil && manual.Operation == "SELL" {
+		http.Error(w, "Нет открытых ордеров", http.StatusBadRequest)
+
+		return
+	}
+
 	if err == nil && manual.Operation == "BUY" {
 		http.Error(w, "Докупать вручную временно запрещено", http.StatusBadRequest)
 

@@ -79,6 +79,7 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 		return
 	}
 
+	manual.Price = o.Formatter.FormatPrice(tradeLimit, manual.Price)
 	o.OrderRepository.SetManualOrder(manual)
 
 	encoded, _ := json.Marshal(manual)

@@ -79,6 +79,14 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 		return
 	}
 
+	binanceOrder := o.OrderRepository.GetBinanceOrder(manual.Symbol, manual.Operation)
+
+	if binanceOrder != nil && binanceOrder.Status == "PARTIALLY_FILLED" {
+		http.Error(w, "Ордер исполняется, дождитесь завершения операции", http.StatusBadRequest)
+
+		return
+	}
+
 	manual.Price = o.Formatter.FormatPrice(tradeLimit, manual.Price)
 	o.OrderRepository.SetManualOrder(manual)
 

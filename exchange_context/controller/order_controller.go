@@ -26,6 +26,12 @@ func (o *OrderController) GetOrderListAction(w http.ResponseWriter, req *http.Re
 }
 
 func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http.Request) {
+	if req.Method == "OPTIONS" {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		fmt.Fprintf(w, "OK")
+		return
+	}
+
 	if req.Method != "POST" {
 		http.Error(w, "Разрешены только POST методы", http.StatusMethodNotAllowed)
 

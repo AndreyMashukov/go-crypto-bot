@@ -108,6 +108,17 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 		return
 	}
 
+	lastKline := o.ExchangeRepository.GetLastKLine(manual.Symbol)
+
+	if err != nil && manual.Operation == "BUY" && lastKline.Close < manual.Price {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, "Покупать выше текущей цены запрещено", http.StatusBadRequest)
+
+		return
+	}
+
 	binanceOrder := o.OrderRepository.GetBinanceOrder(manual.Symbol, manual.Operation)
 
 	if binanceOrder != nil && binanceOrder.Status == "PARTIALLY_FILLED" {

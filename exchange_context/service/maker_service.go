@@ -569,6 +569,12 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			return queryOrder, nil
 		}
 
+		manualOrder := m.OrderRepository.GetManualOrder(queryOrder.Symbol)
+		// cancel current immediately on new manual order
+		if manualOrder != nil && manualOrder.Price != queryOrder.Price {
+			break
+		}
+
 		depth := m.GetDepth(binanceOrder.Symbol)
 
 		var bookPosition int

@@ -14,7 +14,6 @@ import (
 	ExchangeService "gitlab.com/open-soft/go-crypto-bot/exchange_context/service"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -57,6 +56,7 @@ func main() {
 		Ctx: &ctx,
 	}
 
+	formatter := ExchangeService.Formatter{}
 	chartService := ExchangeService.ChartService{
 		ExchangeRepository: &exchangeRepository,
 		OrderRepository:    &orderRepository,
@@ -68,18 +68,19 @@ func main() {
 		Ctx:                &ctx,
 	}
 	orderController := controller.OrderController{
-		OrderRepository: &orderRepository,
+		OrderRepository:    &orderRepository,
+		ExchangeRepository: &exchangeRepository,
+		Formatter:          &formatter,
 	}
 
 	http.HandleFunc("/kline/list/", exchangeController.GetKlineListAction)
 	http.HandleFunc("/depth/", exchangeController.GetDepthAction)
 	http.HandleFunc("/trade/list/", exchangeController.GetTradeListAction)
-	http.HandleFunc("/order/list", orderController.GetOrderListAction)
 	http.HandleFunc("/chart/list", exchangeController.GetChartListAction)
+	http.HandleFunc("/order/list", orderController.GetOrderListAction)
+	http.HandleFunc("/order", orderController.PostManualOrderAction)
 
 	eventChannel := make(chan []byte)
-	tradeLogChannel := make(chan ExchangeModel.Trade)
-	kLineLogChannel := make(chan ExchangeModel.KLine)
 	lockTradeChannel := make(chan ExchangeModel.Lock)
 	depthChannel := make(chan ExchangeModel.Depth)
 
@@ -90,6 +91,7 @@ func main() {
 		LockChannel:        &lockTradeChannel,
 		Lock:               make(map[string]bool),
 		TradeLockMutex:     sync.RWMutex{},
+		Formatter:          &formatter,
 		MinDecisions:       4.00,
 		HoldScore:          75.00,
 	}
@@ -104,9 +106,6 @@ func main() {
 	smaStrategy := ExchangeService.SmaTradeStrategy{
 		ExchangeRepository: exchangeRepository,
 	}
-
-	tradeFile, _ := os.OpenFile("trade.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-	klineFile, _ := os.OpenFile("kline.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 
 	go func() {
 		for {
@@ -164,10 +163,6 @@ func main() {
 				trade := tradeEvent.Trade
 				smaDecision := smaStrategy.Decide(trade)
 				exchangeRepository.SetDecision(smaDecision)
-
-				go func() {
-					tradeLogChannel <- tradeEvent.Trade
-				}()
 				break
 			case strings.Contains(eventModel.Stream, "@kline_1m"):
 				var klineEvent ExchangeModel.KlineEvent
@@ -178,10 +173,6 @@ func main() {
 				exchangeRepository.SetDecision(baseKLineDecision)
 				orderBasedDecision := orderBasedStrategy.Decide(kLine)
 				exchangeRepository.SetDecision(orderBasedDecision)
-
-				go func() {
-					kLineLogChannel <- kLine
-				}()
 				break
 			case strings.Contains(eventModel.Stream, "@depth"):
 				var depthEvent ExchangeModel.DepthEvent
@@ -199,30 +190,8 @@ func main() {
 
 	go func() {
 		for {
-			trade := <-tradeLogChannel
-			encoded, err := json.Marshal(trade)
-
-			if err == nil {
-				tradeFile.WriteString(fmt.Sprintf("%s\n", encoded))
-			}
-		}
-	}()
-
-	go func() {
-		for {
 			depth := <-depthChannel
 			makerService.SetDepth(depth)
-		}
-	}()
-
-	go func() {
-		for {
-			kline := <-kLineLogChannel
-			encoded, err := json.Marshal(kline)
-
-			if err == nil {
-				klineFile.WriteString(fmt.Sprintf("%s\n", encoded))
-			}
 		}
 	}()
 

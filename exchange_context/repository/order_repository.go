@@ -295,3 +295,24 @@ func (repo *OrderRepository) GetBinanceOrder(symbol string, operation string) *E
 func (repo *OrderRepository) DeleteBinanceOrder(order ExchangeModel.BinanceOrder) {
 	repo.RDB.Del(*repo.Ctx, fmt.Sprintf("binance-order-%s-%s", order.Symbol, strings.ToLower(order.Side))).Val()
 }
+
+func (repo *OrderRepository) GetManualOrder(symbol string) *ExchangeModel.ManualOrder {
+	res := repo.RDB.Get(*repo.Ctx, fmt.Sprintf("manual-order-%s", strings.ToLower(symbol))).Val()
+	if len(res) == 0 {
+		return nil
+	}
+
+	var dto ExchangeModel.ManualOrder
+	json.Unmarshal([]byte(res), &dto)
+
+	return &dto
+}
+
+func (repo *OrderRepository) SetManualOrder(order ExchangeModel.ManualOrder) {
+	encoded, _ := json.Marshal(order)
+	repo.RDB.Set(*repo.Ctx, fmt.Sprintf("manual-order-%s", strings.ToLower(order.Symbol)), string(encoded), time.Hour*24)
+}
+
+func (repo *OrderRepository) DeleteManualOrder(symbol string) {
+	repo.RDB.Del(*repo.Ctx, fmt.Sprintf("manual-order-%s", strings.ToLower(symbol))).Val()
+}

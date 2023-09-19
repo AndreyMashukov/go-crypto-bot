@@ -8,7 +8,6 @@ import (
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
 	"log"
 	"math"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -19,6 +18,7 @@ type MakerService struct {
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
 	Binance            *ExchangeClient.Binance
 	LockChannel        *chan ExchangeModel.Lock
+	Formatter          *Formatter
 	Lock               map[string]bool
 	TradeLockMutex     sync.RWMutex
 	MinDecisions       float64
@@ -57,8 +57,21 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		priceSum += decision.Price
 	}
 
-	if amount != m.MinDecisions {
+	manualOrder := m.OrderRepository.GetManualOrder(symbol)
+
+	if amount != m.MinDecisions && manualOrder == nil {
 		return
+	}
+
+	if manualOrder != nil {
+		holdScore = 0
+		if strings.ToUpper(manualOrder.Operation) == "BUY" {
+			sellScore = 0
+			buyScore = 999
+		} else {
+			sellScore = 999
+			buyScore = 0
+		}
 	}
 
 	if holdScore >= m.HoldScore {
@@ -86,7 +99,11 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 			if err == nil {
 				price := m.calculateSellPrice(tradeLimit, order)
-				smaFormatted := m.formatPrice(tradeLimit, smaValue)
+				smaFormatted := m.Formatter.FormatPrice(tradeLimit, smaValue)
+
+				if manualOrder != nil && strings.ToUpper(manualOrder.Operation) == "SELL" {
+					price = manualOrder.Price
+				}
 
 				if price > 0 {
 					err = m.Sell(tradeLimit, order, symbol, price, order.Quantity, sellVolume, buyVolume, smaFormatted)
@@ -118,8 +135,13 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		if err == nil {
 			order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 			price := m.calculateBuyPrice(tradeLimit)
+
+			if manualOrder != nil && strings.ToUpper(manualOrder.Operation) == "BUY" {
+				price = manualOrder.Price
+			}
+
 			if err != nil {
-				smaFormatted := m.formatPrice(tradeLimit, smaValue)
+				smaFormatted := m.Formatter.FormatPrice(tradeLimit, smaValue)
 
 				if price > smaFormatted {
 					log.Printf("[%s] Bad BUY price! SMA: %.6f, Price: %.6f\n", symbol, smaFormatted, price)
@@ -127,7 +149,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 				}
 
 				if price > 0 {
-					quantity := m.formatQuantity(tradeLimit, tradeLimit.USDTLimit/price)
+					quantity := m.Formatter.FormatQuantity(tradeLimit, tradeLimit.USDTLimit/price)
 					// todo: do not BUY if order book (depth) length is too small!!!
 					err = m.Buy(tradeLimit, symbol, price, quantity, sellVolume, buyVolume, smaFormatted)
 					if err != nil {
@@ -158,7 +180,7 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 		return avgPrice
 	}
 
-	minPrice := m.formatPrice(tradeLimit, order.Price*(100+tradeLimit.MinProfitPercent)/100)
+	minPrice := m.Formatter.FormatPrice(tradeLimit, order.Price*(100+tradeLimit.MinProfitPercent)/100)
 
 	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 	if lastKline == nil {
@@ -182,14 +204,14 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 
 	if orderHours >= 5.00 {
 		log.Printf("[%s] Order is opened for %d hours, sell price is min: %.6f\n", tradeLimit.Symbol, orderHours, minPrice)
-		return m.formatPrice(tradeLimit, minPrice)
+		return m.Formatter.FormatPrice(tradeLimit, minPrice)
 	}
 
 	if avgPrice < minPrice {
-		return m.formatPrice(tradeLimit, minPrice)
+		return m.Formatter.FormatPrice(tradeLimit, minPrice)
 	}
 
-	return m.formatPrice(tradeLimit, avgPrice)
+	return m.Formatter.FormatPrice(tradeLimit, avgPrice)
 }
 
 func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) float64 {
@@ -204,7 +226,7 @@ func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) fl
 
 	// Do not BUY higher than last minimum price
 	if 0.00 != minPrice && avgPrice > minPrice {
-		return m.formatPrice(tradeLimit, minPrice)
+		return m.Formatter.FormatPrice(tradeLimit, minPrice)
 	}
 
 	// check existing order and extra buy action
@@ -214,11 +236,11 @@ func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) fl
 		profit, _ := m.getCurrentProfitPercent(order)
 		if tradeLimit.BuyOnFallPercent != 0.00 && profit < tradeLimit.BuyOnFallPercent {
 			lastKline := m.ExchangeRepository.GetLastKLine(order.Symbol)
-			return m.formatPrice(tradeLimit, lastKline.Close)
+			return m.Formatter.FormatPrice(tradeLimit, lastKline.Close)
 		}
 	}
 
-	return m.formatPrice(tradeLimit, avgPrice)
+	return m.Formatter.FormatPrice(tradeLimit, avgPrice)
 }
 
 func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64, sellVolume float64, buyVolume float64, smaValue float64) error {
@@ -240,7 +262,7 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 
 	m.acquireLock(order.Symbol)
 	defer m.releaseLock(order.Symbol)
-	quantity := m.formatQuantity(tradeLimit, availableExtraBudget/price)
+	quantity := m.Formatter.FormatQuantity(tradeLimit, availableExtraBudget/price)
 
 	// todo: check min quantity
 
@@ -288,6 +310,8 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 	if err != nil {
 		return err
 	}
+
+	m.OrderRepository.DeleteManualOrder(order.Symbol)
 
 	return nil
 }
@@ -366,6 +390,8 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 		return err
 	}
 
+	m.OrderRepository.DeleteManualOrder(order.Symbol)
+
 	return nil
 }
 
@@ -394,7 +420,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 		))
 	}
 
-	minPrice := m.formatPrice(tradeLimit, opened.Price*(100+tradeLimit.MinProfitPercent)/100)
+	minPrice := m.Formatter.FormatPrice(tradeLimit, opened.Price*(100+tradeLimit.MinProfitPercent)/100)
 
 	if price < minPrice {
 		return errors.New(fmt.Sprintf(
@@ -440,6 +466,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 		return err
 	}
 
+	m.OrderRepository.DeleteManualOrder(order.Symbol)
 	created, err := m.OrderRepository.Find(*lastId)
 
 	if err != nil {
@@ -643,28 +670,6 @@ func (m *MakerService) tradeLimit(symbol string) *ExchangeModel.TradeLimit {
 	}
 
 	return nil
-}
-
-func (m *MakerService) formatPrice(limit ExchangeModel.TradeLimit, price float64) float64 {
-	if price < limit.MinPrice {
-		return limit.MinPrice
-	}
-
-	split := strings.Split(fmt.Sprintf("%s", strconv.FormatFloat(limit.MinPrice, 'f', -1, 64)), ".")
-	precision := len(split[1])
-	ratio := math.Pow(10, float64(precision))
-	return math.Round(price*ratio) / ratio
-}
-
-func (m *MakerService) formatQuantity(limit ExchangeModel.TradeLimit, quantity float64) float64 {
-	if quantity < limit.MinQuantity {
-		return limit.MinQuantity
-	}
-
-	split := strings.Split(fmt.Sprintf("%s", strconv.FormatFloat(limit.MinQuantity, 'f', -1, 64)), ".")
-	precision := len(split[1])
-	ratio := math.Pow(10, float64(precision))
-	return math.Round(quantity*ratio) / ratio
 }
 
 func (m *MakerService) SetDepth(depth ExchangeModel.Depth) {

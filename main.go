@@ -45,6 +45,8 @@ func main() {
 		DestinationURI: "https://testnet.binance.vision",
 		HttpClient:     &httpClient,
 	}
+	binance.Connect()
+
 	orderRepository := ExchangeRepository.OrderRepository{
 		DB:  db,
 		RDB: rdb,
@@ -143,7 +145,6 @@ func main() {
 				if len(currentDecisions) > 0 {
 					makerService.Make(symbol, currentDecisions)
 				}
-
 				time.Sleep(time.Millisecond * 500)
 			}
 		}(limit.Symbol)

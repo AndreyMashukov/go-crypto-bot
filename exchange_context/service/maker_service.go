@@ -525,6 +525,11 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 	executedQty := 0.00
 	for i := 0; i <= seconds; i++ {
 		queryOrder, err := m.Binance.QueryOrder(binanceOrder.Symbol, binanceOrder.OrderId)
+		if err != nil {
+			log.Println(err.Error())
+			continue
+		}
+
 		log.Printf(
 			"[%s] Wait %s [%.6f] order execution %d, current status is: [%s], ExecutedQty: %.6f of %.6f",
 			binanceOrder.Symbol,

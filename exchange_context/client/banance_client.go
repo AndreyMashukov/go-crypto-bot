@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"os"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -167,9 +166,9 @@ func (b *Binance) LimitOrder(order model.Order, operation string) (model.Binance
 	socketRequest.Params["symbol"] = order.Symbol
 	socketRequest.Params["side"] = operation
 	socketRequest.Params["type"] = "LIMIT"
-	socketRequest.Params["quantity"] = strconv.FormatFloat(order.Quantity, 'f', -1, 64)
+	socketRequest.Params["quantity"] = order.Quantity
 	socketRequest.Params["timeInForce"] = "GTC"
-	socketRequest.Params["price"] = strconv.FormatFloat(order.Price, 'f', -1, 64)
+	socketRequest.Params["price"] = order.Price
 	socketRequest.Params["apiKey"] = b.ApiKey
 	socketRequest.Params["timestamp"] = time.Now().Unix() * 1000
 	socketRequest.Params["signature"] = b.signature(socketRequest.Params)

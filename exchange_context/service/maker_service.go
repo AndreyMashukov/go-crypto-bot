@@ -108,7 +108,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 				if price > 0 {
 					err = m.Sell(tradeLimit, order, symbol, price, order.Quantity, sellVolume, buyVolume, smaFormatted)
 					if err != nil {
-						log.Println(err)
+						log.Printf("[%s] %s", symbol, err)
 					}
 				} else {
 					log.Printf("[%s] No BIDs on the market", symbol)
@@ -153,7 +153,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 					// todo: do not BUY if order book (depth) length is too small!!!
 					err = m.Buy(tradeLimit, symbol, price, quantity, sellVolume, buyVolume, smaFormatted)
 					if err != nil {
-						log.Println(err)
+						log.Printf("[%s] %s", symbol, err)
 					}
 				} else {
 					log.Printf("[%s] No ASKs on the market", symbol)
@@ -164,7 +164,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 				if err == nil && profit <= 0.00 {
 					err = m.BuyExtra(tradeLimit, order, price, sellVolume, buyVolume, smaValue)
 					if err != nil {
-						log.Println(err)
+						log.Printf("[%s] %s", symbol, err)
 					}
 				}
 			}

@@ -106,7 +106,8 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 				}
 
 				if price > 0 {
-					err = m.Sell(tradeLimit, order, symbol, price, order.Quantity, sellVolume, buyVolume, smaFormatted)
+					quantity := m.Formatter.FormatQuantity(tradeLimit, order.Quantity)
+					err = m.Sell(tradeLimit, order, symbol, price, quantity, sellVolume, buyVolume, smaFormatted)
 					if err != nil {
 						log.Printf("[%s] %s", symbol, err)
 					}

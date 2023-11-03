@@ -102,7 +102,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 				smaFormatted := m.Formatter.FormatPrice(tradeLimit, smaValue)
 
 				if manualOrder != nil && strings.ToUpper(manualOrder.Operation) == "SELL" {
-					price = manualOrder.Price
+					price = m.Formatter.FormatPrice(tradeLimit, manualOrder.Price)
 				}
 
 				if price > 0 {
@@ -137,7 +137,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			price := m.calculateBuyPrice(tradeLimit)
 
 			if manualOrder != nil && strings.ToUpper(manualOrder.Operation) == "BUY" {
-				price = manualOrder.Price
+				price = m.Formatter.FormatPrice(tradeLimit, manualOrder.Price)
 			}
 
 			if err != nil {
@@ -489,7 +489,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 }
 
 // todo: order has to be Interface
-func (m *MakerService) tryLimitOrder(order ExchangeModel.Order, operation string, ttl int) (ExchangeModel.BinanceOrder, error) {
+func (m *MakerService) tryLimitOrder(order ExchangeModel.Order, operation string, ttl int64) (ExchangeModel.BinanceOrder, error) {
 	binanceOrder, err := m.findOrCreateOrder(order, operation)
 
 	if err != nil {
@@ -505,7 +505,7 @@ func (m *MakerService) tryLimitOrder(order ExchangeModel.Order, operation string
 	return binanceOrder, nil
 }
 
-func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, seconds int) (ExchangeModel.BinanceOrder, error) {
+func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, seconds int64) (ExchangeModel.BinanceOrder, error) {
 	depth := m.GetDepth(binanceOrder.Symbol)
 
 	var currentPosition int
@@ -522,8 +522,10 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 		book[0],
 	)
 
+	start := time.Now().Unix()
+
 	executedQty := 0.00
-	for i := 0; i <= seconds; i++ {
+	for {
 		queryOrder, err := m.Binance.QueryOrder(binanceOrder.Symbol, binanceOrder.OrderId)
 		if err != nil {
 			log.Println(err.Error())
@@ -600,6 +602,12 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 				book[0],
 			)
 			currentPosition = bookPosition
+		}
+
+		end := time.Now().Unix()
+
+		if (end - start) > seconds {
+			break
 		}
 
 		time.Sleep(time.Second * 5)

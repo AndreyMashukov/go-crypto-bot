@@ -191,6 +191,7 @@ func (b *Binance) LimitOrder(order model.Order, operation string) (model.Binance
 	json.Unmarshal(message, &response)
 
 	if response.Error != nil {
+		log.Println(socketRequest)
 		return model.BinanceOrder{}, errors.New(response.Error.Message)
 	}
 

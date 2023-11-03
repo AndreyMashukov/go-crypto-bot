@@ -544,8 +544,9 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			queryOrder.OrigQty,
 		)
 
+		end := time.Now().Unix()
+
 		if err == nil && queryOrder.Status == "PARTIALLY_FILLED" {
-			time.Sleep(time.Second)
 			// Add 5 minutes more if ExecutedQty moves up!
 			if queryOrder.ExecutedQty > executedQty {
 				seconds = seconds + (60 * 5)
@@ -553,6 +554,12 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 
 			executedQty = queryOrder.ExecutedQty
 			m.OrderRepository.SetBinanceOrder(queryOrder)
+
+			if (end - start) > seconds {
+				break
+			}
+
+			time.Sleep(time.Second * 5)
 			continue
 		}
 
@@ -604,8 +611,6 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			)
 			currentPosition = bookPosition
 		}
-
-		end := time.Now().Unix()
 
 		if (end - start) > seconds {
 			break

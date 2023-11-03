@@ -177,7 +177,7 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 	avgPrice := marketDepth.GetBestAvgAsk()
 
 	if 0.00 == avgPrice {
-		return avgPrice
+		return m.Formatter.FormatPrice(tradeLimit, avgPrice)
 	}
 
 	minPrice := m.Formatter.FormatPrice(tradeLimit, order.Price*(100+tradeLimit.MinProfitPercent)/100)
@@ -219,7 +219,7 @@ func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) fl
 	avgPrice := marketDepth.GetBestAvgBid()
 
 	if 0.00 == avgPrice {
-		return avgPrice
+		return m.Formatter.FormatPrice(tradeLimit, avgPrice)
 	}
 
 	minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, 200)

@@ -17,7 +17,10 @@ func (m *Formatter) FormatPrice(limit ExchangeModel.TradeLimit, price float64) f
 	}
 
 	split := strings.Split(fmt.Sprintf("%s", strconv.FormatFloat(limit.MinPrice, 'f', -1, 64)), ".")
-	precision := len(split[1])
+	precision := 0
+	if len(split) > 1 {
+		precision = len(split[1])
+	}
 	ratio := math.Pow(10, float64(precision))
 	return math.Round(price*ratio) / ratio
 }
@@ -28,7 +31,10 @@ func (m *Formatter) FormatQuantity(limit ExchangeModel.TradeLimit, quantity floa
 	}
 
 	split := strings.Split(fmt.Sprintf("%s", strconv.FormatFloat(limit.MinQuantity, 'f', -1, 64)), ".")
-	precision := len(split[1])
+	precision := 0
+	if len(split) > 1 {
+		precision = len(split[1])
+	}
 	ratio := math.Pow(10, float64(precision))
 	return math.Round(quantity*ratio) / ratio
 }

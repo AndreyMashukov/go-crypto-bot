@@ -24,9 +24,10 @@ type Binance struct {
 	ApiSecret      string
 	DestinationURI string
 
-	HttpClient *http.Client
-	connection *websocket.Conn
-	channel    chan []byte
+	HttpClient   *http.Client
+	connection   *websocket.Conn
+	channel      chan []byte
+	socketWriter chan []byte
 }
 
 func (b *Binance) Connect() {
@@ -35,7 +36,9 @@ func (b *Binance) Connect() {
 		log.Fatal("dial:", err)
 	}
 	b.channel = make(chan []byte)
+	b.socketWriter = make(chan []byte)
 
+	// reader channel
 	go func() {
 		for {
 			_, message, err := connection.ReadMessage()
@@ -46,6 +49,14 @@ func (b *Binance) Connect() {
 			}
 
 			b.channel <- message
+		}
+	}()
+
+	// writer channel
+	go func() {
+		for {
+			serialized := <-b.socketWriter
+			_ = b.connection.WriteMessage(websocket.TextMessage, serialized)
 		}
 	}()
 
@@ -67,7 +78,7 @@ func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {
 	}()
 
 	serialized, _ := json.Marshal(req)
-	_ = b.connection.WriteMessage(websocket.TextMessage, serialized)
+	b.socketWriter <- serialized
 }
 
 func (b *Binance) QueryOrder(symbol string, orderId int64) (model.BinanceOrder, error) {

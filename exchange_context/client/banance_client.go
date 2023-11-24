@@ -30,8 +30,8 @@ type Binance struct {
 	socketWriter chan []byte
 }
 
-func (b *Binance) Connect() {
-	connection, _, err := websocket.DefaultDialer.Dial("wss://testnet.binance.vision/ws-api/v3", nil)
+func (b *Binance) Connect(address string) {
+	connection, _, err := websocket.DefaultDialer.Dial(address, nil)
 	if err != nil {
 		log.Fatal("dial:", err)
 	}

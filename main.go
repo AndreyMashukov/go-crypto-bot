@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/joho/godotenv"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/redis/go-redis/v9"
 	ExchangeClient "gitlab.com/open-soft/go-crypto-bot/exchange_context/client"
@@ -17,10 +18,20 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"os"
 )
 
 func main() {
-	db, err := sql.Open("mysql", "root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot")
+    pwd, _ := os.Getwd()
+	if _, err := os.Stat(fmt.Sprintf("%s/.env", pwd)); err == nil {
+		log.Println(".env is found, loading variables...")
+		err = godotenv.Load()
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	db, err := sql.Open("mysql", os.Getenv("DATABASE_DSN")) // root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot
 	defer db.Close()
 
 	db.SetMaxIdleConns(64)
@@ -33,19 +44,19 @@ func main() {
 
 	var ctx = context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "redis:6379",
+		Addr:     os.Getenv("REDIS_DSN")), //"redis:6379",
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
 
 	httpClient := http.Client{}
 	binance := ExchangeClient.Binance{
-		ApiKey:         "0XVVs5VRWyjJH1fMReQyVUS614C8FlF1rnmvCZN2iK3UDhwncqpGYzF1jgV8KPLM",
-		ApiSecret:      "tg5Ak5LoTFSCIadQLn5LkcnWHEPYSiA6wpY3rEqx89GG2aj9ZWsDyMl17S5TjTHM",
-		DestinationURI: "https://testnet.binance.vision",
+		ApiKey:         os.Getenv("BINANCE_API_KEY"), // "0XVVs5VRWyjJH1fMReQyVUS614C8FlF1rnmvCZN2iK3UDhwncqpGYzF1jgV8KPLM",
+		ApiSecret:      os.Getenv("BINANCE_API_SECRET"), // "tg5Ak5LoTFSCIadQLn5LkcnWHEPYSiA6wpY3rEqx89GG2aj9ZWsDyMl17S5TjTHM",
+		DestinationURI: os.Getenv("BINANCE_API_DSN"), // "https://testnet.binance.vision",
 		HttpClient:     &httpClient,
 	}
-	binance.Connect()
+	binance.Connect(os.Getenv("BINANCE_WS_DSN")) // "wss://testnet.binance.vision/ws-api/v3"
 
 	orderRepository := ExchangeRepository.OrderRepository{
 		DB:  db,

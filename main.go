@@ -44,7 +44,7 @@ func main() {
 
 	var ctx = context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     os.Getenv("REDIS_DSN")), //"redis:6379",
+		Addr:     os.Getenv("REDIS_DSN"), //"redis:6379",
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})

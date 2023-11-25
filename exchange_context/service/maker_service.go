@@ -98,7 +98,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		if err == nil {
 			order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 			if err == nil {
-				m.UpdateCommission(0.00, order)
+				m.recoverCommission(order)
 				price := m.calculateSellPrice(tradeLimit, order)
 				smaFormatted := m.Formatter.FormatPrice(tradeLimit, smaValue)
 
@@ -810,11 +810,30 @@ func (m *MakerService) getAssetBalance(asset string) (float64, error) {
 	return 0.00, nil
 }
 
-func (m *MakerService) UpdateCommission(balanceBefore float64, order ExchangeModel.Order) {
+func (m *MakerService) recoverCommission(order ExchangeModel.Order) {
 	if order.Commission != nil {
 		return
 	}
+	assetSymbol := order.GetAsset()
 
+	balanceAfter, err := m.getAssetBalance(assetSymbol)
+
+	if err != nil {
+		log.Printf("[%s] Can't recover commission: %s", order.Status, err.Error())
+		return
+	}
+
+	commission := order.Quantity - balanceAfter
+	order.Commission = &commission
+	order.CommissionAsset = &assetSymbol
+
+	err = m.OrderRepository.Update(order)
+	if err != nil {
+		log.Printf("[%s] Order Commission Recover: %s", order.Symbol, err.Error())
+	}
+}
+
+func (m *MakerService) UpdateCommission(balanceBefore float64, order ExchangeModel.Order) {
 	assetSymbol := order.GetAsset()
 	balanceAfter, err := m.getAssetBalance(assetSymbol)
 

@@ -524,13 +524,27 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 	)
 
 	start := time.Now().Unix()
-	sleepSeconds := time.Second * 10
+	sleepDuration := time.Second * 10
 
 	executedQty := 0.00
 	for {
 		queryOrder, err := m.Binance.QueryOrder(binanceOrder.Symbol, binanceOrder.OrderId)
 		if err != nil {
-			log.Println(err.Error())
+			log.Printf("[%s] QueryOrder: %s", binanceOrder.Symbol, err.Error())
+
+			if strings.Contains(err.Error(), "Order was canceled or expired") {
+				m.OrderRepository.DeleteBinanceOrder(queryOrder)
+				break
+			}
+
+			if strings.Contains(err.Error(), "Order does not exist") {
+				m.OrderRepository.DeleteBinanceOrder(queryOrder)
+				break
+			}
+
+			log.Printf("[%s] Retry query order...", binanceOrder.Symbol)
+			time.Sleep(sleepDuration)
+
 			continue
 		}
 
@@ -560,7 +574,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 				break
 			}
 
-			time.Sleep(sleepSeconds)
+			time.Sleep(sleepDuration)
 			continue
 		}
 
@@ -617,14 +631,14 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			break
 		}
 
-		time.Sleep(sleepSeconds)
+		time.Sleep(sleepDuration)
 	}
 
 	cancelOrder, err := m.Binance.CancelOrder(binanceOrder.Symbol, binanceOrder.OrderId)
 	m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 
 	if err != nil {
-		log.Println(err)
+		log.Printf("[%s] Cancel: %s", binanceOrder.Symbol, err.Error())
 		return binanceOrder, err
 	}
 

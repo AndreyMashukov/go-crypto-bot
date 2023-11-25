@@ -161,6 +161,30 @@ func (b *Binance) GetOpenedOrders() (*[]model.BinanceOrder, error) {
 	return &response.Result, nil
 }
 
+func (b *Binance) GetExchangeData(symbols []string) (*model.ExchangeInfo, error) {
+	channel := make(chan []byte)
+	defer close(channel)
+
+	socketRequest := model.SocketRequest{
+		Id:     uuid2.New().String(),
+		Method: "exchangeInfo",
+		Params: make(map[string]any),
+	}
+	socketRequest.Params["symbols"] = symbols
+	b.socketRequest(socketRequest, channel)
+	message := <-channel
+
+	var response model.BinanceExchangeInfoResponse
+	json.Unmarshal(message, &response)
+
+	if response.Error != nil {
+		log.Println(socketRequest)
+		return &model.ExchangeInfo{}, errors.New(response.Error.Message)
+	}
+
+	return &response.Result, nil
+}
+
 func (b *Binance) LimitOrder(order model.Order, operation string) (model.BinanceOrder, error) {
 	channel := make(chan []byte)
 	defer close(channel)

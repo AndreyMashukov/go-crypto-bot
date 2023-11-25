@@ -106,6 +106,26 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 	return tradeLimit, nil
 }
 
+func (repo *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
+	_, err := repo.DB.Exec(`
+		UPDATE trade_limit tl SET
+		    tl.min_price = ?,
+		    tl.min_quantity = ?
+		WHERE tl.id = ?
+	`,
+		limit.MinPrice,
+		limit.MinQuantity,
+		limit.Id,
+	)
+
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
+}
+
 func (e *ExchangeRepository) GetLastKLine(symbol string) *model.KLine {
 	list := e.KLineList(symbol, false, 1)
 

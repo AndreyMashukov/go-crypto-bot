@@ -98,7 +98,6 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		if err == nil {
 			order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 			if err == nil {
-				m.recoverCommission(order)
 				price := m.calculateSellPrice(tradeLimit, order)
 				smaFormatted := m.Formatter.FormatPrice(tradeLimit, smaValue)
 
@@ -107,14 +106,8 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 				}
 
 				if price > 0 {
-					receivedQuantity := order.Quantity
-
-					// Decrease QTY by commission amount
-					if order.Commission != nil && order.GetAsset() == *order.CommissionAsset {
-						receivedQuantity = receivedQuantity - *order.Commission
-					}
-
-					quantity := m.Formatter.FormatQuantity(tradeLimit, receivedQuantity)
+					quantity := m.Formatter.FormatQuantity(tradeLimit, m.calculateSellQuantity(order))
+					log.Printf("[%s] SELL QTY = %f", order.Symbol, quantity)
 					err = m.Sell(tradeLimit, order, symbol, price, quantity, sellVolume, buyVolume, smaFormatted)
 					if err != nil {
 						log.Printf("[%s] %s", symbol, err)
@@ -179,6 +172,29 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			}
 		}
 	}
+}
+
+func (m *MakerService) calculateSellQuantity(order ExchangeModel.Order) float64 {
+	m.recoverCommission(order)
+	sellQuantity := order.Quantity
+
+	// Decrease QTY by commission amount
+	if order.Commission != nil && order.GetAsset() == *order.CommissionAsset {
+		sellQuantity = sellQuantity - *order.Commission
+	}
+
+	balance, err := m.getAssetBalance(order.GetAsset())
+
+	if err != nil {
+		time.Sleep(time.Minute * 1)
+		return m.calculateSellQuantity(order)
+	}
+
+	if balance < sellQuantity {
+		return balance
+	}
+
+	return sellQuantity
 }
 
 func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order) float64 {

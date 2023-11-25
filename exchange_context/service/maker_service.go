@@ -842,7 +842,9 @@ func (m *MakerService) UpdateCommission(balanceBefore float64, order ExchangeMod
 		return
 	}
 
-	commission := balanceAfter - balanceBefore
+	arrived := balanceAfter - balanceBefore
+
+	commission := order.Quantity - arrived
 	order.Commission = &commission
 	order.CommissionAsset = &assetSymbol
 

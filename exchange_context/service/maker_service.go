@@ -524,6 +524,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 	)
 
 	start := time.Now().Unix()
+	sleepSeconds := time.Second * 10
 
 	executedQty := 0.00
 	for {
@@ -559,7 +560,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 				break
 			}
 
-			time.Sleep(time.Second * 15)
+			time.Sleep(sleepSeconds)
 			continue
 		}
 
@@ -616,7 +617,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			break
 		}
 
-		time.Sleep(time.Second * 15)
+		time.Sleep(sleepSeconds)
 	}
 
 	cancelOrder, err := m.Binance.CancelOrder(binanceOrder.Symbol, binanceOrder.OrderId)
@@ -662,6 +663,7 @@ func (m *MakerService) findOrCreateOrder(order ExchangeModel.Order, operation st
 	openedOrders, err := m.Binance.GetOpenedOrders()
 
 	if err != nil {
+		log.Printf("[%s] Opened: %s", order.Symbol, err.Error())
 		return ExchangeModel.BinanceOrder{}, err
 	}
 
@@ -677,6 +679,7 @@ func (m *MakerService) findOrCreateOrder(order ExchangeModel.Order, operation st
 	binanceOrder, err := m.Binance.LimitOrder(order, operation)
 
 	if err != nil {
+		log.Printf("[%s] Limit: %s", order.Symbol, err.Error())
 		return binanceOrder, err
 	}
 

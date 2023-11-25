@@ -9,7 +9,6 @@ import (
 	uuid2 "github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -136,34 +135,30 @@ func (b *Binance) CancelOrder(symbol string, orderId int64) (model.BinanceOrder,
 }
 
 func (b *Binance) GetOpenedOrders() (*[]model.BinanceOrder, error) {
-	queryString := fmt.Sprintf(
-		"timestamp=%d",
-		time.Now().UTC().Unix()*1000,
-	)
-	request, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v3/openOrders?%s&signature=%s", b.DestinationURI, queryString, b.sign(queryString)), nil)
-	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
-	request.Header.Set("X-MBX-APIKEY", b.ApiKey)
+	channel := make(chan []byte)
+	defer close(channel)
 
-	response, err := b.HttpClient.Do(request)
-	if err != nil {
-		return nil, err
+	socketRequest := model.SocketRequest{
+		Id:     uuid2.New().String(),
+		Method: "openOrders.status",
+		Params: make(map[string]any),
+	}
+	socketRequest.Params["apiKey"] = b.ApiKey
+	socketRequest.Params["timestamp"] = time.Now().Unix() * 1000
+	socketRequest.Params["signature"] = b.signature(socketRequest.Params)
+	b.socketRequest(socketRequest, channel)
+	message := <-channel
+
+	var response model.BinanceOrderListResponse
+	json.Unmarshal(message, &response)
+
+	if response.Error != nil {
+		log.Println(socketRequest)
+		list := make([]model.BinanceOrder, 0)
+		return &list, errors.New(response.Error.Message)
 	}
 
-	defer response.Body.Close()
-	body, err := ioutil.ReadAll(response.Body)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if response.StatusCode != 200 {
-		return nil, errors.New(string(body))
-	}
-
-	var binanceOrders []model.BinanceOrder
-	json.Unmarshal(body, &binanceOrders)
-
-	return &binanceOrders, nil
+	return &response.Result, nil
 }
 
 func (b *Binance) LimitOrder(order model.Order, operation string) (model.BinanceOrder, error) {

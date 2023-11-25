@@ -17,3 +17,10 @@ type BinanceOrderResponse struct {
 	Result BinanceOrder `json:"result"`
 	Error  *Error       `json:"error"`
 }
+
+type BinanceOrderListResponse struct {
+	Id     string         `json:"id"`
+	Status int64          `json:"status"`
+	Result []BinanceOrder `json:"result"`
+	Error  *Error         `json:"error"`
+}

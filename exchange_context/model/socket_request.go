@@ -61,3 +61,24 @@ type BinanceExchangeInfoResponse struct {
 	Result ExchangeInfo `json:"result"`
 	Error  *Error       `json:"error"`
 }
+
+type MyTrade struct {
+	Id              int64   `json:"id"`
+	OrderId         int64   `json:"orderId"`
+	Price           float64 `json:"price,string"`
+	Quantity        float64 `json:"qty,string"`
+	QuoteQuantity   float64 `json:"quoteQty,string"`
+	Commission      float64 `json:"commission,string"`
+	CommissionAsset string  `json:"commissionAsset"`
+	Time            int64   `json:"time"`
+	IsBuyer         bool    `json:"isBuyer"`
+	IsMaker         bool    `json:"isMaker"`
+	IsBestMatch     bool    `json:"isBestMatch"`
+}
+
+type TradesResponse struct {
+	Id     string    `json:"id"`
+	Status int64     `json:"status"`
+	Result []MyTrade `json:"result"`
+	Error  *Error    `json:"error"`
+}

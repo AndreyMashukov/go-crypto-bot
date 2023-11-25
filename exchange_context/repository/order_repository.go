@@ -70,7 +70,9 @@ func (repo *OrderRepository) getOpenedOrder(symbol string, operation string) (Ex
 			o.sma_value as SmaValue,
 			o.external_id as ExternalId,
 			o.closed_by as ClosedBy,
-			o.used_extra_budget as UsedExtraBudget
+			o.used_extra_budget as UsedExtraBudget,
+			o.commission as Commission,
+			o.commission_asset as CommissionAsset
 		FROM orders o
 		WHERE o.status = ? AND o.symbol = ? AND o.operation = ?`, "opened", symbol, operation,
 	).Scan(
@@ -87,6 +89,8 @@ func (repo *OrderRepository) getOpenedOrder(symbol string, operation string) (Ex
 		&order.ExternalId,
 		&order.ClosedBy,
 		&order.UsedExtraBudget,
+		&order.Commission,
+		&order.CommissionAsset,
 	)
 
 	if err != nil {
@@ -110,7 +114,9 @@ func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
 		    status = ?,
 		    external_id = ?,
 		    closed_by = ?,
-			used_extra_budget = ?
+			used_extra_budget = ?,
+			commission = ?,
+			commission_asset = ?
 	`,
 		order.Symbol,
 		order.Quantity,
@@ -124,6 +130,8 @@ func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
 		order.ExternalId,
 		order.ClosedBy,
 		order.UsedExtraBudget,
+		order.Commission,
+		order.CommissionAsset,
 	)
 
 	if err != nil {
@@ -152,7 +160,9 @@ func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
 		    o.status = ?,
 		    o.external_id = ?,
 		    o.closed_by = ?,
-			o.used_extra_budget = ?
+			o.used_extra_budget = ?,
+			o.commission = ?,
+			o.commission_asset = ?
 		WHERE o.id = ?
 	`,
 		order.Symbol,
@@ -167,6 +177,8 @@ func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
 		order.ExternalId,
 		order.ClosedBy,
 		order.UsedExtraBudget,
+		order.Commission,
+		order.CommissionAsset,
 		order.Id,
 	)
 
@@ -195,7 +207,9 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 			o.sma_value as SmaValue,
 			o.external_id as ExternalId,
 			o.closed_by as ClosedBy,
-			o.used_extra_budget as UsedExtraBudget
+			o.used_extra_budget as UsedExtraBudget,
+			o.commission as Commission,
+			o.commission_asset as CommissionAsset
 		FROM orders o
 		WHERE o.id = ?`, id,
 	).Scan(
@@ -212,6 +226,8 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 		&order.ExternalId,
 		&order.ClosedBy,
 		&order.UsedExtraBudget,
+		&order.Commission,
+		&order.CommissionAsset,
 	)
 
 	if err != nil {
@@ -236,7 +252,9 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 			o.sma_value as SmaValue,
 			o.external_id as ExternalId,
 			o.closed_by as ClosedBy,
-			o.used_extra_budget as UsedExtraBudget
+			o.used_extra_budget as UsedExtraBudget,
+			o.commission as Commission,
+			o.commission_asset as CommissionAsset
 		FROM orders o
 	`)
 	defer res.Close()
@@ -263,6 +281,8 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 			&order.ExternalId,
 			&order.ClosedBy,
 			&order.UsedExtraBudget,
+			&order.Commission,
+			&order.CommissionAsset,
 		)
 
 		if err != nil {

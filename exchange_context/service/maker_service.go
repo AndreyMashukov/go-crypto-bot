@@ -186,15 +186,10 @@ func (m *MakerService) calculateSellQuantity(order ExchangeModel.Order) float64 
 	balance, err := m.getAssetBalance(order.GetAsset())
 
 	if err != nil {
-		time.Sleep(time.Minute * 1)
-		return m.calculateSellQuantity(order)
+		return sellQuantity
 	}
 
-	if balance < sellQuantity {
-		return balance
-	}
-
-	return sellQuantity
+	return balance
 }
 
 func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order) float64 {

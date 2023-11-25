@@ -35,6 +35,10 @@ func (m *Formatter) FormatQuantity(limit ExchangeModel.TradeLimit, quantity floa
 	if len(split) > 1 {
 		precision = len(split[1])
 	}
-	ratio := math.Pow(10, float64(precision))
-	return math.Round(quantity*ratio) / ratio
+
+	expression := "%." + strconv.Itoa(precision) + "f"
+	value := fmt.Sprintf(expression, quantity)
+	quantity, _ = strconv.ParseFloat(value, 64)
+
+	return quantity
 }

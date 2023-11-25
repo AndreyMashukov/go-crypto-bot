@@ -559,7 +559,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 				break
 			}
 
-			time.Sleep(time.Second * 5)
+			time.Sleep(time.Second * 10)
 			continue
 		}
 
@@ -616,7 +616,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			break
 		}
 
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 10)
 	}
 
 	cancelOrder, err := m.Binance.CancelOrder(binanceOrder.Symbol, binanceOrder.OrderId)

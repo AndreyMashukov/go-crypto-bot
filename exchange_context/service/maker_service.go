@@ -469,7 +469,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 		// todo: add commission???
 	}
 
-	balanceBefore, balanceErr := m.getAssetBalance(order.GetAsset())
+	//balanceBefore, balanceErr := m.getAssetBalance(order.GetAsset())
 
 	binanceOrder, err := m.tryLimitOrder(order, "SELL", 20)
 
@@ -510,9 +510,9 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 		return err
 	}
 
-	if balanceErr == nil {
-		m.UpdateCommission(balanceBefore, order)
-	}
+	//if balanceErr == nil {
+	//	m.UpdateCommission(balanceBefore, order)
+	//}
 
 	return nil
 }

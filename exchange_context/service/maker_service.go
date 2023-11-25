@@ -98,6 +98,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		if err == nil {
 			order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 			if err == nil {
+				m.UpdateCommission(order)
 				price := m.calculateSellPrice(tradeLimit, order)
 				smaFormatted := m.Formatter.FormatPrice(tradeLimit, smaValue)
 
@@ -106,7 +107,14 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 				}
 
 				if price > 0 {
-					quantity := m.Formatter.FormatQuantity(tradeLimit, order.Quantity)
+					receivedQuantity := order.Quantity
+
+					// Decrease QTY by commission amount
+					if order.Commission != nil && strings.Contains(strings.ReplaceAll(order.Symbol, "USDT", ""), *order.CommissionAsset) {
+						receivedQuantity = receivedQuantity - *order.Commission
+					}
+
+					quantity := m.Formatter.FormatQuantity(tradeLimit, receivedQuantity)
 					err = m.Sell(tradeLimit, order, symbol, price, quantity, sellVolume, buyVolume, smaFormatted)
 					if err != nil {
 						log.Printf("[%s] %s", symbol, err)
@@ -295,10 +303,6 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 	extraOrder.ClosedBy = &order.Id
 	extraOrder.CreatedAt = time.Now().Format("2006-01-02 15:04:05")
 
-	order.Quantity = extraOrder.Quantity + order.Quantity
-	order.Price = m.getAvgPrice(order, extraOrder)
-	order.UsedExtraBudget = extraOrder.Price * extraOrder.Quantity
-
 	// change QTY to zero for extra order
 	extraOrder.Quantity = 0.00
 
@@ -306,6 +310,14 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 	if err != nil {
 		return err
 	}
+
+	m.UpdateCommission(extraOrder)
+
+	order.Quantity = extraOrder.Quantity + order.Quantity
+	order.Price = m.getAvgPrice(order, extraOrder)
+	order.UsedExtraBudget = extraOrder.Price * extraOrder.Quantity
+	commissionSum := *order.Commission + *extraOrder.Commission
+	order.Commission = &commissionSum
 
 	err = m.OrderRepository.Update(order)
 	if err != nil {
@@ -392,6 +404,8 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 	}
 
 	m.OrderRepository.DeleteManualOrder(order.Symbol)
+
+	m.UpdateCommission(order)
 
 	return nil
 }
@@ -485,6 +499,8 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 
 		return err
 	}
+
+	m.UpdateCommission(order)
 
 	return nil
 }
@@ -761,5 +777,33 @@ func (m *MakerService) UpdateLimits() {
 			tradeLimit.MinQuantity,
 			tradeLimit.MinPrice,
 		)
+	}
+}
+
+func (m *MakerService) UpdateCommission(order ExchangeModel.Order) {
+	if order.Commission != nil {
+		return
+	}
+
+	trades, err := m.Binance.GetTrades(order)
+	log.Println(trades)
+
+	if err != nil {
+		log.Printf("[%s] Commission: %s", order.Symbol, err.Error())
+		return
+	}
+
+	for _, trade := range trades {
+		if trade.OrderId == *order.ExternalId {
+			order.Commission = &trade.Commission
+			order.CommissionAsset = &trade.CommissionAsset
+		}
+	}
+
+	if order.Commission != nil {
+		err = m.OrderRepository.Update(order)
+		if err != nil {
+			log.Printf("[%s] Order Commission Update: %s", order.Symbol, err.Error())
+		}
 	}
 }

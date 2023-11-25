@@ -185,6 +185,37 @@ func (b *Binance) GetExchangeData(symbols []string) (*model.ExchangeInfo, error)
 	return &response.Result, nil
 }
 
+func (b *Binance) GetTrades(order model.Order) ([]model.MyTrade, error) {
+	channel := make(chan []byte)
+	defer close(channel)
+
+	socketRequest := model.SocketRequest{
+		Id:     uuid2.New().String(),
+		Method: "myTrades",
+		Params: make(map[string]any),
+	}
+
+	socketRequest.Params["apiKey"] = b.ApiKey
+	socketRequest.Params["fromId"] = *order.ExternalId
+	socketRequest.Params["limit"] = 1
+	socketRequest.Params["timestamp"] = time.Now().Unix() * 1000
+	socketRequest.Params["symbol"] = order.Symbol
+	socketRequest.Params["signature"] = b.signature(socketRequest.Params)
+	b.socketRequest(socketRequest, channel)
+	message := <-channel
+
+	var response model.TradesResponse
+	json.Unmarshal(message, &response)
+
+	if response.Error != nil {
+		log.Println(socketRequest)
+		list := make([]model.MyTrade, 0)
+		return list, errors.New(response.Error.Message)
+	}
+
+	return response.Result, nil
+}
+
 func (b *Binance) LimitOrder(order model.Order, operation string) (model.BinanceOrder, error) {
 	channel := make(chan []byte)
 	defer close(channel)
@@ -210,7 +241,7 @@ func (b *Binance) LimitOrder(order model.Order, operation string) (model.Binance
 	json.Unmarshal(message, &response)
 
 	if response.Error != nil {
-		log.Println(socketRequest)
+		log.Printf("[%s] Limit Order: %s -> %s", order.Symbol, response.Error.Message, socketRequest)
 		return model.BinanceOrder{}, errors.New(response.Error.Message)
 	}
 

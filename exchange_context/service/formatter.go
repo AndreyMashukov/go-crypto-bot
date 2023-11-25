@@ -39,7 +39,12 @@ func (m *Formatter) FormatQuantity(limit ExchangeModel.TradeLimit, quantity floa
 
 	second := "00"
 	if precision > 0 && len(splitQty) > 1 {
-		second = splitQty[1][0:precision]
+		substr := precision
+		if len(splitQty[1]) < substr {
+			substr = len(splitQty[1])
+		}
+
+		second = splitQty[1][0:substr]
 	}
 	quantity, _ = strconv.ParseFloat(fmt.Sprintf("%s.%s", splitQty[0], second), 64)
 

@@ -721,3 +721,45 @@ func (m *MakerService) SetDepth(depth ExchangeModel.Depth) {
 func (m *MakerService) GetDepth(symbol string) ExchangeModel.Depth {
 	return m.ExchangeRepository.GetDepth(symbol)
 }
+
+func (m *MakerService) UpdateLimits() {
+	symbols := make([]string, 0)
+
+	tradeLimits := m.ExchangeRepository.GetTradeLimits()
+	limitMap := make(map[string]ExchangeModel.TradeLimit)
+	for _, tradeLimit := range tradeLimits {
+		symbols = append(symbols, tradeLimit.Symbol)
+		limitMap[tradeLimit.Symbol] = tradeLimit
+	}
+
+	exchangeInfo, err := m.Binance.GetExchangeData(symbols)
+
+	if err != nil {
+		log.Printf("Exchange Limits: %s", err.Error())
+		return
+	}
+
+	for _, exchangeSymbol := range exchangeInfo.Symbols {
+		tradeLimit := limitMap[exchangeSymbol.Symbol]
+		for _, filter := range exchangeSymbol.Filters {
+			if filter.FilterType == "PRICE_FILTER" {
+				tradeLimit.MinPrice = *filter.MinPrice
+			}
+			if filter.FilterType == "LOT_SIZE" {
+				tradeLimit.MinQuantity = *filter.MinQuantity
+			}
+		}
+		err := m.ExchangeRepository.UpdateTradeLimit(tradeLimit)
+		if err != nil {
+			log.Printf("[%s] Trade Limit Update: %s", tradeLimit.Symbol, err.Error())
+			continue
+		}
+
+		log.Printf(
+			"[%s] Trade Limit Updated, MIN_LOT = %f, MIN_PRICE = %f",
+			tradeLimit.Symbol,
+			tradeLimit.MinQuantity,
+			tradeLimit.MinPrice,
+		)
+	}
+}

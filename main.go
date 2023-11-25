@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/joho/godotenv"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 	ExchangeClient "gitlab.com/open-soft/go-crypto-bot/exchange_context/client"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/controller"
@@ -15,14 +15,14 @@ import (
 	ExchangeService "gitlab.com/open-soft/go-crypto-bot/exchange_context/service"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
-	"os"
 )
 
 func main() {
-    pwd, _ := os.Getwd()
+	pwd, _ := os.Getwd()
 	if _, err := os.Stat(fmt.Sprintf("%s/.env", pwd)); err == nil {
 		log.Println(".env is found, loading variables...")
 		err = godotenv.Load()
@@ -45,15 +45,15 @@ func main() {
 	var ctx = context.Background()
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     os.Getenv("REDIS_DSN"), //"redis:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
+		Password: "",                     // no password set
+		DB:       0,                      // use default DB
 	})
 
 	httpClient := http.Client{}
 	binance := ExchangeClient.Binance{
-		ApiKey:         os.Getenv("BINANCE_API_KEY"), // "0XVVs5VRWyjJH1fMReQyVUS614C8FlF1rnmvCZN2iK3UDhwncqpGYzF1jgV8KPLM",
+		ApiKey:         os.Getenv("BINANCE_API_KEY"),    // "0XVVs5VRWyjJH1fMReQyVUS614C8FlF1rnmvCZN2iK3UDhwncqpGYzF1jgV8KPLM",
 		ApiSecret:      os.Getenv("BINANCE_API_SECRET"), // "tg5Ak5LoTFSCIadQLn5LkcnWHEPYSiA6wpY3rEqx89GG2aj9ZWsDyMl17S5TjTHM",
-		DestinationURI: os.Getenv("BINANCE_API_DSN"), // "https://testnet.binance.vision",
+		DestinationURI: os.Getenv("BINANCE_API_DSN"),    // "https://testnet.binance.vision",
 		HttpClient:     &httpClient,
 	}
 	binance.Connect(os.Getenv("BINANCE_WS_DSN")) // "wss://testnet.binance.vision/ws-api/v3"
@@ -108,6 +108,13 @@ func main() {
 		MinDecisions:       4.00,
 		HoldScore:          75.00,
 	}
+
+	go func() {
+		for {
+			makerService.UpdateLimits()
+			time.Sleep(time.Minute * 5)
+		}
+	}()
 
 	// todo: BuyExtraOnMarketFallStrategy
 	baseKLineStrategy := ExchangeService.BaseKLineStrategy{}

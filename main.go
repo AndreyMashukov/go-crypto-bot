@@ -225,7 +225,7 @@ func main() {
 	}
 
 	// ltcusdt@aggTrade/ethusdt@aggTrade/solusdt@aggTrade /perpusdt@aggTrade
-	wsConnection := ExchangeClient.Listen(fmt.Sprintf("wss://fstream.binance.com/stream?streams=%s", strings.Join(streams[:], "/")), eventChannel)
+	wsConnection := ExchangeClient.Listen(fmt.Sprintf("wss://fstream.binance.com:443/stream?streams=%s", strings.Join(streams[:], "/")), eventChannel)
 	defer wsConnection.Close()
 
 	http.ListenAndServe(":8080", nil)

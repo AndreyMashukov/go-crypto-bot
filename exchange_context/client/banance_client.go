@@ -68,6 +68,7 @@ func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {
 			msg := <-b.channel
 
 			if strings.Contains(string(msg), req.Id) {
+				//log.Printf("[%s], %s", req.Method, string(msg))
 				channel <- msg
 				return
 			}
@@ -185,6 +186,34 @@ func (b *Binance) GetExchangeData(symbols []string) (*model.ExchangeInfo, error)
 	return &response.Result, nil
 }
 
+func (b *Binance) GetAccountStatus() (*model.AccountStatus, error) {
+	channel := make(chan []byte)
+	defer close(channel)
+
+	socketRequest := model.SocketRequest{
+		Id:     uuid2.New().String(),
+		Method: "account.status",
+		Params: make(map[string]any),
+	}
+
+	socketRequest.Params["apiKey"] = b.ApiKey
+	socketRequest.Params["timestamp"] = time.Now().Unix() * 1000
+	socketRequest.Params["signature"] = b.signature(socketRequest.Params)
+	b.socketRequest(socketRequest, channel)
+	message := <-channel
+
+	var response model.AccountStatusResponse
+	json.Unmarshal(message, &response)
+
+	if response.Error != nil {
+		log.Println(socketRequest)
+
+		return nil, errors.New(response.Error.Message)
+	}
+
+	return &response.Result, nil
+}
+
 func (b *Binance) GetTrades(order model.Order) ([]model.MyTrade, error) {
 	channel := make(chan []byte)
 	defer close(channel)
@@ -196,8 +225,6 @@ func (b *Binance) GetTrades(order model.Order) ([]model.MyTrade, error) {
 	}
 
 	socketRequest.Params["apiKey"] = b.ApiKey
-	socketRequest.Params["fromId"] = *order.ExternalId
-	socketRequest.Params["limit"] = 1
 	socketRequest.Params["timestamp"] = time.Now().Unix() * 1000
 	socketRequest.Params["symbol"] = order.Symbol
 	socketRequest.Params["signature"] = b.signature(socketRequest.Params)

@@ -1,5 +1,7 @@
 package model
 
+import "strings"
+
 type Order struct {
 	Id              int64    `json:"id"`
 	Symbol          string   `json:"symbol"`
@@ -16,4 +18,8 @@ type Order struct {
 	UsedExtraBudget float64  `json:"usedExtraBudget"`
 	Commission      *float64 `json:"commission"`
 	CommissionAsset *string  `json:"commissionAsset"`
+}
+
+func (o Order) GetAsset() string {
+	return strings.ReplaceAll(o.Symbol, "USDT", "")
 }

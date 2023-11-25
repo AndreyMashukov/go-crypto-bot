@@ -98,7 +98,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		if err == nil {
 			order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 			if err == nil {
-				m.UpdateCommission(order)
+				m.UpdateCommission(0.00, order)
 				price := m.calculateSellPrice(tradeLimit, order)
 				smaFormatted := m.Formatter.FormatPrice(tradeLimit, smaValue)
 
@@ -110,7 +110,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 					receivedQuantity := order.Quantity
 
 					// Decrease QTY by commission amount
-					if order.Commission != nil && strings.Contains(strings.ReplaceAll(order.Symbol, "USDT", ""), *order.CommissionAsset) {
+					if order.Commission != nil && order.GetAsset() == *order.CommissionAsset {
 						receivedQuantity = receivedQuantity - *order.Commission
 					}
 
@@ -290,6 +290,8 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 		// todo: add commission???
 	}
 
+	balanceBefore, balanceErr := m.getAssetBalance(order.GetAsset())
+
 	binanceOrder, err := m.tryLimitOrder(extraOrder, "BUY", 20)
 
 	if err != nil {
@@ -311,7 +313,9 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 		return err
 	}
 
-	m.UpdateCommission(extraOrder)
+	if balanceErr == nil {
+		m.UpdateCommission(balanceBefore, extraOrder)
+	}
 
 	order.Quantity = extraOrder.Quantity + order.Quantity
 	order.Price = m.getAvgPrice(order, extraOrder)
@@ -383,6 +387,8 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 		// todo: add commission???
 	}
 
+	balanceBefore, balanceErr := m.getAssetBalance(order.GetAsset())
+
 	binanceOrder, err := m.tryLimitOrder(order, "BUY", 20)
 
 	if err != nil {
@@ -405,7 +411,9 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 
 	m.OrderRepository.DeleteManualOrder(order.Symbol)
 
-	m.UpdateCommission(order)
+	if balanceErr == nil {
+		m.UpdateCommission(balanceBefore, order)
+	}
 
 	return nil
 }
@@ -461,6 +469,8 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 		// todo: add commission???
 	}
 
+	balanceBefore, balanceErr := m.getAssetBalance(order.GetAsset())
+
 	binanceOrder, err := m.tryLimitOrder(order, "SELL", 20)
 
 	if err != nil {
@@ -500,7 +510,9 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 		return err
 	}
 
-	m.UpdateCommission(order)
+	if balanceErr == nil {
+		m.UpdateCommission(balanceBefore, order)
+	}
 
 	return nil
 }
@@ -780,30 +792,43 @@ func (m *MakerService) UpdateLimits() {
 	}
 }
 
-func (m *MakerService) UpdateCommission(order ExchangeModel.Order) {
-	if order.Commission != nil {
-		return
-	}
-
-	trades, err := m.Binance.GetTrades(order)
-	log.Println(trades)
+func (m *MakerService) getAssetBalance(asset string) (float64, error) {
+	accountInfo, err := m.Binance.GetAccountStatus()
 
 	if err != nil {
-		log.Printf("[%s] Commission: %s", order.Symbol, err.Error())
+		return 0.00, err
+	}
+
+	for _, assetBalance := range accountInfo.Balances {
+		if assetBalance.Asset == asset {
+			balance := assetBalance.Free - assetBalance.Locked
+			log.Printf("[%s] Balance is: %f", asset, balance)
+			return balance, nil
+		}
+	}
+
+	return 0.00, nil
+}
+
+func (m *MakerService) UpdateCommission(balanceBefore float64, order ExchangeModel.Order) {
+	if order.Commission != nil {
 		return
 	}
 
-	for _, trade := range trades {
-		if trade.OrderId == *order.ExternalId {
-			order.Commission = &trade.Commission
-			order.CommissionAsset = &trade.CommissionAsset
-		}
+	assetSymbol := order.GetAsset()
+	balanceAfter, err := m.getAssetBalance(assetSymbol)
+
+	if err != nil {
+		log.Printf("[%s] Can't update commission: %s", order.Status, err.Error())
+		return
 	}
 
-	if order.Commission != nil {
-		err = m.OrderRepository.Update(order)
-		if err != nil {
-			log.Printf("[%s] Order Commission Update: %s", order.Symbol, err.Error())
-		}
+	commission := balanceAfter - balanceBefore
+	order.Commission = &commission
+	order.CommissionAsset = &assetSymbol
+
+	err = m.OrderRepository.Update(order)
+	if err != nil {
+		log.Printf("[%s] Order Commission Update: %s", order.Symbol, err.Error())
 	}
 }

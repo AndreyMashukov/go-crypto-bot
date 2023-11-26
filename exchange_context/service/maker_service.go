@@ -152,10 +152,15 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 				if price > 0 {
 					quantity := m.Formatter.FormatQuantity(tradeLimit, tradeLimit.USDTLimit/price)
-					// todo: do not BUY if order book (depth) length is too small!!!
+
 					err = m.Buy(tradeLimit, symbol, price, quantity, sellVolume, buyVolume, smaFormatted)
 					if err != nil {
 						log.Printf("[%s] %s", symbol, err)
+
+						if strings.Contains(err.Error(), "not enough balance") {
+							log.Printf("[%s] wait 1 minute...", symbol)
+							time.Sleep(time.Minute * 1)
+						}
 					}
 				} else {
 					log.Printf("[%s] No ASKs on the market", symbol)
@@ -371,6 +376,18 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 
 	if quantity <= 0.00 {
 		return errors.New(fmt.Sprintf("Available quantity is %f", quantity))
+	}
+
+	usdtAvailableBalance, err := m.getAssetBalance("USDT")
+
+	if err != nil {
+		return errors.New(fmt.Sprintf("[%s] BUY balance error: %s", symbol, err.Error()))
+	}
+
+	requiredUsdtAmount := price * quantity
+
+	if requiredUsdtAmount > usdtAvailableBalance {
+		return errors.New(fmt.Sprintf("[%s] BUY not enough balance: %f/%f", symbol, usdtAvailableBalance, requiredUsdtAmount))
 	}
 
 	// to avoid concurrent map writes

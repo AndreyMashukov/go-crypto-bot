@@ -378,16 +378,21 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 		return errors.New(fmt.Sprintf("Available quantity is %f", quantity))
 	}
 
-	usdtAvailableBalance, err := m.getAssetBalance("USDT")
+	cached := m.OrderRepository.GetBinanceOrder(symbol, "BUY")
 
-	if err != nil {
-		return errors.New(fmt.Sprintf("[%s] BUY balance error: %s", symbol, err.Error()))
-	}
+	// Check balance for new order
+	if cached == nil {
+		usdtAvailableBalance, err := m.getAssetBalance("USDT")
 
-	requiredUsdtAmount := price * quantity
+		if err != nil {
+			return errors.New(fmt.Sprintf("[%s] BUY balance error: %s", symbol, err.Error()))
+		}
 
-	if requiredUsdtAmount > usdtAvailableBalance {
-		return errors.New(fmt.Sprintf("[%s] BUY not enough balance: %f/%f", symbol, usdtAvailableBalance, requiredUsdtAmount))
+		requiredUsdtAmount := price * quantity
+
+		if requiredUsdtAmount > usdtAvailableBalance {
+			return errors.New(fmt.Sprintf("[%s] BUY not enough balance: %f/%f", symbol, usdtAvailableBalance, requiredUsdtAmount))
+		}
 	}
 
 	// to avoid concurrent map writes

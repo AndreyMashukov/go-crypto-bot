@@ -504,7 +504,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 
 	//balanceBefore, balanceErr := m.getAssetBalance(order.GetAsset())
 
-	binanceOrder, err := m.tryLimitOrder(order, "SELL", 20)
+	binanceOrder, err := m.tryLimitOrder(order, "SELL", 120)
 
 	if err != nil {
 		return err

@@ -834,9 +834,9 @@ func (m *MakerService) getAssetBalance(asset string) (float64, error) {
 
 	for _, assetBalance := range accountInfo.Balances {
 		if assetBalance.Asset == asset {
-			balance := assetBalance.Free - assetBalance.Locked
-			log.Printf("[%s] Balance is: %f", asset, balance)
-			return balance, nil
+			log.Printf("[%s] Free balance is: %f", asset, assetBalance.Free)
+			log.Printf("[%s] Locked balance is: %f", asset, assetBalance.Locked)
+			return assetBalance.Free, nil
 		}
 	}
 

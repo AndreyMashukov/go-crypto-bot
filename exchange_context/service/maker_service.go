@@ -341,7 +341,7 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 
 	order.Quantity = executedQty + order.Quantity
 	order.Price = avgPrice
-	order.UsedExtraBudget = extraOrder.Price * executedQty
+	order.UsedExtraBudget = order.UsedExtraBudget + (extraOrder.Price * executedQty)
 	commissionSum := *order.Commission + *extraOrder.Commission
 	order.Commission = &commissionSum
 

@@ -74,6 +74,8 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		}
 	}
 
+	// todo: fallback to existing order...
+
 	if holdScore >= m.HoldScore {
 		return
 	}
@@ -314,12 +316,16 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 		return err
 	}
 
+	executedQty := binanceOrder.ExecutedQty
+
 	// fill from API
 	extraOrder.ExternalId = &binanceOrder.OrderId
-	extraOrder.Quantity = binanceOrder.ExecutedQty
+	extraOrder.Quantity = executedQty
 	extraOrder.Price = binanceOrder.Price
 	extraOrder.ClosedBy = &order.Id
 	extraOrder.CreatedAt = time.Now().Format("2006-01-02 15:04:05")
+
+	avgPrice := m.getAvgPrice(order, extraOrder)
 
 	// change QTY to zero for extra order
 	extraOrder.Quantity = 0.00
@@ -333,9 +339,9 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 		m.UpdateCommission(balanceBefore, extraOrder)
 	}
 
-	order.Quantity = extraOrder.Quantity + order.Quantity
-	order.Price = m.getAvgPrice(order, extraOrder)
-	order.UsedExtraBudget = extraOrder.Price * extraOrder.Quantity
+	order.Quantity = executedQty + order.Quantity
+	order.Price = avgPrice
+	order.UsedExtraBudget = extraOrder.Price * executedQty
 	commissionSum := *order.Commission + *extraOrder.Commission
 	order.Commission = &commissionSum
 
@@ -552,6 +558,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 
 // todo: order has to be Interface
 func (m *MakerService) tryLimitOrder(order ExchangeModel.Order, operation string, ttl int64) (ExchangeModel.BinanceOrder, error) {
+	// todo: extra order flag...
 	binanceOrder, err := m.findOrCreateOrder(order, operation)
 
 	if err != nil {
@@ -727,6 +734,7 @@ func (m *MakerService) releaseLock(symbol string) {
 }
 
 func (m *MakerService) findOrCreateOrder(order ExchangeModel.Order, operation string) (ExchangeModel.BinanceOrder, error) {
+	// todo: extra order flag...
 	cached := m.OrderRepository.GetBinanceOrder(order.Symbol, operation)
 
 	if cached != nil {

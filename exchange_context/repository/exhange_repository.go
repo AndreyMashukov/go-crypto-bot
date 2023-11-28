@@ -167,6 +167,18 @@ func (e *ExchangeRepository) KLineList(symbol string, reverse bool, size int64) 
 	return list
 }
 
+func (e *ExchangeRepository) GetPeriodMaxPrice(symbol string, period int64) float64 {
+	kLines := e.KLineList(symbol, true, period)
+	maxPrice := 0.00
+	for _, kLine := range kLines {
+		if maxPrice < kLine.High {
+			maxPrice = kLine.High
+		}
+	}
+
+	return maxPrice
+}
+
 func (e *ExchangeRepository) GetPeriodMinPrice(symbol string, period int64) float64 {
 	kLines := e.KLineList(symbol, true, period)
 	minPrice := 0.00

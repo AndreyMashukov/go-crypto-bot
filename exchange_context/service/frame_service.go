@@ -17,7 +17,7 @@ type FrameService struct {
 }
 
 func (f *FrameService) GetFrame(symbol string, interval string, limit int64) model.Frame {
-	key := fmt.Sprintf("kline-frame-result-%s-%s-%d", symbol, interval, limit)
+	key := fmt.Sprintf("kline-frame-results-%s-%s-%d", symbol, interval, limit)
 	cached := f.RDB.Get(*f.Ctx, key).String()
 
 	if len(cached) > 0 {
@@ -34,14 +34,27 @@ func (f *FrameService) GetFrame(symbol string, interval string, limit int64) mod
 	highSum := 0.00
 	lowSum := 0.00
 	amount := 0.00
+	highestPrice := 0.00
+	lowestPrice := 0.00
 
 	for _, kLine := range kLines {
 		highSum += kLine.GetHighPrice()
 		lowSum += kLine.GetLowPrice()
+
+		if lowestPrice == 0.00 || lowestPrice > kLine.GetLowPrice() {
+			lowestPrice = kLine.GetLowPrice()
+		}
+
+		if highestPrice < kLine.GetHighPrice() {
+			highestPrice = kLine.GetHighPrice()
+		}
+
 		amount++
 	}
 
 	frame := model.Frame{
+		High:    highestPrice,
+		Low:     lowestPrice,
 		AvgHigh: highSum / amount,
 		AvgLow:  lowSum / amount,
 	}

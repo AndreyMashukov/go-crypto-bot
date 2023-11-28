@@ -251,7 +251,7 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (float64, error) {
 	marketDepth := m.GetDepth(tradeLimit.Symbol)
 
-	frame := m.FrameService.GetFrame(tradeLimit.Symbol, "1h", 24)
+	frame := m.FrameService.GetFrame(tradeLimit.Symbol, "2h", 12)
 	bestFramePrice, err := frame.GetBestFramePrice(tradeLimit, marketDepth)
 
 	if err != nil {
@@ -267,10 +267,10 @@ func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (f
 		buyPrice = bestFramePrice[1]
 	}
 
-	avgFramePrice := (bestFramePrice[0] + bestFramePrice[1]) / 2
+	avgMinPrice := (bestFramePrice[0] + minPrice) / 2
 
-	if buyPrice > avgFramePrice {
-		buyPrice = avgFramePrice
+	if buyPrice > avgMinPrice {
+		buyPrice = avgMinPrice
 	}
 
 	if buyPrice > lastKline.Close {
@@ -278,10 +278,12 @@ func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (f
 	}
 
 	log.Printf(
-		"[%s] Trade Frame [low:%f - high:%f]: BUY Price = %f [min(200) = %f, current = %f]",
+		"[%s] Trade Frame [low:%f - high:%f](%.2f%s): BUY Price = %f [min(200) = %f, current = %f]",
 		tradeLimit.Symbol,
 		frame.AvgLow,
 		frame.AvgHigh,
+		frame.GetVolatilityPercent(),
+		"%",
 		buyPrice,
 		minPrice,
 		lastKline.Close,

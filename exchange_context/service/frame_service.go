@@ -47,7 +47,7 @@ func (f *FrameService) GetFrame(symbol string, interval string, limit int64) mod
 	}
 
 	result, _ := json.Marshal(frame)
-	f.RDB.Set(*f.Ctx, key, string(result), time.Second*30)
+	f.RDB.Set(*f.Ctx, key, string(result), time.Second*15)
 
 	return frame
 }

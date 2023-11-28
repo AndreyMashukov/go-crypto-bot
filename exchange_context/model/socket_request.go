@@ -1,5 +1,10 @@
 package model
 
+import (
+	"encoding/json"
+	"strconv"
+)
+
 type SocketRequest struct {
 	Id     string         `json:"id"`
 	Method string         `json:"method"`
@@ -137,4 +142,68 @@ type AccountStatusResponse struct {
 	Status int64         `json:"status"`
 	Result AccountStatus `json:"result"`
 	Error  *Error        `json:"error"`
+}
+
+type KLineHistory struct {
+	OpenTime                 int64  `json:"openTime"`
+	Open                     string `json:"open"`
+	High                     string `json:"high"`
+	Low                      string `json:"low"`
+	Close                    string `json:"close"`
+	Volume                   string `json:"volume"`
+	CloseTime                int64  `json:"closeTime"`
+	QuoteAssetVolume         string `json:"quoteAssetVolume"`
+	TradesNumber             int64  `json:"tradesNumber"`
+	TakerBuyBaseAssetVolume  string `json:"takerBuyBaseAssetVolume"`
+	TakerBuyQuoteAssetVolume string `json:"TakerBuyQuoteAssetVolume"`
+	UnusedField              string `json:"_"`
+}
+
+func (k *KLineHistory) GetHighPrice() float64 {
+	value, _ := strconv.ParseFloat(k.High, 64)
+
+	return value
+}
+
+func (k *KLineHistory) GetLowPrice() float64 {
+	value, _ := strconv.ParseFloat(k.Low, 64)
+
+	return value
+}
+
+func (k *KLineHistory) UnmarshalJSON(data []byte) error {
+	var s []json.RawMessage
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	dest := []interface{}{
+		&k.OpenTime,
+		&k.Open,
+		&k.High,
+		&k.Low,
+		&k.Close,
+		&k.Volume,
+		&k.CloseTime,
+		&k.QuoteAssetVolume,
+		&k.TradesNumber,
+		&k.TakerBuyBaseAssetVolume,
+		&k.TakerBuyQuoteAssetVolume,
+		&k.UnusedField,
+	}
+
+	for i := 0; i < len(s); i++ {
+		if err := json.Unmarshal(s[i], dest[i]); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type BinanceKLineResponse struct {
+	Id     string         `json:"id"`
+	Status int64          `json:"status"`
+	Result []KLineHistory `json:"result"`
+	Error  *Error         `json:"error"`
 }

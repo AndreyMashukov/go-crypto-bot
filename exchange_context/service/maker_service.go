@@ -261,26 +261,28 @@ func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (f
 	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
 	minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, 200)
+	buyPrice := minPrice
 
-	if minPrice > bestFramePrice[1] {
-		minPrice = bestFramePrice[1]
+	if buyPrice > bestFramePrice[1] {
+		buyPrice = bestFramePrice[1]
 	}
 
 	avgFramePrice := (bestFramePrice[0] + bestFramePrice[1]) / 2
 
-	if minPrice > avgFramePrice {
-		minPrice = avgFramePrice
+	if buyPrice > avgFramePrice {
+		buyPrice = avgFramePrice
 	}
 
-	if minPrice > lastKline.Close {
-		minPrice = lastKline.Close
+	if buyPrice > lastKline.Close {
+		buyPrice = lastKline.Close
 	}
 
 	log.Printf(
-		"[%s] Trade Frame [low:%f - high:%f]: BUY Price = %f [current = %f]",
+		"[%s] Trade Frame [low:%f - high:%f]: BUY Price = %f [min(200) = %f, current = %f]",
 		tradeLimit.Symbol,
 		frame.AvgLow,
 		frame.AvgHigh,
+		buyPrice,
 		minPrice,
 		lastKline.Close,
 	)

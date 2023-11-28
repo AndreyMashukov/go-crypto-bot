@@ -43,3 +43,7 @@ func (f *Frame) GetBestFramePrice(limit TradeLimit, marketDepth Depth) ([2]float
 
 	return [2]float64{f.AvgLow, openPrice}, nil
 }
+
+func (f *Frame) GetVolatilityPercent() float64 {
+	return (f.AvgHigh * 100 / f.AvgLow) - 100
+}

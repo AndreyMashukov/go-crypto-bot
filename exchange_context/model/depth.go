@@ -229,3 +229,13 @@ func (d *Depth) GetBestAvgAsk() float64 {
 
 	return bestPriceSum / bestPriceAmount
 }
+
+func (d *Depth) GetBids() [][2]Number {
+	bids := make([][2]Number, len(d.Bids))
+	copy(bids, d.Bids)
+	sort.SliceStable(bids, func(i int, j int) bool {
+		return bids[i][0].Value > bids[j][0].Value
+	})
+
+	return bids
+}

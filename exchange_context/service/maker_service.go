@@ -19,6 +19,7 @@ type MakerService struct {
 	Binance            *ExchangeClient.Binance
 	LockChannel        *chan ExchangeModel.Lock
 	Formatter          *Formatter
+	FrameService       *FrameService
 	Lock               map[string]bool
 	TradeLockMutex     sync.RWMutex
 	MinDecisions       float64
@@ -137,8 +138,14 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		}
 
 		if err == nil {
+			price, err := m.calculateBuyPrice(tradeLimit)
+
+			if err != nil {
+				log.Printf("[%s] %s", symbol, err.Error())
+				return
+			}
+
 			order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
-			price := m.calculateBuyPrice(tradeLimit)
 
 			if manualOrder != nil && strings.ToUpper(manualOrder.Operation) == "BUY" {
 				price = m.Formatter.FormatPrice(tradeLimit, manualOrder.Price)
@@ -241,33 +248,44 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 	return m.Formatter.FormatPrice(tradeLimit, avgPrice)
 }
 
-func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) float64 {
+func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (float64, error) {
 	marketDepth := m.GetDepth(tradeLimit.Symbol)
-	avgPrice := marketDepth.GetBestAvgBid()
 
-	if 0.00 == avgPrice {
-		return m.Formatter.FormatPrice(tradeLimit, avgPrice)
+	frame := m.FrameService.GetFrame(tradeLimit.Symbol, "1h", 24)
+	bestFramePrice, err := frame.GetBestFramePrice(tradeLimit, marketDepth)
+
+	if err != nil {
+		return 0.00, err
 	}
+
+	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
 	minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, 200)
 
-	// Do not BUY higher than last minimum price
-	if 0.00 != minPrice && avgPrice > minPrice {
-		return m.Formatter.FormatPrice(tradeLimit, minPrice)
+	if minPrice > bestFramePrice[1] {
+		minPrice = bestFramePrice[1]
 	}
 
-	// check existing order and extra buy action
-	order, err := m.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
+	avgFramePrice := (bestFramePrice[0] + bestFramePrice[1]) / 2
 
-	if err == nil {
-		profit, _ := m.getCurrentProfitPercent(order)
-		if tradeLimit.BuyOnFallPercent != 0.00 && profit < tradeLimit.BuyOnFallPercent {
-			lastKline := m.ExchangeRepository.GetLastKLine(order.Symbol)
-			return m.Formatter.FormatPrice(tradeLimit, lastKline.Close)
-		}
+	if minPrice > avgFramePrice {
+		minPrice = avgFramePrice
 	}
 
-	return m.Formatter.FormatPrice(tradeLimit, avgPrice)
+	if minPrice > lastKline.Close {
+		minPrice = lastKline.Close
+	}
+
+	log.Printf(
+		"[%s] Trade Frame [low:%f - high:%f]: BUY Price = %f [current = %f]",
+		tradeLimit.Symbol,
+		frame.AvgLow,
+		frame.AvgHigh,
+		minPrice,
+		lastKline.Close,
+	)
+
+	return m.Formatter.FormatPrice(tradeLimit, minPrice), nil
 }
 
 func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64, sellVolume float64, buyVolume float64, smaValue float64) error {

@@ -162,6 +162,34 @@ func (b *Binance) GetOpenedOrders() (*[]model.BinanceOrder, error) {
 	return &response.Result, nil
 }
 
+func (b *Binance) GetKLines(symbol string, interval string, limit int64) []model.KLineHistory {
+	channel := make(chan []byte)
+	defer close(channel)
+
+	socketRequest := model.SocketRequest{
+		Id:     uuid2.New().String(),
+		Method: "klines",
+		Params: make(map[string]any),
+	}
+
+	socketRequest.Params["symbol"] = symbol
+	socketRequest.Params["interval"] = interval
+	socketRequest.Params["limit"] = limit
+	b.socketRequest(socketRequest, channel)
+	message := <-channel
+
+	var response model.BinanceKLineResponse
+	json.Unmarshal(message, &response)
+
+	if response.Error != nil {
+		log.Println(socketRequest)
+		list := make([]model.KLineHistory, 0)
+		return list
+	}
+
+	return response.Result
+}
+
 func (b *Binance) GetExchangeData(symbols []string) (*model.ExchangeInfo, error) {
 	channel := make(chan []byte)
 	defer close(channel)

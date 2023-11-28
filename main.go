@@ -58,6 +58,12 @@ func main() {
 	}
 	binance.Connect(os.Getenv("BINANCE_WS_DSN")) // "wss://testnet.binance.vision/ws-api/v3"
 
+	frameService := ExchangeService.FrameService{
+		RDB:     rdb,
+		Ctx:     &ctx,
+		Binance: &binance,
+	}
+
 	orderRepository := ExchangeRepository.OrderRepository{
 		DB:  db,
 		RDB: rdb,
@@ -105,6 +111,7 @@ func main() {
 		Lock:               make(map[string]bool),
 		TradeLockMutex:     sync.RWMutex{},
 		Formatter:          &formatter,
+		FrameService:       &frameService,
 		MinDecisions:       4.00,
 		HoldScore:          75.00,
 	}

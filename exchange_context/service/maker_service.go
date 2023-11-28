@@ -215,18 +215,6 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 	}
 
 	minPrice := m.Formatter.FormatPrice(tradeLimit, order.Price*(100+tradeLimit.MinProfitPercent)/100)
-
-	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
-	if lastKline == nil {
-		return 0.00
-	}
-
-	currentPrice := lastKline.Close
-
-	if minPrice < currentPrice {
-		minPrice = currentPrice
-	}
-
 	openedOrder, err := m.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
 
 	if err != nil {
@@ -236,23 +224,61 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 	date, _ := time.Parse("2006-01-02 15:04:05", openedOrder.CreatedAt)
 	orderHours := (time.Now().Unix() - date.Unix()) / 3600
 
-	if orderHours >= 5.00 {
-		log.Printf("[%s] Order is opened for %d hours, sell price is min: %.6f\n", tradeLimit.Symbol, orderHours, minPrice)
-		return m.Formatter.FormatPrice(tradeLimit, minPrice)
+	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+	if lastKline == nil {
+		return 0.00
 	}
 
-	if avgPrice < minPrice {
-		return m.Formatter.FormatPrice(tradeLimit, minPrice)
+	currentPrice := lastKline.Close
+
+	if avgPrice > minPrice {
+		log.Printf("[%s] Choosen AVG sell price %f", tradeLimit.Symbol, avgPrice)
+		minPrice = avgPrice
 	}
 
-	return m.Formatter.FormatPrice(tradeLimit, avgPrice)
+	var frame ExchangeModel.Frame
+
+	if orderHours >= 48.00 {
+		log.Printf("[%s] Order is opened for %d hours, will be used 8-hours frame", tradeLimit.Symbol, orderHours)
+		frame = m.FrameService.GetFrame(tradeLimit.Symbol, "2h", 4)
+	} else {
+		frame = m.FrameService.GetFrame(tradeLimit.Symbol, "2h", 8)
+	}
+
+	bestFrameSell, err := frame.GetBestFrameSell(marketDepth)
+
+	if err == nil {
+		if bestFrameSell[0] > minPrice {
+			minPrice = bestFrameSell[0]
+			log.Printf(
+				"[%s] Choosen Frame [low:%f - high:%f] Sell price = %f",
+				tradeLimit.Symbol,
+				frame.AvgLow,
+				frame.AvgHigh,
+				minPrice,
+			)
+		}
+	} else {
+		log.Printf("[%s] Sell Frame: %s, current = %f", tradeLimit.Symbol, err.Error(), currentPrice)
+	}
+
+	if currentPrice > minPrice {
+		minPrice = currentPrice
+		log.Printf("[%s] Choosen Current sell price %f", tradeLimit.Symbol, minPrice)
+	}
+
+	profit := (minPrice - order.Price) * order.Quantity
+
+	log.Printf("[%s] Sell price = %f, expected profit = %f$", order.Symbol, minPrice, profit)
+
+	return m.Formatter.FormatPrice(tradeLimit, minPrice)
 }
 
 func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (float64, error) {
 	marketDepth := m.GetDepth(tradeLimit.Symbol)
 
 	frame := m.FrameService.GetFrame(tradeLimit.Symbol, "2h", 6)
-	bestFramePrice, err := frame.GetBestFramePrice(tradeLimit, marketDepth)
+	bestFramePrice, err := frame.GetBestFrameBuy(tradeLimit, marketDepth)
 
 	if err != nil {
 		return 0.00, err
@@ -291,7 +317,7 @@ func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (f
 		lastKline.Close,
 	)
 
-	return m.Formatter.FormatPrice(tradeLimit, minPrice), nil
+	return m.Formatter.FormatPrice(tradeLimit, buyPrice), nil
 }
 
 func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64, sellVolume float64, buyVolume float64, smaValue float64) error {

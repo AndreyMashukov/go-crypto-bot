@@ -229,7 +229,7 @@ func main() {
 	// todo: sync existed orders in Binance with bot database...
 
 	streams := []string{}
-	events := [3]string{"@aggTrade", "@kline_1m", "@depth"}
+	events := [3]string{"@aggTrade", "@kline_1m", "@depth20@100ms"}
 
 	for _, tradeLimit := range tradeLimits {
 		for i := 0; i < len(events); i++ {

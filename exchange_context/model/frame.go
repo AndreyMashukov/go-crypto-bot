@@ -6,6 +6,8 @@ import (
 )
 
 type Frame struct {
+	High    float64 `json:"high"`
+	Low     float64 `json:"low"`
 	AvgHigh float64 `json:"avgHigh"`
 	AvgLow  float64 `json:"avgLow"`
 }
@@ -22,9 +24,9 @@ func (f *Frame) GetBestFramePrice(limit TradeLimit, marketDepth Depth) ([2]float
 			continue
 		}
 
-		//if potentialOpenPrice <= f.AvgLow {
-		//	break
-		//}
+		if potentialOpenPrice <= f.Low {
+			break
+		}
 
 		if closePrice < f.AvgHigh {
 			openPrice = potentialOpenPrice
@@ -44,6 +46,10 @@ func (f *Frame) GetBestFramePrice(limit TradeLimit, marketDepth Depth) ([2]float
 	return [2]float64{f.AvgLow, openPrice}, nil
 }
 
-func (f *Frame) GetVolatilityPercent() float64 {
+func (f *Frame) GetMediumVolatilityPercent() float64 {
 	return (f.AvgHigh * 100 / f.AvgLow) - 100
+}
+
+func (f *Frame) GetVolatilityPercent() float64 {
+	return (f.High * 100 / f.Low) - 100
 }

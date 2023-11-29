@@ -15,9 +15,10 @@ type Frame struct {
 func (f *Frame) GetBestFrameBuy(limit TradeLimit, marketDepth Depth) ([2]float64, error) {
 	openPrice := 0.00
 	closePrice := 0.00
+	potentialOpenPrice := 0.00
 
 	for _, bid := range marketDepth.GetBids() {
-		potentialOpenPrice := bid[0].Value
+		potentialOpenPrice = bid[0].Value
 		closePrice = potentialOpenPrice * (100 + limit.MinProfitPercent) / 100
 
 		if potentialOpenPrice >= f.AvgHigh {
@@ -36,10 +37,11 @@ func (f *Frame) GetBestFrameBuy(limit TradeLimit, marketDepth Depth) ([2]float64
 
 	if openPrice == 0.00 {
 		return [2]float64{0.00, 0.00}, errors.New(fmt.Sprintf(
-			"Bad time to buy! Frame [low:%f - high:%f] [must close = %f]",
+			"Bad time to buy! Frame [low:%f - high:%f] [must close = %f, if open = %f]",
 			f.AvgLow,
 			f.AvgHigh,
 			closePrice,
+			potentialOpenPrice,
 		))
 	}
 

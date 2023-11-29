@@ -138,7 +138,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		}
 
 		if err == nil {
-			price, err := m.calculateBuyPrice(tradeLimit)
+			price, err := m.CalculateBuyPrice(tradeLimit)
 
 			if err != nil {
 				lastKline := m.ExchangeRepository.GetLastKLine(symbol)
@@ -275,7 +275,7 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 	return m.Formatter.FormatPrice(tradeLimit, minPrice)
 }
 
-func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (float64, error) {
+func (m *MakerService) CalculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (float64, error) {
 	marketDepth := m.GetDepth(tradeLimit.Symbol)
 
 	frame := m.FrameService.GetFrame(tradeLimit.Symbol, "2h", 6)

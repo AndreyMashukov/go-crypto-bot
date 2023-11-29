@@ -86,18 +86,6 @@ func main() {
 		RDB:                rdb,
 		Ctx:                &ctx,
 	}
-	orderController := controller.OrderController{
-		OrderRepository:    &orderRepository,
-		ExchangeRepository: &exchangeRepository,
-		Formatter:          &formatter,
-	}
-
-	http.HandleFunc("/kline/list/", exchangeController.GetKlineListAction)
-	http.HandleFunc("/depth/", exchangeController.GetDepthAction)
-	http.HandleFunc("/trade/list/", exchangeController.GetTradeListAction)
-	http.HandleFunc("/chart/list", exchangeController.GetChartListAction)
-	http.HandleFunc("/order/list", orderController.GetOrderListAction)
-	http.HandleFunc("/order", orderController.PostManualOrderAction)
 
 	eventChannel := make(chan []byte)
 	lockTradeChannel := make(chan ExchangeModel.Lock)
@@ -115,6 +103,20 @@ func main() {
 		MinDecisions:       4.00,
 		HoldScore:          75.00,
 	}
+
+	orderController := controller.OrderController{
+		OrderRepository:    &orderRepository,
+		ExchangeRepository: &exchangeRepository,
+		Formatter:          &formatter,
+		MakerService:       &makerService,
+	}
+
+	http.HandleFunc("/kline/list/", exchangeController.GetKlineListAction)
+	http.HandleFunc("/depth/", exchangeController.GetDepthAction)
+	http.HandleFunc("/trade/list/", exchangeController.GetTradeListAction)
+	http.HandleFunc("/chart/list", exchangeController.GetChartListAction)
+	http.HandleFunc("/order/list", orderController.GetOrderListAction)
+	http.HandleFunc("/order", orderController.PostManualOrderAction)
 
 	go func() {
 		for {

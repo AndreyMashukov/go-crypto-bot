@@ -14,6 +14,7 @@ type OrderController struct {
 	OrderRepository    *ExchangeRepository.OrderRepository
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
 	Formatter          *service.Formatter
+	MakerService       *service.MakerService
 }
 
 func (o *OrderController) GetOrderListAction(w http.ResponseWriter, req *http.Request) {
@@ -108,13 +109,22 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 		return
 	}
 
-	lastKline := o.ExchangeRepository.GetLastKLine(manual.Symbol)
+	minPrice, err := o.MakerService.CalculateBuyPrice(tradeLimit)
 
-	if err != nil && manual.Operation == "BUY" && lastKline.Close < manual.Price {
+	if err != nil {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, "Покупать выше текущей цены запрещено", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Ошибка: %s", err.Error()), http.StatusBadRequest)
+
+		return
+	}
+
+	if err != nil && manual.Operation == "BUY" && minPrice < manual.Price {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, fmt.Sprintf("Покупать выше цены %f запрещено", minPrice), http.StatusBadRequest)
 
 		return
 	}

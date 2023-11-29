@@ -109,13 +109,13 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 		return
 	}
 
-	minPrice, err := o.MakerService.CalculateBuyPrice(tradeLimit)
+	minPrice, buyError := o.MakerService.CalculateBuyPrice(tradeLimit)
 
-	if err != nil {
+	if buyError != nil {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, fmt.Sprintf("Ошибка: %s", err.Error()), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Ошибка: %s", buyError.Error()), http.StatusBadRequest)
 
 		return
 	}

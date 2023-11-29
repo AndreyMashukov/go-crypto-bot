@@ -369,7 +369,7 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 
 	balanceBefore, balanceErr := m.getAssetBalance(order.GetAsset())
 
-	binanceOrder, err := m.tryLimitOrder(extraOrder, "BUY", 20)
+	binanceOrder, err := m.tryLimitOrder(extraOrder, "BUY", 120)
 
 	if err != nil {
 		return err
@@ -487,7 +487,7 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 
 	balanceBefore, balanceErr := m.getAssetBalance(order.GetAsset())
 
-	binanceOrder, err := m.tryLimitOrder(order, "BUY", 20)
+	binanceOrder, err := m.tryLimitOrder(order, "BUY", 240)
 
 	if err != nil {
 		return err
@@ -569,7 +569,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 
 	//balanceBefore, balanceErr := m.getAssetBalance(order.GetAsset())
 
-	binanceOrder, err := m.tryLimitOrder(order, "SELL", 120)
+	binanceOrder, err := m.tryLimitOrder(order, "SELL", 240)
 
 	if err != nil {
 		return err

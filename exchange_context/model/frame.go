@@ -29,7 +29,7 @@ func (f *Frame) GetBestFrameBuy(limit TradeLimit, marketDepth Depth) ([2]float64
 			break
 		}
 
-		if closePrice < f.AvgHigh {
+		if closePrice <= f.AvgHigh {
 			openPrice = potentialOpenPrice
 			break
 		}

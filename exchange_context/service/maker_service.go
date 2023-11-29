@@ -281,23 +281,31 @@ func (m *MakerService) calculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (f
 	frame := m.FrameService.GetFrame(tradeLimit.Symbol, "2h", 6)
 	bestFramePrice, err := frame.GetBestFrameBuy(tradeLimit, marketDepth)
 
-	if err != nil {
-		return 0.00, err
-	}
-
-	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
-
 	minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, 200)
 	buyPrice := minPrice
+	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
-	if buyPrice > bestFramePrice[1] {
-		buyPrice = bestFramePrice[1]
-	}
+	if err == nil {
+		if buyPrice > bestFramePrice[1] {
+			buyPrice = bestFramePrice[1]
+		}
+	} else {
+		log.Printf("[%s] Buy Frame Error: %s, current = %f", tradeLimit.Symbol, err.Error(), lastKline.Close)
+		potentialOpenPrice := lastKline.Close
+		for {
+			closePrice := potentialOpenPrice * (100 + tradeLimit.MinProfitPercent) / 100
 
-	avgMinPrice := (bestFramePrice[0] + minPrice) / 2
+			if closePrice <= frame.AvgHigh {
+				break
+			}
 
-	if buyPrice > avgMinPrice {
-		buyPrice = avgMinPrice
+			potentialOpenPrice -= tradeLimit.MinPrice
+		}
+
+		if buyPrice > potentialOpenPrice {
+			buyPrice = potentialOpenPrice
+			log.Printf("[%s] Choosen potential open price = %f", tradeLimit.Symbol, buyPrice)
+		}
 	}
 
 	if buyPrice > lastKline.Close {

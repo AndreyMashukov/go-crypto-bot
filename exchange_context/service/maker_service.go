@@ -141,7 +141,8 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			price, err := m.calculateBuyPrice(tradeLimit)
 
 			if err != nil {
-				log.Printf("[%s] %s", symbol, err.Error())
+				lastKline := m.ExchangeRepository.GetLastKLine(symbol)
+				log.Printf("[%s] %s, current = %f", symbol, err.Error(), lastKline.Close)
 				return
 			}
 

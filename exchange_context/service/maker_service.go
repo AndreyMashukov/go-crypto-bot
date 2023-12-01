@@ -7,7 +7,6 @@ import (
 	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
 	"log"
-	"math"
 	"strings"
 	"sync"
 	"time"
@@ -222,9 +221,6 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 		return 0.00
 	}
 
-	date, _ := time.Parse("2006-01-02 15:04:05", openedOrder.CreatedAt)
-	orderHours := (time.Now().Unix() - date.Unix()) / 3600
-
 	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 	if lastKline == nil {
 		return 0.00
@@ -238,6 +234,7 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 	}
 
 	var frame ExchangeModel.Frame
+	orderHours := openedOrder.GetHoursOpened()
 
 	if orderHours >= 48.00 {
 		log.Printf("[%s] Order is opened for %d hours, will be used 8-hours frame", tradeLimit.Symbol, orderHours)
@@ -277,13 +274,47 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 
 func (m *MakerService) CalculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (float64, error) {
 	marketDepth := m.GetDepth(tradeLimit.Symbol)
+	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+
+	if lastKline == nil {
+		return 0.00, errors.New(fmt.Sprintf("[%s] Current price is unknown, wait...", tradeLimit.Symbol))
+	}
+
+	minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, 200)
+	order, err := m.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
+
+	// Extra charge by current price
+	if err == nil && order.GetProfitPercent(lastKline.Close) <= tradeLimit.BuyOnFallPercent {
+		extraBuyPrice := minPrice
+		// todo: For next extras has to be used last extra order
+		if order.GetHoursOpened() >= 24 {
+			extraBuyPrice = lastKline.Close
+			log.Printf(
+				"[%s] Extra buy price is %f (more than 24 hours), profit: %.2f",
+				tradeLimit.Symbol,
+				extraBuyPrice,
+				order.GetProfitPercent(lastKline.Close),
+			)
+		} else {
+			extraBuyPrice = minPrice
+			log.Printf(
+				"[%s] Extra buy price is %f (less than 24 hours), profit: %.2f",
+				tradeLimit.Symbol,
+				extraBuyPrice,
+				order.GetProfitPercent(lastKline.Close),
+			)
+		}
+
+		if extraBuyPrice > lastKline.Close {
+			extraBuyPrice = lastKline.Close
+		}
+
+		return m.Formatter.FormatPrice(tradeLimit, extraBuyPrice), nil
+	}
 
 	frame := m.FrameService.GetFrame(tradeLimit.Symbol, "2h", 6)
 	bestFramePrice, err := frame.GetBestFrameBuy(tradeLimit, marketDepth)
-
-	minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, 200)
 	buyPrice := minPrice
-	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
 	if err == nil {
 		if buyPrice > bestFramePrice[1] {
@@ -421,9 +452,7 @@ func (m *MakerService) getCurrentProfitPercent(order ExchangeModel.Order) (float
 		return 0.00, errors.New(fmt.Sprintf("[%s] Do not have info about the price", order.Symbol))
 	}
 
-	diff := lastKline.Close - order.Price
-
-	return math.Round(diff*100/order.Price*100) / 100, nil
+	return order.GetProfitPercent(lastKline.Close), nil
 }
 
 func (m *MakerService) getAvgPrice(opened ExchangeModel.Order, extra ExchangeModel.Order) float64 {

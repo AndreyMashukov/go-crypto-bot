@@ -15,9 +15,21 @@ type OrderController struct {
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
 	Formatter          *service.Formatter
 	MakerService       *service.MakerService
+	CurrentBot         *model.Bot
 }
 
 func (o *OrderController) GetOrderListAction(w http.ResponseWriter, req *http.Request) {
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != o.CurrentBot.BotUuid {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
+
 	list := o.OrderRepository.GetList()
 	encoded, _ := json.Marshal(list)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -27,6 +39,17 @@ func (o *OrderController) GetOrderListAction(w http.ResponseWriter, req *http.Re
 }
 
 func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http.Request) {
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != o.CurrentBot.BotUuid {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
+
 	if req.Method == "OPTIONS" {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -54,6 +77,15 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		w.Header().Set("Content-Type", "application/json")
 		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	if manual.BotUuid != o.CurrentBot.BotUuid {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, "Forbidden", http.StatusForbidden)
 
 		return
 	}

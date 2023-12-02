@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/redis/go-redis/v9"
+	"gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/service"
 	"net/http"
@@ -17,6 +18,7 @@ type ExchangeController struct {
 	ChartService       *service.ChartService
 	RDB                *redis.Client
 	Ctx                *context.Context
+	CurrentBot         *model.Bot
 }
 
 func (e *ExchangeController) GetKlineListAction(w http.ResponseWriter, req *http.Request) {
@@ -53,13 +55,13 @@ func (e *ExchangeController) GetTradeListAction(w http.ResponseWriter, req *http
 }
 
 func (e *ExchangeController) GetChartListAction(w http.ResponseWriter, req *http.Request) {
-	encoded := e.RDB.Get(*e.Ctx, "chart-cache").Val()
+	encoded := e.RDB.Get(*e.Ctx, fmt.Sprintf("chart-cache-bot-%d", e.CurrentBot.Id)).Val()
 
 	if len(encoded) == 0 {
 		chart := e.ChartService.GetCharts()
 		encodedRes, _ := json.Marshal(chart)
 		encoded = string(encodedRes)
-		e.RDB.Set(*e.Ctx, "chart-cache", encoded, time.Second*5)
+		e.RDB.Set(*e.Ctx, fmt.Sprintf("chart-cache-bot-%d", e.CurrentBot.Id), encoded, time.Second*5)
 	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")

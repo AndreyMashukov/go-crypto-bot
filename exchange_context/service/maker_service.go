@@ -476,7 +476,7 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 		return errors.New(fmt.Sprintf("Available quantity is %f", quantity))
 	}
 
-	cached := m.OrderRepository.GetBinanceOrder(symbol, "BUY")
+	cached, _ := m.findBinanceOrder(symbol, "BUY")
 
 	// Check balance for new order
 	if cached == nil {
@@ -825,30 +825,42 @@ func (m *MakerService) releaseLock(symbol string) {
 	*m.LockChannel <- ExchangeModel.Lock{IsLocked: false, Symbol: symbol}
 }
 
-func (m *MakerService) findOrCreateOrder(order ExchangeModel.Order, operation string) (ExchangeModel.BinanceOrder, error) {
-	// todo: extra order flag...
-	cached := m.OrderRepository.GetBinanceOrder(order.Symbol, operation)
+func (m *MakerService) findBinanceOrder(symbol string, operation string) (*ExchangeModel.BinanceOrder, error) {
+	cached := m.OrderRepository.GetBinanceOrder(symbol, operation)
 
 	if cached != nil {
-		log.Printf("[%s] Found cached %s order %d in binance", order.Symbol, operation, cached.OrderId)
+		log.Printf("[%s] Found cached %s order %d in binance", symbol, operation, cached.OrderId)
 
-		return *cached, nil
+		return cached, nil
 	}
 
 	openedOrders, err := m.Binance.GetOpenedOrders()
 
 	if err != nil {
-		log.Printf("[%s] Opened: %s", order.Symbol, err.Error())
-		return ExchangeModel.BinanceOrder{}, err
+		log.Printf("[%s] Opened: %s", symbol, err.Error())
+		return nil, err
 	}
 
 	for _, opened := range *openedOrders {
-		if opened.Side == operation && opened.Symbol == order.Symbol {
-			log.Printf("[%s] Found opened %s order %d in binance", order.Symbol, operation, opened.OrderId)
+		if opened.Side == operation && opened.Symbol == symbol {
+			log.Printf("[%s] Found opened %s order %d in binance", symbol, operation, opened.OrderId)
 			m.OrderRepository.SetBinanceOrder(opened)
 
-			return opened, nil
+			return &opened, nil
 		}
+	}
+
+	return nil, errors.New(fmt.Sprintf("[%s] Binance order is not found", symbol))
+}
+
+func (m *MakerService) findOrCreateOrder(order ExchangeModel.Order, operation string) (ExchangeModel.BinanceOrder, error) {
+	// todo: extra order flag...
+	cached, err := m.findBinanceOrder(order.Symbol, operation)
+
+	if cached != nil {
+		log.Printf("[%s] Found cached %s order %d in binance", order.Symbol, operation, cached.OrderId)
+
+		return *cached, nil
 	}
 
 	binanceOrder, err := m.Binance.LimitOrder(order, operation)

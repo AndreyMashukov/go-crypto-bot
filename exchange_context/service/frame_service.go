@@ -33,7 +33,8 @@ func (f *FrameService) GetFrame(symbol string, interval string, limit int64) mod
 
 	highSum := 0.00
 	lowSum := 0.00
-	amount := 0.00
+	amountHigh := 0.00
+	amountLow := 0.00
 	highestPrice := 0.00
 	lowestPrice := 0.00
 
@@ -48,20 +49,20 @@ func (f *FrameService) GetFrame(symbol string, interval string, limit int64) mod
 
 		if kLine.IsPositive() {
 			highSum += kLine.GetHighPrice()
-			amount++
+			amountHigh++
 		}
 
 		if kLine.IsNegative() {
 			lowSum += kLine.GetLowPrice()
-			amount++
+			amountLow++
 		}
 	}
 
 	frame := model.Frame{
 		High:    highestPrice,
 		Low:     lowestPrice,
-		AvgHigh: highSum / amount,
-		AvgLow:  lowSum / amount,
+		AvgHigh: highSum / amountHigh,
+		AvgLow:  lowSum / amountLow,
 	}
 
 	result, _ := json.Marshal(frame)

@@ -140,12 +140,20 @@ func main() {
 		CurrentBot:         currentBot,
 	}
 
+	tradeController := controller.TradeController{
+		CurrentBot:         currentBot,
+		ExchangeRepository: &exchangeRepository,
+	}
+
 	http.HandleFunc("/kline/list/", exchangeController.GetKlineListAction)
 	http.HandleFunc("/depth/", exchangeController.GetDepthAction)
 	http.HandleFunc("/trade/list/", exchangeController.GetTradeListAction)
 	http.HandleFunc("/chart/list", exchangeController.GetChartListAction)
 	http.HandleFunc("/order/list", orderController.GetOrderListAction)
 	http.HandleFunc("/order", orderController.PostManualOrderAction)
+	http.HandleFunc("/trade/limit/list", tradeController.GetTradeLimits)
+	http.HandleFunc("/trade/limit/create", tradeController.CreateTradeLimit)
+	http.HandleFunc("/trade/limit/update", tradeController.UpdateTradeLimit)
 
 	go func() {
 		for {

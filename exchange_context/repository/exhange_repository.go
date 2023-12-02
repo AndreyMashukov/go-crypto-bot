@@ -108,6 +108,40 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 	return tradeLimit, nil
 }
 
+func (repo *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64, error) {
+	res, err := repo.DB.Exec(`
+		INSERT INTO trade_limit SET
+		    symbol = ?,
+		    usdt_limit = ?,
+		    min_price = ?,
+		    min_quantity = ?,
+		    min_profit_percent = ?,
+		    is_enabled = ?,
+		    usdt_extra_budget = ?,
+		    buy_on_fall_percent = ?,
+		    bot_id = ?
+	`,
+		limit.Symbol,
+		limit.USDTLimit,
+		limit.MinPrice,
+		limit.MinQuantity,
+		limit.MinProfitPercent,
+		limit.IsEnabled,
+		limit.USDTExtraBudget,
+		limit.BuyOnFallPercent,
+		repo.CurrentBot.Id,
+	)
+
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	lastId, err := res.LastInsertId()
+
+	return &lastId, err
+}
+
 func (repo *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 	_, err := repo.DB.Exec(`
 		UPDATE trade_limit tl SET

@@ -22,39 +22,46 @@ type ExchangeController struct {
 }
 
 func (e *ExchangeController) GetKlineListAction(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
 	symbol := strings.TrimPrefix(req.URL.Path, "/kline/list/")
 
 	list := e.ExchangeRepository.KLineList(symbol, true, 200)
 	encoded, _ := json.Marshal(list)
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, string(encoded))
 }
 
 func (e *ExchangeController) GetDepthAction(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
 	symbol := strings.TrimPrefix(req.URL.Path, "/depth/")
 
 	list := e.ExchangeRepository.GetDepth(symbol)
 	encoded, _ := json.Marshal(list)
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, string(encoded))
 }
 
 func (e *ExchangeController) GetTradeListAction(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
 	symbol := strings.TrimPrefix(req.URL.Path, "/trade/list/")
 
 	list := e.ExchangeRepository.TradeList(symbol)
 	encoded, _ := json.Marshal(list)
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, string(encoded))
 }
 
 func (e *ExchangeController) GetChartListAction(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
 	encoded := e.RDB.Get(*e.Ctx, fmt.Sprintf("chart-cache-bot-%d", e.CurrentBot.Id)).Val()
 
 	if len(encoded) == 0 {
@@ -64,8 +71,5 @@ func (e *ExchangeController) GetChartListAction(w http.ResponseWriter, req *http
 		e.RDB.Set(*e.Ctx, fmt.Sprintf("chart-cache-bot-%d", e.CurrentBot.Id), encoded, time.Second*5)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, encoded)
 }

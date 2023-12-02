@@ -520,7 +520,7 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 
 	balanceBefore, balanceErr := m.getAssetBalance(order.GetAsset())
 
-	binanceOrder, err := m.tryLimitOrder(order, "BUY", 240)
+	binanceOrder, err := m.tryLimitOrder(order, "BUY", 480)
 
 	if err != nil {
 		return err
@@ -602,7 +602,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 
 	//balanceBefore, balanceErr := m.getAssetBalance(order.GetAsset())
 
-	binanceOrder, err := m.tryLimitOrder(order, "SELL", 240)
+	binanceOrder, err := m.tryLimitOrder(order, "SELL", 480)
 
 	if err != nil {
 		return err
@@ -684,7 +684,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 	)
 
 	start := time.Now().Unix()
-	sleepDuration := time.Second * 10
+	sleepDuration := time.Second * 20
 
 	executedQty := 0.00
 	for {

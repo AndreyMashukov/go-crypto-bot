@@ -145,12 +145,24 @@ func (repo *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64
 func (repo *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 	_, err := repo.DB.Exec(`
 		UPDATE trade_limit tl SET
+		    tl.symbol = ?,
+		    tl.usdt_limit = ?,
 		    tl.min_price = ?,
-		    tl.min_quantity = ?
+		    tl.min_quantity = ?,
+		    tl.min_profit_percent = ?,
+		    tl.is_enabled = ?,
+		    tl.usdt_extra_budget = ?,
+		    tl.buy_on_fall_percent = ?
 		WHERE tl.id = ?
 	`,
+		limit.Symbol,
+		limit.USDTLimit,
 		limit.MinPrice,
 		limit.MinQuantity,
+		limit.MinProfitPercent,
+		limit.IsEnabled,
+		limit.USDTExtraBudget,
+		limit.BuyOnFallPercent,
 		limit.Id,
 	)
 

@@ -13,9 +13,10 @@ import (
 )
 
 type ExchangeRepository struct {
-	DB  *sql.DB
-	RDB *redis.Client
-	Ctx *context.Context
+	DB         *sql.DB
+	RDB        *redis.Client
+	Ctx        *context.Context
+	CurrentBot *model.Bot
 }
 
 func (e *ExchangeRepository) GetSubscribedSymbols() []model.Symbol {
@@ -37,8 +38,8 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 		    tl.is_enabled as IsEnabled,
 		    tl.usdt_extra_budget as USDTExtraBudget,
 		    tl.buy_on_fall_percent as BuyOnFallPercent
-		FROM trade_limit tl
-	`)
+		FROM trade_limit tl WHERE tl.bot_id = ?
+	`, e.CurrentBot.Id)
 	defer res.Close()
 
 	if err != nil {
@@ -85,9 +86,10 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		    tl.usdt_extra_budget as USDTExtraBudget,
 		    tl.buy_on_fall_percent as BuyOnFallPercent
 		FROM trade_limit tl
-		WHERE tl.symbol = ?
+		WHERE tl.symbol = ? AND tl.bot_id = ?
 	`,
 		symbol,
+		e.CurrentBot.Id,
 	).Scan(
 		&tradeLimit.Id,
 		&tradeLimit.Symbol,
@@ -235,11 +237,11 @@ func (e *ExchangeRepository) TradeList(symbol string) []model.Trade {
 
 func (e *ExchangeRepository) SetDecision(decision model.Decision) {
 	encoded, _ := json.Marshal(decision)
-	e.RDB.Set(*e.Ctx, fmt.Sprintf("decision-%s", decision.StrategyName), string(encoded), time.Second*5)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("decision-%s-bot-%d", decision.StrategyName, e.CurrentBot.Id), string(encoded), time.Second*5)
 }
 
 func (e *ExchangeRepository) GetDecision(strategy string) *model.Decision {
-	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("decision-%s", strategy)).Val()
+	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("decision-%s-bot-%d", strategy, e.CurrentBot.Id)).Val()
 	if len(res) == 0 {
 		return nil
 	}

@@ -13,13 +13,19 @@ import (
 )
 
 type OrderRepository struct {
-	DB  *sql.DB
-	RDB *redis.Client
-	Ctx *context.Context
+	DB         *sql.DB
+	RDB        *redis.Client
+	Ctx        *context.Context
+	CurrentBot *ExchangeModel.Bot
 }
 
 func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation string) (ExchangeModel.Order, error) {
-	res := repo.RDB.Get(*repo.Ctx, fmt.Sprintf("opened-order-%s-%s", symbol, strings.ToLower(operation))).Val()
+	res := repo.RDB.Get(*repo.Ctx, fmt.Sprintf(
+		"opened-order-%s-%s-bot-%d",
+		symbol,
+		strings.ToLower(operation),
+		repo.CurrentBot.Id,
+	)).Val()
 	if len(res) > 0 {
 		var dto ExchangeModel.Order
 		json.Unmarshal([]byte(res), &dto)
@@ -50,7 +56,12 @@ func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation strin
 }
 
 func (repo *OrderRepository) DeleteOpenedOrderCache(order ExchangeModel.Order) {
-	repo.RDB.Del(*repo.Ctx, fmt.Sprintf("opened-order-%s-%s", order.Symbol, strings.ToLower(order.Operation))).Val()
+	repo.RDB.Del(*repo.Ctx, fmt.Sprintf(
+		"opened-order-%s-%s-bot-%d",
+		order.Symbol,
+		strings.ToLower(order.Operation),
+		repo.CurrentBot.Id,
+	)).Val()
 }
 
 func (repo *OrderRepository) getOpenedOrder(symbol string, operation string) (ExchangeModel.Order, error) {
@@ -74,7 +85,11 @@ func (repo *OrderRepository) getOpenedOrder(symbol string, operation string) (Ex
 			o.commission as Commission,
 			o.commission_asset as CommissionAsset
 		FROM orders o
-		WHERE o.status = ? AND o.symbol = ? AND o.operation = ?`, "opened", symbol, operation,
+		WHERE o.status = ? AND o.symbol = ? AND o.operation = ? AND o.bot_id = ?`,
+		"opened",
+		symbol,
+		operation,
+		repo.CurrentBot.Id,
 	).Scan(
 		&order.Id,
 		&order.Symbol,
@@ -116,7 +131,8 @@ func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
 		    closed_by = ?,
 			used_extra_budget = ?,
 			commission = ?,
-			commission_asset = ?
+			commission_asset = ?,
+			bot_id = ?
 	`,
 		order.Symbol,
 		order.Quantity,
@@ -132,6 +148,7 @@ func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
 		order.UsedExtraBudget,
 		order.Commission,
 		order.CommissionAsset,
+		repo.CurrentBot.Id,
 	)
 
 	if err != nil {
@@ -255,8 +272,8 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 			o.used_extra_budget as UsedExtraBudget,
 			o.commission as Commission,
 			o.commission_asset as CommissionAsset
-		FROM orders o
-	`)
+		FROM orders o WHERE o.bot_id = ?
+	`, repo.CurrentBot.Id)
 	defer res.Close()
 
 	if err != nil {
@@ -297,11 +314,21 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 
 func (repo *OrderRepository) SetBinanceOrder(order ExchangeModel.BinanceOrder) {
 	encoded, _ := json.Marshal(order)
-	repo.RDB.Set(*repo.Ctx, fmt.Sprintf("binance-order-%s-%s", order.Symbol, strings.ToLower(order.Side)), string(encoded), time.Hour*24*90)
+	repo.RDB.Set(*repo.Ctx, fmt.Sprintf(
+		"binance-order-%s-%s-bot-%d",
+		order.Symbol,
+		strings.ToLower(order.Side),
+		repo.CurrentBot.Id,
+	), string(encoded), time.Hour*24*90)
 }
 
 func (repo *OrderRepository) GetBinanceOrder(symbol string, operation string) *ExchangeModel.BinanceOrder {
-	res := repo.RDB.Get(*repo.Ctx, fmt.Sprintf("binance-order-%s-%s", symbol, strings.ToLower(operation))).Val()
+	res := repo.RDB.Get(*repo.Ctx, fmt.Sprintf(
+		"binance-order-%s-%s-bot-%d",
+		symbol,
+		strings.ToLower(operation),
+		repo.CurrentBot.Id,
+	)).Val()
 	if len(res) == 0 {
 		return nil
 	}
@@ -313,11 +340,20 @@ func (repo *OrderRepository) GetBinanceOrder(symbol string, operation string) *E
 }
 
 func (repo *OrderRepository) DeleteBinanceOrder(order ExchangeModel.BinanceOrder) {
-	repo.RDB.Del(*repo.Ctx, fmt.Sprintf("binance-order-%s-%s", order.Symbol, strings.ToLower(order.Side))).Val()
+	repo.RDB.Del(*repo.Ctx, fmt.Sprintf(
+		"binance-order-%s-%s-bot-%d",
+		order.Symbol,
+		strings.ToLower(order.Side),
+		repo.CurrentBot.Id,
+	)).Val()
 }
 
 func (repo *OrderRepository) GetManualOrder(symbol string) *ExchangeModel.ManualOrder {
-	res := repo.RDB.Get(*repo.Ctx, fmt.Sprintf("manual-order-%s", strings.ToLower(symbol))).Val()
+	res := repo.RDB.Get(*repo.Ctx, fmt.Sprintf(
+		"manual-order-%s-bot-%d",
+		strings.ToLower(symbol),
+		repo.CurrentBot.Id,
+	)).Val()
 	if len(res) == 0 {
 		return nil
 	}
@@ -330,9 +366,17 @@ func (repo *OrderRepository) GetManualOrder(symbol string) *ExchangeModel.Manual
 
 func (repo *OrderRepository) SetManualOrder(order ExchangeModel.ManualOrder) {
 	encoded, _ := json.Marshal(order)
-	repo.RDB.Set(*repo.Ctx, fmt.Sprintf("manual-order-%s", strings.ToLower(order.Symbol)), string(encoded), time.Hour*24)
+	repo.RDB.Set(*repo.Ctx, fmt.Sprintf(
+		"manual-order-%s-bot-%d",
+		strings.ToLower(order.Symbol),
+		repo.CurrentBot.Id,
+	), string(encoded), time.Hour*24)
 }
 
 func (repo *OrderRepository) DeleteManualOrder(symbol string) {
-	repo.RDB.Del(*repo.Ctx, fmt.Sprintf("manual-order-%s", strings.ToLower(symbol))).Val()
+	repo.RDB.Del(*repo.Ctx, fmt.Sprintf(
+		"manual-order-%s-bot-%d",
+		strings.ToLower(symbol),
+		repo.CurrentBot.Id,
+	)).Val()
 }

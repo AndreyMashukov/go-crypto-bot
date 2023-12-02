@@ -64,15 +64,42 @@ func main() {
 		Binance: &binance,
 	}
 
-	orderRepository := ExchangeRepository.OrderRepository{
+	botRepository := ExchangeRepository.BotRepository{
 		DB:  db,
 		RDB: rdb,
 		Ctx: &ctx,
 	}
+
+	currentBot := botRepository.GetCurrentBot()
+	if currentBot == nil {
+		botUuid := os.Getenv("BOT_UUID")
+		currentBot := &ExchangeModel.Bot{
+			BotUuid: botUuid,
+		}
+		err := botRepository.Create(*currentBot)
+		if err != nil {
+			panic(err)
+		}
+
+		currentBot = botRepository.GetCurrentBot()
+		if currentBot == nil {
+			panic(fmt.Sprintf("Can't initialize bot: %s", botUuid))
+		}
+	}
+
+	log.Printf("Bot [%s] is initialized successfully", currentBot.BotUuid)
+
+	orderRepository := ExchangeRepository.OrderRepository{
+		DB:         db,
+		RDB:        rdb,
+		Ctx:        &ctx,
+		CurrentBot: currentBot,
+	}
 	exchangeRepository := ExchangeRepository.ExchangeRepository{
-		DB:  db,
-		RDB: rdb,
-		Ctx: &ctx,
+		DB:         db,
+		RDB:        rdb,
+		Ctx:        &ctx,
+		CurrentBot: currentBot,
 	}
 
 	formatter := ExchangeService.Formatter{}
@@ -85,6 +112,7 @@ func main() {
 		ChartService:       &chartService,
 		RDB:                rdb,
 		Ctx:                &ctx,
+		CurrentBot:         currentBot,
 	}
 
 	eventChannel := make(chan []byte)
@@ -109,6 +137,7 @@ func main() {
 		ExchangeRepository: &exchangeRepository,
 		Formatter:          &formatter,
 		MakerService:       &makerService,
+		CurrentBot:         currentBot,
 	}
 
 	http.HandleFunc("/kline/list/", exchangeController.GetKlineListAction)

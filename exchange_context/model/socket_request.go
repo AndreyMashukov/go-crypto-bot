@@ -159,6 +159,18 @@ type KLineHistory struct {
 	UnusedField              string `json:"_"`
 }
 
+func (k *KLineHistory) GetClosePrice() float64 {
+	value, _ := strconv.ParseFloat(k.Close, 64)
+
+	return value
+}
+
+func (k *KLineHistory) GetOpenPrice() float64 {
+	value, _ := strconv.ParseFloat(k.Open, 64)
+
+	return value
+}
+
 func (k *KLineHistory) GetHighPrice() float64 {
 	value, _ := strconv.ParseFloat(k.High, 64)
 
@@ -169,6 +181,14 @@ func (k *KLineHistory) GetLowPrice() float64 {
 	value, _ := strconv.ParseFloat(k.Low, 64)
 
 	return value
+}
+
+func (k *KLineHistory) IsPositive() bool {
+	return k.GetClosePrice() > k.GetOpenPrice()
+}
+
+func (k *KLineHistory) IsNegative() bool {
+	return k.GetClosePrice() < k.GetOpenPrice()
 }
 
 func (k *KLineHistory) UnmarshalJSON(data []byte) error {

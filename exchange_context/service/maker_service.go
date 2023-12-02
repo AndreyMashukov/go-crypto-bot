@@ -436,7 +436,11 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 	if order.Commission != nil {
 		commission = *order.Commission
 	}
-	commissionSum := commission + *extraOrder.Commission
+	extraCommission := 0.00
+	if extraOrder.Commission != nil {
+		extraCommission = *extraOrder.Commission
+	}
+	commissionSum := commission + extraCommission
 	order.Commission = &commissionSum
 
 	err = m.OrderRepository.Update(order)

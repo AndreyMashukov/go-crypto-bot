@@ -20,11 +20,20 @@ func (e *ChartService) GetCharts() []map[string][]any {
 	orderMap := make(map[string][]model.Order)
 	symbols := make([]string, 0)
 
+	tradeLimits := e.ExchangeRepository.GetTradeLimits()
+
+	for _, tradeLimit := range tradeLimits {
+		if !tradeLimit.IsEnabled {
+			continue
+		}
+
+		symbols = append(symbols, tradeLimit.Symbol)
+	}
+
 	for _, order := range orders {
 		_, exist := orderMap[order.Symbol]
 		if !exist {
 			orderMap[order.Symbol] = make([]model.Order, 0)
-			symbols = append(symbols, order.Symbol)
 		}
 		orderMap[order.Symbol] = append(orderMap[order.Symbol], order)
 	}

@@ -26,6 +26,14 @@ func (e *ExchangeController) GetKlineListAction(w http.ResponseWriter, req *http
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Content-Type", "application/json")
 
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != e.CurrentBot.BotUuid {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
+
 	symbol := strings.TrimPrefix(req.URL.Path, "/kline/list/")
 
 	list := e.ExchangeRepository.KLineList(symbol, true, 200)
@@ -37,6 +45,14 @@ func (e *ExchangeController) GetDepthAction(w http.ResponseWriter, req *http.Req
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Content-Type", "application/json")
+
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != e.CurrentBot.BotUuid {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
 
 	symbol := strings.TrimPrefix(req.URL.Path, "/depth/")
 
@@ -50,6 +66,14 @@ func (e *ExchangeController) GetTradeListAction(w http.ResponseWriter, req *http
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Content-Type", "application/json")
 
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != e.CurrentBot.BotUuid {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
+
 	symbol := strings.TrimPrefix(req.URL.Path, "/trade/list/")
 
 	list := e.ExchangeRepository.TradeList(symbol)
@@ -61,6 +85,14 @@ func (e *ExchangeController) GetChartListAction(w http.ResponseWriter, req *http
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Content-Type", "application/json")
+
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != e.CurrentBot.BotUuid {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
 
 	encoded := e.RDB.Get(*e.Ctx, fmt.Sprintf("chart-cache-bot-%d", e.CurrentBot.Id)).Val()
 

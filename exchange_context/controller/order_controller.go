@@ -18,6 +18,35 @@ type OrderController struct {
 	CurrentBot         *model.Bot
 }
 
+func (o *OrderController) GetOrderTradeListAction(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if req.Method == "OPTIONS" {
+		fmt.Fprintf(w, "OK")
+		return
+	}
+
+	if req.Method != "GET" {
+		http.Error(w, "Разрешены только GET методы", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != o.CurrentBot.BotUuid {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
+
+	list := o.OrderRepository.GetTrades()
+	encoded, _ := json.Marshal(list)
+	fmt.Fprintf(w, string(encoded))
+}
+
 func (o *OrderController) GetOrderListAction(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")

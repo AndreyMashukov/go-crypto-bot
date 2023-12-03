@@ -254,6 +254,58 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 	return order, nil
 }
 
+func (repo *OrderRepository) GetTrades() []ExchangeModel.OrderTrade {
+	res, err := repo.DB.Query(`
+		SELECT
+		   buy.created_at as Open,
+		   sell.created_at as Close,
+		   buy.price as Buy,
+		   sell.price as Sell,
+		   buy.quantity as BuyQuantity,
+		   sell.quantity as SellQuantity,
+		   (sell.price * sell.quantity) - (buy.price * buy.quantity) as Profit,
+		   buy.symbol as Symbol,
+		   TIMESTAMPDIFF(HOUR, buy.created_at, sell.created_at) as HoursOpened,
+		   (buy.price * buy.quantity) as Budget,
+		   (((sell.price * sell.quantity) - (buy.price * buy.quantity)) * 100 / (buy.price * buy.quantity)) as Percent
+		FROM orders buy
+		   INNER JOIN orders sell ON sell.id = buy.closed_by and sell.operation = 'sell'
+		WHERE buy.bot_id = ? AND buy.operation = 'buy' and buy.closed_by is not null order by sell.created_at DESC
+	`, repo.CurrentBot.Id)
+	defer res.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	list := make([]ExchangeModel.OrderTrade, 0)
+
+	for res.Next() {
+		var orderTrade ExchangeModel.OrderTrade
+		err := res.Scan(
+			&orderTrade.Open,
+			&orderTrade.Close,
+			&orderTrade.Buy,
+			&orderTrade.Sell,
+			&orderTrade.BuyQuantity,
+			&orderTrade.SellQuantity,
+			&orderTrade.Profit,
+			&orderTrade.Symbol,
+			&orderTrade.HoursOpened,
+			&orderTrade.Budget,
+			&orderTrade.Percent,
+		)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		list = append(list, orderTrade)
+	}
+
+	return list
+}
+
 func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 	res, err := repo.DB.Query(`
 		SELECT

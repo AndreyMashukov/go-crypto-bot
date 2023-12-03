@@ -13,7 +13,7 @@ type TradeController struct {
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
 }
 
-func (t *TradeController) UpdateTradeLimit(w http.ResponseWriter, req *http.Request) {
+func (t *TradeController) UpdateTradeLimitAction(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Content-Type", "application/json")
@@ -75,7 +75,7 @@ func (t *TradeController) UpdateTradeLimit(w http.ResponseWriter, req *http.Requ
 	fmt.Fprintf(w, string(encodedRes))
 }
 
-func (t *TradeController) CreateTradeLimit(w http.ResponseWriter, req *http.Request) {
+func (t *TradeController) CreateTradeLimitAction(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Content-Type", "application/json")
@@ -136,7 +136,7 @@ func (t *TradeController) CreateTradeLimit(w http.ResponseWriter, req *http.Requ
 	fmt.Fprintf(w, string(encodedRes))
 }
 
-func (t *TradeController) GetTradeLimits(w http.ResponseWriter, req *http.Request) {
+func (t *TradeController) GetTradeLimitsAction(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Content-Type", "application/json")

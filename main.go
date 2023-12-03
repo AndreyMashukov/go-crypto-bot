@@ -151,9 +151,10 @@ func main() {
 	http.HandleFunc("/chart/list", exchangeController.GetChartListAction)
 	http.HandleFunc("/order/list", orderController.GetOrderListAction)
 	http.HandleFunc("/order", orderController.PostManualOrderAction)
-	http.HandleFunc("/trade/limit/list", tradeController.GetTradeLimits)
-	http.HandleFunc("/trade/limit/create", tradeController.CreateTradeLimit)
-	http.HandleFunc("/trade/limit/update", tradeController.UpdateTradeLimit)
+	http.HandleFunc("/order/trade/list", orderController.GetOrderTradeListAction)
+	http.HandleFunc("/trade/limit/list", tradeController.GetTradeLimitsAction)
+	http.HandleFunc("/trade/limit/create", tradeController.CreateTradeLimitAction)
+	http.HandleFunc("/trade/limit/update", tradeController.UpdateTradeLimitAction)
 
 	go func() {
 		for {

@@ -58,11 +58,25 @@ func (f *FrameService) GetFrame(symbol string, interval string, limit int64) mod
 		}
 	}
 
+	avgLow := 0.00
+
+	if amountLow > 0 {
+		avgLow = lowSum / amountLow
+	}
+
+	avgHigh := 0.00
+
+	if amountHigh == 0.00 {
+		avgHigh = avgLow
+	} else {
+		avgHigh = highSum / amountHigh
+	}
+
 	frame := model.Frame{
 		High:    highestPrice,
 		Low:     lowestPrice,
-		AvgHigh: highSum / amountHigh,
-		AvgLow:  lowSum / amountLow,
+		AvgHigh: avgHigh,
+		AvgLow:  avgLow,
 	}
 
 	result, _ := json.Marshal(frame)

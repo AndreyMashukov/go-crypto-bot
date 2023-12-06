@@ -14,3 +14,11 @@ type BinanceOrder struct {
 	WorkingTime         int64   `json:"workingTime"`
 	Timestamp           int64   `json:"time"`
 }
+
+func (b *BinanceOrder) IsBuy() bool {
+	return b.Side == "BUY"
+}
+
+func (b *BinanceOrder) IsSell() bool {
+	return b.Side == "SELL"
+}

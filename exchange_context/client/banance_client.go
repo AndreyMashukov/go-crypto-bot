@@ -32,7 +32,8 @@ type Binance struct {
 func (b *Binance) Connect(address string) {
 	connection, _, err := websocket.DefaultDialer.Dial(address, nil)
 	if err != nil {
-		log.Fatal("dial:", err)
+		log.Printf("Binance WS [%s]: %s", address, err.Error())
+		log.Fatal("Quit!")
 	}
 	b.channel = make(chan []byte)
 	b.socketWriter = make(chan []byte)

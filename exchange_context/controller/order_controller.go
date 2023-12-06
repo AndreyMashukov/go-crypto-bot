@@ -127,7 +127,7 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 
 	opened, err := o.OrderRepository.GetOpenedOrderCached(manual.Symbol, "BUY")
 	if err == nil && manual.Operation == "SELL" {
-		minPrice := o.Formatter.FormatPrice(tradeLimit, opened.Price*(100+tradeLimit.MinProfitPercent)/100)
+		minPrice := o.Formatter.FormatPrice(tradeLimit, opened.GetMinClosePrice(tradeLimit))
 		if minPrice > manual.Price {
 			http.Error(w, fmt.Sprintf("Цена не может быть ниже %.6f", minPrice), http.StatusBadRequest)
 

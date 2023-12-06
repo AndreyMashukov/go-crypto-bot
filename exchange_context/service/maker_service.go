@@ -734,7 +734,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 				return
 			default:
 				speed := m.TrendSpeedService.GetPriceSpeedPoints(tradeLimit)
-				if speed > 0 {
+				if speed != 0.00 {
 					log.Printf("[%s] Trend Speed %.2f", tradeLimit.Symbol, speed)
 				}
 

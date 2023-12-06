@@ -37,3 +37,7 @@ func (o *Order) GetHoursOpened() int64 {
 func (o *Order) GetProfitPercent(currentPrice float64) float64 {
 	return math.Round((currentPrice-o.Price)*100/o.Price*100) / 100
 }
+
+func (o *Order) GetMinClosePrice(limit TradeLimit) float64 {
+	return o.Price * (100 + limit.GetMinProfitPercent()) / 100
+}

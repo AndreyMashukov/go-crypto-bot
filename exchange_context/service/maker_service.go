@@ -1016,6 +1016,30 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 				return queryOrder, nil
 			}
 
+			// Just in case of bug...
+			if queryOrder.Status == "PARTIALLY_FILLED" {
+				log.Printf(
+					"[%s] Order [%d] status is [%s], try again waitExecution...",
+					queryOrder.Symbol,
+					queryOrder.OrderId,
+					queryOrder.Status,
+				)
+
+				return m.waitExecution(queryOrder, 120)
+			}
+
+			// Just in case of bug...
+			if queryOrder.Status == "NEW" {
+				log.Printf(
+					"[%s] Order [%d] status is [%s], try again waitExecution...",
+					queryOrder.Symbol,
+					queryOrder.OrderId,
+					queryOrder.Status,
+				)
+
+				return m.waitExecution(queryOrder, 120)
+			}
+
 			if queryOrder.ExecutedQty > 0 {
 				log.Printf(
 					"Order [%d] is [%s], ExecutedQty = %.8f",

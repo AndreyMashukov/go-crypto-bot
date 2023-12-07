@@ -1,5 +1,7 @@
 package model
 
+import "math"
+
 type BinanceOrder struct {
 	OrderId             int64   `json:"orderId"`
 	Symbol              string  `json:"symbol"`
@@ -21,4 +23,8 @@ func (b *BinanceOrder) IsBuy() bool {
 
 func (b *BinanceOrder) IsSell() bool {
 	return b.Side == "SELL"
+}
+
+func (b *BinanceOrder) GetProfitPercent(currentPrice float64) float64 {
+	return math.Round((currentPrice-b.Price)*100/b.Price*100) / 100
 }

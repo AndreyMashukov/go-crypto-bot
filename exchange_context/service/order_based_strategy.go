@@ -3,7 +3,6 @@ package service
 import (
 	ExchangeModel "github.com/AndreyMashukov/go-crypto-bot/server/exchange_context/model"
 	ExchangeRepository "github.com/AndreyMashukov/go-crypto-bot/server/exchange_context/repository"
-	"math"
 	"time"
 )
 
@@ -39,8 +38,7 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 		}
 	}
 
-	diff := kLine.Close - order.Price
-	profitPercent := math.Round(diff*100/order.Price*100) / 100
+	profitPercent := order.GetProfitPercent(kLine.Close)
 
 	if profitPercent >= tradeLimit.GetMinProfitPercent() {
 		return ExchangeModel.Decision{

@@ -669,7 +669,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 	}
 
 	// commission can be around 0.2%
-	if (totalExecuted - (totalExecuted * 0.002)) >= opened.ExecutedQuantity {
+	if (totalExecuted + (totalExecuted * 0.002)) >= opened.ExecutedQuantity {
 		opened.Status = "closed"
 	}
 
@@ -765,9 +765,11 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 						fallPercent,
 					)
 
-					cancelFallPercent := 0.15
+					minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, 200)
 
-					if fallPercent >= cancelFallPercent && allowedExtraRequest {
+					cancelFallPercent := 0.20
+
+					if fallPercent >= cancelFallPercent && minPrice > kline.Close && allowedExtraRequest {
 						log.Printf("[%s] Check status signal sent!", binanceOrder.Symbol)
 						allowedExtraRequest = false
 						orderManageChannel <- "wait" // check status
@@ -775,8 +777,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 						log.Printf("[%s] Order status is [%s]", binanceOrder.Symbol, binanceOrder.Status)
 					}
 
-					// todo: what about partial???
-					if fallPercent >= cancelFallPercent && binanceOrder.Status == "NEW" {
+					if fallPercent >= cancelFallPercent && binanceOrder.Status == "NEW" && minPrice > kline.Close {
 						log.Printf("[%s] Cancel signal sent!", binanceOrder.Symbol)
 						orderManageChannel <- "cancel"
 						time.Sleep(time.Millisecond * 20)
@@ -787,7 +788,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 				if binanceOrder.IsSell() && binanceOrder.Price < kline.Close {
 					growthPercent := m.ComparePercentage(binanceOrder.Price, kline.Close)
 					log.Printf(
-						"[%s] SELL Price growth more then opened order []!!! %.8f < %.8f (%.2f)",
+						"[%s] SELL Price growth more then opened order [%s]!!! %.8f < %.8f (%.2f)",
 						tradeLimit.Symbol,
 						binanceOrder.Status,
 						binanceOrder.Price,

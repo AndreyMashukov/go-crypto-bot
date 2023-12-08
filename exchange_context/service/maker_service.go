@@ -199,12 +199,6 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 func (m *MakerService) calculateSellQuantity(order ExchangeModel.Order) float64 {
 	m.recoverCommission(order)
 	sellQuantity := order.GetRemainingToSellQuantity()
-
-	// Decrease QTY by commission amount
-	if order.Commission != nil && order.GetAsset() == *order.CommissionAsset {
-		sellQuantity = sellQuantity - *order.Commission
-	}
-
 	balance, err := m.getAssetBalance(order.GetAsset())
 
 	if err != nil {
@@ -668,7 +662,8 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 		}
 	}
 
-	// commission can be around 0.2%
+	// commission can be around 0.2% (0.1% to one side)
+	// @see https://www.binance.com/en/fee/trading
 	if (totalExecuted + (totalExecuted * 0.002)) >= opened.ExecutedQuantity {
 		opened.Status = "closed"
 	}
@@ -1259,6 +1254,11 @@ func (m *MakerService) UpdateCommission(balanceBefore float64, order ExchangeMod
 	arrived := balanceAfter - balanceBefore
 
 	commission := order.ExecutedQuantity - arrived
+
+	if commission < 0 {
+		commission = 0.00
+	}
+
 	order.Commission = &commission
 	order.CommissionAsset = &assetSymbol
 

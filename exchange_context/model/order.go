@@ -16,6 +16,10 @@ func (p Percent) Value() float64 {
 	return float64(p)
 }
 
+func (p Percent) Half() Percent {
+	return Percent(float64(p) / 2)
+}
+
 func (p Percent) Gt(percent Percent) bool {
 	return p.Value() > percent.Value()
 }

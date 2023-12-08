@@ -52,3 +52,7 @@ func (b *BinanceOrder) IsPartiallyFilled() bool {
 func (b *BinanceOrder) HasExecutedQuantity() bool {
 	return b.ExecutedQty > 0
 }
+
+func (b *BinanceOrder) GetExecutedQuantity() float64 {
+	return b.ExecutedQty
+}

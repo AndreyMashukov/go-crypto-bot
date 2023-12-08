@@ -40,7 +40,7 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 
 	profitPercent := order.GetProfitPercent(kLine.Close)
 
-	if profitPercent >= tradeLimit.GetMinProfitPercent() {
+	if profitPercent.Gte(tradeLimit.GetMinProfitPercent()) {
 		return ExchangeModel.Decision{
 			StrategyName: "order_based_strategy",
 			Score:        30.00,
@@ -54,7 +54,7 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 	periodMinPrice := o.ExchangeRepository.GetPeriodMinPrice(kLine.Symbol, 200)
 
 	// If time to extra buy and price is near Low (Low + 0.5%)
-	if tradeLimit.IsExtraChargeEnabled() && profitPercent <= tradeLimit.GetBuyOnFallPercent() && kLine.Close <= kLine.GetLowPercent(0.5) {
+	if tradeLimit.IsExtraChargeEnabled() && profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) && kLine.Close <= kLine.GetLowPercent(0.5) {
 		return ExchangeModel.Decision{
 			StrategyName: "order_based_strategy",
 			Score:        999.99,

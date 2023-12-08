@@ -19,7 +19,7 @@ func (f *Frame) GetBestFrameBuy(limit TradeLimit, marketDepth Depth) ([2]float64
 
 	for _, bid := range marketDepth.GetBids() {
 		potentialOpenPrice = bid[0].Value
-		closePrice = potentialOpenPrice * (100 + limit.GetMinProfitPercent()) / 100
+		closePrice = potentialOpenPrice * (100 + limit.GetMinProfitPercent().Value()) / 100
 
 		if potentialOpenPrice <= f.Low {
 			break

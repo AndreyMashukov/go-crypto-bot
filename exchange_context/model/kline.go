@@ -35,3 +35,7 @@ func (k *KLine) IsNegative() bool {
 func (k *KLine) IsPositive() bool {
 	return k.Close > k.Open
 }
+
+func (k *KLine) GetLowPercent(percent float64) float64 {
+	return k.Low + (k.Low * percent / 100)
+}

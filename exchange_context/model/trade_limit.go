@@ -29,3 +29,7 @@ func (t *TradeLimit) GetBuyOnFallPercent() float64 {
 		return t.BuyOnFallPercent
 	}
 }
+
+func (t *TradeLimit) IsExtraChargeEnabled() bool {
+	return t.BuyOnFallPercent != 0.00
+}

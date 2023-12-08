@@ -64,6 +64,32 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		return
 	}
 
+	tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
+
+	if err != nil {
+		log.Printf("[%s] %s", symbol, err.Error())
+		return
+	}
+
+	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+	order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
+
+	if err == nil && tradeLimit.IsExtraChargeEnabled() {
+		profitPercent := order.GetProfitPercent(lastKline.Close)
+
+		// If time to extra buy and price is near Low (Low + 0.5%)
+		if profitPercent <= tradeLimit.GetBuyOnFallPercent() && lastKline.Close <= lastKline.GetLowPercent(0.5) {
+			log.Printf(
+				"[%s] Time to extra chanrge, profit %.2f of %.2f, price = %.8f",
+				symbol,
+				profitPercent,
+				tradeLimit.GetBuyOnFallPercent(),
+				lastKline.Close,
+			)
+			holdScore = 0
+		}
+	}
+
 	if manualOrder != nil {
 		holdScore = 0
 		if strings.ToUpper(manualOrder.Operation) == "BUY" {
@@ -83,7 +109,6 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 	if sellScore >= buyScore {
 		log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
-		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
 		marketDepth := m.GetDepth(tradeLimit.Symbol)
 
@@ -92,7 +117,6 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			return
 		}
 
-		lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 		if lastKline == nil {
 			log.Printf("[%s] No information about current price", symbol)
 			return
@@ -148,6 +172,11 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 			if err != nil {
 				lastKline := m.ExchangeRepository.GetLastKLine(symbol)
+				if lastKline == nil {
+					log.Printf("[%s] Last price is unknown", symbol)
+					return
+				}
+
 				log.Printf("[%s] %s, current = %f", symbol, err.Error(), lastKline.Close)
 				return
 			}
@@ -280,6 +309,8 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 }
 
 func (m *MakerService) CalculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (float64, error) {
+	// todo: check manual!!!!
+
 	marketDepth := m.GetDepth(tradeLimit.Symbol)
 	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
@@ -460,6 +491,10 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 		extraCommission = *extraOrder.Commission
 	}
 	commissionSum := commission + extraCommission
+	if commissionSum < 0 {
+		commissionSum = 0
+	}
+
 	order.Commission = &commissionSum
 
 	err = m.OrderRepository.Update(order)
@@ -764,7 +799,8 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 
 					cancelFallPercent := 0.20
 
-					if fallPercent >= cancelFallPercent && minPrice > kline.Close && allowedExtraRequest {
+					// If falls more then (min - 0.5%) cancel current
+					if fallPercent >= cancelFallPercent && minPrice-(minPrice*0.005) > kline.Close && allowedExtraRequest {
 						log.Printf("[%s] Check status signal sent!", binanceOrder.Symbol)
 						allowedExtraRequest = false
 						orderManageChannel <- "wait" // check status
@@ -1233,6 +1269,9 @@ func (m *MakerService) recoverCommission(order ExchangeModel.Order) {
 	}
 
 	commission := order.ExecutedQuantity - balanceAfter
+	if commission < 0 {
+		commission = 0
+	}
 	order.Commission = &commission
 	order.CommissionAsset = &assetSymbol
 

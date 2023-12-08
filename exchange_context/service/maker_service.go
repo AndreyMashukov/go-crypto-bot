@@ -765,7 +765,6 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 		book[0],
 	)
 
-	start := time.Now().Unix()
 	executedQty := 0.00
 
 	orderManageChannel := make(chan string)
@@ -777,9 +776,10 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 
 	tradeLimit := m.tradeLimit(binanceOrder.Symbol)
 
-	go func(tradeLimit ExchangeModel.TradeLimit, binanceOrder ExchangeModel.BinanceOrder) {
+	go func(tradeLimit ExchangeModel.TradeLimit, binanceOrder ExchangeModel.BinanceOrder, ttl int64) {
 		timer := 0
 		allowedExtraRequest := true
+		start := time.Now().Unix()
 
 		for {
 			select {
@@ -789,6 +789,8 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			case binanceOrder = <-orderChannel:
 				log.Printf("[%s] Order update received in wait handler", binanceOrder.Symbol)
 			default:
+				end := time.Now().Unix()
+
 				speed := m.TrendSpeedService.GetPriceSpeedPoints(tradeLimit)
 				if speed != 0.00 {
 					log.Printf("[%s] Trend Speed %.2f", tradeLimit.Symbol, speed)
@@ -815,7 +817,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 					if fallPercent.Gte(cancelFallPercent) && minPrice-(minPrice*0.005) > kline.Close && allowedExtraRequest {
 						log.Printf("[%s] Check status signal sent!", binanceOrder.Symbol)
 						allowedExtraRequest = false
-						orderManageChannel <- "wait" // check status
+						orderManageChannel <- "status"
 						time.Sleep(time.Millisecond * 50)
 						log.Printf("[%s] Order status is [%s]", binanceOrder.Symbol, binanceOrder.Status)
 					}
@@ -864,7 +866,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 				}
 
 				if timer > 20000 {
-					orderManageChannel <- "wait"
+					orderManageChannel <- "status"
 					timer = 0
 					log.Printf(
 						"[%s] %s Order [%d] wait handler, curent price is [%.8f], order price [%.8f]",
@@ -874,6 +876,53 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 						kline.Close,
 						binanceOrder.Price,
 					)
+					time.Sleep(time.Second)
+
+					if end >= (start+ttl) && binanceOrder.IsNew() {
+						if binanceOrder.IsSell() {
+							openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
+							if err == nil {
+								if openedBuyPosition.GetProfitPercent(kline.Close).Lte(0.00) {
+									log.Printf(
+										"[%s] %s Order [%d] timeout, current price is [%.8f], order price [%.8f]",
+										binanceOrder.Symbol,
+										binanceOrder.Side,
+										binanceOrder.OrderId,
+										kline.Close,
+										binanceOrder.Price,
+									)
+									orderManageChannel <- "cancel"
+								}
+							} else {
+								log.Printf(
+									"[%s] %s Order [%d] %s",
+									binanceOrder.Symbol,
+									binanceOrder.Side,
+									binanceOrder.OrderId,
+									err.Error(),
+								)
+								orderManageChannel <- "cancel"
+							}
+						}
+
+						if binanceOrder.IsBuy() && m.ComparePercentage(binanceOrder.Price, kline.Close).Gte(102) {
+							log.Printf(
+								"[%s] %s Order [%d] timeout, current price is [%.8f], order price [%.8f]",
+								binanceOrder.Symbol,
+								binanceOrder.Side,
+								binanceOrder.OrderId,
+								kline.Close,
+								binanceOrder.Price,
+							)
+							orderManageChannel <- "cancel"
+						}
+					}
+				}
+
+				manualOrder := m.OrderRepository.GetManualOrder(binanceOrder.Symbol)
+				// cancel current immediately on new manual order
+				if manualOrder != nil && manualOrder.Price != binanceOrder.Price {
+					orderManageChannel <- "cancel"
 				}
 
 				allowedExtraRequest = true
@@ -881,7 +930,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 				time.Sleep(time.Millisecond * 20)
 			}
 		}
-	}(*tradeLimit, binanceOrder)
+	}(*tradeLimit, binanceOrder, seconds)
 
 	for {
 		queryOrder, err := m.Binance.QueryOrder(binanceOrder.Symbol, binanceOrder.OrderId)
@@ -917,8 +966,6 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 
 		orderChannel <- queryOrder
 
-		end := time.Now().Unix()
-
 		if err == nil && queryOrder.IsPartiallyFilled() {
 			// Add 5 minutes more if ExecutedQty moves up!
 			if queryOrder.ExecutedQty > executedQty {
@@ -927,12 +974,6 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 
 			executedQty = queryOrder.ExecutedQty
 			m.OrderRepository.SetBinanceOrder(queryOrder)
-
-			if (end - start) > seconds {
-				// todo: so terrible case, we have to do something with it...
-				log.Printf("[%s] Wait timeout, but order is still partially filled...", queryOrder.Symbol)
-				// todo: confirm partially filled??? apply as is...
-			}
 
 			action := <-orderManageChannel
 			if action == "cancel" {
@@ -970,49 +1011,12 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			break
 		}
 
-		// todo: handle EXPIRED status...
-
 		if err == nil && queryOrder.IsFilled() && queryOrder.HasExecutedQuantity() {
 			quit <- "stop"
 			log.Printf("[%s] Order [%d] is executed [%s]", binanceOrder.Symbol, queryOrder.OrderId, queryOrder.Status)
 
 			m.OrderRepository.DeleteBinanceOrder(queryOrder)
 			return queryOrder, nil
-		}
-
-		manualOrder := m.OrderRepository.GetManualOrder(queryOrder.Symbol)
-		// cancel current immediately on new manual order
-		if manualOrder != nil && manualOrder.Price != queryOrder.Price {
-			break
-		}
-
-		// todo: If time to buy extra, cancel current order and let bot trade again...
-		// todo: Use channel...
-
-		depth := m.GetDepth(binanceOrder.Symbol)
-
-		var bookPosition int
-		var book [2]ExchangeModel.Number
-		if "BUY" == binanceOrder.Side {
-			bookPosition, book = depth.GetBidPosition(binanceOrder.Price)
-		} else {
-			bookPosition, book = depth.GetAskPosition(binanceOrder.Price)
-		}
-
-		if bookPosition < currentPosition {
-			seconds += seconds
-			log.Printf(
-				"[%s] Order Book position decrease [%d]->[%d] %.6f!!! Ttl has extended\n",
-				binanceOrder.Symbol,
-				currentPosition,
-				bookPosition,
-				book[0],
-			)
-			currentPosition = bookPosition
-		}
-
-		if (end - start) > seconds {
-			break
 		}
 
 		action := <-orderManageChannel

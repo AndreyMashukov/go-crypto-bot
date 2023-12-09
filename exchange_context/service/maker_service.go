@@ -23,7 +23,6 @@ type MakerService struct {
 	TradeLockMutex     sync.RWMutex
 	MinDecisions       float64
 	HoldScore          float64
-	TrendSpeedService  *TrendSpeedService
 }
 
 func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {

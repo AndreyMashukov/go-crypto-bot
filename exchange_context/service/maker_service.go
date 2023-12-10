@@ -232,6 +232,12 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 }
 
 func (m *MakerService) calculateSellQuantity(order ExchangeModel.Order) float64 {
+	binanceOrder := m.OrderRepository.GetBinanceOrder(order.Symbol, "SELL")
+
+	if binanceOrder != nil {
+		return binanceOrder.OrigQty
+	}
+
 	m.recoverCommission(order)
 	sellQuantity := order.GetRemainingToSellQuantity()
 	balance, err := m.getAssetBalance(order.GetAsset())

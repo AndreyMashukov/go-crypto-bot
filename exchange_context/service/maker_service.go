@@ -71,6 +71,12 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 	}
 
 	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+
+	if lastKline == nil {
+		log.Printf("[%s] Last price is unknown... skip!", symbol)
+		return
+	}
+
 	order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 
 	if err == nil && tradeLimit.IsExtraChargeEnabled() {

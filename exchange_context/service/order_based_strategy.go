@@ -3,7 +3,6 @@ package service
 import (
 	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
-	"math"
 	"time"
 )
 
@@ -39,10 +38,9 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 		}
 	}
 
-	diff := kLine.Close - order.Price
-	profitPercent := math.Round(diff*100/order.Price*100) / 100
+	profitPercent := order.GetProfitPercent(kLine.Close)
 
-	if profitPercent >= tradeLimit.GetMinProfitPercent() {
+	if profitPercent.Gte(tradeLimit.GetMinProfitPercent()) {
 		return ExchangeModel.Decision{
 			StrategyName: "order_based_strategy",
 			Score:        30.00,
@@ -55,14 +53,14 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 
 	periodMinPrice := o.ExchangeRepository.GetPeriodMinPrice(kLine.Symbol, 200)
 
-	// todo: do not sell if we have an `opened` order and price less than extra charge percent...
-	if tradeLimit.BuyOnFallPercent != 0.00 && profitPercent <= tradeLimit.BuyOnFallPercent && periodMinPrice != 0.00 && kLine.Low <= periodMinPrice {
+	// If time to extra buy and price is near Low (Low + 0.5%)
+	if tradeLimit.IsExtraChargeEnabled() && profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) && kLine.Close <= kLine.GetLowPercent(0.5) {
 		return ExchangeModel.Decision{
 			StrategyName: "order_based_strategy",
-			Score:        75.00,
+			Score:        999.99,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
-			Price:        kLine.Close,
+			Price:        periodMinPrice,
 			Params:       [3]float64{0, 0, 0},
 		}
 	}

@@ -72,6 +72,7 @@ func (repo *OrderRepository) getOpenedOrder(symbol string, operation string) (Ex
 			o.id as Id, 
 			o.symbol as Symbol, 
 			o.quantity as Quantity,
+			o.executed_quantity as ExecutedQuantity,
 			o.price as Price,
 			o.created_at as CreatedAt,
 			o.operation as Operation,
@@ -80,12 +81,15 @@ func (repo *OrderRepository) getOpenedOrder(symbol string, operation string) (Ex
 			o.buy_volume as BuyVolume,
 			o.sma_value as SmaValue,
 			o.external_id as ExternalId,
-			o.closed_by as ClosedBy,
+			o.closes_order as ClosesOrder,
 			o.used_extra_budget as UsedExtraBudget,
 			o.commission as Commission,
-			o.commission_asset as CommissionAsset
+			o.commission_asset as CommissionAsset,
+			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity
 		FROM orders o
-		WHERE o.status = ? AND o.symbol = ? AND o.operation = ? AND o.bot_id = ?`,
+		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
+		WHERE o.status = ? AND o.symbol = ? AND o.operation = ? AND o.bot_id = ?
+		GROUP BY o.id`,
 		"opened",
 		symbol,
 		operation,
@@ -94,6 +98,7 @@ func (repo *OrderRepository) getOpenedOrder(symbol string, operation string) (Ex
 		&order.Id,
 		&order.Symbol,
 		&order.Quantity,
+		&order.ExecutedQuantity,
 		&order.Price,
 		&order.CreatedAt,
 		&order.Operation,
@@ -102,10 +107,11 @@ func (repo *OrderRepository) getOpenedOrder(symbol string, operation string) (Ex
 		&order.BuyVolume,
 		&order.SmaValue,
 		&order.ExternalId,
-		&order.ClosedBy,
+		&order.ClosesOrder,
 		&order.UsedExtraBudget,
 		&order.Commission,
 		&order.CommissionAsset,
+		&order.SoldQuantity,
 	)
 
 	if err != nil {
@@ -120,6 +126,7 @@ func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
 		INSERT INTO orders SET
 	  		symbol = ?,
 		    quantity = ?,
+		    executed_quantity = ?,
 	        price = ?,
 		    created_at = ?,
 		    sell_volume = ?,
@@ -128,7 +135,7 @@ func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
 		    operation = ?,
 		    status = ?,
 		    external_id = ?,
-		    closed_by = ?,
+		    closes_order = ?,
 			used_extra_budget = ?,
 			commission = ?,
 			commission_asset = ?,
@@ -136,6 +143,7 @@ func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
 	`,
 		order.Symbol,
 		order.Quantity,
+		order.ExecutedQuantity,
 		order.Price,
 		order.CreatedAt,
 		order.SellVolume,
@@ -144,7 +152,7 @@ func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
 		order.Operation,
 		order.Status,
 		order.ExternalId,
-		order.ClosedBy,
+		order.ClosesOrder,
 		order.UsedExtraBudget,
 		order.Commission,
 		order.CommissionAsset,
@@ -168,6 +176,7 @@ func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
 		UPDATE orders o SET
 	  		o.symbol = ?,
 		    o.quantity = ?,
+		    o.executed_quantity = ?,
 	        o.price = ?,
 		    o.created_at = ?,
 		    o.sell_volume = ?,
@@ -176,7 +185,7 @@ func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
 		    o.operation = ?,
 		    o.status = ?,
 		    o.external_id = ?,
-		    o.closed_by = ?,
+			o.closes_order = ?,
 			o.used_extra_budget = ?,
 			o.commission = ?,
 			o.commission_asset = ?
@@ -184,6 +193,7 @@ func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
 	`,
 		order.Symbol,
 		order.Quantity,
+		order.ExecutedQuantity,
 		order.Price,
 		order.CreatedAt,
 		order.SellVolume,
@@ -192,7 +202,7 @@ func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
 		order.Operation,
 		order.Status,
 		order.ExternalId,
-		order.ClosedBy,
+		order.ClosesOrder,
 		order.UsedExtraBudget,
 		order.Commission,
 		order.CommissionAsset,
@@ -215,6 +225,7 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 			o.id as Id, 
 			o.symbol as Symbol, 
 			o.quantity as Quantity,
+			o.executed_quantity as ExecutedQuantity,
 			o.price as Price,
 			o.created_at as CreatedAt,
 			o.operation as Operation,
@@ -223,16 +234,20 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 			o.buy_volume as BuyVolume,
 			o.sma_value as SmaValue,
 			o.external_id as ExternalId,
-			o.closed_by as ClosedBy,
+			o.closes_order as ClosesOrder,
 			o.used_extra_budget as UsedExtraBudget,
 			o.commission as Commission,
-			o.commission_asset as CommissionAsset
+			o.commission_asset as CommissionAsset,
+			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity
 		FROM orders o
-		WHERE o.id = ?`, id,
+		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
+		WHERE o.id = ? 
+		GROUP BY o.id`, id,
 	).Scan(
 		&order.Id,
 		&order.Symbol,
 		&order.Quantity,
+		&order.ExecutedQuantity,
 		&order.Price,
 		&order.CreatedAt,
 		&order.Operation,
@@ -241,10 +256,11 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 		&order.BuyVolume,
 		&order.SmaValue,
 		&order.ExternalId,
-		&order.ClosedBy,
+		&order.ClosesOrder,
 		&order.UsedExtraBudget,
 		&order.Commission,
 		&order.CommissionAsset,
+		&order.SoldQuantity,
 	)
 
 	if err != nil {
@@ -255,22 +271,25 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 }
 
 func (repo *OrderRepository) GetTrades() []ExchangeModel.OrderTrade {
+	// todo: refactor with partial...
 	res, err := repo.DB.Query(`
 		SELECT
-		   buy.created_at as Open,
-		   sell.created_at as Close,
-		   buy.price as Buy,
-		   sell.price as Sell,
-		   buy.quantity as BuyQuantity,
-		   sell.quantity as SellQuantity,
-		   (sell.price * sell.quantity) - (buy.price * buy.quantity) as Profit,
-		   buy.symbol as Symbol,
-		   TIMESTAMPDIFF(HOUR, buy.created_at, sell.created_at) as HoursOpened,
-		   (buy.price * buy.quantity) as Budget,
-		   (((sell.price * sell.quantity) - (buy.price * buy.quantity)) * 100 / (buy.price * buy.quantity)) as Percent
+			buy.created_at as Open,
+			MAX(sell.created_at) as Close,
+			buy.price as Buy,
+			AVG(sell.price) as Sell,
+			buy.executed_quantity as BuyQuantity,
+			SUM(sell.executed_quantity) as SellQuantity,
+			(SUM(sell.price * sell.executed_quantity)) - (buy.price * buy.executed_quantity) as Profit,
+			buy.symbol as Symbol,
+			TIMESTAMPDIFF(HOUR, buy.created_at, MAX(sell.created_at)) as HoursOpened,
+			(buy.price * buy.quantity) as Budget,
+			(((AVG(sell.price) * AVG(sell.executed_quantity)) - (buy.price * buy.executed_quantity)) * 100 / (buy.price * buy.quantity)) as Percent
 		FROM orders buy
-		   INNER JOIN orders sell ON sell.id = buy.closed_by and sell.operation = 'sell'
-		WHERE buy.bot_id = ? AND buy.operation = 'buy' and buy.closed_by is not null order by sell.created_at DESC
+			 INNER JOIN orders sell ON sell.closes_order = buy.id and sell.operation = 'sell'
+		WHERE buy.bot_id = ? AND buy.operation = 'buy' and buy.status = 'closed' is not null
+		GROUP BY buy.id
+		order by Close DESC
 	`, repo.CurrentBot.Id)
 	defer res.Close()
 
@@ -312,6 +331,7 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 		    o.id as Id, 
 			o.symbol as Symbol, 
 			o.quantity as Quantity,
+			o.executed_quantity as ExecutedQuantity,
 			o.price as Price,
 			o.created_at as CreatedAt,
 			o.operation as Operation,
@@ -320,11 +340,15 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 			o.buy_volume as BuyVolume,
 			o.sma_value as SmaValue,
 			o.external_id as ExternalId,
-			o.closed_by as ClosedBy,
+			o.closes_order as ClosesOrder,
 			o.used_extra_budget as UsedExtraBudget,
 			o.commission as Commission,
-			o.commission_asset as CommissionAsset
-		FROM orders o WHERE o.bot_id = ?
+			o.commission_asset as CommissionAsset,
+			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity	
+		FROM orders o 
+		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
+		WHERE o.bot_id = ?
+		GROUP BY o.id
 	`, repo.CurrentBot.Id)
 	defer res.Close()
 
@@ -340,6 +364,7 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 			&order.Id,
 			&order.Symbol,
 			&order.Quantity,
+			&order.ExecutedQuantity,
 			&order.Price,
 			&order.CreatedAt,
 			&order.Operation,
@@ -348,10 +373,76 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 			&order.BuyVolume,
 			&order.SmaValue,
 			&order.ExternalId,
-			&order.ClosedBy,
+			&order.ClosesOrder,
 			&order.UsedExtraBudget,
 			&order.Commission,
 			&order.CommissionAsset,
+			&order.SoldQuantity,
+		)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		list = append(list, order)
+	}
+
+	return list
+}
+
+func (repo *OrderRepository) GetClosesOrderList(buyOrder ExchangeModel.Order) []ExchangeModel.Order {
+	res, err := repo.DB.Query(`
+		SELECT
+		    o.id as Id, 
+			o.symbol as Symbol, 
+			o.quantity as Quantity,
+			o.executed_quantity as ExecutedQuantity,
+			o.price as Price,
+			o.created_at as CreatedAt,
+			o.operation as Operation,
+			o.status as Status,
+			o.sell_volume as SellVolume,
+			o.buy_volume as BuyVolume,
+			o.sma_value as SmaValue,
+			o.external_id as ExternalId,
+			o.closes_order as ClosesOrder,
+			o.used_extra_budget as UsedExtraBudget,
+			o.commission as Commission,
+			o.commission_asset as CommissionAsset,
+			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity	
+		FROM orders o 
+		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
+		WHERE o.bot_id = ? AND o.closes_order = ? AND o.operation = ?
+		GROUP BY o.id
+	`, repo.CurrentBot.Id, buyOrder.Id, "SELL")
+	defer res.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	list := make([]ExchangeModel.Order, 0)
+
+	for res.Next() {
+		var order ExchangeModel.Order
+		err := res.Scan(
+			&order.Id,
+			&order.Symbol,
+			&order.Quantity,
+			&order.ExecutedQuantity,
+			&order.Price,
+			&order.CreatedAt,
+			&order.Operation,
+			&order.Status,
+			&order.SellVolume,
+			&order.BuyVolume,
+			&order.SmaValue,
+			&order.ExternalId,
+			&order.ClosesOrder,
+			&order.UsedExtraBudget,
+			&order.Commission,
+			&order.CommissionAsset,
+			&order.SoldQuantity,
 		)
 
 		if err != nil {

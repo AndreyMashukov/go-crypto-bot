@@ -1,5 +1,7 @@
 package model
 
+import "math"
+
 type BinanceOrder struct {
 	OrderId             int64   `json:"orderId"`
 	Symbol              string  `json:"symbol"`
@@ -21,4 +23,36 @@ func (b *BinanceOrder) IsBuy() bool {
 
 func (b *BinanceOrder) IsSell() bool {
 	return b.Side == "SELL"
+}
+
+func (b *BinanceOrder) GetProfitPercent(currentPrice float64) Percent {
+	return Percent(math.Round((currentPrice-b.Price)*100/b.Price*100) / 100)
+}
+
+func (b *BinanceOrder) IsNew() bool {
+	return b.Status == "NEW"
+}
+
+func (b *BinanceOrder) IsExpired() bool {
+	return b.Status == "EXPIRED"
+}
+
+func (b *BinanceOrder) IsFilled() bool {
+	return b.Status == "FILLED"
+}
+
+func (b *BinanceOrder) IsCancelled() bool {
+	return b.Status == "CANCELED"
+}
+
+func (b *BinanceOrder) IsPartiallyFilled() bool {
+	return b.Status == "PARTIALLY_FILLED"
+}
+
+func (b *BinanceOrder) HasExecutedQuantity() bool {
+	return b.ExecutedQty > 0
+}
+
+func (b *BinanceOrder) GetExecutedQuantity() float64 {
+	return b.ExecutedQty
 }

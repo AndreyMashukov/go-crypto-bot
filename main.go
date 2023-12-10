@@ -102,12 +102,6 @@ func main() {
 		CurrentBot: currentBot,
 	}
 
-	trendSpeedService := ExchangeService.TrendSpeedService{
-		RDB:        rdb,
-		Ctx:        &ctx,
-		CurrentBot: currentBot,
-	}
-
 	formatter := ExchangeService.Formatter{}
 	chartService := ExchangeService.ChartService{
 		ExchangeRepository: &exchangeRepository,
@@ -136,7 +130,6 @@ func main() {
 		FrameService:       &frameService,
 		MinDecisions:       4.00,
 		HoldScore:          75.00,
-		TrendSpeedService:  &trendSpeedService,
 	}
 
 	orderController := controller.OrderController{
@@ -241,7 +234,6 @@ func main() {
 				var klineEvent ExchangeModel.KlineEvent
 				json.Unmarshal(message, &klineEvent)
 				kLine := klineEvent.KlineData.Kline
-				trendSpeedService.ProcessKline(kLine)
 				exchangeRepository.AddKLine(kLine)
 				baseKLineDecision := baseKLineStrategy.Decide(kLine)
 				exchangeRepository.SetDecision(baseKLineDecision)

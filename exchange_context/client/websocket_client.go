@@ -9,14 +9,15 @@ import (
 func Listen(address string, tradeChannel chan<- []byte) *websocket.Conn {
 	connection, _, err := websocket.DefaultDialer.Dial(address, nil)
 	if err != nil {
-		log.Fatal("dial:", err)
+		log.Printf("Binance WS Events [%s]: %s", address, err.Error())
+		log.Fatal("Quit!")
 	}
 
 	go func() {
 		for {
 			_, message, err := connection.ReadMessage()
 			if err != nil {
-				log.Println("read: ", err)
+				log.Printf("Binance WS Events, read [%s]: %s", address, err.Error())
 
 				os.Exit(1)
 			}

@@ -23,7 +23,6 @@ type MakerService struct {
 	TradeLockMutex     sync.RWMutex
 	MinDecisions       float64
 	HoldScore          float64
-	TrendSpeedService  *TrendSpeedService
 }
 
 func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
@@ -64,6 +63,32 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		return
 	}
 
+	tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
+
+	if err != nil {
+		log.Printf("[%s] %s", symbol, err.Error())
+		return
+	}
+
+	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+	order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
+
+	if err == nil && tradeLimit.IsExtraChargeEnabled() {
+		profitPercent := order.GetProfitPercent(lastKline.Close)
+
+		// If time to extra buy and price is near Low (Low + 0.5%)
+		if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) && lastKline.Close <= lastKline.GetLowPercent(0.5) {
+			log.Printf(
+				"[%s] Time to extra chanrge, profit %.2f of %.2f, price = %.8f",
+				symbol,
+				profitPercent,
+				tradeLimit.GetBuyOnFallPercent().Value(),
+				lastKline.Close,
+			)
+			holdScore = 0
+		}
+	}
+
 	if manualOrder != nil {
 		holdScore = 0
 		if strings.ToUpper(manualOrder.Operation) == "BUY" {
@@ -83,7 +108,6 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 	if sellScore >= buyScore {
 		log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
-		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
 		marketDepth := m.GetDepth(tradeLimit.Symbol)
 
@@ -92,7 +116,6 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			return
 		}
 
-		lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 		if lastKline == nil {
 			log.Printf("[%s] No information about current price", symbol)
 			return
@@ -110,8 +133,14 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 				if price > 0 {
 					quantity := m.Formatter.FormatQuantity(tradeLimit, m.calculateSellQuantity(order))
-					log.Printf("[%s] SELL QTY = %f", order.Symbol, quantity)
-					err = m.Sell(tradeLimit, order, symbol, price, quantity, sellVolume, buyVolume, smaFormatted)
+
+					if quantity >= tradeLimit.MinQuantity {
+						log.Printf("[%s] SELL QTY = %f", order.Symbol, quantity)
+						err = m.Sell(tradeLimit, order, symbol, price, quantity, sellVolume, buyVolume, smaFormatted)
+					} else {
+						log.Printf("[%s] SELL QTY = %f is too small!", order.Symbol, quantity)
+					}
+
 					if err != nil {
 						log.Printf("[%s] %s", symbol, err)
 					}
@@ -142,6 +171,11 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 			if err != nil {
 				lastKline := m.ExchangeRepository.GetLastKLine(symbol)
+				if lastKline == nil {
+					log.Printf("[%s] Last price is unknown", symbol)
+					return
+				}
+
 				log.Printf("[%s] %s, current = %f", symbol, err.Error(), lastKline.Close)
 				return
 			}
@@ -179,11 +213,18 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			} else {
 				profit, err := m.getCurrentProfitPercent(order)
 
-				if err == nil && profit <= 0.00 {
+				if err == nil && profit.Lte(tradeLimit.GetBuyOnFallPercent()) {
 					err = m.BuyExtra(tradeLimit, order, price, sellVolume, buyVolume, smaValue)
 					if err != nil {
 						log.Printf("[%s] %s", symbol, err)
 					}
+				} else {
+					log.Printf(
+						"[%s] Extra charge is not allowed: %.2f of %.2f",
+						symbol,
+						profit.Value(),
+						tradeLimit.GetBuyOnFallPercent().Value(),
+					)
 				}
 			}
 		}
@@ -191,14 +232,14 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 }
 
 func (m *MakerService) calculateSellQuantity(order ExchangeModel.Order) float64 {
-	m.recoverCommission(order)
-	sellQuantity := order.Quantity
+	binanceOrder := m.OrderRepository.GetBinanceOrder(order.Symbol, "SELL")
 
-	// Decrease QTY by commission amount
-	if order.Commission != nil && order.GetAsset() == *order.CommissionAsset {
-		sellQuantity = sellQuantity - *order.Commission
+	if binanceOrder != nil {
+		return binanceOrder.OrigQty
 	}
 
+	m.recoverCommission(order)
+	sellQuantity := order.GetRemainingToSellQuantity()
 	balance, err := m.getAssetBalance(order.GetAsset())
 
 	if err != nil {
@@ -272,7 +313,7 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 		log.Printf("[%s] Choosen Current sell price %f", tradeLimit.Symbol, minPrice)
 	}
 
-	profit := (minPrice - order.Price) * order.Quantity
+	profit := (minPrice - order.Price) * order.ExecutedQuantity
 
 	log.Printf("[%s] Sell price = %f, expected profit = %f$", order.Symbol, minPrice, profit)
 
@@ -280,6 +321,8 @@ func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, o
 }
 
 func (m *MakerService) CalculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (float64, error) {
+	// todo: check manual!!!!
+
 	marketDepth := m.GetDepth(tradeLimit.Symbol)
 	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
@@ -291,7 +334,7 @@ func (m *MakerService) CalculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (f
 	order, err := m.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
 
 	// Extra charge by current price
-	if err == nil && order.GetProfitPercent(lastKline.Close) <= tradeLimit.GetBuyOnFallPercent() {
+	if err == nil && order.GetProfitPercent(lastKline.Close).Lte(tradeLimit.GetBuyOnFallPercent()) {
 		extraBuyPrice := minPrice
 		// todo: For next extras has to be used last extra order
 		if order.GetHoursOpened() >= 24 {
@@ -300,7 +343,7 @@ func (m *MakerService) CalculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (f
 				"[%s] Extra buy price is %f (more than 24 hours), profit: %.2f",
 				tradeLimit.Symbol,
 				extraBuyPrice,
-				order.GetProfitPercent(lastKline.Close),
+				order.GetProfitPercent(lastKline.Close).Value(),
 			)
 		} else {
 			extraBuyPrice = minPrice
@@ -331,7 +374,7 @@ func (m *MakerService) CalculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (f
 		log.Printf("[%s] Buy Frame Error: %s, current = %f", tradeLimit.Symbol, err.Error(), lastKline.Close)
 		potentialOpenPrice := lastKline.Close
 		for {
-			closePrice := potentialOpenPrice * (100 + tradeLimit.GetMinProfitPercent()) / 100
+			closePrice := potentialOpenPrice * (100 + tradeLimit.GetMinProfitPercent().Value()) / 100
 
 			if closePrice <= frame.AvgHigh {
 				break
@@ -368,7 +411,7 @@ func (m *MakerService) CalculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (f
 }
 
 func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64, sellVolume float64, buyVolume float64, smaValue float64) error {
-	if tradeLimit.GetBuyOnFallPercent() >= 0.00 {
+	if tradeLimit.GetBuyOnFallPercent().Gte(0.00) {
 		return errors.New(fmt.Sprintf("[%s] Extra buy is disabled", tradeLimit.Symbol))
 	}
 
@@ -380,8 +423,13 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 
 	profit, _ := m.getCurrentProfitPercent(order)
 
-	if profit > tradeLimit.GetBuyOnFallPercent() {
-		return errors.New(fmt.Sprintf("[%s] Extra buy percent is not reached %.2f of %.2f", tradeLimit.Symbol, profit, tradeLimit.GetBuyOnFallPercent()))
+	if profit.Gt(tradeLimit.GetBuyOnFallPercent()) {
+		return errors.New(fmt.Sprintf(
+			"[%s] Extra buy percent is not reached %.2f of %.2f",
+			tradeLimit.Symbol,
+			profit,
+			tradeLimit.GetBuyOnFallPercent().Value()),
+		)
 	}
 
 	m.acquireLock(order.Symbol)
@@ -406,22 +454,18 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 		}
 	}
 
-	// todo: check is enough balance on SPOT wallet!!!
-
-	// todo: check min quantity
-
 	var extraOrder = ExchangeModel.Order{
-		Symbol:     order.Symbol,
-		Quantity:   quantity,
-		Price:      price,
-		CreatedAt:  time.Now().Format("2006-01-02 15:04:05"),
-		SellVolume: sellVolume,
-		BuyVolume:  buyVolume,
-		SmaValue:   smaValue,
-		Status:     "closed",
-		Operation:  "buy",
-		ExternalId: nil,
-		ClosedBy:   nil,
+		Symbol:      order.Symbol,
+		Quantity:    quantity,
+		Price:       price,
+		CreatedAt:   time.Now().Format("2006-01-02 15:04:05"),
+		SellVolume:  sellVolume,
+		BuyVolume:   buyVolume,
+		SmaValue:    smaValue,
+		Status:      "closed",
+		Operation:   "buy",
+		ExternalId:  nil,
+		ClosesOrder: &order.Id,
 		// todo: add commission???
 	}
 
@@ -433,19 +477,15 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 		return err
 	}
 
-	executedQty := binanceOrder.ExecutedQty
+	executedQty := binanceOrder.GetExecutedQuantity()
 
 	// fill from API
 	extraOrder.ExternalId = &binanceOrder.OrderId
-	extraOrder.Quantity = executedQty
+	extraOrder.ExecutedQuantity = executedQty
 	extraOrder.Price = binanceOrder.Price
-	extraOrder.ClosedBy = &order.Id
 	extraOrder.CreatedAt = time.Now().Format("2006-01-02 15:04:05")
 
 	avgPrice := m.getAvgPrice(order, extraOrder)
-
-	// change QTY to zero for extra order
-	extraOrder.Quantity = 0.00
 
 	_, err = m.OrderRepository.Create(extraOrder)
 	if err != nil {
@@ -456,7 +496,7 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 		m.UpdateCommission(balanceBefore, extraOrder)
 	}
 
-	order.Quantity = executedQty + order.Quantity
+	order.ExecutedQuantity = executedQty + order.ExecutedQuantity
 	order.Price = avgPrice
 	order.UsedExtraBudget = order.UsedExtraBudget + (extraOrder.Price * executedQty)
 	commission := 0.00
@@ -468,6 +508,10 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 		extraCommission = *extraOrder.Commission
 	}
 	commissionSum := commission + extraCommission
+	if commissionSum < 0 {
+		commissionSum = 0
+	}
+
 	order.Commission = &commissionSum
 
 	err = m.OrderRepository.Update(order)
@@ -480,18 +524,18 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 	return nil
 }
 
-func (m *MakerService) getCurrentProfitPercent(order ExchangeModel.Order) (float64, error) {
+func (m *MakerService) getCurrentProfitPercent(order ExchangeModel.Order) (ExchangeModel.Percent, error) {
 	lastKline := m.ExchangeRepository.GetLastKLine(order.Symbol)
 
 	if lastKline == nil {
-		return 0.00, errors.New(fmt.Sprintf("[%s] Do not have info about the price", order.Symbol))
+		return ExchangeModel.Percent(0.00), errors.New(fmt.Sprintf("[%s] Do not have info about the price", order.Symbol))
 	}
 
 	return order.GetProfitPercent(lastKline.Close), nil
 }
 
 func (m *MakerService) getAvgPrice(opened ExchangeModel.Order, extra ExchangeModel.Order) float64 {
-	return ((opened.Quantity * opened.Price) + (extra.Quantity * extra.Price)) / (opened.Quantity + extra.Quantity)
+	return ((opened.ExecutedQuantity * opened.Price) + (extra.ExecutedQuantity * extra.Price)) / (opened.ExecutedQuantity + extra.ExecutedQuantity)
 }
 
 func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, price float64, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
@@ -535,17 +579,17 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 	// todo: check min quantity
 
 	var order = ExchangeModel.Order{
-		Symbol:     symbol,
-		Quantity:   quantity,
-		Price:      price,
-		CreatedAt:  time.Now().Format("2006-01-02 15:04:05"),
-		SellVolume: sellVolume,
-		BuyVolume:  buyVolume,
-		SmaValue:   smaValue,
-		Status:     "opened",
-		Operation:  "buy",
-		ExternalId: nil,
-		ClosedBy:   nil,
+		Symbol:      symbol,
+		Quantity:    quantity,
+		Price:       price,
+		CreatedAt:   time.Now().Format("2006-01-02 15:04:05"),
+		SellVolume:  sellVolume,
+		BuyVolume:   buyVolume,
+		SmaValue:    smaValue,
+		Status:      "opened",
+		Operation:   "buy",
+		ExternalId:  nil,
+		ClosesOrder: nil,
 		// todo: add commission???
 	}
 
@@ -559,7 +603,7 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 
 	// fill from API
 	order.ExternalId = &binanceOrder.OrderId
-	order.Quantity = binanceOrder.ExecutedQty
+	order.ExecutedQuantity = binanceOrder.GetExecutedQuantity()
 	order.Price = binanceOrder.Price
 	order.CreatedAt = time.Now().Format("2006-01-02 15:04:05")
 
@@ -617,17 +661,17 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 	}
 
 	var order = ExchangeModel.Order{
-		Symbol:     symbol,
-		Quantity:   quantity,
-		Price:      price,
-		CreatedAt:  time.Now().Format("2006-01-02 15:04:05"),
-		SellVolume: sellVolume,
-		BuyVolume:  buyVolume,
-		SmaValue:   smaValue,
-		Status:     "closed",
-		Operation:  "sell",
-		ExternalId: nil,
-		ClosedBy:   nil,
+		Symbol:      symbol,
+		Quantity:    quantity,
+		Price:       price,
+		CreatedAt:   time.Now().Format("2006-01-02 15:04:05"),
+		SellVolume:  sellVolume,
+		BuyVolume:   buyVolume,
+		SmaValue:    smaValue,
+		Status:      "closed",
+		Operation:   "sell",
+		ExternalId:  nil,
+		ClosesOrder: &opened.Id,
 		// todo: add commission???
 	}
 
@@ -641,7 +685,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 
 	// fill from API
 	order.ExternalId = &binanceOrder.OrderId
-	order.Quantity = binanceOrder.ExecutedQty
+	order.ExecutedQuantity = binanceOrder.GetExecutedQuantity()
 	order.Price = binanceOrder.Price
 	order.CreatedAt = time.Now().Format("2006-01-02 15:04:05")
 
@@ -654,7 +698,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 	}
 
 	m.OrderRepository.DeleteManualOrder(order.Symbol)
-	created, err := m.OrderRepository.Find(*lastId)
+	_, err = m.OrderRepository.Find(*lastId)
 
 	if err != nil {
 		log.Printf("Can't get created order [%d]: %s", lastId, order)
@@ -662,8 +706,20 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 		return err
 	}
 
-	opened.Status = "closed"
-	opened.ClosedBy = &created.Id
+	closings := m.OrderRepository.GetClosesOrderList(opened)
+	totalExecuted := 0.00
+	for _, closeOrder := range closings {
+		if closeOrder.IsClosed() {
+			totalExecuted += closeOrder.ExecutedQuantity
+		}
+	}
+
+	// commission can be around 0.2% (0.1% to one side)
+	// @see https://www.binance.com/en/fee/trading
+	if (totalExecuted + (totalExecuted * 0.002)) >= opened.ExecutedQuantity {
+		opened.Status = "closed"
+	}
+
 	err = m.OrderRepository.Update(opened)
 
 	if err != nil {
@@ -714,246 +770,408 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 		book[0],
 	)
 
-	start := time.Now().Unix()
 	executedQty := 0.00
 
 	orderManageChannel := make(chan string)
-	quit := make(chan string)
+	control := make(chan string)
 	defer close(orderManageChannel)
-	defer close(quit)
+	defer close(control)
+	defer m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 
 	tradeLimit := m.tradeLimit(binanceOrder.Symbol)
 
-	go func(tradeLimit ExchangeModel.TradeLimit, binanceOrder ExchangeModel.BinanceOrder) {
+	go func(
+		tradeLimit ExchangeModel.TradeLimit,
+		binanceOrder *ExchangeModel.BinanceOrder,
+		ttl *int64,
+		control chan string,
+		orderManageChannel chan string,
+	) {
 		timer := 0
+		allowedExtraRequest := true
+		start := time.Now().Unix()
 
 		for {
-			select {
-			case <-quit:
-				log.Printf("[%s] Wait order [%d] stop, channel closed", binanceOrder.Symbol, binanceOrder.OrderId)
-				return
-			default:
-				speed := m.TrendSpeedService.GetPriceSpeedPoints(tradeLimit)
-				if speed != 0.00 {
-					log.Printf("[%s] Trend Speed %.2f", tradeLimit.Symbol, speed)
+			if binanceOrder.IsCancelled() || binanceOrder.IsExpired() || binanceOrder.IsFilled() {
+				orderManageChannel <- "status"
+				action := <-control
+				if action == "stop" {
+					return
 				}
+				time.Sleep(time.Second * 15)
+				continue
+			}
 
-				kline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+			end := time.Now().Unix()
+			kline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
-				if binanceOrder.IsBuy() && binanceOrder.Price > kline.Close {
-					fallPercent := m.ComparePercentage(binanceOrder.Price, kline.Close)
-					log.Printf(
-						"[%s] BUY Price falls more then opened order!!! %.8f > %.8f (%.2f)",
-						tradeLimit.Symbol,
-						binanceOrder.Price,
-						kline.Close,
-						fallPercent,
-					)
-				}
+			if binanceOrder.IsBuy() && binanceOrder.IsNew() && binanceOrder.Price > kline.Close {
+				fallPercent := ExchangeModel.Percent(100 - m.ComparePercentage(binanceOrder.Price, kline.Close).Value())
+				minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, 200)
 
-				if binanceOrder.IsSell() && binanceOrder.Price < kline.Close {
-					growthPercent := m.ComparePercentage(binanceOrder.Price, kline.Close)
-					log.Printf(
-						"[%s] SELL Price growth more then opened order!!! %.8f < %.8f (%.2f)",
-						tradeLimit.Symbol,
-						binanceOrder.Price,
-						kline.Close,
-						growthPercent,
-					)
-				}
+				cancelFallPercent := ExchangeModel.Percent(0.50)
 
-				if binanceOrder.IsSell() {
-					openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
-					if err == nil && openedBuyPosition.GetProfitPercent(kline.Close) <= tradeLimit.GetBuyOnFallPercent() {
-						log.Printf(
-							"[%s] Extra Charge percent reached, current profit is: %.2f, SELL order is cancelled",
-							binanceOrder.Symbol,
-							openedBuyPosition.GetProfitPercent(kline.Close),
-						)
+				// If falls more then (min - 0.5%) cancel current
+				if fallPercent.Gte(cancelFallPercent) && minPrice-(minPrice*0.005) > kline.Close && allowedExtraRequest {
+					log.Printf("[%s] Check status signal sent!", binanceOrder.Symbol)
+					allowedExtraRequest = false
+					orderManageChannel <- "status"
+					action := <-control
+					if action == "stop" {
+						return
+					}
+					log.Printf("[%s] Order status is [%s]", binanceOrder.Symbol, binanceOrder.Status)
+
+					if binanceOrder.IsNew() {
+						log.Printf("[%s] Cancel signal sent!", binanceOrder.Symbol)
 						orderManageChannel <- "cancel"
-						time.Sleep(time.Millisecond * 20)
-						continue
+						action := <-control
+						if action == "stop" {
+							return
+						}
 					}
 				}
+			}
 
-				if timer > 20000 {
-					orderManageChannel <- "wait"
-					timer = 0
+			// [BUY] Check is it time to sell (maybe we have already partially filled)
+			if binanceOrder.IsBuy() && binanceOrder.IsPartiallyFilled() && binanceOrder.GetProfitPercent(kline.Close).Gte(tradeLimit.GetMinProfitPercent()) {
+				log.Printf(
+					"[%s] Max profit percent reached, current profit is: %.2f, %s [%d] order is cancelled",
+					binanceOrder.Symbol,
+					binanceOrder.GetProfitPercent(kline.Close).Value(),
+					binanceOrder.Side,
+					binanceOrder.OrderId,
+				)
+				orderManageChannel <- "cancel"
+				action := <-control
+				if action == "stop" {
+					return
+				}
+			}
+
+			// Check is time to extra buy, but we have sell partial...
+			if binanceOrder.IsSell() && binanceOrder.IsPartiallyFilled() {
+				openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
+				if err == nil && openedBuyPosition.GetProfitPercent(kline.Close).Lte(tradeLimit.GetBuyOnFallPercent()) {
 					log.Printf(
-						"[%s] %s Order [%d] wait handler, curent price is [%.8f], order price [%.8f]",
+						"[%s] Extra Charge percent reached, current profit is: %.2f, SELL order is cancelled",
 						binanceOrder.Symbol,
-						binanceOrder.Side,
-						binanceOrder.OrderId,
-						kline.Close,
-						binanceOrder.Price,
+						openedBuyPosition.GetProfitPercent(kline.Close).Value(),
 					)
+					orderManageChannel <- "cancel"
+					action := <-control
+					if action == "stop" {
+						return
+					}
+				}
+			}
+
+			if timer > 20000 {
+				orderManageChannel <- "status"
+				action := <-control
+				log.Printf(
+					"[%s] %s Order [%d] status [%s] wait handler (%s), current price is [%.8f], order price [%.8f], ExecutedQty: %.6f of %.6f\"",
+					binanceOrder.Symbol,
+					binanceOrder.Side,
+					binanceOrder.OrderId,
+					binanceOrder.Status,
+					action,
+					kline.Close,
+					binanceOrder.Price,
+					binanceOrder.ExecutedQty,
+					binanceOrder.OrigQty,
+				)
+				if action == "stop" {
+					return
 				}
 
-				timer = timer + 20
-				time.Sleep(time.Millisecond * 20)
+				timer = 0
+				time.Sleep(time.Second)
+
+				// check only new timeout
+				if end >= (start+*ttl) && binanceOrder.IsNew() {
+					if binanceOrder.IsSell() {
+						openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
+						if err == nil {
+							profitPercent := openedBuyPosition.GetProfitPercent(kline.Close)
+							if profitPercent.Lte(0.00) {
+								log.Printf(
+									"[%s] %s Order [%d] status [%s] ttl reached, current price is [%.8f], order price [%.8f], open [%.8f], profit: %.2f",
+									binanceOrder.Symbol,
+									binanceOrder.Side,
+									binanceOrder.OrderId,
+									binanceOrder.Status,
+									kline.Close,
+									binanceOrder.Price,
+									openedBuyPosition.Price,
+									profitPercent.Value(),
+								)
+								orderManageChannel <- "cancel"
+								action := <-control
+								if action == "stop" {
+									return
+								}
+							} else {
+								log.Printf(
+									"[%s] %s Order [%d] status [%s] ttl ignored, current price is [%.8f], order price [%.8f], open [%.8f], profit: %.2f",
+									binanceOrder.Symbol,
+									binanceOrder.Side,
+									binanceOrder.OrderId,
+									binanceOrder.Status,
+									kline.Close,
+									binanceOrder.Price,
+									openedBuyPosition.Price,
+									profitPercent.Value(),
+								)
+							}
+						} else {
+							log.Printf(
+								"[%s] %s Order [%d] %s",
+								binanceOrder.Symbol,
+								binanceOrder.Side,
+								binanceOrder.OrderId,
+								err.Error(),
+							)
+							orderManageChannel <- "cancel"
+							action := <-control
+							if action == "stop" {
+								return
+							}
+						}
+					}
+
+					if binanceOrder.IsBuy() {
+						positionPercentage := m.ComparePercentage(binanceOrder.Price, kline.Close)
+						if positionPercentage.Gte(101) {
+							log.Printf(
+								"[%s] %s Order [%d] status [%s] ttl reached, current price is [%.8f], order price [%.8f], diff percent: %.2f",
+								binanceOrder.Symbol,
+								binanceOrder.Side,
+								binanceOrder.OrderId,
+								binanceOrder.Status,
+								kline.Close,
+								binanceOrder.Price,
+								positionPercentage.Value(),
+							)
+							orderManageChannel <- "cancel"
+							action := <-control
+							if action == "stop" {
+								return
+							}
+						} else {
+							log.Printf(
+								"[%s] %s Order [%d] status [%s] ttl ignored, current price is [%.8f], order price [%.8f], diff percent: %.2f",
+								binanceOrder.Symbol,
+								binanceOrder.Side,
+								binanceOrder.OrderId,
+								binanceOrder.Status,
+								kline.Close,
+								binanceOrder.Price,
+								positionPercentage.Value(),
+							)
+						}
+					}
+				}
+			} else {
+				manualOrder := m.OrderRepository.GetManualOrder(binanceOrder.Symbol)
+				// cancel current immediately on new manual order
+				if manualOrder != nil && manualOrder.Price != binanceOrder.Price {
+					orderManageChannel <- "cancel"
+					action := <-control
+					if action == "stop" {
+						return
+					}
+				} else {
+					orderManageChannel <- "continue"
+					action := <-control
+					if action == "stop" {
+						return
+					}
+				}
 			}
+
+			allowedExtraRequest = true
+			timer = timer + 20
+			time.Sleep(time.Millisecond * 20)
 		}
-	}(*tradeLimit, binanceOrder)
+	}(*tradeLimit, &binanceOrder, &seconds, control, orderManageChannel)
 
 	for {
+		action := <-orderManageChannel
+		if action == "continue" {
+			control <- "continue"
+			continue
+		}
+
+		if action == "cancel" {
+			log.Printf(
+				"[%s] %s Order %d, cancel signal has received",
+				binanceOrder.Symbol,
+				binanceOrder.Side,
+				binanceOrder.OrderId,
+			)
+			break
+		}
+
 		queryOrder, err := m.Binance.QueryOrder(binanceOrder.Symbol, binanceOrder.OrderId)
+
 		if err != nil {
 			log.Printf("[%s] QueryOrder: %s", binanceOrder.Symbol, err.Error())
 
 			if strings.Contains(err.Error(), "Order was canceled or expired") {
-				m.OrderRepository.DeleteBinanceOrder(queryOrder)
 				break
 			}
 
 			if strings.Contains(err.Error(), "Order does not exist") {
-				m.OrderRepository.DeleteBinanceOrder(queryOrder)
 				break
 			}
 
 			log.Printf("[%s] Retry query order...", binanceOrder.Symbol)
 			time.Sleep(time.Second * 20)
 
+			control <- "continue"
 			continue
 		}
 
-		log.Printf(
-			"[%s] Wait %s [%.6f] order execution %d, current status is: [%s], ExecutedQty: %.6f of %.6f",
-			binanceOrder.Symbol,
-			binanceOrder.Side,
-			binanceOrder.Price,
-			binanceOrder.OrderId,
-			queryOrder.Status,
-			executedQty,
-			queryOrder.OrigQty,
-		)
+		binanceOrder = queryOrder
 
-		end := time.Now().Unix()
-
-		if err == nil && queryOrder.Status == "PARTIALLY_FILLED" {
+		if binanceOrder.IsPartiallyFilled() {
 			// Add 5 minutes more if ExecutedQty moves up!
-			if queryOrder.ExecutedQty > executedQty {
+			if binanceOrder.GetExecutedQuantity() > executedQty {
 				seconds = seconds + (60 * 5)
 			}
 
-			executedQty = queryOrder.ExecutedQty
-			m.OrderRepository.SetBinanceOrder(queryOrder)
-
-			if (end - start) > seconds {
-				// todo: so terrible case, we have to do something with it...
-				log.Printf("[%s] Wait timeout, but order is still partially filled...", queryOrder.Symbol)
-			}
-
-			action := <-orderManageChannel
-			if action == "cancel" {
-				// todo: check is cancel operation possible here???
-				log.Printf(
-					"[%s] %s Order %d, cancel signal has received... (ignored)",
-					queryOrder.Symbol,
-					queryOrder.Side,
-					queryOrder.OrderId,
-				)
-			}
-
+			executedQty = binanceOrder.GetExecutedQuantity()
+			m.OrderRepository.SetBinanceOrder(binanceOrder)
+			control <- "continue"
 			continue
 		}
 
-		if err == nil && queryOrder.Status == "EXPIRED" {
-			m.OrderRepository.DeleteBinanceOrder(queryOrder)
+		if binanceOrder.IsExpired() {
+			if binanceOrder.HasExecutedQuantity() {
+				control <- "stop"
+				return binanceOrder, nil
+			}
 
 			break
 		}
 
-		if err == nil && queryOrder.Status == "CANCELED" {
-			m.OrderRepository.DeleteBinanceOrder(queryOrder)
+		if binanceOrder.IsCancelled() {
+			if binanceOrder.HasExecutedQuantity() {
+				control <- "stop"
+				return binanceOrder, nil
+			}
 
 			break
 		}
 
-		// todo: handle EXPIRED status...
+		if binanceOrder.IsFilled() {
+			log.Printf("[%s] Order [%d] is executed [%s]", binanceOrder.Symbol, binanceOrder.OrderId, binanceOrder.Status)
 
-		if err == nil && queryOrder.Status == "FILLED" {
-			quit <- "stop"
-			log.Printf("[%s] Order [%d] is executed [%s]", binanceOrder.Symbol, queryOrder.OrderId, queryOrder.Status)
-
-			m.OrderRepository.DeleteBinanceOrder(queryOrder)
-			return queryOrder, nil
+			control <- "stop"
+			return binanceOrder, nil
 		}
 
-		manualOrder := m.OrderRepository.GetManualOrder(queryOrder.Symbol)
-		// cancel current immediately on new manual order
-		if manualOrder != nil && manualOrder.Price != queryOrder.Price {
-			break
-		}
-
-		// todo: If time to buy extra, cancel current order and let bot trade again...
-		// todo: Use channel...
-
-		depth := m.GetDepth(binanceOrder.Symbol)
-
-		var bookPosition int
-		var book [2]ExchangeModel.Number
-		if "BUY" == binanceOrder.Side {
-			bookPosition, book = depth.GetBidPosition(binanceOrder.Price)
-		} else {
-			bookPosition, book = depth.GetAskPosition(binanceOrder.Price)
-		}
-
-		if bookPosition < currentPosition {
-			seconds += seconds
-			log.Printf(
-				"[%s] Order Book position decrease [%d]->[%d] %.6f!!! Ttl has extended\n",
-				binanceOrder.Symbol,
-				currentPosition,
-				bookPosition,
-				book[0],
-			)
-			currentPosition = bookPosition
-		}
-
-		if (end - start) > seconds {
-			break
-		}
-
-		action := <-orderManageChannel
-		if action == "cancel" {
-			break
-		}
+		control <- "continue"
 	}
 
-	quit <- "stop"
-
+	// If you cancel an order that has already been partially filled,
+	// the cryptocurrency or fiat currency that was used to fill the order
+	// will be returned to your account. The remaining cryptocurrency or fiat
+	// currency will be used to fill other orders that are waiting to be executed.
+	// {
+	//    "symbol": "ETHUSDT",
+	//    "origClientOrderId": "aSUn6e7pktn5fVFuNEb0TK",
+	//    "orderId": 31314,
+	//    "orderListId": -1,
+	//    "clientOrderId": "wnpmGUt6RgoyuZB48NXbFG",
+	//    "transactTime": 1701886419972,
+	//    "price": "2100.93000000",
+	//    "origQty": "0.04750000",
+	//    "executedQty": "0.04670000",
+	//    "cummulativeQuoteQty": "98.11343100",
+	//    "status": "CANCELED",
+	//    "timeInForce": "GTC",
+	//    "type": "LIMIT",
+	//    "side": "BUY",
+	//    "selfTradePreventionMode": "EXPIRE_MAKER"
+	//}
 	cancelOrder, err := m.Binance.CancelOrder(binanceOrder.Symbol, binanceOrder.OrderId)
-	m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 
 	if err != nil {
+		// Possible case: {"code": -2011,"msg": "Order was not canceled due to cancel restrictions."}
+
 		log.Printf("[%s] Cancel failed: %s", binanceOrder.Symbol, err.Error())
 		queryOrder, retryErr := m.Binance.QueryOrder(binanceOrder.Symbol, binanceOrder.OrderId)
 
 		if retryErr == nil {
-			log.Printf("[%s] Order [%d] is recovered [%s]", binanceOrder.Symbol, queryOrder.OrderId, queryOrder.Status)
+			binanceOrder = queryOrder
+			control <- "stop"
+			log.Printf("[%s] Order [%d] is recovered [%s]", binanceOrder.Symbol, binanceOrder.OrderId, binanceOrder.Status)
 
-			if queryOrder.Status == "FILLED" {
-				return queryOrder, nil
+			if binanceOrder.IsFilled() {
+				return binanceOrder, nil
 			}
 
-			// todo: cover this case...
-			// If you cancel an order that has already been partially filled,
-			// the cryptocurrency or fiat currency that was used to fill the order
-			// will be returned to your account. The remaining cryptocurrency or fiat
-			// currency will be used to fill other orders that are waiting to be executed.
-			if queryOrder.Status == "PARTIALLY_FILLED" {
-				return queryOrder, nil
+			// Just in case of bug...
+			if binanceOrder.IsPartiallyFilled() {
+				log.Printf(
+					"[%s] Order [%d] status is [%s], try again waitExecution...",
+					binanceOrder.Symbol,
+					binanceOrder.OrderId,
+					binanceOrder.Status,
+				)
+
+				return m.waitExecution(binanceOrder, 120)
+			}
+
+			// Just in case of bug...
+			if binanceOrder.IsNew() {
+				log.Printf(
+					"[%s] Order [%d] status is [%s], try again waitExecution...",
+					binanceOrder.Symbol,
+					binanceOrder.OrderId,
+					binanceOrder.Status,
+				)
+
+				return m.waitExecution(binanceOrder, 120)
+			}
+
+			if binanceOrder.HasExecutedQuantity() {
+				log.Printf(
+					"Order [%d] is [%s], ExecutedQty = %.8f",
+					binanceOrder.OrderId,
+					binanceOrder.Status,
+					binanceOrder.GetExecutedQuantity(),
+				)
+
+				return binanceOrder, nil
 			}
 		}
 
+		control <- "stop"
 		return binanceOrder, err
 	}
 
+	binanceOrder = cancelOrder
+	control <- "stop"
+
 	// handle cancel error and get again
 
-	log.Printf("Order [%d] is CANCELED [%s]", cancelOrder.OrderId, cancelOrder.Status)
+	if binanceOrder.HasExecutedQuantity() {
+		log.Printf(
+			"Order [%d] is [%s], ExecutedQty = %.8f",
+			binanceOrder.OrderId,
+			binanceOrder.Status,
+			binanceOrder.GetExecutedQuantity(),
+		)
 
-	return cancelOrder, errors.New(fmt.Sprintf("Order %d was CANCELED", binanceOrder.OrderId))
+		return binanceOrder, nil
+	}
+
+	log.Printf("Order [%d] is [%s]", binanceOrder.OrderId, binanceOrder.Status)
+
+	return binanceOrder, errors.New(fmt.Sprintf("Order %d was CANCELED", binanceOrder.OrderId))
 }
 
 func (m *MakerService) isTradeLocked(symbol string) bool {
@@ -1119,7 +1337,10 @@ func (m *MakerService) recoverCommission(order ExchangeModel.Order) {
 		return
 	}
 
-	commission := order.Quantity - balanceAfter
+	commission := order.ExecutedQuantity - balanceAfter
+	if commission < 0 {
+		commission = 0
+	}
 	order.Commission = &commission
 	order.CommissionAsset = &assetSymbol
 
@@ -1140,7 +1361,12 @@ func (m *MakerService) UpdateCommission(balanceBefore float64, order ExchangeMod
 
 	arrived := balanceAfter - balanceBefore
 
-	commission := order.Quantity - arrived
+	commission := order.ExecutedQuantity - arrived
+
+	if commission < 0 {
+		commission = 0.00
+	}
+
 	order.Commission = &commission
 	order.CommissionAsset = &assetSymbol
 
@@ -1150,6 +1376,6 @@ func (m *MakerService) UpdateCommission(balanceBefore float64, order ExchangeMod
 	}
 }
 
-func (m *MakerService) ComparePercentage(first float64, second float64) float64 {
-	return second * 100 / first
+func (m *MakerService) ComparePercentage(first float64, second float64) ExchangeModel.Percent {
+	return ExchangeModel.Percent(second * 100 / first)
 }

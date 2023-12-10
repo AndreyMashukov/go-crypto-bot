@@ -41,7 +41,7 @@ func (b *BinanceOrder) IsFilled() bool {
 	return b.Status == "FILLED"
 }
 
-func (b *BinanceOrder) IsCancelled() bool {
+func (b *BinanceOrder) IsCanceled() bool {
 	return b.Status == "CANCELED"
 }
 

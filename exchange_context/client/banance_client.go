@@ -285,6 +285,20 @@ func (b *Binance) LimitOrder(order model.Order, operation string) (model.Binance
 	socketRequest.Params["side"] = operation
 	socketRequest.Params["type"] = "LIMIT"
 	socketRequest.Params["quantity"] = strconv.FormatFloat(order.Quantity, 'f', -1, 64)
+	// [FOK] - Fill or kill (FOK) is a conditional type of time-in-force order used in
+	// securities trading that instructs a brokerage to execute a
+	// transaction immediately and completely or not at all.
+	// This type of order is most often used by active traders and is usually for a
+	// large quantity of stock. The order must be filled in its entirety or else canceled (killed)
+	// --------
+	// [IOC] - An immediate or cancel order (IOC) is an order to buy or sell a security that attempts
+	// to execute all or part immediately and then cancels any unfilled portion of the order.
+	// An IOC order is one of several "duration," or time in force orders, that investors can use
+	// to specify how long the order remains active in the market and under what conditions the order is canceled.
+	// -------
+	// [GTC] - Good ’til canceled (GTC) describes a type of order that an investor may place to buy or sell
+	// a security that remains active until either the order is filled or the investor cancels it.
+	// Brokerages will typically limit the maximum time you can keep a GTC order open (active) to 90 days.
 	socketRequest.Params["timeInForce"] = "GTC"
 	socketRequest.Params["price"] = strconv.FormatFloat(order.Price, 'f', -1, 64)
 	socketRequest.Params["apiKey"] = b.ApiKey

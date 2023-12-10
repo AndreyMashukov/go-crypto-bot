@@ -798,7 +798,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 		start := time.Now().Unix()
 
 		for {
-			if binanceOrder.IsCancelled() || binanceOrder.IsExpired() || binanceOrder.IsFilled() {
+			if binanceOrder.IsCanceled() || binanceOrder.IsExpired() || binanceOrder.IsFilled() {
 				orderManageChannel <- "status"
 				action := <-control
 				if action == "stop" {
@@ -1062,7 +1062,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			break
 		}
 
-		if binanceOrder.IsCancelled() {
+		if binanceOrder.IsCanceled() {
 			if binanceOrder.HasExecutedQuantity() {
 				control <- "stop"
 				return binanceOrder, nil
@@ -1152,11 +1152,13 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 				)
 
 				return binanceOrder, nil
+			} else {
+				return binanceOrder, errors.New(fmt.Sprintf("Order %d was CANCELED", binanceOrder.OrderId))
 			}
+		} else {
+			control <- "stop"
+			return binanceOrder, err
 		}
-
-		control <- "stop"
-		return binanceOrder, err
 	}
 
 	binanceOrder = cancelOrder

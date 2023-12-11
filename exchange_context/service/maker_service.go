@@ -1,12 +1,15 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"github.com/redis/go-redis/v9"
 	ExchangeClient "gitlab.com/open-soft/go-crypto-bot/exchange_context/client"
 	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
 	"log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,6 +26,9 @@ type MakerService struct {
 	TradeLockMutex     sync.RWMutex
 	MinDecisions       float64
 	HoldScore          float64
+	RDB                *redis.Client
+	Ctx                *context.Context
+	CurrentBot         *ExchangeModel.Bot
 }
 
 func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
@@ -489,6 +495,7 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 	binanceOrder, err := m.tryLimitOrder(extraOrder, "BUY", 120)
 
 	if err != nil {
+		m.invalidateBalanceCache("USDT")
 		return err
 	}
 
@@ -530,6 +537,10 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 	order.Commission = &commissionSum
 
 	err = m.OrderRepository.Update(order)
+	_, err = m.OrderRepository.Create(order)
+	m.invalidateBalanceCache("USDT")
+	m.invalidateBalanceCache(order.GetAsset())
+
 	if err != nil {
 		return err
 	}
@@ -613,6 +624,7 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 	binanceOrder, err := m.tryLimitOrder(order, "BUY", 480)
 
 	if err != nil {
+		m.invalidateBalanceCache("USDT")
 		return err
 	}
 
@@ -623,6 +635,8 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 	order.CreatedAt = time.Now().Format("2006-01-02 15:04:05")
 
 	_, err = m.OrderRepository.Create(order)
+	m.invalidateBalanceCache("USDT")
+	m.invalidateBalanceCache(order.GetAsset())
 
 	if err != nil {
 		log.Printf("Can't create order: %s", order)
@@ -695,6 +709,7 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 	binanceOrder, err := m.tryLimitOrder(order, "SELL", 480)
 
 	if err != nil {
+		m.invalidateBalanceCache(order.GetAsset())
 		return err
 	}
 
@@ -736,6 +751,8 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 	}
 
 	err = m.OrderRepository.Update(opened)
+	m.invalidateBalanceCache("USDT")
+	m.invalidateBalanceCache(opened.GetAsset())
 
 	if err != nil {
 		log.Printf("Can't udpdate order [%d]: %s", order.Id, order)
@@ -1043,7 +1060,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			}
 
 			log.Printf("[%s] Retry query order...", binanceOrder.Symbol)
-			time.Sleep(time.Second * 20)
+			time.Sleep(time.Minute * 2)
 
 			control <- "continue"
 			continue
@@ -1256,6 +1273,11 @@ func (m *MakerService) findOrCreateOrder(order ExchangeModel.Order, operation st
 
 	log.Printf("[%s] %s Order created %d, Price: %.6f", order.Symbol, operation, binanceOrder.OrderId, binanceOrder.Price)
 	m.OrderRepository.SetBinanceOrder(binanceOrder)
+	if order.IsBuy() {
+		m.invalidateBalanceCache("USDT")
+	} else {
+		m.invalidateBalanceCache(order.GetAsset())
+	}
 
 	return binanceOrder, nil
 }
@@ -1328,7 +1350,26 @@ func (m *MakerService) UpdateLimits() {
 	}
 }
 
+func (m *MakerService) invalidateBalanceCache(asset string) {
+	m.RDB.Del(*m.Ctx, m.getBalanceCacheKey(asset))
+}
+
+func (m *MakerService) getBalanceCacheKey(asset string) string {
+	return fmt.Sprintf("balance-%s-account-%d", asset, m.CurrentBot.Id)
+}
+
 func (m *MakerService) getAssetBalance(asset string) (float64, error) {
+	cached := m.RDB.Get(*m.Ctx, m.getBalanceCacheKey(asset)).Val()
+
+	if len(cached) > 0 {
+		balanceCached, err := strconv.ParseFloat(cached, 64)
+
+		if err == nil {
+			log.Printf("[%s] Free balance is: %f (cached)", asset, balanceCached)
+			return balanceCached, nil
+		}
+	}
+
 	accountInfo, err := m.Binance.GetAccountStatus()
 
 	if err != nil {
@@ -1339,6 +1380,8 @@ func (m *MakerService) getAssetBalance(asset string) (float64, error) {
 		if assetBalance.Asset == asset {
 			log.Printf("[%s] Free balance is: %f", asset, assetBalance.Free)
 			log.Printf("[%s] Locked balance is: %f", asset, assetBalance.Locked)
+
+			m.RDB.Set(*m.Ctx, m.getBalanceCacheKey(asset), assetBalance.Free, time.Minute*2)
 			return assetBalance.Free, nil
 		}
 	}

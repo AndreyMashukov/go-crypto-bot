@@ -69,9 +69,20 @@ func (b *Binance) Connect(address string) {
 }
 
 func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {
-	go func() {
+
+	go func(req model.SocketRequest) {
 		for {
 			msg := <-b.channel
+
+			if strings.Contains(string(msg), "Too much request weight used; current limit is 6000 request weight per 1 MINUTE") {
+				log.Printf("Socket error [%s]: %s, wait 1 min and retry...", req.Id, string(msg))
+				time.Sleep(time.Minute)
+				serialized, _ := json.Marshal(req)
+				b.socketWriter <- serialized
+				log.Printf("[%s] retried...", req.Id)
+
+				continue
+			}
 
 			if strings.Contains(string(msg), req.Id) {
 				//log.Printf("[%s], %s", req.Method, string(msg))
@@ -81,7 +92,7 @@ func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {
 
 			b.channel <- msg
 		}
-	}()
+	}(req)
 
 	serialized, _ := json.Marshal(req)
 	b.socketWriter <- serialized

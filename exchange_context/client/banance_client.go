@@ -11,7 +11,6 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	"log"
 	"net/http"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -25,8 +24,8 @@ type Binance struct {
 
 	HttpClient   *http.Client
 	connection   *websocket.Conn
-	channel      chan []byte
-	socketWriter chan []byte
+	Channel      chan []byte
+	SocketWriter chan []byte
 }
 
 func (b *Binance) Connect(address string) {
@@ -35,8 +34,6 @@ func (b *Binance) Connect(address string) {
 		log.Printf("Binance WS [%s]: %s", address, err.Error())
 		log.Fatal("Quit!")
 	}
-	b.channel = make(chan []byte)
-	b.socketWriter = make(chan []byte)
 
 	// 2023/12/11 05:56:32 [SOLUSDT] QueryOrder: Too much request weight used; current limit is 6000 request weight per 1 MINUTE. Please use WebSocket Streams for live updates to avoid polling the API.
 	// 2023/12/11 05:56:32 [SOLUSDT] Retry query order...
@@ -50,17 +47,21 @@ func (b *Binance) Connect(address string) {
 			if err != nil {
 				log.Println("read: ", err)
 
-				os.Exit(1)
+				_ = connection.Close()
+				log.Printf("Binance WS, wait and reconnect...")
+				time.Sleep(time.Second * 20)
+				b.Connect(address)
+				return
 			}
 
-			b.channel <- message
+			b.Channel <- message
 		}
 	}()
 
 	// writer channel
 	go func() {
 		for {
-			serialized := <-b.socketWriter
+			serialized := <-b.SocketWriter
 			_ = b.connection.WriteMessage(websocket.TextMessage, serialized)
 		}
 	}()
@@ -72,13 +73,13 @@ func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {
 
 	go func(req model.SocketRequest) {
 		for {
-			msg := <-b.channel
+			msg := <-b.Channel
 
 			if strings.Contains(string(msg), "Too much request weight used; current limit is 6000 request weight per 1 MINUTE") {
 				log.Printf("Socket error [%s]: %s, wait 1 min and retry...", req.Id, string(msg))
 				time.Sleep(time.Minute)
 				serialized, _ := json.Marshal(req)
-				b.socketWriter <- serialized
+				b.SocketWriter <- serialized
 				log.Printf("[%s] retried...", req.Id)
 
 				continue
@@ -90,12 +91,12 @@ func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {
 				return
 			}
 
-			b.channel <- msg
+			b.Channel <- msg
 		}
 	}(req)
 
 	serialized, _ := json.Marshal(req)
-	b.socketWriter <- serialized
+	b.SocketWriter <- serialized
 }
 
 func (b *Binance) QueryOrder(symbol string, orderId int64) (model.BinanceOrder, error) {

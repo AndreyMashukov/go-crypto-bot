@@ -56,6 +56,8 @@ func main() {
 		ApiSecret:      os.Getenv("BINANCE_API_SECRET"), // "tg5Ak5LoTFSCIadQLn5LkcnWHEPYSiA6wpY3rEqx89GG2aj9ZWsDyMl17S5TjTHM",
 		DestinationURI: os.Getenv("BINANCE_API_DSN"),    // "https://testnet.binance.vision",
 		HttpClient:     &httpClient,
+		Channel:        make(chan []byte),
+		SocketWriter:   make(chan []byte),
 	}
 	binance.Connect(os.Getenv("BINANCE_WS_DSN")) // "wss://testnet.binance.vision/ws-api/v3"
 

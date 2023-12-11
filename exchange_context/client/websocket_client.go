@@ -3,7 +3,7 @@ package client
 import (
 	"github.com/gorilla/websocket"
 	"log"
-	"os"
+	"time"
 )
 
 func Listen(address string, tradeChannel chan<- []byte) *websocket.Conn {
@@ -19,7 +19,11 @@ func Listen(address string, tradeChannel chan<- []byte) *websocket.Conn {
 			if err != nil {
 				log.Printf("Binance WS Events, read [%s]: %s", address, err.Error())
 
-				os.Exit(1)
+				_ = connection.Close()
+				log.Printf("Binance WS Events, wait and reconnect...")
+				time.Sleep(time.Second * 20)
+				Listen(address, tradeChannel)
+				return
 			}
 
 			tradeChannel <- message

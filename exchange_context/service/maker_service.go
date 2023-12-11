@@ -85,7 +85,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		// If time to extra buy and price is near Low (Low + 0.5%)
 		if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) && lastKline.Close <= lastKline.GetLowPercent(0.5) {
 			log.Printf(
-				"[%s] Time to extra chanrge, profit %.2f of %.2f, price = %.8f",
+				"[%s] Time to extra charge, profit %.2f of %.2f, price = %.8f",
 				symbol,
 				profitPercent,
 				tradeLimit.GetBuyOnFallPercent().Value(),
@@ -203,6 +203,11 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 				if price > 0 {
 					// todo: get buy quantity, buy to all cutlet! check available balance!
 					quantity := m.Formatter.FormatQuantity(tradeLimit, tradeLimit.USDTLimit/price)
+
+					if (quantity * price) < tradeLimit.MinNotional {
+						log.Printf("[%s] BUY Notional: %.8f < %.8f", symbol, quantity*price, tradeLimit.MinNotional)
+						return
+					}
 
 					err = m.Buy(tradeLimit, symbol, price, quantity, sellVolume, buyVolume, smaFormatted)
 					if err != nil {
@@ -442,6 +447,10 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 	defer m.releaseLock(order.Symbol)
 	// todo: get buy quantity, buy to all cutlet! check available balance!
 	quantity := m.Formatter.FormatQuantity(tradeLimit, availableExtraBudget/price)
+
+	if (quantity * price) < tradeLimit.MinNotional {
+		return errors.New(fmt.Sprintf("[%s] Extra BUY Notional: %.8f < %.8f", order.Symbol, quantity*price, tradeLimit.MinNotional))
+	}
 
 	cached, _ := m.findBinanceOrder(order.Symbol, "BUY")
 
@@ -1299,6 +1308,9 @@ func (m *MakerService) UpdateLimits() {
 			}
 			if filter.FilterType == "LOT_SIZE" {
 				tradeLimit.MinQuantity = *filter.MinQuantity
+			}
+			if filter.FilterType == "NOTIONAL" {
+				tradeLimit.MinNotional = *filter.MinNotional
 			}
 		}
 		err := m.ExchangeRepository.UpdateTradeLimit(tradeLimit)

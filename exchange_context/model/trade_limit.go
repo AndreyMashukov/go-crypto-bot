@@ -6,6 +6,7 @@ type TradeLimit struct {
 	USDTLimit        float64 `json:"USDTLimit"`
 	MinPrice         float64 `json:"minPrice"`
 	MinQuantity      float64 `json:"minQuantity"`
+	MinNotional      float64 `json:"minNotional"`
 	MinProfitPercent float64 `json:"minProfitPercent"`
 	IsEnabled        bool    `json:"isEnabled"`
 

@@ -43,6 +43,8 @@ type ExchangeFilter struct {
 	MaxPrice    *float64 `json:"maxPrice,string"`
 	TickSize    *float64 `json:"tickSize,string"`
 	MinQuantity *float64 `json:"minQty,string"`
+	MinNotional *float64 `json:"minNotional,string"`
+	MaxNotional *float64 `json:"maxNotional,string"`
 	MaxQuantity *float64 `json:"maxQty,string"`
 	StepSize    *float64 `json:"stepSize,string"`
 }

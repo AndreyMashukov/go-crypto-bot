@@ -175,6 +175,15 @@ func (repo *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 }
 
 func (e *ExchangeRepository) GetLastKLine(symbol string) *model.KLine {
+	encodedLast := e.RDB.Get(*e.Ctx, fmt.Sprintf("last-kline-%s", symbol)).Val()
+
+	if len(encodedLast) > 0 {
+		var dto model.KLine
+		json.Unmarshal([]byte(encodedLast), &dto)
+
+		return &dto
+	}
+
 	list := e.KLineList(symbol, false, 1)
 
 	if len(list) > 0 {
@@ -185,17 +194,29 @@ func (e *ExchangeRepository) GetLastKLine(symbol string) *model.KLine {
 }
 
 func (e *ExchangeRepository) AddKLine(kLine model.KLine) {
-	lastKline := e.GetLastKLine(kLine.Symbol)
+	lastKLines := e.KLineList(kLine.Symbol, false, 200)
+	duplicates := 0
+	encoded, _ := json.Marshal(kLine)
 
-	if lastKline != nil {
+	for _, lastKline := range lastKLines {
 		if lastKline.Timestamp == kLine.Timestamp {
 			e.RDB.LPop(*e.Ctx, fmt.Sprintf("k-lines-%s", kLine.Symbol)).Val()
+			duplicates++
 		}
 	}
 
-	encoded, _ := json.Marshal(kLine)
+	if duplicates > 1 {
+		log.Printf(
+			"[%s] Removed Kline duplicates - %d [timestamp = %d]",
+			kLine.Symbol,
+			duplicates,
+			kLine.Timestamp,
+		)
+	}
+
 	e.RDB.LPush(*e.Ctx, fmt.Sprintf("k-lines-%s", kLine.Symbol), string(encoded))
 	e.RDB.LTrim(*e.Ctx, fmt.Sprintf("k-lines-%s", kLine.Symbol), 0, 2880)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("last-kline-%s", kLine.Symbol), string(encoded), time.Hour)
 }
 
 func (e *ExchangeRepository) KLineList(symbol string, reverse bool, size int64) []model.KLine {

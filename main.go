@@ -131,6 +131,9 @@ func main() {
 		FrameService:       &frameService,
 		MinDecisions:       4.00,
 		HoldScore:          75.00,
+		RDB:                rdb,
+		Ctx:                &ctx,
+		CurrentBot:         currentBot,
 	}
 
 	orderController := controller.OrderController{

@@ -16,6 +16,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -275,6 +276,39 @@ func main() {
 		for i := 0; i < len(events); i++ {
 			event := events[i]
 			streams = append(streams, fmt.Sprintf("%s%s", strings.ToLower(tradeLimit.Symbol), event))
+		}
+
+		kLines := exchangeRepository.KLineList(tradeLimit.Symbol, false, 200)
+		if len(kLines) < 200 {
+			history := binance.GetKLines(tradeLimit.Symbol, "1m", 200)
+
+			var timeClose int64 = 0
+			for _, kline := range history {
+				openPrice, _ := strconv.ParseFloat(kline.Open, 64)
+				closePrice, _ := strconv.ParseFloat(kline.Close, 64)
+				highPrice, _ := strconv.ParseFloat(kline.High, 64)
+				lowPrice, _ := strconv.ParseFloat(kline.Low, 64)
+				volume, _ := strconv.ParseFloat(kline.Volume, 64)
+
+				if timeClose == 0 {
+					timeClose = kline.CloseTime
+				}
+
+				timeClose = kline.CloseTime
+
+				dto := ExchangeModel.KLine{
+					Symbol:    tradeLimit.Symbol,
+					Open:      openPrice,
+					Close:     closePrice,
+					High:      highPrice,
+					Low:       lowPrice,
+					Interval:  "1m",
+					Timestamp: kline.CloseTime,
+					Volume:    volume,
+				}
+				exchangeRepository.AddKLine(dto)
+				log.Printf("[%s] Added history for [%d] = %.8f", dto.Symbol, dto.Timestamp, dto.Close)
+			}
 		}
 	}
 

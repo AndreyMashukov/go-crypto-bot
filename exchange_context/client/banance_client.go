@@ -38,6 +38,11 @@ func (b *Binance) Connect(address string) {
 	b.channel = make(chan []byte)
 	b.socketWriter = make(chan []byte)
 
+	// 2023/12/11 05:56:32 [SOLUSDT] QueryOrder: Too much request weight used; current limit is 6000 request weight per 1 MINUTE. Please use WebSocket Streams for live updates to avoid polling the API.
+	// 2023/12/11 05:56:32 [SOLUSDT] Retry query order...
+	// 2023/12/11 05:56:38 [AVAXUSDT] Opened: Way too much request weight used; IP banned until 1702275878212. Please use WebSocket Streams for live updates to avoid bans.
+	// 2023/12/11 05:56:38 read:  websocket: close 1008 (policy violation): disconnected
+
 	// reader channel
 	go func() {
 		for {
@@ -312,6 +317,12 @@ func (b *Binance) LimitOrder(order model.Order, operation string) (model.Binance
 
 	if response.Error != nil {
 		log.Printf("[%s] Limit Order: %s -> %s", order.Symbol, response.Error.Message, socketRequest)
+
+		if strings.Contains(response.Error.Message, "Filter failure: NOTIONAL") {
+			log.Printf("[%s] Sleep 1 minute", order.Symbol)
+			time.Sleep(time.Minute) // wait one minute
+		}
+
 		return model.BinanceOrder{}, errors.New(response.Error.Message)
 	}
 

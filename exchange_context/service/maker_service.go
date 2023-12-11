@@ -804,7 +804,8 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 				if action == "stop" {
 					return
 				}
-				time.Sleep(time.Second * 15)
+
+				time.Sleep(time.Second * 40)
 				continue
 			}
 
@@ -872,7 +873,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 				}
 			}
 
-			if timer > 20000 {
+			if timer > 30000 {
 				orderManageChannel <- "status"
 				action := <-control
 				log.Printf(
@@ -997,7 +998,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			}
 
 			allowedExtraRequest = true
-			timer = timer + 20
+			timer = timer + 30
 			time.Sleep(time.Millisecond * 20)
 		}
 	}(*tradeLimit, &binanceOrder, &seconds, control, orderManageChannel)
@@ -1156,6 +1157,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 				return binanceOrder, errors.New(fmt.Sprintf("Order %d was CANCELED", binanceOrder.OrderId))
 			}
 		} else {
+			// todo: loop??? timeout + loop???
 			control <- "stop"
 			return binanceOrder, err
 		}

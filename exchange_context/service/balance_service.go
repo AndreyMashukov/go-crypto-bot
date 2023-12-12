@@ -45,7 +45,7 @@ func (b *BalanceService) GetAssetBalance(asset string) (float64, error) {
 			log.Printf("[%s] Free balance is: %f", asset, assetBalance.Free)
 			log.Printf("[%s] Locked balance is: %f", asset, assetBalance.Locked)
 
-			b.RDB.Set(*b.Ctx, b.getBalanceCacheKey(asset), assetBalance.Free, time.Minute*2)
+			b.RDB.Set(*b.Ctx, b.getBalanceCacheKey(asset), assetBalance.Free, time.Minute*5)
 			return assetBalance.Free, nil
 		}
 	}

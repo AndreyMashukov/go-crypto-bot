@@ -217,7 +217,9 @@ func (b *Binance) GetExchangeData(symbols []string) (*model.ExchangeInfo, error)
 		Method: "exchangeInfo",
 		Params: make(map[string]any),
 	}
-	socketRequest.Params["symbols"] = symbols
+	if len(symbols) > 0 {
+		socketRequest.Params["symbols"] = symbols
+	}
 	b.socketRequest(socketRequest, channel)
 	message := <-channel
 

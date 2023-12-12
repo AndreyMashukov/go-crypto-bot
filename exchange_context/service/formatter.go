@@ -50,3 +50,7 @@ func (m *Formatter) FormatQuantity(limit ExchangeModel.TradeLimit, quantity floa
 
 	return quantity
 }
+
+func (m *Formatter) ComparePercentage(first float64, second float64) ExchangeModel.Percent {
+	return ExchangeModel.Percent(second * 100 / first)
+}

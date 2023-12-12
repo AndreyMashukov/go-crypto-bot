@@ -50,9 +50,17 @@ type ExchangeFilter struct {
 }
 
 type ExchangeSymbol struct {
-	Symbol  string           `json:"symbol"`
-	Status  string           `json:"status"`
-	Filters []ExchangeFilter `json:"filters"`
+	Symbol             string           `json:"symbol"`
+	Status             string           `json:"status"`
+	BaseAsset          string           `json:"baseAsset"`
+	QuoteAsset         string           `json:"quoteAsset"`
+	BaseAssetPrecision int              `json:"baseAssetPrecision"`
+	QuotePrecision     int              `json:"quotePrecision"`
+	Filters            []ExchangeFilter `json:"filters"`
+}
+
+func (e *ExchangeSymbol) IsTrading() bool {
+	return e.Status == "TRADING"
 }
 
 type ExchangeInfo struct {
@@ -159,6 +167,25 @@ type KLineHistory struct {
 	TakerBuyBaseAssetVolume  string `json:"takerBuyBaseAssetVolume"`
 	TakerBuyQuoteAssetVolume string `json:"TakerBuyQuoteAssetVolume"`
 	UnusedField              string `json:"_"`
+}
+
+func (k *KLineHistory) ToKLine(symbol string) KLine {
+	openPrice, _ := strconv.ParseFloat(k.Open, 64)
+	closePrice, _ := strconv.ParseFloat(k.Close, 64)
+	highPrice, _ := strconv.ParseFloat(k.High, 64)
+	lowPrice, _ := strconv.ParseFloat(k.Low, 64)
+	volume, _ := strconv.ParseFloat(k.Volume, 64)
+
+	return KLine{
+		Symbol:    symbol,
+		Open:      openPrice,
+		Close:     closePrice,
+		High:      highPrice,
+		Low:       lowPrice,
+		Interval:  "1m",
+		Timestamp: k.CloseTime,
+		Volume:    volume,
+	}
 }
 
 func (k *KLineHistory) GetClosePrice() float64 {

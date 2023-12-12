@@ -16,7 +16,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -90,6 +90,8 @@ func main() {
 		}
 	}
 
+	swapEnabled := currentBot.BotUuid == "5b51a35f-76a6-4747-8461-850fff9f7c18"
+
 	log.Printf("Bot [%s] is initialized successfully", currentBot.BotUuid)
 
 	orderRepository := ExchangeRepository.OrderRepository{
@@ -122,6 +124,13 @@ func main() {
 	lockTradeChannel := make(chan ExchangeModel.Lock)
 	depthChannel := make(chan ExchangeModel.Depth)
 
+	balanceService := ExchangeService.BalanceService{
+		Binance:    &binance,
+		RDB:        rdb,
+		Ctx:        &ctx,
+		CurrentBot: currentBot,
+	}
+
 	makerService := ExchangeService.MakerService{
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,
@@ -136,6 +145,7 @@ func main() {
 		RDB:                rdb,
 		Ctx:                &ctx,
 		CurrentBot:         currentBot,
+		BalanceService:     &balanceService,
 	}
 
 	orderController := controller.OrderController{
@@ -169,6 +179,10 @@ func main() {
 		}
 	}()
 
+	if swapEnabled {
+		makerService.UpdateSwapPairs()
+	}
+
 	// todo: BuyExtraOnMarketFallStrategy
 	baseKLineStrategy := ExchangeService.BaseKLineStrategy{}
 	orderBasedStrategy := ExchangeService.OrderBasedStrategy{
@@ -178,6 +192,12 @@ func main() {
 	marketDepthStrategy := ExchangeService.MarketDepthStrategy{}
 	smaStrategy := ExchangeService.SmaTradeStrategy{
 		ExchangeRepository: exchangeRepository,
+	}
+
+	swapManager := ExchangeService.SwapManager{
+		ExchangeRepository: &exchangeRepository,
+		BalanceService:     &balanceService,
+		Formatter:          &formatter,
 	}
 
 	go func() {
@@ -221,6 +241,41 @@ func main() {
 		}(limit.Symbol)
 	}
 
+	swapPairs := exchangeRepository.GetSwapPairs()
+
+	swapSlice := make([]string, 0)
+	for _, swapPair := range swapPairs {
+		swapSlice = append(swapSlice, swapPair.Symbol)
+	}
+
+	if swapEnabled {
+		for _, swapPair := range swapPairs {
+			time.Sleep(time.Millisecond * 200)
+			go func(swapPair ExchangeModel.SwapPair) {
+				for {
+					time.Sleep(time.Second * 30)
+					kLine := exchangeRepository.GetLastKLine(swapPair.Symbol)
+
+					if kLine == nil {
+						kLines := binance.GetKLines(swapPair.Symbol, "1m", 1)
+						basicKLine := kLines[0].ToKLine(swapPair.Symbol)
+						kLine = &basicKLine
+					}
+
+					if slices.Contains(swapSlice, kLine.Symbol) {
+						swapPair, err := exchangeRepository.GetSwapPair(kLine.Symbol)
+						if err == nil {
+							swapPair.LastPrice = kLine.Close
+							swapPair.PriceTimestamp = kLine.Timestamp
+							_ = exchangeRepository.UpdateSwapPair(swapPair)
+						}
+					}
+					swapManager.CalculateSwapOptions(kLine.Symbol)
+				}
+			}(swapPair)
+		}
+	}
+
 	go func() {
 		for {
 			// Read the channel, todo -> better to use select: https://go.dev/tour/concurrency/5
@@ -245,6 +300,7 @@ func main() {
 				exchangeRepository.SetDecision(baseKLineDecision)
 				orderBasedDecision := orderBasedStrategy.Decide(kLine)
 				exchangeRepository.SetDecision(orderBasedDecision)
+
 				break
 			case strings.Contains(eventModel.Stream, "@depth"):
 				var depthEvent ExchangeModel.DepthEvent
@@ -287,32 +343,21 @@ func main() {
 		if len(kLines) < 200 {
 			history := binance.GetKLines(tradeLimit.Symbol, "1m", 200)
 
-			var timeClose int64 = 0
 			for _, kline := range history {
-				openPrice, _ := strconv.ParseFloat(kline.Open, 64)
-				closePrice, _ := strconv.ParseFloat(kline.Close, 64)
-				highPrice, _ := strconv.ParseFloat(kline.High, 64)
-				lowPrice, _ := strconv.ParseFloat(kline.Low, 64)
-				volume, _ := strconv.ParseFloat(kline.Volume, 64)
-
-				if timeClose == 0 {
-					timeClose = kline.CloseTime
-				}
-
-				timeClose = kline.CloseTime
-
-				dto := ExchangeModel.KLine{
-					Symbol:    tradeLimit.Symbol,
-					Open:      openPrice,
-					Close:     closePrice,
-					High:      highPrice,
-					Low:       lowPrice,
-					Interval:  "1m",
-					Timestamp: kline.CloseTime,
-					Volume:    volume,
-				}
-				exchangeRepository.AddKLine(dto)
+				dto := kline.ToKLine(tradeLimit.Symbol)
+				exchangeRepository.AddKLine(kline.ToKLine(tradeLimit.Symbol))
 				log.Printf("[%s] Added history for [%d] = %.8f", dto.Symbol, dto.Timestamp, dto.Close)
+			}
+		}
+	}
+
+	if swapEnabled {
+		swapEvents := [2]string{"@kline_1m", "@depth20@100ms"}
+
+		for _, swapPair := range swapPairs {
+			for i := 0; i < len(swapEvents); i++ {
+				swapEvent := swapEvents[i]
+				streams = append(streams, fmt.Sprintf("%s%s", strings.ToLower(swapPair.Symbol), swapEvent))
 			}
 		}
 	}

@@ -52,7 +52,7 @@ type Order struct {
 	SoldQuantity     *float64 `json:"soldQuantity"`
 }
 
-func (o *Order) GetAsset() string {
+func (o *Order) GetBaseAsset() string {
 	return strings.ReplaceAll(o.Symbol, "USDT", "")
 }
 

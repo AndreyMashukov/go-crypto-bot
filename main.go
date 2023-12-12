@@ -351,16 +351,16 @@ func main() {
 		}
 	}
 
-	if swapEnabled {
-		swapEvents := [2]string{"@kline_1m", "@depth20@100ms"}
-
-		for _, swapPair := range swapPairs {
-			for i := 0; i < len(swapEvents); i++ {
-				swapEvent := swapEvents[i]
-				streams = append(streams, fmt.Sprintf("%s%s", strings.ToLower(swapPair.Symbol), swapEvent))
-			}
-		}
-	}
+	//if swapEnabled {
+	//	swapEvents := [2]string{"@kline_1m", "@depth20@100ms"}
+	//
+	//	for _, swapPair := range swapPairs {
+	//		for i := 0; i < len(swapEvents); i++ {
+	//			swapEvent := swapEvents[i]
+	//			streams = append(streams, fmt.Sprintf("%s%s", strings.ToLower(swapPair.Symbol), swapEvent))
+	//		}
+	//	}
+	//}
 
 	// ltcusdt@aggTrade/ethusdt@aggTrade/solusdt@aggTrade /perpusdt@aggTrade
 	wsConnection := ExchangeClient.Listen(fmt.Sprintf("wss://fstream.binance.com:443/stream?streams=%s", strings.Join(streams[:], "/")), eventChannel)

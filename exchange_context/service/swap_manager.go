@@ -4,6 +4,7 @@ import (
 	"github.com/AndreyMashukov/go-crypto-bot/server/exchange_context/model"
 	ExchangeRepository "github.com/AndreyMashukov/go-crypto-bot/server/exchange_context/repository"
 	"log"
+	"time"
 )
 
 type SwapManager struct {
@@ -45,6 +46,11 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 	}
 
 	if err != nil {
+		return chain
+	}
+
+	if balance <= 0 {
+		time.Sleep(time.Minute * 5)
 		return chain
 	}
 

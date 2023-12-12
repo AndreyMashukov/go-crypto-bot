@@ -90,7 +90,7 @@ func main() {
 		}
 	}
 
-	swapEnabled := currentBot.BotUuid == "5b51a35f-76a6-4747-8461-850fff9f7c18"
+	swapEnabled := currentBot.Id == 1
 
 	log.Printf("Bot [%s] is initialized successfully", currentBot.BotUuid)
 

@@ -1,5 +1,7 @@
 package model
 
+import "strings"
+
 type TradeLimit struct {
 	Id               int64   `json:"id"`
 	Symbol           string  `json:"symbol"`
@@ -13,6 +15,10 @@ type TradeLimit struct {
 	// Extra budget for market fall
 	USDTExtraBudget  float64 `json:"USDTExtraBudget"`
 	BuyOnFallPercent float64 `json:"buyOnFallPercent"`
+}
+
+func (t *TradeLimit) GetBaseAsset() string {
+	return strings.ReplaceAll(t.Symbol, "USDT", "")
 }
 
 func (t *TradeLimit) GetMinProfitPercent() Percent {

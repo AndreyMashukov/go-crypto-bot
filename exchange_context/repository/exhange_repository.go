@@ -148,6 +148,258 @@ func (repo *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64
 	return &lastId, err
 }
 
+func (repo *ExchangeRepository) CreateSwapPair(swapPair model.SwapPair) (*int64, error) {
+	res, err := repo.DB.Exec(`
+		INSERT INTO swap_pair SET
+		    source_symbol = ?,
+		    symbol = ?,
+		    base_asset = ?,
+		    quote_asset = ?,
+		    last_price = ?,
+		    price_timestamp = ?,
+		    min_notional = ?,
+		    min_quantity = ?,
+		    min_price = ?
+	`,
+		swapPair.SourceSymbol,
+		swapPair.Symbol,
+		swapPair.BaseAsset,
+		swapPair.QuoteAsset,
+		swapPair.LastPrice,
+		swapPair.PriceTimestamp,
+		swapPair.MinNotional,
+		swapPair.MinQuantity,
+		swapPair.MinPrice,
+	)
+
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	lastId, err := res.LastInsertId()
+
+	return &lastId, err
+}
+
+func (repo *ExchangeRepository) UpdateSwapPair(swapPair model.SwapPair) error {
+	_, err := repo.DB.Exec(`
+		UPDATE swap_pair sp SET
+		    sp.source_symbol = ?,
+		    sp.symbol = ?,
+		    sp.base_asset = ?,
+		    sp.quote_asset = ?,
+		    sp.last_price = ?,
+		    sp.price_timestamp = ?,
+		    sp.min_notional = ?,
+		    sp.min_quantity = ?,
+		    sp.min_price = ?
+		WHERE sp.id = ?
+	`,
+		swapPair.SourceSymbol,
+		swapPair.Symbol,
+		swapPair.BaseAsset,
+		swapPair.QuoteAsset,
+		swapPair.LastPrice,
+		swapPair.PriceTimestamp,
+		swapPair.MinNotional,
+		swapPair.MinQuantity,
+		swapPair.MinPrice,
+		swapPair.Id,
+	)
+
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
+}
+
+func (e *ExchangeRepository) GetSwapPairs() []model.SwapPair {
+	res, err := e.DB.Query(`
+		SELECT
+		    sp.id as Id,
+		    sp.source_symbol as SourceSymbol,
+		    sp.symbol as Symbol,
+		    sp.base_asset as BaseAsset,
+		    sp.quote_asset as QuoteAsset,
+		    sp.last_price as LastPrice,
+		    sp.price_timestamp as PriceTimestamp,
+		    sp.min_notional as MinNotional,
+		    sp.min_quantity as MinQuantity,
+		    sp.min_price as MinPrice
+		FROM swap_pair sp
+	`)
+	defer res.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	list := make([]model.SwapPair, 0)
+
+	for res.Next() {
+		var swapPair model.SwapPair
+		err := res.Scan(
+			&swapPair.Id,
+			&swapPair.SourceSymbol,
+			&swapPair.Symbol,
+			&swapPair.BaseAsset,
+			&swapPair.QuoteAsset,
+			&swapPair.LastPrice,
+			&swapPair.PriceTimestamp,
+			&swapPair.MinNotional,
+			&swapPair.MinQuantity,
+			&swapPair.MinPrice,
+		)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		list = append(list, swapPair)
+	}
+
+	return list
+}
+
+func (e *ExchangeRepository) GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair {
+	res, err := e.DB.Query(`
+		SELECT
+		    sp.id as Id,
+		    sp.source_symbol as SourceSymbol,
+		    sp.symbol as Symbol,
+		    sp.base_asset as BaseAsset,
+		    sp.quote_asset as QuoteAsset,
+		    sp.last_price as LastPrice,
+		    sp.price_timestamp as PriceTimestamp,
+		    sp.min_notional as MinNotional,
+		    sp.min_quantity as MinQuantity,
+		    sp.min_price as MinPrice
+		FROM swap_pair sp 
+		WHERE sp.base_asset = ? AND sp.last_price > sp.min_price
+	`, baseAsset)
+	defer res.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	list := make([]model.SwapPair, 0)
+
+	for res.Next() {
+		var swapPair model.SwapPair
+		err := res.Scan(
+			&swapPair.Id,
+			&swapPair.SourceSymbol,
+			&swapPair.Symbol,
+			&swapPair.BaseAsset,
+			&swapPair.QuoteAsset,
+			&swapPair.LastPrice,
+			&swapPair.PriceTimestamp,
+			&swapPair.MinNotional,
+			&swapPair.MinQuantity,
+			&swapPair.MinPrice,
+		)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		list = append(list, swapPair)
+	}
+
+	return list
+}
+
+func (e *ExchangeRepository) GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair {
+	res, err := e.DB.Query(`
+		SELECT
+		    sp.id as Id,
+		    sp.source_symbol as SourceSymbol,
+		    sp.symbol as Symbol,
+		    sp.base_asset as BaseAsset,
+		    sp.quote_asset as QuoteAsset,
+		    sp.last_price as LastPrice,
+		    sp.price_timestamp as PriceTimestamp,
+		    sp.min_notional as MinNotional,
+		    sp.min_quantity as MinQuantity,
+		    sp.min_price as MinPrice
+		FROM swap_pair sp 
+		WHERE sp.quote_asset = ? AND sp.last_price > sp.min_price
+	`, quoteAsset)
+	defer res.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	list := make([]model.SwapPair, 0)
+
+	for res.Next() {
+		var swapPair model.SwapPair
+		err := res.Scan(
+			&swapPair.Id,
+			&swapPair.SourceSymbol,
+			&swapPair.Symbol,
+			&swapPair.BaseAsset,
+			&swapPair.QuoteAsset,
+			&swapPair.LastPrice,
+			&swapPair.PriceTimestamp,
+			&swapPair.MinNotional,
+			&swapPair.MinQuantity,
+			&swapPair.MinPrice,
+		)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		list = append(list, swapPair)
+	}
+
+	return list
+}
+
+func (e *ExchangeRepository) GetSwapPair(symbol string) (model.SwapPair, error) {
+	var swapPair model.SwapPair
+	err := e.DB.QueryRow(`
+		SELECT
+		    sp.id as Id,
+		    sp.source_symbol as SourceSymbol,
+		    sp.symbol as Symbol,
+		    sp.base_asset as BaseAsset,
+		    sp.quote_asset as QuoteAsset,
+		    sp.last_price as LastPrice,
+		    sp.price_timestamp as PriceTimestamp,
+		    sp.min_notional as MinNotional,
+		    sp.min_quantity as MinQuantity,
+		    sp.min_price as MinPrice
+		FROM swap_pair sp
+		WHERE sp.symbol = ?
+	`,
+		symbol,
+	).Scan(
+		&swapPair.Id,
+		&swapPair.SourceSymbol,
+		&swapPair.Symbol,
+		&swapPair.BaseAsset,
+		&swapPair.QuoteAsset,
+		&swapPair.LastPrice,
+		&swapPair.PriceTimestamp,
+		&swapPair.MinNotional,
+		&swapPair.MinQuantity,
+		&swapPair.MinPrice,
+	)
+
+	if err != nil {
+		return swapPair, err
+	}
+
+	return swapPair, nil
+}
+
 func (repo *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 	_, err := repo.DB.Exec(`
 		UPDATE trade_limit tl SET

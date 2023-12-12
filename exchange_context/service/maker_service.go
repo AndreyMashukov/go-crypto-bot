@@ -9,7 +9,7 @@ import (
 	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
 	"log"
-	"strconv"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -29,6 +29,7 @@ type MakerService struct {
 	RDB                *redis.Client
 	Ctx                *context.Context
 	CurrentBot         *ExchangeModel.Bot
+	BalanceService     *BalanceService
 }
 
 func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
@@ -257,7 +258,7 @@ func (m *MakerService) calculateSellQuantity(order ExchangeModel.Order) float64 
 
 	m.recoverCommission(order)
 	sellQuantity := order.GetRemainingToSellQuantity()
-	balance, err := m.getAssetBalance(order.GetAsset())
+	balance, err := m.BalanceService.GetAssetBalance(order.GetBaseAsset())
 
 	if err != nil {
 		return sellQuantity
@@ -462,7 +463,7 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 
 	// Check balance for new order
 	if cached == nil {
-		usdtAvailableBalance, err := m.getAssetBalance("USDT")
+		usdtAvailableBalance, err := m.BalanceService.GetAssetBalance("USDT")
 
 		if err != nil {
 			return errors.New(fmt.Sprintf("[%s] BUY balance error: %s", order.Symbol, err.Error()))
@@ -490,12 +491,12 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 		// todo: add commission???
 	}
 
-	balanceBefore, balanceErr := m.getAssetBalance(order.GetAsset())
+	balanceBefore, balanceErr := m.BalanceService.GetAssetBalance(order.GetBaseAsset())
 
 	binanceOrder, err := m.tryLimitOrder(extraOrder, "BUY", 120)
 
 	if err != nil {
-		m.invalidateBalanceCache("USDT")
+		m.BalanceService.InvalidateBalanceCache("USDT")
 		return err
 	}
 
@@ -538,8 +539,8 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 
 	err = m.OrderRepository.Update(order)
 	_, err = m.OrderRepository.Create(order)
-	m.invalidateBalanceCache("USDT")
-	m.invalidateBalanceCache(order.GetAsset())
+	m.BalanceService.InvalidateBalanceCache("USDT")
+	m.BalanceService.InvalidateBalanceCache(order.GetBaseAsset())
 
 	if err != nil {
 		return err
@@ -581,7 +582,7 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 
 	// Check balance for new order
 	if cached == nil {
-		usdtAvailableBalance, err := m.getAssetBalance("USDT")
+		usdtAvailableBalance, err := m.BalanceService.GetAssetBalance("USDT")
 
 		if err != nil {
 			return errors.New(fmt.Sprintf("[%s] BUY balance error: %s", symbol, err.Error()))
@@ -619,12 +620,12 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 		// todo: add commission???
 	}
 
-	balanceBefore, balanceErr := m.getAssetBalance(order.GetAsset())
+	balanceBefore, balanceErr := m.BalanceService.GetAssetBalance(order.GetBaseAsset())
 
 	binanceOrder, err := m.tryLimitOrder(order, "BUY", 480)
 
 	if err != nil {
-		m.invalidateBalanceCache("USDT")
+		m.BalanceService.InvalidateBalanceCache("USDT")
 		return err
 	}
 
@@ -635,8 +636,8 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 	order.CreatedAt = time.Now().Format("2006-01-02 15:04:05")
 
 	_, err = m.OrderRepository.Create(order)
-	m.invalidateBalanceCache("USDT")
-	m.invalidateBalanceCache(order.GetAsset())
+	m.BalanceService.InvalidateBalanceCache("USDT")
+	m.BalanceService.InvalidateBalanceCache(order.GetBaseAsset())
 
 	if err != nil {
 		log.Printf("Can't create order: %s", order)
@@ -704,12 +705,12 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 		// todo: add commission???
 	}
 
-	//balanceBefore, balanceErr := m.getAssetBalance(order.GetAsset())
+	//balanceBefore, balanceErr := m.BalanceService.GetAssetBalanceorder.GetBaseAsset())
 
 	binanceOrder, err := m.tryLimitOrder(order, "SELL", 480)
 
 	if err != nil {
-		m.invalidateBalanceCache(order.GetAsset())
+		m.BalanceService.InvalidateBalanceCache(order.GetBaseAsset())
 		return err
 	}
 
@@ -751,8 +752,8 @@ func (m *MakerService) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchange
 	}
 
 	err = m.OrderRepository.Update(opened)
-	m.invalidateBalanceCache("USDT")
-	m.invalidateBalanceCache(opened.GetAsset())
+	m.BalanceService.InvalidateBalanceCache("USDT")
+	m.BalanceService.InvalidateBalanceCache(opened.GetBaseAsset())
 
 	if err != nil {
 		log.Printf("Can't udpdate order [%d]: %s", order.Id, order)
@@ -839,7 +840,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			kline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
 			if binanceOrder.IsBuy() && binanceOrder.IsNew() && binanceOrder.Price > kline.Close {
-				fallPercent := ExchangeModel.Percent(100 - m.ComparePercentage(binanceOrder.Price, kline.Close).Value())
+				fallPercent := ExchangeModel.Percent(100 - m.Formatter.ComparePercentage(binanceOrder.Price, kline.Close).Value())
 				minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, 200)
 
 				cancelFallPercent := ExchangeModel.Percent(0.50)
@@ -974,7 +975,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 					}
 
 					if binanceOrder.IsBuy() {
-						positionPercentage := m.ComparePercentage(binanceOrder.Price, kline.Close)
+						positionPercentage := m.Formatter.ComparePercentage(binanceOrder.Price, kline.Close)
 						if positionPercentage.Gte(101) {
 							log.Printf(
 								"[%s] %s Order [%d] status [%s] ttl reached, current price is [%.8f], order price [%.8f], diff percent: %.2f",
@@ -1274,9 +1275,9 @@ func (m *MakerService) findOrCreateOrder(order ExchangeModel.Order, operation st
 	log.Printf("[%s] %s Order created %d, Price: %.6f", order.Symbol, operation, binanceOrder.OrderId, binanceOrder.Price)
 	m.OrderRepository.SetBinanceOrder(binanceOrder)
 	if order.IsBuy() {
-		m.invalidateBalanceCache("USDT")
+		m.BalanceService.InvalidateBalanceCache("USDT")
 	} else {
-		m.invalidateBalanceCache(order.GetAsset())
+		m.BalanceService.InvalidateBalanceCache(order.GetBaseAsset())
 	}
 
 	return binanceOrder, nil
@@ -1299,6 +1300,89 @@ func (m *MakerService) SetDepth(depth ExchangeModel.Depth) {
 
 func (m *MakerService) GetDepth(symbol string) ExchangeModel.Depth {
 	return m.ExchangeRepository.GetDepth(symbol)
+}
+
+func (m *MakerService) UpdateSwapPairs() {
+	swapMap := make(map[string][]ExchangeModel.ExchangeSymbol)
+	exchangeInfo, _ := m.Binance.GetExchangeData(make([]string, 0))
+	tradeLimits := m.ExchangeRepository.GetTradeLimits()
+
+	supportedQuoteAssets := []string{"BTC", "ETH", "BNB", "TRX"}
+
+	for _, tradeLimit := range tradeLimits {
+		if !tradeLimit.IsEnabled {
+			continue
+		}
+
+		swapMap[tradeLimit.Symbol] = make([]ExchangeModel.ExchangeSymbol, 0)
+
+		for _, exchangeSymbol := range exchangeInfo.Symbols {
+			if !exchangeSymbol.IsTrading() {
+				continue
+			}
+
+			if exchangeSymbol.Symbol == tradeLimit.Symbol {
+				baseAsset := exchangeSymbol.BaseAsset
+				quoteAsset := exchangeSymbol.QuoteAsset
+
+				for _, exchangeItem := range exchangeInfo.Symbols {
+					if !exchangeItem.IsTrading() {
+						continue
+					}
+
+					if !slices.Contains(supportedQuoteAssets, exchangeItem.QuoteAsset) {
+						continue
+					}
+
+					if exchangeItem.BaseAsset == baseAsset && exchangeItem.QuoteAsset != quoteAsset {
+						swapMap[tradeLimit.Symbol] = append(swapMap[tradeLimit.Symbol], exchangeItem)
+					}
+				}
+			}
+		}
+
+		for _, exchangeItem := range swapMap[tradeLimit.Symbol] {
+			swapPair, err := m.ExchangeRepository.GetSwapPair(exchangeItem.Symbol)
+			if err != nil {
+				swapPair := ExchangeModel.SwapPair{
+					SourceSymbol:   tradeLimit.Symbol,
+					Symbol:         exchangeItem.Symbol,
+					BaseAsset:      exchangeItem.BaseAsset,
+					QuoteAsset:     exchangeItem.QuoteAsset,
+					LastPrice:      0.00,
+					PriceTimestamp: 0,
+				}
+
+				for _, filter := range exchangeItem.Filters {
+					if filter.FilterType == "PRICE_FILTER" {
+						swapPair.MinPrice = *filter.MinPrice
+					}
+					if filter.FilterType == "LOT_SIZE" {
+						swapPair.MinQuantity = *filter.MinQuantity
+					}
+					if filter.FilterType == "NOTIONAL" {
+						swapPair.MinNotional = *filter.MinNotional
+					}
+				}
+
+				_, _ = m.ExchangeRepository.CreateSwapPair(swapPair)
+			} else {
+				for _, filter := range exchangeItem.Filters {
+					if filter.FilterType == "PRICE_FILTER" {
+						swapPair.MinPrice = *filter.MinPrice
+					}
+					if filter.FilterType == "LOT_SIZE" {
+						swapPair.MinQuantity = *filter.MinQuantity
+					}
+					if filter.FilterType == "NOTIONAL" {
+						swapPair.MinNotional = *filter.MinNotional
+					}
+				}
+
+				_ = m.ExchangeRepository.UpdateSwapPair(swapPair)
+			}
+		}
+	}
 }
 
 func (m *MakerService) UpdateLimits() {
@@ -1350,52 +1434,13 @@ func (m *MakerService) UpdateLimits() {
 	}
 }
 
-func (m *MakerService) invalidateBalanceCache(asset string) {
-	m.RDB.Del(*m.Ctx, m.getBalanceCacheKey(asset))
-}
-
-func (m *MakerService) getBalanceCacheKey(asset string) string {
-	return fmt.Sprintf("balance-%s-account-%d", asset, m.CurrentBot.Id)
-}
-
-func (m *MakerService) getAssetBalance(asset string) (float64, error) {
-	cached := m.RDB.Get(*m.Ctx, m.getBalanceCacheKey(asset)).Val()
-
-	if len(cached) > 0 {
-		balanceCached, err := strconv.ParseFloat(cached, 64)
-
-		if err == nil {
-			log.Printf("[%s] Free balance is: %f (cached)", asset, balanceCached)
-			return balanceCached, nil
-		}
-	}
-
-	accountInfo, err := m.Binance.GetAccountStatus()
-
-	if err != nil {
-		return 0.00, err
-	}
-
-	for _, assetBalance := range accountInfo.Balances {
-		if assetBalance.Asset == asset {
-			log.Printf("[%s] Free balance is: %f", asset, assetBalance.Free)
-			log.Printf("[%s] Locked balance is: %f", asset, assetBalance.Locked)
-
-			m.RDB.Set(*m.Ctx, m.getBalanceCacheKey(asset), assetBalance.Free, time.Minute*2)
-			return assetBalance.Free, nil
-		}
-	}
-
-	return 0.00, nil
-}
-
 func (m *MakerService) recoverCommission(order ExchangeModel.Order) {
 	if order.Commission != nil {
 		return
 	}
-	assetSymbol := order.GetAsset()
+	assetSymbol := order.GetBaseAsset()
 
-	balanceAfter, err := m.getAssetBalance(assetSymbol)
+	balanceAfter, err := m.BalanceService.GetAssetBalance(assetSymbol)
 
 	if err != nil {
 		log.Printf("[%s] Can't recover commission: %s", order.Status, err.Error())
@@ -1416,8 +1461,8 @@ func (m *MakerService) recoverCommission(order ExchangeModel.Order) {
 }
 
 func (m *MakerService) UpdateCommission(balanceBefore float64, order ExchangeModel.Order) {
-	assetSymbol := order.GetAsset()
-	balanceAfter, err := m.getAssetBalance(assetSymbol)
+	assetSymbol := order.GetBaseAsset()
+	balanceAfter, err := m.BalanceService.GetAssetBalance(assetSymbol)
 
 	if err != nil {
 		log.Printf("[%s] Can't update commission: %s", order.Status, err.Error())
@@ -1439,8 +1484,4 @@ func (m *MakerService) UpdateCommission(balanceBefore float64, order ExchangeMod
 	if err != nil {
 		log.Printf("[%s] Order Commission Update: %s", order.Symbol, err.Error())
 	}
-}
-
-func (m *MakerService) ComparePercentage(first float64, second float64) ExchangeModel.Percent {
-	return ExchangeModel.Percent(second * 100 / first)
 }

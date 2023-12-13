@@ -1,14 +1,18 @@
 package service
 
 import (
+	"crypto/md5"
+	"fmt"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
+	"io"
 	"log"
 	"time"
 )
 
 type SwapManager struct {
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
+	SwapRepository     *ExchangeRepository.SwapRepository
 	BalanceService     *BalanceService
 	Formatter          *Formatter
 }
@@ -31,6 +35,77 @@ func (s *SwapManager) CalculateSwapOptions(symbol string) {
 			buyBuySell.BestChain.SellOne.Price,
 			buyBuySell.BestChain.Percent.Value(),
 		)
+		swapChainEntity, err := s.SwapRepository.GetSwapChain(buyBuySell.BestChain.Hash)
+		var swapChainId int64 = 0
+		var swapOneId int64 = 0
+		var swapOneTwo int64 = 0
+		var swapOneThree int64 = 0
+		if err == nil {
+			swapChainId = swapChainEntity.Id
+			swapOneId = swapChainEntity.SwapOne.Id
+			swapOneTwo = swapChainEntity.SwapTwo.Id
+			swapOneThree = swapChainEntity.SwapThree.Id
+		}
+
+		swapChainEntity = model.SwapChainEntity{
+			Id:        swapChainId,
+			Title:     buyBuySell.BestChain.Title,
+			Type:      buyBuySell.BestChain.Type,
+			Hash:      buyBuySell.BestChain.Hash,
+			Percent:   buyBuySell.BestChain.Percent,
+			Timestamp: buyBuySell.BestChain.Timestamp,
+			SwapOne: &model.SwapTransitionEntity{
+				Id:   swapOneId,
+				Type: buyBuySell.BestChain.BuyOne.Type,
+				Symbol: fmt.Sprintf(
+					"%s%s",
+					buyBuySell.BestChain.BuyOne.BaseAsset,
+					buyBuySell.BestChain.BuyOne.QuoteAsset,
+				),
+				BaseAsset:  buyBuySell.BestChain.BuyOne.BaseAsset,
+				QuoteAsset: buyBuySell.BestChain.BuyOne.QuoteAsset,
+				Operation:  buyBuySell.BestChain.BuyOne.Operation,
+				Quantity:   buyBuySell.BestChain.BuyOne.BaseQuantity,
+				Price:      buyBuySell.BestChain.BuyOne.Price,
+				Level:      buyBuySell.BestChain.BuyOne.Level,
+			},
+			SwapTwo: &model.SwapTransitionEntity{
+				Id:   swapOneTwo,
+				Type: buyBuySell.BestChain.BuyTwo.Type,
+				Symbol: fmt.Sprintf(
+					"%s%s",
+					buyBuySell.BestChain.BuyTwo.BaseAsset,
+					buyBuySell.BestChain.BuyTwo.QuoteAsset,
+				),
+				BaseAsset:  buyBuySell.BestChain.BuyTwo.BaseAsset,
+				QuoteAsset: buyBuySell.BestChain.BuyTwo.QuoteAsset,
+				Operation:  buyBuySell.BestChain.BuyTwo.Operation,
+				Quantity:   buyBuySell.BestChain.BuyTwo.BaseQuantity,
+				Price:      buyBuySell.BestChain.BuyTwo.Price,
+				Level:      buyBuySell.BestChain.BuyTwo.Level,
+			},
+			SwapThree: &model.SwapTransitionEntity{
+				Id:   swapOneThree,
+				Type: buyBuySell.BestChain.SellOne.Type,
+				Symbol: fmt.Sprintf(
+					"%s%s",
+					buyBuySell.BestChain.SellOne.QuoteAsset,
+					buyBuySell.BestChain.SellOne.BaseAsset,
+				),
+				BaseAsset:  buyBuySell.BestChain.SellOne.BaseAsset,
+				QuoteAsset: buyBuySell.BestChain.SellOne.QuoteAsset,
+				Operation:  buyBuySell.BestChain.SellOne.Operation,
+				Quantity:   buyBuySell.BestChain.SellOne.QuoteQuantity,
+				Price:      buyBuySell.BestChain.SellOne.Price,
+				Level:      buyBuySell.BestChain.SellOne.Level,
+			},
+		}
+
+		if swapChainId > 0 {
+			_ = s.SwapRepository.UpdateSwapChain(swapChainEntity)
+		} else {
+			_, _ = s.SwapRepository.CreateSwapChain(swapChainEntity)
+		}
 	}
 }
 
@@ -60,9 +135,10 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 
 	for _, option0 := range options0 {
 		buy0 := SwapTransition{
+			Type:          SwapTransitionTypeBuyBuySell,
 			BaseAsset:     asset,
 			QuoteAsset:    option0.QuoteAsset,
-			Operation:     "BUY",
+			Operation:     SwapTransitionOperationTypeBuy,
 			BaseQuantity:  balance,
 			QuoteQuantity: 0.00,
 			Price:         option0.LastPrice,
@@ -78,9 +154,10 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 			}
 
 			buy1 := SwapTransition{
+				Type:          SwapTransitionTypeBuyBuySell,
 				BaseAsset:     option1.BaseAsset,
 				QuoteAsset:    option1.QuoteAsset,
-				Operation:     "BUY",
+				Operation:     SwapTransitionOperationTypeBuy,
 				BaseQuantity:  buy0.Balance,
 				QuoteQuantity: 0.00,
 				Price:         option1.LastPrice,
@@ -98,9 +175,10 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 				sellBalance := (buy1.Balance / option2.LastPrice) - (buy1.Balance/option2.LastPrice)*0.002
 
 				sell0 := SwapTransition{
+					Type:          SwapTransitionTypeBuyBuySell,
 					BaseAsset:     asset,
 					QuoteAsset:    buy1.QuoteAsset,
-					Operation:     "SELL",
+					Operation:     SwapTransitionOperationTypeSell,
 					BaseQuantity:  0.00,
 					QuoteQuantity: buy1.Balance,
 					Price:         option2.LastPrice,
@@ -112,11 +190,26 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 				profit := s.Formatter.ComparePercentage(buy0.BaseQuantity, sellBalance) - 100
 
 				if bestChain == nil || profit.Gt(bestChain.Percent) {
+					title := fmt.Sprintf(
+						"%s buy-> %s buy-> %s sell-> %s",
+						asset,
+						buy0.QuoteAsset,
+						buy1.QuoteAsset,
+						sell0.BaseAsset,
+					)
+
+					h := md5.New()
+					_, _ = io.WriteString(h, title)
+
 					bbsChain := BuyBuySell{
-						BuyOne:  &buy0,
-						BuyTwo:  &buy1,
-						SellOne: &sell0,
-						Percent: profit,
+						Type:      SwapTransitionTypeBuyBuySell,
+						Title:     title,
+						Hash:      fmt.Sprintf("%x", h.Sum(nil)),
+						BuyOne:    &buy0,
+						BuyTwo:    &buy1,
+						SellOne:   &sell0,
+						Percent:   profit,
+						Timestamp: time.Now().Unix(),
 					}
 					bestChain = &bbsChain
 				}
@@ -150,7 +243,12 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 	return chain
 }
 
+const SwapTransitionTypeBuyBuySell = "BBS"
+const SwapTransitionOperationTypeSell = "SELL"
+const SwapTransitionOperationTypeBuy = "BUY"
+
 type SwapTransition struct {
+	Type          string           `json:"type"`
 	BaseAsset     string           `json:"baseAsset"`
 	QuoteAsset    string           `json:"quoteAsset"`
 	Operation     string           `json:"operation"`
@@ -162,14 +260,18 @@ type SwapTransition struct {
 	Transitions   []SwapTransition `json:"transitions,omitempty"`
 }
 
+type BuyBuySell struct {
+	Title     string          `json:"title"`
+	Type      string          `json:"type"`
+	Hash      string          `json:"hash"`
+	BuyOne    *SwapTransition `json:"buyOne"`
+	BuyTwo    *SwapTransition `json:"buyTwo"`
+	SellOne   *SwapTransition `json:"sellOne"`
+	Percent   model.Percent   `json:"percent"`
+	Timestamp int64           `json:"timestamp"`
+}
+
 type BBSArbitrageChain struct {
 	Transitions []SwapTransition `json:"transitions"`
 	BestChain   *BuyBuySell      `json:"bestChain"`
-}
-
-type BuyBuySell struct {
-	BuyOne  *SwapTransition `json:"buyOne"`
-	BuyTwo  *SwapTransition `json:"buyTwo"`
-	SellOne *SwapTransition `json:"sellOne"`
-	Percent model.Percent
 }

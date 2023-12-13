@@ -106,6 +106,12 @@ func main() {
 		Ctx:        &ctx,
 		CurrentBot: currentBot,
 	}
+	swapRepository := ExchangeRepository.SwapRepository{
+		DB:         db,
+		RDB:        rdb,
+		Ctx:        &ctx,
+		CurrentBot: currentBot,
+	}
 
 	formatter := ExchangeService.Formatter{}
 	chartService := ExchangeService.ChartService{
@@ -196,6 +202,7 @@ func main() {
 
 	swapManager := ExchangeService.SwapManager{
 		ExchangeRepository: &exchangeRepository,
+		SwapRepository:     &swapRepository,
 		BalanceService:     &balanceService,
 		Formatter:          &formatter,
 	}

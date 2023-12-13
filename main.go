@@ -140,6 +140,7 @@ func main() {
 	makerService := ExchangeService.MakerService{
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,
+		SwapRepository:     &swapRepository,
 		Binance:            &binance,
 		LockChannel:        &lockTradeChannel,
 		Lock:               make(map[string]bool),
@@ -203,7 +204,6 @@ func main() {
 	swapManager := ExchangeService.SwapManager{
 		ExchangeRepository: &exchangeRepository,
 		SwapRepository:     &swapRepository,
-		BalanceService:     &balanceService,
 		Formatter:          &formatter,
 	}
 

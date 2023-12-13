@@ -13,7 +13,6 @@ import (
 type SwapManager struct {
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
 	SwapRepository     *ExchangeRepository.SwapRepository
-	BalanceService     *BalanceService
 	Formatter          *Formatter
 }
 
@@ -106,27 +105,20 @@ func (s *SwapManager) CalculateSwapOptions(symbol string) {
 		} else {
 			_, _ = s.SwapRepository.CreateSwapChain(swapChainEntity)
 		}
+
+		// Set to cache, will be read in MakerService
+		s.SwapRepository.SaveSwapChainCache(swapChainEntity.SwapOne.BaseAsset, swapChainEntity)
 	}
 }
 
 func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 	asset := symbol[:len(symbol)-3]
-
-	balance, err := s.BalanceService.GetAssetBalance(asset)
+	balance := 100.00
 
 	transitions := make([]SwapTransition, 0)
 	chain := BBSArbitrageChain{
 		Transitions: make([]SwapTransition, 0),
 		BestChain:   nil,
-	}
-
-	if err != nil {
-		return chain
-	}
-
-	if balance <= 0 {
-		time.Sleep(time.Minute * 5)
-		return chain
 	}
 
 	options0 := s.ExchangeRepository.GetSwapPairsByBaseAsset(asset)

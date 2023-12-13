@@ -29,7 +29,6 @@ func (b *BalanceService) GetAssetBalance(asset string) (float64, error) {
 		balanceCached, err := strconv.ParseFloat(cached, 64)
 
 		if err == nil {
-			log.Printf("[%s] Free balance is: %f (cached)", asset, balanceCached)
 			return balanceCached, nil
 		}
 	}

@@ -50,6 +50,7 @@ type Order struct {
 	Commission       *float64 `json:"commission"`
 	CommissionAsset  *string  `json:"commissionAsset"`
 	SoldQuantity     *float64 `json:"soldQuantity"`
+	Swap             bool     `json:"swap"`
 }
 
 func (o *Order) GetBaseAsset() string {
@@ -88,4 +89,8 @@ func (o *Order) GetRemainingToSellQuantity() float64 {
 	}
 
 	return o.ExecutedQuantity
+}
+
+func (o *Order) IsSwap() bool {
+	return o.Swap
 }

@@ -16,6 +16,7 @@ import (
 )
 
 type MakerService struct {
+	SwapValidator      *SwapValidator
 	OrderRepository    *ExchangeRepository.OrderRepository
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
 	SwapRepository     *ExchangeRepository.SwapRepository
@@ -842,23 +843,39 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 
 			if binanceOrder.IsSell() && binanceOrder.IsNew() {
 				openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
-				// Try arbitrage for long orders >= 3 hours and with profit < -4.00%
-				if err == nil && openedBuyPosition.GetProfitPercent(kline.Close).Lte(-4.00) && openedBuyPosition.GetHoursOpened() >= 3 {
+				// Try arbitrage for long orders >= 3 hours and with profit < -3.50%
+				if err == nil && openedBuyPosition.GetHoursOpened() >= 3 { // openedBuyPosition.GetProfitPercent(kline.Close).Lte(-3.50) &&
 					swapChain := m.SwapRepository.GetSwapChainCache(openedBuyPosition.GetBaseAsset())
 					if swapChain != nil {
-						log.Printf(
-							"[%s] Swap chain [%s] is found for order #%d, percent: %.2f",
-							binanceOrder.Symbol,
-							swapChain.Title,
-							openedBuyPosition.Id,
-							swapChain.Percent,
-						)
+						violation := m.SwapValidator.Validate(*swapChain)
+						if violation == nil {
+							chainCurrentPercent := m.SwapValidator.CalculatePercent(*swapChain)
+							log.Printf(
+								"[%s] Swap chain [%s] is found for order #%d, initial percent: %.2f, current = %.2f",
+								binanceOrder.Symbol,
+								swapChain.Title,
+								openedBuyPosition.Id,
+								swapChain.Percent,
+								chainCurrentPercent,
+							)
+							orderManageChannel <- "status"
+							action := <-control
+							if action == "stop" {
+								return
+							}
 
-						// check order status and cancel...
-
-						// todo: start swap...
-						// todo: set to cache for concrete order...
-						// todo: invoke swap executor (separate service)
+							if binanceOrder.IsNew() {
+								log.Printf("[%s] Cancel signal sent!", binanceOrder.Symbol)
+								orderManageChannel <- "cancel"
+								action := <-control
+								if action == "stop" {
+									// todo: start swap...
+									// todo: set to cache for concrete order...
+									// todo: invoke swap executor (separate service)
+									return
+								}
+							}
+						}
 					}
 				}
 			}

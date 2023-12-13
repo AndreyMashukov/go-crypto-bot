@@ -127,10 +127,10 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 
 	for _, option0 := range options0 {
 		buy0 := SwapTransition{
-			Type:          SwapTransitionTypeBuyBuySell,
+			Type:          model.SwapTransitionTypeBuyBuySell,
 			BaseAsset:     asset,
 			QuoteAsset:    option0.QuoteAsset,
-			Operation:     SwapTransitionOperationTypeBuy,
+			Operation:     model.SwapTransitionOperationTypeBuy,
 			BaseQuantity:  balance,
 			QuoteQuantity: 0.00,
 			Price:         option0.LastPrice,
@@ -146,10 +146,10 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 			}
 
 			buy1 := SwapTransition{
-				Type:          SwapTransitionTypeBuyBuySell,
+				Type:          model.SwapTransitionTypeBuyBuySell,
 				BaseAsset:     option1.BaseAsset,
 				QuoteAsset:    option1.QuoteAsset,
-				Operation:     SwapTransitionOperationTypeBuy,
+				Operation:     model.SwapTransitionOperationTypeBuy,
 				BaseQuantity:  buy0.Balance,
 				QuoteQuantity: 0.00,
 				Price:         option1.LastPrice,
@@ -167,10 +167,10 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 				sellBalance := (buy1.Balance / option2.LastPrice) - (buy1.Balance/option2.LastPrice)*0.002
 
 				sell0 := SwapTransition{
-					Type:          SwapTransitionTypeBuyBuySell,
+					Type:          model.SwapTransitionTypeBuyBuySell,
 					BaseAsset:     asset,
 					QuoteAsset:    buy1.QuoteAsset,
-					Operation:     SwapTransitionOperationTypeSell,
+					Operation:     model.SwapTransitionOperationTypeSell,
 					BaseQuantity:  0.00,
 					QuoteQuantity: buy1.Balance,
 					Price:         option2.LastPrice,
@@ -194,7 +194,7 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 					_, _ = io.WriteString(h, title)
 
 					bbsChain := BuyBuySell{
-						Type:      SwapTransitionTypeBuyBuySell,
+						Type:      model.SwapTransitionTypeBuyBuySell,
 						Title:     title,
 						Hash:      fmt.Sprintf("%x", h.Sum(nil)),
 						BuyOne:    &buy0,
@@ -234,10 +234,6 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 
 	return chain
 }
-
-const SwapTransitionTypeBuyBuySell = "BBS"
-const SwapTransitionOperationTypeSell = "SELL"
-const SwapTransitionOperationTypeBuy = "BUY"
 
 type SwapTransition struct {
 	Type          string           `json:"type"`

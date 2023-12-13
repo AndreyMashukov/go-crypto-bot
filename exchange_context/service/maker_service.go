@@ -18,6 +18,7 @@ import (
 type MakerService struct {
 	OrderRepository    *ExchangeRepository.OrderRepository
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
+	SwapRepository     *ExchangeRepository.SwapRepository
 	Binance            *ExchangeClient.Binance
 	LockChannel        *chan ExchangeModel.Lock
 	Formatter          *Formatter
@@ -838,6 +839,29 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 
 			end := time.Now().Unix()
 			kline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+
+			if binanceOrder.IsSell() && binanceOrder.IsNew() {
+				openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
+				// Try arbitrage for long orders >= 3 hours and with profit < -4.00%
+				if err == nil && openedBuyPosition.GetProfitPercent(kline.Close).Lte(-4.00) && openedBuyPosition.GetHoursOpened() >= 3 {
+					swapChain := m.SwapRepository.GetSwapChainCache(openedBuyPosition.GetBaseAsset())
+					if swapChain != nil {
+						log.Printf(
+							"[%s] Swap chain [%s] is found for order #%d, percent: %.2f",
+							binanceOrder.Symbol,
+							swapChain.Title,
+							openedBuyPosition.Id,
+							swapChain.Percent,
+						)
+
+						// check order status and cancel...
+
+						// todo: start swap...
+						// todo: set to cache for concrete order...
+						// todo: invoke swap executor (separate service)
+					}
+				}
+			}
 
 			if binanceOrder.IsBuy() && binanceOrder.IsNew() && binanceOrder.Price > kline.Close {
 				fallPercent := ExchangeModel.Percent(100 - m.Formatter.ComparePercentage(binanceOrder.Price, kline.Close).Value())

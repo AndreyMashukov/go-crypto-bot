@@ -3,9 +3,12 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
 	"github.com/redis/go-redis/v9"
 	model "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	"log"
+	"time"
 )
 
 type SwapRepository struct {
@@ -241,4 +244,27 @@ func (s *SwapRepository) UpdateSwapTransition(transition model.SwapTransitionEnt
 	}
 
 	return nil
+}
+
+func (s *SwapRepository) SaveSwapChainCache(asset string, entity model.SwapChainEntity) {
+	encoded, _ := json.Marshal(entity)
+
+	s.RDB.Set(*s.Ctx, s.getSwapCacheKey(asset), string(encoded), time.Minute*10)
+}
+
+func (s *SwapRepository) GetSwapChainCache(asset string) *model.SwapChainEntity {
+	cached := s.RDB.Get(*s.Ctx, s.getSwapCacheKey(asset)).Val()
+
+	if len(cached) > 0 {
+		var entity model.SwapChainEntity
+		json.Unmarshal([]byte(cached), &entity)
+
+		return &entity
+	}
+
+	return nil
+}
+
+func (s *SwapRepository) getSwapCacheKey(asset string) string {
+	return fmt.Sprintf("swap-chain-%s", asset)
 }

@@ -37,3 +37,4 @@ create table `swap_chain`
     constraint swap_transition_two_fk foreign key (swap_two) references `swap_transition` (id),
     constraint swap_transition_three_fk foreign key (swap_three) references `swap_transition` (id)
 );
+ALTER TABLE swap_chain ADD CONSTRAINT swap_chain_hash_uniq UNIQUE (hash);

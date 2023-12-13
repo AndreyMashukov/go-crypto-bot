@@ -38,3 +38,5 @@ create table `swap_chain`
     constraint swap_transition_three_fk foreign key (swap_three) references `swap_transition` (id)
 );
 ALTER TABLE swap_chain ADD CONSTRAINT swap_chain_hash_uniq UNIQUE (hash);
+# --------
+alter table orders add swap tinyint(1) not null default 0;

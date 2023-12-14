@@ -11,12 +11,12 @@ import (
 type Formatter struct {
 }
 
-func (m *Formatter) FormatPrice(limit ExchangeModel.TradeLimit, price float64) float64 {
-	if price < limit.MinPrice {
-		return limit.MinPrice
+func (m *Formatter) FormatPrice(limit ExchangeModel.TradeLimitInterface, price float64) float64 {
+	if price < limit.GetMinPrice() {
+		return limit.GetMinPrice()
 	}
 
-	split := strings.Split(fmt.Sprintf("%s", strconv.FormatFloat(limit.MinPrice, 'f', -1, 64)), ".")
+	split := strings.Split(fmt.Sprintf("%s", strconv.FormatFloat(limit.GetMinPrice(), 'f', -1, 64)), ".")
 	precision := 0
 	if len(split) > 1 {
 		precision = len(split[1])
@@ -25,13 +25,13 @@ func (m *Formatter) FormatPrice(limit ExchangeModel.TradeLimit, price float64) f
 	return math.Round(price*ratio) / ratio
 }
 
-func (m *Formatter) FormatQuantity(limit ExchangeModel.TradeLimit, quantity float64) float64 {
-	if quantity < limit.MinQuantity {
-		return limit.MinQuantity
+func (m *Formatter) FormatQuantity(limit ExchangeModel.TradeLimitInterface, quantity float64) float64 {
+	if quantity < limit.GetMinQuantity() {
+		return limit.GetMinQuantity()
 	}
 
 	splitQty := strings.Split(fmt.Sprintf("%s", strconv.FormatFloat(quantity, 'f', -1, 64)), ".")
-	split := strings.Split(fmt.Sprintf("%s", strconv.FormatFloat(limit.MinQuantity, 'f', -1, 64)), ".")
+	split := strings.Split(fmt.Sprintf("%s", strconv.FormatFloat(limit.GetMinQuantity(), 'f', -1, 64)), ".")
 	precision := 0
 	if len(split) > 1 {
 		precision = len(split[1])

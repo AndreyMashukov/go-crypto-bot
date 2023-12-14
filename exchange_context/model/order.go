@@ -32,6 +32,10 @@ func (p Percent) Lte(percent Percent) bool {
 	return p.Value() <= percent.Value()
 }
 
+func (p Percent) Lt(percent Percent) bool {
+	return p.Value() < percent.Value()
+}
+
 type Order struct {
 	Id               int64    `json:"id"`
 	Symbol           string   `json:"symbol"`
@@ -50,6 +54,7 @@ type Order struct {
 	Commission       *float64 `json:"commission"`
 	CommissionAsset  *string  `json:"commissionAsset"`
 	SoldQuantity     *float64 `json:"soldQuantity"`
+	Swap             bool     `json:"swap"`
 }
 
 func (o *Order) GetBaseAsset() string {
@@ -88,4 +93,8 @@ func (o *Order) GetRemainingToSellQuantity() float64 {
 	}
 
 	return o.ExecutedQuantity
+}
+
+func (o *Order) IsSwap() bool {
+	return o.Swap
 }

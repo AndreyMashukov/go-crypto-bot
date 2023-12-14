@@ -125,6 +125,10 @@ func main() {
 		Ctx:                &ctx,
 		CurrentBot:         currentBot,
 	}
+	swapValidator := ExchangeService.SwapValidator{
+		ExchangeRepository: &exchangeRepository,
+		Formatter:          &formatter,
+	}
 
 	eventChannel := make(chan []byte)
 	lockTradeChannel := make(chan ExchangeModel.Lock)
@@ -138,6 +142,7 @@ func main() {
 	}
 
 	makerService := ExchangeService.MakerService{
+		SwapValidator:      &swapValidator,
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,
 		SwapRepository:     &swapRepository,
@@ -153,6 +158,7 @@ func main() {
 		Ctx:                &ctx,
 		CurrentBot:         currentBot,
 		BalanceService:     &balanceService,
+		SwapEnabled:        swapEnabled,
 	}
 
 	orderController := controller.OrderController{
@@ -261,23 +267,19 @@ func main() {
 			go func(swapPair ExchangeModel.SwapPair) {
 				for {
 					time.Sleep(time.Second * 30)
-					kLine := exchangeRepository.GetLastKLine(swapPair.Symbol)
+					kLines := binance.GetKLines(swapPair.Symbol, "1m", 1)
+					basicKLine := kLines[0].ToKLine(swapPair.Symbol)
+					exchangeRepository.AddKLine(basicKLine)
 
-					if kLine == nil {
-						kLines := binance.GetKLines(swapPair.Symbol, "1m", 1)
-						basicKLine := kLines[0].ToKLine(swapPair.Symbol)
-						kLine = &basicKLine
-					}
-
-					if slices.Contains(swapSlice, kLine.Symbol) {
-						swapPair, err := exchangeRepository.GetSwapPair(kLine.Symbol)
+					if slices.Contains(swapSlice, basicKLine.Symbol) {
+						swapPair, err := exchangeRepository.GetSwapPair(basicKLine.Symbol)
 						if err == nil {
-							swapPair.LastPrice = kLine.Close
-							swapPair.PriceTimestamp = kLine.Timestamp
+							swapPair.LastPrice = basicKLine.Close
+							swapPair.PriceTimestamp = basicKLine.Timestamp
 							_ = exchangeRepository.UpdateSwapPair(swapPair)
 						}
 					}
-					swapManager.CalculateSwapOptions(kLine.Symbol)
+					swapManager.CalculateSwapOptions(basicKLine.Symbol)
 				}
 			}(swapPair)
 		}

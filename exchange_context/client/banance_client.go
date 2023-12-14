@@ -291,7 +291,7 @@ func (b *Binance) GetTrades(order model.Order) ([]model.MyTrade, error) {
 	return response.Result, nil
 }
 
-func (b *Binance) LimitOrder(order model.Order, operation string) (model.BinanceOrder, error) {
+func (b *Binance) LimitOrder(symbol string, quantity float64, price float64, operation string) (model.BinanceOrder, error) {
 	channel := make(chan []byte)
 	defer close(channel)
 
@@ -300,10 +300,10 @@ func (b *Binance) LimitOrder(order model.Order, operation string) (model.Binance
 		Method: "order.place",
 		Params: make(map[string]any),
 	}
-	socketRequest.Params["symbol"] = order.Symbol
+	socketRequest.Params["symbol"] = symbol
 	socketRequest.Params["side"] = operation
 	socketRequest.Params["type"] = "LIMIT"
-	socketRequest.Params["quantity"] = strconv.FormatFloat(order.Quantity, 'f', -1, 64)
+	socketRequest.Params["quantity"] = strconv.FormatFloat(quantity, 'f', -1, 64)
 	// [FOK] - Fill or kill (FOK) is a conditional type of time-in-force order used in
 	// securities trading that instructs a brokerage to execute a
 	// transaction immediately and completely or not at all.
@@ -319,7 +319,7 @@ func (b *Binance) LimitOrder(order model.Order, operation string) (model.Binance
 	// a security that remains active until either the order is filled or the investor cancels it.
 	// Brokerages will typically limit the maximum time you can keep a GTC order open (active) to 90 days.
 	socketRequest.Params["timeInForce"] = "GTC"
-	socketRequest.Params["price"] = strconv.FormatFloat(order.Price, 'f', -1, 64)
+	socketRequest.Params["price"] = strconv.FormatFloat(price, 'f', -1, 64)
 	socketRequest.Params["apiKey"] = b.ApiKey
 	socketRequest.Params["timestamp"] = time.Now().Unix() * 1000
 	socketRequest.Params["signature"] = b.signature(socketRequest.Params)
@@ -330,10 +330,10 @@ func (b *Binance) LimitOrder(order model.Order, operation string) (model.Binance
 	json.Unmarshal(message, &response)
 
 	if response.Error != nil {
-		log.Printf("[%s] Limit Order: %s -> %s", order.Symbol, response.Error.Message, socketRequest)
+		log.Printf("[%s] Limit Order: %s -> %s", symbol, response.Error.Message, socketRequest)
 
 		if strings.Contains(response.Error.Message, "Filter failure: NOTIONAL") {
-			log.Printf("[%s] Sleep 1 minute", order.Symbol)
+			log.Printf("[%s] Sleep 1 minute", symbol)
 			time.Sleep(time.Minute) // wait one minute
 		}
 

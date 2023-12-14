@@ -2,6 +2,13 @@ package model
 
 import "strings"
 
+type TradeLimitInterface interface {
+	GetMinPrice() float64
+	GetBaseAsset() string
+	GetMinNotional() float64
+	GetMinQuantity() float64
+}
+
 type TradeLimit struct {
 	Id               int64   `json:"id"`
 	Symbol           string  `json:"symbol"`
@@ -17,11 +24,23 @@ type TradeLimit struct {
 	BuyOnFallPercent float64 `json:"buyOnFallPercent"`
 }
 
-func (t *TradeLimit) GetBaseAsset() string {
+func (t TradeLimit) GetMinPrice() float64 {
+	return t.MinPrice
+}
+
+func (t TradeLimit) GetMinNotional() float64 {
+	return t.MinNotional
+}
+
+func (t TradeLimit) GetMinQuantity() float64 {
+	return t.MinQuantity
+}
+
+func (t TradeLimit) GetBaseAsset() string {
 	return strings.ReplaceAll(t.Symbol, "USDT", "")
 }
 
-func (t *TradeLimit) GetMinProfitPercent() Percent {
+func (t TradeLimit) GetMinProfitPercent() Percent {
 	if t.MinProfitPercent < 0 {
 		return Percent(t.MinProfitPercent * -1)
 	} else {

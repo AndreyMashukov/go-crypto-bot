@@ -1,5 +1,7 @@
 package model
 
+import "fmt"
+
 // SwapTransitionEntity (Entity)
 type SwapTransitionEntity struct {
 	Id         int64   `json:"id"`
@@ -13,6 +15,22 @@ type SwapTransitionEntity struct {
 	Level      int64   `json:"level"`
 }
 
+func (s *SwapTransitionEntity) GetSymbol() string {
+	return fmt.Sprintf("%s%s", s.BaseAsset, s.QuoteAsset)
+}
+
+func (s *SwapTransitionEntity) IsBuy() bool {
+	return s.Type == SwapTransitionOperationTypeBuy
+}
+
+func (s *SwapTransitionEntity) IsSell() bool {
+	return s.Type == SwapTransitionOperationTypeSell
+}
+
+const SwapTransitionTypeBuyBuySell = "BBS"
+const SwapTransitionOperationTypeSell = "SELL"
+const SwapTransitionOperationTypeBuy = "BUY"
+
 // SwapChainEntity (Entity)
 type SwapChainEntity struct {
 	Id        int64                 `json:"id"`
@@ -24,4 +42,8 @@ type SwapChainEntity struct {
 	SwapThree *SwapTransitionEntity `json:"swapThree"`
 	Percent   Percent               `json:"percent"`
 	Timestamp int64                 `json:"timestamp"`
+}
+
+func (s SwapChainEntity) IsBBS() bool {
+	return s.Type == SwapTransitionTypeBuyBuySell
 }

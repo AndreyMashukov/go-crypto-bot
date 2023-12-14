@@ -40,3 +40,34 @@ create table `swap_chain`
 ALTER TABLE swap_chain ADD CONSTRAINT swap_chain_hash_uniq UNIQUE (hash);
 # --------
 alter table orders add swap tinyint(1) not null default 0;
+create table `swap_action`
+(
+    id                         int auto_increment primary key,
+    order_id                   int                                               not null,
+    bot_id                     int unsigned                                      not null,
+    swap_chain_id              int                                               not null,
+    asset                      char(10)                                          not null,
+    status                     enum('pending', 'process', 'canceled', 'success') not null,
+    start_timestamp            int                                               not null,
+    start_quantity             double                                            not null,
+    end_timestamp              int                                               default null,
+    end_quantity               int                                               default null,
+    swap_one_external_id       bigint                                            default null,
+    swap_one_external_status   char(20)                                          default null,
+    swap_one_symbol            char(10)                                          not null,
+    swap_one_price             double                                            not null,
+    swap_one_timestamp         int                                               default null,
+    swap_two_external_id       bigint                                            default null,
+    swap_two_external_status   char(20)                                          default null,
+    swap_two_symbol            char(10)                                          not null,
+    swap_two_price             double                                            not null,
+    swap_two_timestamp         int                                               default null,
+    swap_three_external_id     bigint                                            default null,
+    swap_three_external_status char(20)                                          default null,
+    swap_three_symbol          char(10)                                          not null,
+    swap_three_price           double                                            not null,
+    swap_three_timestamp       int                                               default null,
+    constraint swap_action_order_fk foreign key (order_id) references `orders` (id),
+    constraint swap_action_swap_chain_fk foreign key (swap_chain_id) references `swap_chain` (id),
+    constraint swap_action_bot_fk foreign key (bot_id) references `bots` (id)
+);

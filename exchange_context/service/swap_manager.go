@@ -88,8 +88,8 @@ func (s *SwapManager) CalculateSwapOptions(symbol string) {
 				Type: buyBuySell.BestChain.SellOne.Type,
 				Symbol: fmt.Sprintf(
 					"%s%s",
-					buyBuySell.BestChain.SellOne.QuoteAsset,
 					buyBuySell.BestChain.SellOne.BaseAsset,
+					buyBuySell.BestChain.SellOne.QuoteAsset,
 				),
 				BaseAsset:  buyBuySell.BestChain.SellOne.BaseAsset,
 				QuoteAsset: buyBuySell.BestChain.SellOne.QuoteAsset,
@@ -161,7 +161,7 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 
 			option1Price := option1.LastPrice
 			// sell two steps less
-			option1Price -= option1.MinPrice
+			option1Price -= option1.MinPrice * 2
 			option1Price = s.Formatter.FormatPrice(option1, option1Price)
 			buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option1, buy0.Balance)
 
@@ -186,7 +186,7 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 
 				option2Price := option2.LastPrice
 				// buy two steps greater
-				option2Price += option2.MinPrice
+				option2Price += option2.MinPrice * 4
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)
 				sell1Quantity := buy1.Balance //s.Formatter.FormatQuantity(option2, buy1.Balance)
 

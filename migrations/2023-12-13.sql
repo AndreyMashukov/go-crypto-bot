@@ -51,7 +51,7 @@ create table `swap_action`
     start_timestamp            int                                               not null,
     start_quantity             double                                            not null,
     end_timestamp              int                                               default null,
-    end_quantity               int                                               default null,
+    end_quantity               double                                            default null,
     swap_one_external_id       bigint                                            default null,
     swap_one_external_status   char(20)                                          default null,
     swap_one_symbol            char(10)                                          not null,

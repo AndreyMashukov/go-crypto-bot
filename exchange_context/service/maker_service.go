@@ -32,6 +32,7 @@ type MakerService struct {
 	Ctx                *context.Context
 	CurrentBot         *ExchangeModel.Bot
 	BalanceService     *BalanceService
+	SwapEnabled        bool
 }
 
 func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
@@ -88,7 +89,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 	order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 
-	if order.IsSwap() {
+	if m.SwapEnabled && order.IsSwap() {
 		log.Printf("[%s] Swap Order [%d] Mode: processing...", symbol, order.Id)
 		m.ProcessSwap(order)
 		return
@@ -847,7 +848,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			end := time.Now().Unix()
 			kline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
-			if binanceOrder.IsSell() && binanceOrder.IsNew() {
+			if binanceOrder.IsSell() && binanceOrder.IsNew() && m.SwapEnabled {
 				openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
 				// Try arbitrage for long orders >= 2 hours and with profit < -2.00%
 				if err == nil && openedBuyPosition.GetHoursOpened() >= 2 && openedBuyPosition.GetProfitPercent(kline.Close).Lte(-2.00) && !openedBuyPosition.IsSwap() {
@@ -1641,7 +1642,19 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			return
 		}
 
+		if binanceOrder.IsCanceled() || binanceOrder.IsExpired() {
+			swapAction.SwapOneExternalId = nil
+			swapAction.SwapOneTimestamp = nil
+			swapAction.SwapOneExternalStatus = nil
+			_ = m.SwapRepository.UpdateSwapAction(swapAction)
+			m.BalanceService.InvalidateBalanceCache(swapAction.Asset)
+
+			return
+		}
+
 		swapOneOrder = &binanceOrder
+		swapAction.SwapOneExternalStatus = &binanceOrder.Status
+		_ = m.SwapRepository.UpdateSwapAction(swapAction)
 	}
 
 	// step 1
@@ -1681,6 +1694,37 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			if binanceOrder.IsFilled() {
 				break
 			}
+
+			// todo: timeout... cancel and remove swap action...
+
+			if binanceOrder.IsCanceled() || binanceOrder.IsExpired() {
+				swapAction.SwapOneExternalId = nil
+				swapAction.SwapOneTimestamp = nil
+				swapAction.SwapOneExternalStatus = nil
+				_ = m.SwapRepository.UpdateSwapAction(swapAction)
+				m.BalanceService.InvalidateBalanceCache(swapAction.Asset)
+
+				return
+			}
+
+			if binanceOrder.IsNew() && (time.Now().Unix()-swapAction.StartTimestamp) > 60 {
+				cancelOrder, err := m.Binance.CancelOrder(binanceOrder.Symbol, binanceOrder.OrderId)
+				if err == nil {
+					swapAction.SwapOneExternalStatus = &cancelOrder.Status
+					swapAction.Status = ExchangeModel.SwapActionStatusCanceled
+					nowTimestamp := time.Now().Unix()
+					swapAction.EndTimestamp = &nowTimestamp
+					swapAction.EndQuantity = &swapAction.StartQuantity
+					_ = m.SwapRepository.UpdateSwapAction(swapAction)
+					order.Swap = false
+					_ = m.OrderRepository.Update(order)
+					// invalidate balance cache
+					m.BalanceService.InvalidateBalanceCache(swapAction.Asset)
+					log.Printf("[%s] Swap process cancelled, couldn't be processed more than 60 seconds", order.Symbol)
+
+					return
+				}
+			}
 		}
 	}
 
@@ -1692,7 +1736,8 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 	if swapAction.SwapTwoExternalId == nil {
 		m.BalanceService.InvalidateBalanceCache(assetTwo)
 		balance, _ := m.BalanceService.GetAssetBalance(assetTwo)
-		quantity := swapOneOrder.ExecutedQty
+		// Calculate how much we earn, and sell it!
+		quantity := swapOneOrder.ExecutedQty * swapOneOrder.Price
 
 		if quantity > balance {
 			quantity = balance
@@ -1727,7 +1772,19 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			return
 		}
 
+		if binanceOrder.IsCanceled() || binanceOrder.IsExpired() {
+			swapAction.SwapTwoExternalId = nil
+			swapAction.SwapTwoTimestamp = nil
+			swapAction.SwapTwoExternalStatus = nil
+			_ = m.SwapRepository.UpdateSwapAction(swapAction)
+			m.BalanceService.InvalidateBalanceCache(assetTwo)
+
+			return
+		}
+
 		swapTwoOrder = &binanceOrder
+		swapAction.SwapTwoExternalStatus = &binanceOrder.Status
+		_ = m.SwapRepository.UpdateSwapAction(swapAction)
 	}
 
 	// todo: if expired, clear and call recursively
@@ -1765,6 +1822,16 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			if binanceOrder.IsFilled() {
 				break
 			}
+
+			if binanceOrder.IsCanceled() || binanceOrder.IsExpired() {
+				swapAction.SwapTwoExternalId = nil
+				swapAction.SwapTwoTimestamp = nil
+				swapAction.SwapTwoExternalStatus = nil
+				_ = m.SwapRepository.UpdateSwapAction(swapAction)
+				m.BalanceService.InvalidateBalanceCache(assetTwo)
+
+				return
+			}
 		}
 	}
 
@@ -1776,7 +1843,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 	if swapAction.SwapThreeExternalId == nil {
 		m.BalanceService.InvalidateBalanceCache(assetThree)
 		balance, _ := m.BalanceService.GetAssetBalance(assetThree)
-		quantity := swapTwoOrder.ExecutedQty
+		quantity := swapTwoOrder.ExecutedQty * swapTwoOrder.Price
 
 		if quantity > balance {
 			quantity = balance
@@ -1811,7 +1878,19 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			return
 		}
 
+		if binanceOrder.IsCanceled() || binanceOrder.IsExpired() {
+			swapAction.SwapThreeExternalId = nil
+			swapAction.SwapThreeTimestamp = nil
+			swapAction.SwapThreeExternalStatus = nil
+			_ = m.SwapRepository.UpdateSwapAction(swapAction)
+			m.BalanceService.InvalidateBalanceCache(assetThree)
+
+			return
+		}
+
 		swapThreeOrder = &binanceOrder
+		swapAction.SwapThreeExternalStatus = &binanceOrder.Status
+		_ = m.SwapRepository.UpdateSwapAction(swapAction)
 	}
 
 	// todo: if expired, clear and call recursively
@@ -1849,6 +1928,16 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			if binanceOrder.IsFilled() {
 				break
 			}
+
+			if binanceOrder.IsCanceled() || binanceOrder.IsExpired() {
+				swapAction.SwapThreeExternalId = nil
+				swapAction.SwapThreeTimestamp = nil
+				swapAction.SwapThreeExternalStatus = nil
+				_ = m.SwapRepository.UpdateSwapAction(swapAction)
+				m.BalanceService.InvalidateBalanceCache(assetThree)
+
+				return
+			}
 		}
 	}
 
@@ -1856,6 +1945,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 	swapAction.Status = ExchangeModel.SwapActionStatusSuccess
 	nowTimestamp := time.Now().Unix()
 	swapAction.EndTimestamp = &nowTimestamp
+	swapAction.SwapThreeTimestamp = &nowTimestamp
 	swapAction.EndQuantity = &swapThreeOrder.ExecutedQty
 	_ = m.SwapRepository.UpdateSwapAction(swapAction)
 	_ = m.OrderRepository.Update(order)

@@ -32,6 +32,10 @@ func (p Percent) Lte(percent Percent) bool {
 	return p.Value() <= percent.Value()
 }
 
+func (p Percent) Lt(percent Percent) bool {
+	return p.Value() < percent.Value()
+}
+
 type Order struct {
 	Id               int64    `json:"id"`
 	Symbol           string   `json:"symbol"`

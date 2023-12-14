@@ -18,6 +18,10 @@ func (s SwapValidator) Validate(entity model.SwapChainEntity) error {
 		return errors.New(fmt.Sprintf("Swap [%s] unsupported type given.", entity.Title))
 	}
 
+	if entity.Percent.Lt(0.2) {
+		return errors.New(fmt.Sprintf("Swap [%s] too small percent %.2f.", entity.Title, entity.Percent))
+	}
+
 	err := s.validateSwap(*entity.SwapOne)
 
 	if err != nil {
@@ -64,7 +68,7 @@ func (s SwapValidator) validateSwap(entity model.SwapTransitionEntity) error {
 		return errors.New(fmt.Sprintf("Swap [%s:%s] current price is unknown", entity.Operation, entity.Symbol))
 	}
 
-	timestampDeadline := time.Now().Unix() - 30
+	timestampDeadline := time.Now().Unix() - 60
 
 	if (swapCurrentKline.Timestamp / 1000) < timestampDeadline {
 		return errors.New(fmt.Sprintf("Swap [%s:%s] price is expired", entity.Operation, entity.Symbol))

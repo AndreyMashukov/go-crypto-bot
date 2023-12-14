@@ -12,3 +12,19 @@ type SwapPair struct {
 	MinQuantity    float64
 	MinPrice       float64
 }
+
+func (s SwapPair) GetMinPrice() float64 {
+	return s.MinPrice
+}
+
+func (s SwapPair) GetMinNotional() float64 {
+	return s.MinNotional
+}
+
+func (s SwapPair) GetMinQuantity() float64 {
+	return s.MinQuantity
+}
+
+func (s SwapPair) GetBaseAsset() string {
+	return s.BaseAsset
+}

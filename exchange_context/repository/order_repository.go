@@ -85,7 +85,8 @@ func (repo *OrderRepository) getOpenedOrder(symbol string, operation string) (Ex
 			o.used_extra_budget as UsedExtraBudget,
 			o.commission as Commission,
 			o.commission_asset as CommissionAsset,
-			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity
+			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
+			o.swap as Swap
 		FROM orders o
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
 		WHERE o.status = ? AND o.symbol = ? AND o.operation = ? AND o.bot_id = ?
@@ -112,6 +113,7 @@ func (repo *OrderRepository) getOpenedOrder(symbol string, operation string) (Ex
 		&order.Commission,
 		&order.CommissionAsset,
 		&order.SoldQuantity,
+		&order.Swap,
 	)
 
 	if err != nil {
@@ -188,7 +190,8 @@ func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
 			o.closes_order = ?,
 			o.used_extra_budget = ?,
 			o.commission = ?,
-			o.commission_asset = ?
+			o.commission_asset = ?,
+			o.swap = ?
 		WHERE o.id = ?
 	`,
 		order.Symbol,
@@ -206,6 +209,7 @@ func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
 		order.UsedExtraBudget,
 		order.Commission,
 		order.CommissionAsset,
+		order.Swap,
 		order.Id,
 	)
 
@@ -238,7 +242,8 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 			o.used_extra_budget as UsedExtraBudget,
 			o.commission as Commission,
 			o.commission_asset as CommissionAsset,
-			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity
+			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
+			o.swap as Swap
 		FROM orders o
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
 		WHERE o.id = ? 
@@ -261,6 +266,7 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 		&order.Commission,
 		&order.CommissionAsset,
 		&order.SoldQuantity,
+		&order.Swap,
 	)
 
 	if err != nil {
@@ -344,7 +350,8 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 			o.used_extra_budget as UsedExtraBudget,
 			o.commission as Commission,
 			o.commission_asset as CommissionAsset,
-			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity	
+			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
+			o.swap as Swap
 		FROM orders o 
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
 		WHERE o.bot_id = ?
@@ -378,6 +385,7 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 			&order.Commission,
 			&order.CommissionAsset,
 			&order.SoldQuantity,
+			&order.Swap,
 		)
 
 		if err != nil {
@@ -409,7 +417,8 @@ func (repo *OrderRepository) GetClosesOrderList(buyOrder ExchangeModel.Order) []
 			o.used_extra_budget as UsedExtraBudget,
 			o.commission as Commission,
 			o.commission_asset as CommissionAsset,
-			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity	
+			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
+			o.swap as Swap
 		FROM orders o 
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
 		WHERE o.bot_id = ? AND o.closes_order = ? AND o.operation = ?
@@ -443,6 +452,7 @@ func (repo *OrderRepository) GetClosesOrderList(buyOrder ExchangeModel.Order) []
 			&order.Commission,
 			&order.CommissionAsset,
 			&order.SoldQuantity,
+			&order.Swap,
 		)
 
 		if err != nil {

@@ -158,6 +158,7 @@ func main() {
 		Ctx:                &ctx,
 		CurrentBot:         currentBot,
 		BalanceService:     &balanceService,
+		SwapEnabled:        swapEnabled,
 	}
 
 	orderController := controller.OrderController{

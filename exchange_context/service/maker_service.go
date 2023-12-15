@@ -1719,11 +1719,17 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			// todo: timeout... cancel and remove swap action...
 
 			if binanceOrder.IsCanceled() || binanceOrder.IsExpired() {
-				swapAction.SwapOneExternalId = nil
-				swapAction.SwapOneTimestamp = nil
-				swapAction.SwapOneExternalStatus = nil
+				swapAction.SwapOneExternalStatus = &binanceOrder.Status
+				swapAction.Status = ExchangeModel.SwapActionStatusCanceled
+				nowTimestamp := time.Now().Unix()
+				swapAction.EndTimestamp = &nowTimestamp
+				swapAction.EndQuantity = &swapAction.StartQuantity
 				_ = m.SwapRepository.UpdateSwapAction(swapAction)
+				order.Swap = false
+				_ = m.OrderRepository.Update(order)
+				// invalidate balance cache
 				m.BalanceService.InvalidateBalanceCache(swapAction.Asset)
+				log.Printf("[%s] Swap one process cancelled, cancel all the operation!", order.Symbol)
 
 				return
 			}

@@ -16,7 +16,7 @@ type SwapPair struct {
 }
 
 func (s SwapPair) IsPriceExpired() bool {
-	return (time.Now().Unix() - (s.PriceTimestamp / 1000)) > 60
+	return (time.Now().Unix() - (s.PriceTimestamp)) > 60
 }
 
 func (s SwapPair) GetMinPrice() float64 {

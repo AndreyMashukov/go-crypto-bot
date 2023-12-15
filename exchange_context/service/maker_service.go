@@ -1346,7 +1346,17 @@ func (m *MakerService) SetDepth(depth ExchangeModel.Depth) {
 }
 
 func (m *MakerService) GetDepth(symbol string) ExchangeModel.Depth {
-	return m.ExchangeRepository.GetDepth(symbol)
+	depth := m.ExchangeRepository.GetDepth(symbol)
+
+	if len(depth.Asks) == 0 && len(depth.Bids) == 0 {
+		book, err := m.Binance.GetDepth(symbol)
+		if err == nil {
+			depth = book.ToDepth(symbol)
+			m.SetDepth(depth)
+		}
+	}
+
+	return depth
 }
 
 func (m *MakerService) UpdateSwapPairs() {

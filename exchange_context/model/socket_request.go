@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"strconv"
+	"time"
 )
 
 type SocketRequest struct {
@@ -101,6 +102,27 @@ type TradesResponse struct {
 	Id     string    `json:"id"`
 	Status int64     `json:"status"`
 	Result []MyTrade `json:"result"`
+	Error  *Error    `json:"error"`
+}
+
+type OrderBook struct {
+	Bids [][2]Number `json:"bids"`
+	Asks [][2]Number `json:"asks"`
+}
+
+func (o OrderBook) ToDepth(symbol string) Depth {
+	return Depth{
+		Symbol:    symbol,
+		Timestamp: time.Now().UnixMilli(),
+		Bids:      o.Bids,
+		Asks:      o.Asks,
+	}
+}
+
+type OrderBookResponse struct {
+	Id     string    `json:"id"`
+	Status int64     `json:"status"`
+	Result OrderBook `json:"result"`
 	Error  *Error    `json:"error"`
 }
 

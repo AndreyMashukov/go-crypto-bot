@@ -223,7 +223,7 @@ func main() {
 					kline := history[0].ToKLine(swapPair.Symbol)
 					exchangeRepository.AddKLine(kline)
 					swapPair.LastPrice = kline.Close
-					swapPair.PriceTimestamp = kline.Timestamp
+					swapPair.PriceTimestamp = time.Now().UnixMilli()
 					_ = exchangeRepository.UpdateSwapPair(swapPair)
 				}
 

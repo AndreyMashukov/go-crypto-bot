@@ -442,9 +442,7 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 		return errors.New(fmt.Sprintf("[%s] Extra buy is disabled", tradeLimit.Symbol))
 	}
 
-	availableExtraBudget := tradeLimit.USDTExtraBudget - order.UsedExtraBudget
-
-	if availableExtraBudget <= 0.00 {
+	if !order.CanExtraBuy(tradeLimit) {
 		return errors.New(fmt.Sprintf("[%s] Not enough budget to buy more", tradeLimit.Symbol))
 	}
 
@@ -462,7 +460,7 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 	m.acquireLock(order.Symbol)
 	defer m.releaseLock(order.Symbol)
 	// todo: get buy quantity, buy to all cutlet! check available balance!
-	quantity := m.Formatter.FormatQuantity(tradeLimit, availableExtraBudget/price)
+	quantity := m.Formatter.FormatQuantity(tradeLimit, order.GetAvailableExtraBudget(tradeLimit)/price)
 
 	if (quantity * price) < tradeLimit.MinNotional {
 		return errors.New(fmt.Sprintf("[%s] Extra BUY Notional: %.8f < %.8f", order.Symbol, quantity*price, tradeLimit.MinNotional))
@@ -851,35 +849,47 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			if binanceOrder.IsSell() && binanceOrder.IsNew() && m.SwapEnabled {
 				openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
 				// Try arbitrage for long orders >= 2 hours and with profit < -2.00%
-				if err == nil && openedBuyPosition.GetHoursOpened() >= 2 && openedBuyPosition.GetProfitPercent(kline.Close).Lte(-2.00) && !openedBuyPosition.IsSwap() {
+				if err == nil && openedBuyPosition.GetHoursOpened() >= 4 && openedBuyPosition.GetProfitPercent(kline.Close).Lte(-1.0) && !openedBuyPosition.IsSwap() {
 					swapChain := m.SwapRepository.GetSwapChainCache(openedBuyPosition.GetBaseAsset())
 					if swapChain != nil {
-						violation := m.SwapValidator.Validate(*swapChain)
+						possibleSwaps := m.SwapRepository.GetSwapChains(openedBuyPosition.GetBaseAsset())
 
-						if violation == nil {
-							chainCurrentPercent := m.SwapValidator.CalculatePercent(*swapChain)
-							log.Printf(
-								"[%s] Swap chain [%s] is found for order #%d, initial percent: %.2f, current = %.2f",
-								binanceOrder.Symbol,
-								swapChain.Title,
-								openedBuyPosition.Id,
-								swapChain.Percent,
-								chainCurrentPercent,
-							)
-							orderManageChannel <- "status"
-							action := <-control
-							if action == "stop" {
-								return
-							}
+						if len(possibleSwaps) > 0 {
+							log.Printf("[%s] Found %d possible swaps...", openedBuyPosition.Symbol, len(possibleSwaps))
+						} else {
+							m.SwapRepository.InvalidateSwapChainCache(openedBuyPosition.GetBaseAsset())
+						}
 
-							if binanceOrder.IsNew() {
-								log.Printf("[%s] Cancel signal sent!", binanceOrder.Symbol)
-								orderManageChannel <- "cancel"
+						for _, possibleSwap := range possibleSwaps {
+							violation := m.SwapValidator.Validate(possibleSwap)
+
+							if violation == nil {
+								chainCurrentPercent := m.SwapValidator.CalculatePercent(*swapChain)
+								log.Printf(
+									"[%s] Swap chain [%s] is found for order #%d, initial percent: %.2f, current = %.2f",
+									binanceOrder.Symbol,
+									swapChain.Title,
+									openedBuyPosition.Id,
+									swapChain.Percent,
+									chainCurrentPercent,
+								)
+								orderManageChannel <- "status"
 								action := <-control
 								if action == "stop" {
-									m.makeSwap(openedBuyPosition, *swapChain)
 									return
 								}
+
+								if binanceOrder.IsNew() {
+									log.Printf("[%s] Cancel signal sent!", binanceOrder.Symbol)
+									orderManageChannel <- "cancel"
+									action := <-control
+									if action == "stop" {
+										m.makeSwap(openedBuyPosition, *swapChain)
+										return
+									}
+								}
+							} else {
+								log.Println(violation)
 							}
 						}
 					}
@@ -1364,7 +1374,7 @@ func (m *MakerService) UpdateSwapPairs() {
 	exchangeInfo, _ := m.Binance.GetExchangeData(make([]string, 0))
 	tradeLimits := m.ExchangeRepository.GetTradeLimits()
 
-	supportedQuoteAssets := []string{"BTC", "ETH", "BNB", "TRX"}
+	supportedQuoteAssets := []string{"BTC", "ETH", "BNB", "TRX", "BUSD", "XRP", "EUR", "TUSD"}
 
 	for _, tradeLimit := range tradeLimits {
 		if !tradeLimit.IsEnabled {
@@ -1671,8 +1681,8 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 
 	// todo: if expired, clear and call recursively
 	if !swapOneOrder.IsFilled() {
+		time.Sleep(time.Second * 5)
 		for {
-			time.Sleep(time.Second * 15)
 			binanceOrder, err := m.Binance.QueryOrder(swapOneOrder.Symbol, swapOneOrder.OrderId)
 			if err != nil {
 				log.Printf("[%s] Swap Binance error: %s", order.Symbol, err.Error())
@@ -1717,7 +1727,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 				return
 			}
 
-			if binanceOrder.IsNew() && (time.Now().Unix()-swapAction.StartTimestamp) > 60 {
+			if binanceOrder.IsNew() && (time.Now().Unix()-swapAction.StartTimestamp) >= 60 {
 				cancelOrder, err := m.Binance.CancelOrder(binanceOrder.Symbol, binanceOrder.OrderId)
 				if err == nil {
 					swapAction.SwapOneExternalStatus = &cancelOrder.Status
@@ -1734,6 +1744,12 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 
 					return
 				}
+			}
+
+			if binanceOrder.IsPartiallyFilled() {
+				time.Sleep(time.Second * 7)
+			} else {
+				time.Sleep(time.Second * 15)
 			}
 		}
 	}
@@ -1799,8 +1815,8 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 
 	// todo: if expired, clear and call recursively
 	if !swapTwoOrder.IsFilled() {
+		time.Sleep(time.Second * 5)
 		for {
-			time.Sleep(time.Second * 15)
 			binanceOrder, err := m.Binance.QueryOrder(swapTwoOrder.Symbol, swapTwoOrder.OrderId)
 			if err != nil {
 				log.Printf("[%s] Swap Binance error: %s", order.Symbol, err.Error())
@@ -1841,6 +1857,12 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 				m.BalanceService.InvalidateBalanceCache(assetTwo)
 
 				return
+			}
+
+			if binanceOrder.IsPartiallyFilled() {
+				time.Sleep(time.Second * 7)
+			} else {
+				time.Sleep(time.Second * 15)
 			}
 		}
 	}
@@ -1905,8 +1927,8 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 
 	// todo: if expired, clear and call recursively
 	if !swapThreeOrder.IsFilled() {
+		time.Sleep(time.Second * 5)
 		for {
-			time.Sleep(time.Second * 15)
 			binanceOrder, err := m.Binance.QueryOrder(swapThreeOrder.Symbol, swapThreeOrder.OrderId)
 			if err != nil {
 				log.Printf("[%s] Swap Binance error: %s", order.Symbol, err.Error())
@@ -1947,6 +1969,12 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 				m.BalanceService.InvalidateBalanceCache(assetThree)
 
 				return
+			}
+
+			if binanceOrder.IsPartiallyFilled() {
+				time.Sleep(time.Second * 7)
+			} else {
+				time.Sleep(time.Second * 15)
 			}
 		}
 	}

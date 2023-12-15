@@ -21,7 +21,7 @@ func (s *SwapManager) CalculateSwapOptions(symbol string) {
 
 	asset := symbol[:len(symbol)-3]
 
-	if buyBuySell.BestChain != nil && buyBuySell.BestChain.Percent.Gte(0.30) {
+	if buyBuySell.BestChain != nil && buyBuySell.BestChain.Percent.Gte(1.50) {
 		log.Printf(
 			"[%s] Swap Chain Found! %s buy-> %s(%f) buy-> %s(%f) sell-> %s(%f) = %.2f percent profit",
 			asset,
@@ -113,7 +113,7 @@ func (s *SwapManager) CalculateSwapOptions(symbol string) {
 
 func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 	asset := symbol[:len(symbol)-3]
-	balance := 100000.00
+	initialBalance := 100.00
 
 	transitions := make([]SwapTransition, 0)
 	chain := BBSArbitrageChain{
@@ -131,10 +131,10 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 		}
 
 		option0Price := option0.LastPrice
-		// sell two steps less
-		option0Price -= option0.MinPrice
+		// first sell is +2 points
+		option0Price += option0.MinPrice * 2
 		option0Price = s.Formatter.FormatPrice(option0, option0Price)
-		buy0Quantity := balance //s.Formatter.FormatQuantity(option0, balance)
+		buy0Quantity := initialBalance //s.Formatter.FormatQuantity(option0, initialBalance)
 
 		buy0 := SwapTransition{
 			Type:          model.SwapTransitionTypeBuyBuySell,
@@ -160,8 +160,8 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 			}
 
 			option1Price := option1.LastPrice
-			// sell two steps less
-			option1Price -= option1.MinPrice * 2
+			// sell -1 point
+			option1Price -= option1.MinPrice
 			option1Price = s.Formatter.FormatPrice(option1, option1Price)
 			buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option1, buy0.Balance)
 
@@ -189,8 +189,8 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 				}
 
 				option2Price := option2.LastPrice
-				// buy two steps greater
-				option2Price += option2.MinPrice * 2
+				// buy +1 point
+				option2Price += option2.MinPrice
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)
 				sell1Quantity := buy1.Balance //s.Formatter.FormatQuantity(option2, buy1.Balance)
 
@@ -219,6 +219,14 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 						buy1.QuoteAsset,
 						sell0.BaseAsset,
 					)
+
+					//log.Printf(
+					//	"[%s] Swap chain statistics: before = %.8f after = %.8f, percent = %.2f",
+					//	title,
+					//	initialBalance,
+					//	sell0.Balance,
+					//	profit,
+					//)
 
 					h := md5.New()
 					_, _ = io.WriteString(h, title)

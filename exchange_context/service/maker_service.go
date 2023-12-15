@@ -246,7 +246,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 						log.Printf("[%s] %s", symbol, err)
 
 						swapChain := m.SwapRepository.GetSwapChainCache(order.GetBaseAsset())
-						if swapChain != nil {
+						if swapChain != nil && m.SwapEnabled {
 							possibleSwaps := m.SwapRepository.GetSwapChains(order.GetBaseAsset())
 
 							if len(possibleSwaps) > 0 {

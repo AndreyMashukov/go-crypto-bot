@@ -18,7 +18,7 @@ func (s SwapValidator) Validate(entity model.SwapChainEntity) error {
 		return errors.New(fmt.Sprintf("Swap [%s] unsupported type given.", entity.Title))
 	}
 
-	minPercent := model.Percent(1.5)
+	minPercent := model.Percent(1.00)
 
 	if entity.Percent.Lt(minPercent) {
 		return errors.New(fmt.Sprintf("Swap [%s] too small percent %.2f.", entity.Title, entity.Percent))

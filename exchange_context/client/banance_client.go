@@ -338,7 +338,7 @@ func (b *Binance) GetTrades(order model.Order) ([]model.MyTrade, error) {
 	return response.Result, nil
 }
 
-func (b *Binance) LimitOrder(symbol string, quantity float64, price float64, operation string) (model.BinanceOrder, error) {
+func (b *Binance) LimitOrder(symbol string, quantity float64, price float64, operation string, timeInForce string) (model.BinanceOrder, error) {
 	channel := make(chan []byte)
 	defer close(channel)
 
@@ -365,7 +365,7 @@ func (b *Binance) LimitOrder(symbol string, quantity float64, price float64, ope
 	// [GTC] - Good ’til canceled (GTC) describes a type of order that an investor may place to buy or sell
 	// a security that remains active until either the order is filled or the investor cancels it.
 	// Brokerages will typically limit the maximum time you can keep a GTC order open (active) to 90 days.
-	socketRequest.Params["timeInForce"] = "GTC"
+	socketRequest.Params["timeInForce"] = timeInForce
 	socketRequest.Params["price"] = strconv.FormatFloat(price, 'f', -1, 64)
 	socketRequest.Params["apiKey"] = b.ApiKey
 	socketRequest.Params["timestamp"] = time.Now().Unix() * 1000

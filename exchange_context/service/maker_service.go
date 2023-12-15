@@ -848,7 +848,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 
 			if binanceOrder.IsSell() && binanceOrder.IsNew() && m.SwapEnabled {
 				openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
-				// Try arbitrage for long orders >= 2 hours and with profit < -2.00%
+				// Try arbitrage for long orders >= 4 hours and with profit < -1.00%
 				if err == nil && openedBuyPosition.GetHoursOpened() >= 4 && openedBuyPosition.GetProfitPercent(kline.Close).Lte(-1.0) && !openedBuyPosition.IsSwap() {
 					swapChain := m.SwapRepository.GetSwapChainCache(openedBuyPosition.GetBaseAsset())
 					if swapChain != nil {

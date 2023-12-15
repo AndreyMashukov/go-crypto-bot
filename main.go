@@ -16,7 +16,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -254,56 +253,23 @@ func main() {
 		}(limit.Symbol)
 	}
 
-	swapPairs := exchangeRepository.GetSwapPairs()
-
-	swapSlice := make([]string, 0)
-	for _, swapPair := range swapPairs {
-		swapSlice = append(swapSlice, swapPair.Symbol)
-	}
-
-	if swapEnabled {
-		for _, swapPair := range swapPairs {
-			time.Sleep(time.Millisecond * 200)
-			go func(swapPair ExchangeModel.SwapPair) {
-				for {
-					time.Sleep(time.Second * 30)
-					kLines := binance.GetKLines(swapPair.Symbol, "1m", 1)
-					basicKLine := kLines[0].ToKLine(swapPair.Symbol)
-					exchangeRepository.AddKLine(basicKLine)
-
-					if slices.Contains(swapSlice, basicKLine.Symbol) {
-						swapPair, err := exchangeRepository.GetSwapPair(basicKLine.Symbol)
-						if err == nil {
-							swapPair.LastPrice = basicKLine.Close
-							swapPair.PriceTimestamp = basicKLine.Timestamp
-							_ = exchangeRepository.UpdateSwapPair(swapPair)
-						}
-					}
-					swapManager.CalculateSwapOptions(basicKLine.Symbol)
-				}
-			}(swapPair)
-		}
-	}
-
 	go func() {
 		for {
 			// Read the channel, todo -> better to use select: https://go.dev/tour/concurrency/5
 			message := <-eventChannel
-			var eventModel ExchangeModel.Event
-			json.Unmarshal(message, &eventModel)
 
 			switch true {
-			case strings.Contains(eventModel.Stream, "@aggTrade"):
-				var tradeEvent ExchangeModel.TradeEvent
-				json.Unmarshal(message, &tradeEvent)
-				trade := tradeEvent.Trade
+			case strings.Contains(string(message), "aggTrade"):
+				var trade ExchangeModel.Trade
+				json.Unmarshal(message, &trade)
 				smaDecision := smaStrategy.Decide(trade)
 				exchangeRepository.SetDecision(smaDecision)
 				break
-			case strings.Contains(eventModel.Stream, "@kline_1m"):
-				var klineEvent ExchangeModel.KlineEvent
-				json.Unmarshal(message, &klineEvent)
-				kLine := klineEvent.KlineData.Kline
+			case strings.Contains(string(message), "kline"):
+				var klineData ExchangeModel.KlineData
+				json.Unmarshal(message, &klineData)
+				kLine := klineData.Kline
+
 				exchangeRepository.AddKLine(kLine)
 				baseKLineDecision := baseKLineStrategy.Decide(kLine)
 				exchangeRepository.SetDecision(baseKLineDecision)
@@ -311,10 +277,9 @@ func main() {
 				exchangeRepository.SetDecision(orderBasedDecision)
 
 				break
-			case strings.Contains(eventModel.Stream, "@depth"):
-				var depthEvent ExchangeModel.DepthEvent
-				json.Unmarshal(message, &depthEvent)
-				depth := depthEvent.Depth
+			case strings.Contains(string(message), "depthUpdate"):
+				var depth ExchangeModel.Depth
+				json.Unmarshal(message, &depth)
 				depthDecision := marketDepthStrategy.Decide(depth)
 				exchangeRepository.SetDecision(depthDecision)
 				go func() {
@@ -331,11 +296,6 @@ func main() {
 			makerService.SetDepth(depth)
 		}
 	}()
-
-	// todo: concatenate streams...
-	for _, symbol := range exchangeRepository.GetSubscribedSymbols() {
-		fmt.Println(symbol)
-	}
 
 	// todo: sync existed orders in Binance with bot database...
 
@@ -360,20 +320,77 @@ func main() {
 		}
 	}
 
-	//if swapEnabled {
-	//	swapEvents := [2]string{"@kline_1m", "@depth20@100ms"}
-	//
-	//	for _, swapPair := range swapPairs {
-	//		for i := 0; i < len(swapEvents); i++ {
-	//			swapEvent := swapEvents[i]
-	//			streams = append(streams, fmt.Sprintf("%s%s", strings.ToLower(swapPair.Symbol), swapEvent))
-	//		}
-	//	}
-	//}
+	userDataStreamStart, err := binance.UserDataStreamStart()
 
-	// ltcusdt@aggTrade/ethusdt@aggTrade/solusdt@aggTrade /perpusdt@aggTrade
-	wsConnection := ExchangeClient.Listen(fmt.Sprintf("wss://fstream.binance.com:443/stream?streams=%s", strings.Join(streams[:], "/")), eventChannel)
+	if err != nil {
+		log.Println(err)
+	}
+
+	wsConnection := ExchangeClient.Listen(fmt.Sprintf(
+		"%s/ws/%s",
+		os.Getenv("BINANCE_STREAM_DSN"),
+		userDataStreamStart.ListenKey,
+	), eventChannel, streams, 1)
 	defer wsConnection.Close()
+
+	swapChannel := make(chan []byte)
+
+	if swapEnabled {
+		swapPairs := exchangeRepository.GetSwapPairs()
+
+		go func() {
+			for {
+				swapEvent := <-swapChannel
+
+				switch true {
+				case strings.Contains(string(swapEvent), "kline"):
+					var klineData ExchangeModel.KlineData
+					json.Unmarshal(swapEvent, &klineData)
+					kLine := klineData.Kline
+					exchangeRepository.AddKLine(kLine)
+
+					if "ETHBTC" != kLine.Symbol {
+						log.Println(kLine)
+					}
+
+					swapPair, err := exchangeRepository.GetSwapPair(kLine.Symbol)
+					if err == nil {
+						swapPair.LastPrice = kLine.Close
+						swapPair.PriceTimestamp = kLine.Timestamp
+						_ = exchangeRepository.UpdateSwapPair(swapPair)
+					}
+					swapManager.CalculateSwapOptions(kLine.Symbol)
+
+					break
+				case strings.Contains(string(swapEvent), "depthUpdate"):
+					var depth ExchangeModel.Depth
+					json.Unmarshal(swapEvent, &depth)
+					makerService.SetDepth(depth)
+
+					break
+				}
+			}
+		}()
+
+		swapStreams := []string{}
+		swapEvents := [2]string{"@kline_1m", "@depth20@100ms"}
+
+		for _, swapPair := range swapPairs {
+			log.Printf("Swap pair listen: %s", swapPair.Symbol)
+
+			for i := 0; i < len(swapEvents); i++ {
+				swapEvent := swapEvents[i]
+				swapStreams = append(swapStreams, fmt.Sprintf("%s%s", strings.ToLower(swapPair.Symbol), swapEvent))
+			}
+		}
+
+		swapWsConnection := ExchangeClient.Listen(fmt.Sprintf(
+			"%s/ws/%s",
+			os.Getenv("BINANCE_STREAM_DSN"),
+			userDataStreamStart.ListenKey,
+		), swapChannel, swapStreams, 2)
+		defer swapWsConnection.Close()
+	}
 
 	http.ListenAndServe(":8080", nil)
 }

@@ -11,6 +11,12 @@ type SocketRequest struct {
 	Params map[string]any `json:"params"`
 }
 
+type SocketStreamsRequest struct {
+	Id     int64    `json:"id"`
+	Method string   `json:"method"`
+	Params []string `json:"params"`
+}
+
 type Error struct {
 	Code    int64  `json:"code"`
 	Message string `json:"msg"`
@@ -96,6 +102,17 @@ type TradesResponse struct {
 	Status int64     `json:"status"`
 	Result []MyTrade `json:"result"`
 	Error  *Error    `json:"error"`
+}
+
+type UserDataStreamStart struct {
+	ListenKey string `json:"listenKey"`
+}
+
+type UserDataStreamStartResponse struct {
+	Id     string              `json:"id"`
+	Status int64               `json:"status"`
+	Result UserDataStreamStart `json:"result"`
+	Error  *Error              `json:"error"`
 }
 
 type Balance struct {

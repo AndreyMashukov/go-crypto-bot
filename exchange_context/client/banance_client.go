@@ -153,6 +153,32 @@ func (b *Binance) CancelOrder(symbol string, orderId int64) (model.BinanceOrder,
 	return response.Result, nil
 }
 
+func (b *Binance) UserDataStreamStart() (model.UserDataStreamStart, error) {
+	channel := make(chan []byte)
+	defer close(channel)
+
+	socketRequest := model.SocketRequest{
+		Id:     uuid2.New().String(),
+		Method: "userDataStream.start",
+		Params: make(map[string]any),
+	}
+	socketRequest.Params["apiKey"] = b.ApiKey
+	//socketRequest.Params["signature"] = b.signature(socketRequest.Params)
+	b.socketRequest(socketRequest, channel)
+	message := <-channel
+
+	var response model.UserDataStreamStartResponse
+	json.Unmarshal(message, &response)
+
+	if response.Error != nil {
+		return model.UserDataStreamStart{}, errors.New(response.Error.Message)
+	}
+
+	return response.Result, nil
+}
+
+//
+
 func (b *Binance) GetOpenedOrders() (*[]model.BinanceOrder, error) {
 	channel := make(chan []byte)
 	defer close(channel)

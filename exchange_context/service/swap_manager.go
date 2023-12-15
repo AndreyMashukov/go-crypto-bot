@@ -126,6 +126,10 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 	var bestChain *BuyBuySell = nil
 
 	for _, option0 := range options0 {
+		if option0.IsPriceExpired() {
+			continue
+		}
+
 		option0Price := option0.LastPrice
 		// sell two steps less
 		option0Price -= option0.MinPrice
@@ -147,6 +151,10 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 		// log.Printf("[%s] 1 BUY %s -> %s | %f x %f = %f", asset, buy0.BaseAsset, buy0.QuoteAsset, buy0.BaseQuantity, buy0.Price, buy0.Balance)
 		options1 := s.ExchangeRepository.GetSwapPairsByBaseAsset(buy0.QuoteAsset)
 		for _, option1 := range options1 {
+			if option1.IsPriceExpired() {
+				continue
+			}
+
 			if option1.QuoteAsset == asset {
 				continue
 			}
@@ -172,6 +180,10 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 			// log.Printf("[%s] 2 BUY %s -> %s | %f x %f = %f", asset, buy1.BaseAsset, buy1.QuoteAsset, buy1.BaseQuantity, buy1.Price, buy1.Balance)
 			options2 := s.ExchangeRepository.GetSwapPairsByBaseAsset(asset)
 			for _, option2 := range options2 {
+				if option2.IsPriceExpired() {
+					continue
+				}
+
 				if option2.QuoteAsset != buy1.QuoteAsset {
 					continue
 				}

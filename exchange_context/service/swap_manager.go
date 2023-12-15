@@ -106,16 +106,8 @@ func (s *SwapManager) CalculateSwapOptions(symbol string) {
 			_, _ = s.SwapRepository.CreateSwapChain(swapChainEntity)
 		}
 
-		cached := s.SwapRepository.GetSwapChainCache(swapChainEntity.SwapOne.BaseAsset)
-
-		if cached == nil {
-			// Set to cache, will be read in MakerService
-			s.SwapRepository.SaveSwapChainCache(swapChainEntity.SwapOne.BaseAsset, swapChainEntity)
-		}
-
-		if cached != nil && cached.Percent.Lt(swapChainEntity.Percent) {
-			s.SwapRepository.SaveSwapChainCache(swapChainEntity.SwapOne.BaseAsset, swapChainEntity)
-		}
+		// Set to cache, will be read in MakerService
+		s.SwapRepository.SaveSwapChainCache(swapChainEntity.SwapOne.BaseAsset, swapChainEntity)
 	}
 }
 

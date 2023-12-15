@@ -124,9 +124,10 @@ func main() {
 		Ctx:                &ctx,
 		CurrentBot:         currentBot,
 	}
+
 	swapValidator := ExchangeService.SwapValidator{
-		ExchangeRepository: &exchangeRepository,
-		Formatter:          &formatter,
+		SwapRepository: &swapRepository,
+		Formatter:      &formatter,
 	}
 
 	eventChannel := make(chan []byte)
@@ -223,7 +224,7 @@ func main() {
 					kline := history[0].ToKLine(swapPair.Symbol)
 					exchangeRepository.AddKLine(kline)
 					swapPair.LastPrice = kline.Close
-					swapPair.PriceTimestamp = time.Now().UnixMilli()
+					swapPair.PriceTimestamp = time.Now().Unix()
 					_ = exchangeRepository.UpdateSwapPair(swapPair)
 				}
 

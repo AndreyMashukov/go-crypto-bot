@@ -9,8 +9,8 @@ import (
 )
 
 type SwapValidator struct {
-	ExchangeRepository *ExchangeRepository.ExchangeRepository
-	Formatter          *Formatter
+	SwapRepository *ExchangeRepository.SwapRepository
+	Formatter      *Formatter
 }
 
 func (s SwapValidator) Validate(entity model.SwapChainEntity) error {
@@ -51,34 +51,32 @@ func (s SwapValidator) Validate(entity model.SwapChainEntity) error {
 
 func (s SwapValidator) CalculatePercent(entity model.SwapChainEntity) model.Percent {
 	initialBalance := 100.00
-	swapOnePrice := s.ExchangeRepository.GetLastKLine(entity.SwapOne.GetSymbol())
-	balance := (initialBalance * swapOnePrice.Close) - (initialBalance*swapOnePrice.Close)*0.002
-	swapTwoPrice := s.ExchangeRepository.GetLastKLine(entity.SwapTwo.GetSymbol())
-	balance = (balance * swapTwoPrice.Close) - (balance*swapTwoPrice.Close)*0.002
-	swapThreePrice := s.ExchangeRepository.GetLastKLine(entity.SwapThree.GetSymbol())
-	balance = (balance / swapThreePrice.Close) - (balance/swapThreePrice.Close)*0.002
+	swapOnePrice, _ := s.SwapRepository.GetSwapPairBySymbol(entity.SwapOne.GetSymbol())
+	balance := (initialBalance * swapOnePrice.LastPrice) - (initialBalance*swapOnePrice.LastPrice)*0.002
+	swapTwoPrice, _ := s.SwapRepository.GetSwapPairBySymbol(entity.SwapTwo.GetSymbol())
+	balance = (balance * swapTwoPrice.LastPrice) - (balance*swapTwoPrice.LastPrice)*0.002
+	swapThreePrice, _ := s.SwapRepository.GetSwapPairBySymbol(entity.SwapThree.GetSymbol())
+	balance = (balance / swapThreePrice.LastPrice) - (balance/swapThreePrice.LastPrice)*0.002
 
 	return s.Formatter.ComparePercentage(initialBalance, balance) - 100
 }
 
 func (s SwapValidator) validateSwap(entity model.SwapTransitionEntity) error {
-	swapCurrentKline := s.ExchangeRepository.GetLastKLine(entity.GetSymbol())
+	swapCurrentKline, err := s.SwapRepository.GetSwapPairBySymbol(entity.GetSymbol())
 
-	if swapCurrentKline == nil {
+	if err != nil {
 		return errors.New(fmt.Sprintf("Swap [%s:%s] current price is unknown", entity.Operation, entity.Symbol))
 	}
 
-	timestampDeadline := time.Now().Unix() - 60
-
-	if (swapCurrentKline.Timestamp / 1000) < timestampDeadline {
+	if (time.Now().Unix() - swapCurrentKline.PriceTimestamp) > 60 {
 		return errors.New(fmt.Sprintf("Swap [%s:%s] price is expired", entity.Operation, entity.Symbol))
 	}
 
-	if entity.IsBuy() && s.Formatter.ComparePercentage(entity.Price, swapCurrentKline.Close).Gte(100.15) {
+	if entity.IsBuy() && s.Formatter.ComparePercentage(entity.Price, swapCurrentKline.LastPrice).Gte(100.15) {
 		return errors.New(fmt.Sprintf("Swap [%s:%s] price is too high", entity.Operation, entity.Symbol))
 	}
 
-	if entity.IsSell() && s.Formatter.ComparePercentage(entity.Price, swapCurrentKline.Close).Lte(99.85) {
+	if entity.IsSell() && s.Formatter.ComparePercentage(entity.Price, swapCurrentKline.LastPrice).Lte(99.85) {
 		return errors.New(fmt.Sprintf("Swap [%s:%s] price is too low", entity.Operation, entity.Symbol))
 	}
 

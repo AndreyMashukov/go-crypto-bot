@@ -1322,7 +1322,7 @@ func (m *MakerService) findOrCreateOrder(order ExchangeModel.Order, operation st
 		return *cached, nil
 	}
 
-	binanceOrder, err := m.Binance.LimitOrder(order.Symbol, order.Quantity, order.Price, operation)
+	binanceOrder, err := m.Binance.LimitOrder(order.Symbol, order.Quantity, order.Price, operation, "GTC")
 
 	if err != nil {
 		log.Printf("[%s] Limit: %s", order.Symbol, err.Error())
@@ -1642,6 +1642,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			m.Formatter.FormatQuantity(swapPair, swapAction.StartQuantity),
 			m.Formatter.FormatPrice(swapPair, swapAction.SwapOnePrice),
 			"SELL",
+			"FOK",
 		)
 
 		if err != nil {
@@ -1778,6 +1779,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			m.Formatter.FormatQuantity(swapPair, quantity),
 			m.Formatter.FormatPrice(swapPair, swapAction.SwapTwoPrice),
 			"SELL",
+			"GTC",
 		)
 
 		if err != nil {
@@ -1890,6 +1892,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			m.Formatter.FormatQuantity(swapPair, quantity/swapAction.SwapThreePrice),
 			m.Formatter.FormatPrice(swapPair, swapAction.SwapThreePrice),
 			"BUY",
+			"GTC",
 		)
 
 		if err != nil {

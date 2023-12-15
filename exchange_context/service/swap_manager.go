@@ -186,7 +186,7 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 
 				option2Price := option2.LastPrice
 				// buy two steps greater
-				option2Price += option2.MinPrice * 4
+				option2Price += option2.MinPrice * 2
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)
 				sell1Quantity := buy1.Balance //s.Formatter.FormatQuantity(option2, buy1.Balance)
 

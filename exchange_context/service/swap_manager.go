@@ -21,7 +21,7 @@ func (s *SwapManager) CalculateSwapOptions(symbol string) {
 
 	asset := symbol[:len(symbol)-3]
 
-	if buyBuySell.BestChain != nil && buyBuySell.BestChain.Percent.Gte(1.50) {
+	if buyBuySell.BestChain != nil && buyBuySell.BestChain.Percent.Gte(1.00) {
 		log.Printf(
 			"[%s] Swap Chain Found! %s buy-> %s(%f) buy-> %s(%f) sell-> %s(%f) = %.2f percent profit",
 			asset,

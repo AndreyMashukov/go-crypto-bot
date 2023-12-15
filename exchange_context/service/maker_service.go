@@ -244,6 +244,37 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 					err = m.BuyExtra(tradeLimit, order, price, sellVolume, buyVolume, smaValue)
 					if err != nil {
 						log.Printf("[%s] %s", symbol, err)
+
+						swapChain := m.SwapRepository.GetSwapChainCache(order.GetBaseAsset())
+						if swapChain != nil {
+							possibleSwaps := m.SwapRepository.GetSwapChains(order.GetBaseAsset())
+
+							if len(possibleSwaps) > 0 {
+								log.Printf("[%s] Found %d possible swaps...", order.Symbol, len(possibleSwaps))
+							} else {
+								m.SwapRepository.InvalidateSwapChainCache(order.GetBaseAsset())
+							}
+
+							for _, possibleSwap := range possibleSwaps {
+								violation := m.SwapValidator.Validate(possibleSwap)
+
+								if violation == nil {
+									chainCurrentPercent := m.SwapValidator.CalculatePercent(*swapChain)
+									log.Printf(
+										"[%s] EXTRA BUY FAILED -> Swap chain [%s] is found for order #%d, initial percent: %.2f, current = %.2f",
+										order.Symbol,
+										swapChain.Title,
+										order.Id,
+										swapChain.Percent,
+										chainCurrentPercent,
+									)
+									m.makeSwap(order, *swapChain)
+								} else {
+									log.Println(violation)
+								}
+							}
+						}
+
 					}
 				} else {
 					log.Printf(

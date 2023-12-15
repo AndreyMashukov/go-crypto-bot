@@ -57,6 +57,20 @@ type Order struct {
 	Swap             bool     `json:"swap"`
 }
 
+func (o *Order) CanExtraBuy(tradeLimit TradeLimit) bool {
+	if tradeLimit.USDTExtraBudget <= 0 {
+		return false
+	}
+
+	availableExtraBudget := tradeLimit.USDTExtraBudget - o.UsedExtraBudget
+
+	return availableExtraBudget > 0
+}
+
+func (o *Order) GetAvailableExtraBudget(tradeLimit TradeLimit) float64 {
+	return tradeLimit.USDTExtraBudget - o.UsedExtraBudget
+}
+
 func (o *Order) GetBaseAsset() string {
 	return strings.ReplaceAll(o.Symbol, "USDT", "")
 }

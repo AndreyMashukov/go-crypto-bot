@@ -71,6 +71,10 @@ func (repo *SwapRepository) GetSwapChains(baseAsset string) []model.SwapChainEnt
 
 	for res.Next() {
 		var swapChain model.SwapChainEntity
+		swapChain.SwapOne = &model.SwapTransitionEntity{}
+		swapChain.SwapTwo = &model.SwapTransitionEntity{}
+		swapChain.SwapThree = &model.SwapTransitionEntity{}
+
 		err := res.Scan(
 			&swapChain.Id,
 			&swapChain.Title,

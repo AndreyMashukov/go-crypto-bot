@@ -2012,6 +2012,12 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			}
 
 			if binanceOrder.IsPartiallyFilled() {
+				swapAction.EndQuantity = &binanceOrder.ExecutedQty
+				_ = m.SwapRepository.UpdateSwapAction(swapAction)
+
+				if (nowTimestamp-swapAction.StartTimestamp) > (3600*4) && binanceOrder.IsNearlyFilled() {
+					break // Do not cancel order, but check it later...
+				}
 				time.Sleep(time.Second * 7)
 			} else {
 				time.Sleep(time.Second * 15)

@@ -8,7 +8,8 @@ type SwapPair struct {
 	Symbol         string
 	BaseAsset      string
 	QuoteAsset     string
-	LastPrice      float64
+	BuyPrice       float64
+	SellPrice      float64
 	PriceTimestamp int64
 	MinNotional    float64
 	MinQuantity    float64

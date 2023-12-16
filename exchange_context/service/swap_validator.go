@@ -45,14 +45,14 @@ func (s SwapValidator) Validate(entity model.SwapChainEntity) error {
 	return nil
 }
 
-func (s SwapValidator) CalculatePercent(entity model.SwapChainEntity) model.Percent {
+func (s SwapValidator) CalculateSSBPercent(entity model.SwapChainEntity) model.Percent {
 	initialBalance := 100.00
 	swapOnePrice, _ := s.SwapRepository.GetSwapPairBySymbol(entity.SwapOne.GetSymbol())
-	balance := (initialBalance * swapOnePrice.LastPrice) - (initialBalance*swapOnePrice.LastPrice)*0.002
+	balance := (initialBalance * swapOnePrice.SellPrice) - (initialBalance*swapOnePrice.SellPrice)*0.002
 	swapTwoPrice, _ := s.SwapRepository.GetSwapPairBySymbol(entity.SwapTwo.GetSymbol())
-	balance = (balance * swapTwoPrice.LastPrice) - (balance*swapTwoPrice.LastPrice)*0.002
+	balance = (balance * swapTwoPrice.SellPrice) - (balance*swapTwoPrice.SellPrice)*0.002
 	swapThreePrice, _ := s.SwapRepository.GetSwapPairBySymbol(entity.SwapThree.GetSymbol())
-	balance = (balance / swapThreePrice.LastPrice) - (balance/swapThreePrice.LastPrice)*0.002
+	balance = (balance / swapThreePrice.BuyPrice) - (balance/swapThreePrice.BuyPrice)*0.002
 
 	return s.Formatter.ComparePercentage(initialBalance, balance) - 100
 }
@@ -68,11 +68,11 @@ func (s SwapValidator) validateSwap(entity model.SwapTransitionEntity) error {
 		return errors.New(fmt.Sprintf("Swap [%s:%s] price is expired", entity.Operation, entity.Symbol))
 	}
 
-	if entity.IsBuy() && s.Formatter.ComparePercentage(entity.Price, swapCurrentKline.LastPrice).Gte(100.15) {
+	if entity.IsBuy() && s.Formatter.ComparePercentage(entity.Price, swapCurrentKline.BuyPrice).Gte(100.15) {
 		return errors.New(fmt.Sprintf("Swap [%s:%s] price is too high", entity.Operation, entity.Symbol))
 	}
 
-	if entity.IsSell() && s.Formatter.ComparePercentage(entity.Price, swapCurrentKline.LastPrice).Lte(99.85) {
+	if entity.IsSell() && s.Formatter.ComparePercentage(entity.Price, swapCurrentKline.SellPrice).Lte(99.85) {
 		return errors.New(fmt.Sprintf("Swap [%s:%s] price is too low", entity.Operation, entity.Symbol))
 	}
 

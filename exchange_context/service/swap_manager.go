@@ -130,17 +130,17 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 			continue
 		}
 
-		option0Price := option0.LastPrice
+		option0Price := option0.SellPrice
 		// first sell is -2 points
 		option0Price -= option0.MinPrice * 2
 		option0Price = s.Formatter.FormatPrice(option0, option0Price)
 		buy0Quantity := initialBalance //s.Formatter.FormatQuantity(option0, initialBalance)
 
 		buy0 := SwapTransition{
-			Type:          model.SwapTransitionTypeBuyBuySell,
+			Type:          model.SwapTransitionTypeSellSellBuy,
 			BaseAsset:     asset,
 			QuoteAsset:    option0.QuoteAsset,
-			Operation:     model.SwapTransitionOperationTypeBuy,
+			Operation:     model.SwapTransitionOperationTypeSell,
 			BaseQuantity:  buy0Quantity,
 			QuoteQuantity: 0.00,
 			Price:         option0Price,
@@ -159,17 +159,17 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 				continue
 			}
 
-			option1Price := option1.LastPrice
+			option1Price := option1.SellPrice
 			// sell -3 points
 			option1Price -= option1.MinPrice * 2
 			option1Price = s.Formatter.FormatPrice(option1, option1Price)
 			buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option1, buy0.Balance)
 
 			buy1 := SwapTransition{
-				Type:          model.SwapTransitionTypeBuyBuySell,
+				Type:          model.SwapTransitionTypeSellSellBuy,
 				BaseAsset:     option1.BaseAsset,
 				QuoteAsset:    option1.QuoteAsset,
-				Operation:     model.SwapTransitionOperationTypeBuy,
+				Operation:     model.SwapTransitionOperationTypeSell,
 				BaseQuantity:  buy1Quantity,
 				QuoteQuantity: 0.00,
 				Price:         option1Price,
@@ -188,8 +188,8 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 					continue
 				}
 
-				option2Price := option2.LastPrice
-				// buy +6 points
+				option2Price := option2.BuyPrice
+				// buy +4 points
 				option2Price += option2.MinPrice * 4
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)
 				sell1Quantity := buy1.Balance //s.Formatter.FormatQuantity(option2, buy1.Balance)
@@ -197,10 +197,10 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 				sellBalance := (sell1Quantity / option2Price) - (sell1Quantity/option2Price)*0.002
 
 				sell0 := SwapTransition{
-					Type:          model.SwapTransitionTypeBuyBuySell,
+					Type:          model.SwapTransitionTypeSellSellBuy,
 					BaseAsset:     asset,
 					QuoteAsset:    buy1.QuoteAsset,
-					Operation:     model.SwapTransitionOperationTypeSell,
+					Operation:     model.SwapTransitionOperationTypeBuy,
 					BaseQuantity:  0.00,
 					QuoteQuantity: sell1Quantity,
 					Price:         option2Price,
@@ -232,7 +232,7 @@ func (s *SwapManager) BuyBuySell(symbol string) BBSArbitrageChain {
 					_, _ = io.WriteString(h, title)
 
 					bbsChain := BuyBuySell{
-						Type:      model.SwapTransitionTypeBuyBuySell,
+						Type:      model.SwapTransitionTypeSellSellBuy,
 						Title:     title,
 						Hash:      fmt.Sprintf("%x", h.Sum(nil)),
 						BuyOne:    &buy0,

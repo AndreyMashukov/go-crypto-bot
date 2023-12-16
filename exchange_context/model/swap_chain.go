@@ -27,7 +27,7 @@ func (s *SwapTransitionEntity) IsSell() bool {
 	return s.Type == SwapTransitionOperationTypeSell
 }
 
-const SwapTransitionTypeBuyBuySell = "BBS"
+const SwapTransitionTypeSellSellBuy = "SSB"
 const SwapTransitionOperationTypeSell = "SELL"
 const SwapTransitionOperationTypeBuy = "BUY"
 
@@ -45,5 +45,5 @@ type SwapChainEntity struct {
 }
 
 func (s SwapChainEntity) IsBBS() bool {
-	return s.Type == SwapTransitionTypeBuyBuySell
+	return s.Type == SwapTransitionTypeSellSellBuy
 }

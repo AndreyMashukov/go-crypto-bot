@@ -259,7 +259,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 								violation := m.SwapValidator.Validate(possibleSwap)
 
 								if violation == nil {
-									chainCurrentPercent := m.SwapValidator.CalculatePercent(possibleSwap)
+									chainCurrentPercent := m.SwapValidator.CalculateSSBPercent(possibleSwap)
 									log.Printf(
 										"[%s] EXTRA BUY FAILED -> Swap chain [%s] is found for order #%d, initial percent: %.2f, current = %.2f",
 										order.Symbol,
@@ -895,7 +895,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 							violation := m.SwapValidator.Validate(possibleSwap)
 
 							if violation == nil {
-								chainCurrentPercent := m.SwapValidator.CalculatePercent(possibleSwap)
+								chainCurrentPercent := m.SwapValidator.CalculateSSBPercent(possibleSwap)
 								log.Printf(
 									"[%s] Swap chain [%s] is found for order #%d, initial percent: %.2f, current = %.2f",
 									binanceOrder.Symbol,
@@ -1447,7 +1447,8 @@ func (m *MakerService) UpdateSwapPairs() {
 					Symbol:         exchangeItem.Symbol,
 					BaseAsset:      exchangeItem.BaseAsset,
 					QuoteAsset:     exchangeItem.QuoteAsset,
-					LastPrice:      0.00,
+					BuyPrice:       0.00,
+					SellPrice:      0.00,
 					PriceTimestamp: 0,
 				}
 
@@ -1730,7 +1731,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 				binanceOrder.Status,
 				binanceOrder.OrderId,
 				binanceOrder.Price,
-				swapPair.LastPrice,
+				swapPair.SellPrice,
 				binanceOrder.ExecutedQty,
 				binanceOrder.OrigQty,
 			)
@@ -1871,7 +1872,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 				binanceOrder.Status,
 				binanceOrder.OrderId,
 				binanceOrder.Price,
-				swapPair.LastPrice,
+				swapPair.SellPrice,
 				binanceOrder.ExecutedQty,
 				binanceOrder.OrigQty,
 			)
@@ -1984,7 +1985,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 				binanceOrder.Status,
 				binanceOrder.OrderId,
 				binanceOrder.Price,
-				swapPair.LastPrice,
+				swapPair.BuyPrice,
 				binanceOrder.ExecutedQty,
 				binanceOrder.OrigQty,
 			)

@@ -49,6 +49,18 @@ func (b *BinanceOrder) IsPartiallyFilled() bool {
 	return b.Status == "PARTIALLY_FILLED"
 }
 
+func (b *BinanceOrder) IsNearlyFilled() bool {
+	if b.IsFilled() {
+		return true
+	}
+
+	if !b.IsPartiallyFilled() {
+		return false
+	}
+
+	return (b.ExecutedQty * 100 / b.OrigQty) >= 99.5
+}
+
 func (b *BinanceOrder) HasExecutedQuantity() bool {
 	return b.ExecutedQty > 0
 }

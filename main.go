@@ -220,12 +220,14 @@ func main() {
 				time.Sleep(time.Second * 30)
 				for _, swapPair := range swapPairs {
 					time.Sleep(time.Millisecond * 10)
-					history := binance.GetKLines(swapPair.Symbol, "1m", 1)
-					kline := history[0].ToKLine(swapPair.Symbol)
-					exchangeRepository.AddKLine(kline)
-					swapPair.LastPrice = kline.Close
-					swapPair.PriceTimestamp = time.Now().Unix()
-					_ = exchangeRepository.UpdateSwapPair(swapPair)
+					orderBook, err := binance.GetDepth(swapPair.Symbol)
+					if err == nil && len(orderBook.Asks) > 0 && len(orderBook.Bids) > 0 {
+						orderDepth := orderBook.ToDepth(swapPair.Symbol)
+						swapPair.BuyPrice = orderDepth.Bids[0][0].Value
+						swapPair.SellPrice = orderDepth.Asks[0][0].Value
+						swapPair.PriceTimestamp = time.Now().Unix()
+						_ = exchangeRepository.UpdateSwapPair(swapPair)
+					}
 				}
 
 				for _, swapPair := range swapPairs {

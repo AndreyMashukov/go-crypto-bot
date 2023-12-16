@@ -5,12 +5,14 @@ services:
     build: '.'
     container_name: go_crypto_bot
     environment:
+        BOT_UUID: '5b51a35f-76a6-4747-8461-850fff9f7c18'
         DATABASE_DSN: 'root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot'
         REDIS_DSN: 'redis:6379'
         BINANCE_API_KEY: '0XVVs5VRWyjJH1fMReQyVUS614C8FlF1rnmvCZN2iK3UDhwncqpGYzF1jgV8KPLM'
         BINANCE_API_SECRET: 'tg5Ak5LoTFSCIadQLn5LkcnWHEPYSiA6wpY3rEqx89GG2aj9ZWsDyMl17S5TjTHM'
         BINANCE_API_DSN: 'https://testnet.binance.vision'
         BINANCE_WS_DSN: 'wss://testnet.binance.vision/ws-api/v3'
+        BINANCE_STREAM_DSN: 'wss://stream.binancefuture.com'
     networks:
       - bot-net
     ports:
@@ -24,23 +26,12 @@ services:
       - ./trade.log:/go/src/app/trade.log
       - ./kline.log:/go/src/app/kline.log
 
-  front:
-    image: 'registry.gitlab.com/open-soft/crypto-bot-front'
-    container_name: go_crypto_bot_front
-    networks:
-      - bot-net
-    ports:
-      - "8010:3000"
-    restart: always
-    depends_on:
-      - writer
-
   mysql:
     platform: linux/x86_64
     image: mysql:5.7
     restart: unless-stopped
     ports:
-      - "3366:3306"
+      - "3367:3306"
     networks:
       - bot-net
     environment:

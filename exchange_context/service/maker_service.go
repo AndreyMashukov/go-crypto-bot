@@ -259,7 +259,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 								violation := m.SwapValidator.Validate(possibleSwap)
 
 								if violation == nil {
-									chainCurrentPercent := m.SwapValidator.CalculatePercent(*swapChain)
+									chainCurrentPercent := m.SwapValidator.CalculatePercent(possibleSwap)
 									log.Printf(
 										"[%s] EXTRA BUY FAILED -> Swap chain [%s] is found for order #%d, initial percent: %.2f, current = %.2f",
 										order.Symbol,
@@ -268,7 +268,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 										swapChain.Percent,
 										chainCurrentPercent,
 									)
-									m.makeSwap(order, *swapChain)
+									m.makeSwap(order, possibleSwap)
 								} else {
 									log.Println(violation)
 								}
@@ -895,7 +895,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 							violation := m.SwapValidator.Validate(possibleSwap)
 
 							if violation == nil {
-								chainCurrentPercent := m.SwapValidator.CalculatePercent(*swapChain)
+								chainCurrentPercent := m.SwapValidator.CalculatePercent(possibleSwap)
 								log.Printf(
 									"[%s] Swap chain [%s] is found for order #%d, initial percent: %.2f, current = %.2f",
 									binanceOrder.Symbol,
@@ -915,7 +915,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 									orderManageChannel <- "cancel"
 									action := <-control
 									if action == "stop" {
-										m.makeSwap(openedBuyPosition, *swapChain)
+										m.makeSwap(openedBuyPosition, possibleSwap)
 										return
 									}
 								}

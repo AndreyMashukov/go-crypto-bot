@@ -1673,7 +1673,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			m.Formatter.FormatQuantity(swapPair, swapAction.StartQuantity),
 			m.Formatter.FormatPrice(swapPair, swapAction.SwapOnePrice),
 			"SELL",
-			"FOK",
+			"GTC",
 		)
 
 		if err != nil {

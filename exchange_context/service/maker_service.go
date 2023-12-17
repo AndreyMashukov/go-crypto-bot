@@ -1644,8 +1644,6 @@ func (m *MakerService) makeSwap(order ExchangeModel.Order, swapChain ExchangeMod
 func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 	swapAction, err := m.SwapRepository.GetActiveSwapAction(order)
 
-	// todo: validate only BBS supported...
-
 	if err != nil {
 		log.Printf("[%s] Swap processing error: %s", order.Symbol, err.Error())
 

@@ -33,6 +33,8 @@ type MakerService struct {
 	CurrentBot         *ExchangeModel.Bot
 	BalanceService     *BalanceService
 	SwapEnabled        bool
+	SwapSellOrderDays  int64
+	SwapProfitPercent  float64
 }
 
 func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
@@ -880,7 +882,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 			if binanceOrder.IsSell() && binanceOrder.IsNew() && m.SwapEnabled {
 				openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
 				// Try arbitrage for long orders >= 4 hours and with profit < -1.00%
-				if err == nil && openedBuyPosition.GetHoursOpened() >= 4 && openedBuyPosition.GetProfitPercent(kline.Close).Lte(-1.0) && !openedBuyPosition.IsSwap() {
+				if err == nil && openedBuyPosition.GetHoursOpened() >= m.SwapSellOrderDays && openedBuyPosition.GetProfitPercent(kline.Close).Lte(ExchangeModel.Percent(m.SwapProfitPercent)) && !openedBuyPosition.IsSwap() {
 					swapChain := m.SwapRepository.GetSwapChainCache(openedBuyPosition.GetBaseAsset())
 					if swapChain != nil {
 						possibleSwaps := m.SwapRepository.GetSwapChains(openedBuyPosition.GetBaseAsset())
@@ -1405,7 +1407,7 @@ func (m *MakerService) UpdateSwapPairs() {
 	exchangeInfo, _ := m.Binance.GetExchangeData(make([]string, 0))
 	tradeLimits := m.ExchangeRepository.GetTradeLimits()
 
-	supportedQuoteAssets := []string{"BTC", "ETH", "BNB", "TRX", "BUSD", "XRP", "EUR", "TUSD"}
+	supportedQuoteAssets := []string{"BTC", "ETH", "BNB", "TRX", "XRP", "EUR", "DAI", "TUSD", "GBP"}
 
 	for _, tradeLimit := range tradeLimits {
 		if !tradeLimit.IsEnabled {
@@ -1600,10 +1602,6 @@ func (m *MakerService) makeSwap(order ExchangeModel.Order, swapChain ExchangeMod
 		return
 	}
 
-	swapOnePrice := m.ExchangeRepository.GetLastKLine(swapChain.SwapOne.GetSymbol())
-	swapTwoPrice := m.ExchangeRepository.GetLastKLine(swapChain.SwapTwo.GetSymbol())
-	swapThreePrice := m.ExchangeRepository.GetLastKLine(swapChain.SwapThree.GetSymbol())
-
 	// todo: transaction
 	// create swap
 	_, err = m.SwapRepository.CreateSwapAction(ExchangeModel.SwapAction{
@@ -1616,11 +1614,11 @@ func (m *MakerService) makeSwap(order ExchangeModel.Order, swapChain ExchangeMod
 		StartTimestamp:  time.Now().Unix(),
 		StartQuantity:   assetBalance,
 		SwapOneSymbol:   swapChain.SwapOne.GetSymbol(),
-		SwapOnePrice:    swapOnePrice.Close,
+		SwapOnePrice:    swapChain.SwapOne.Price,
 		SwapTwoSymbol:   swapChain.SwapTwo.GetSymbol(),
-		SwapTwoPrice:    swapTwoPrice.Close,
+		SwapTwoPrice:    swapChain.SwapTwo.Price,
 		SwapThreeSymbol: swapChain.SwapThree.GetSymbol(),
-		SwapThreePrice:  swapThreePrice.Close,
+		SwapThreePrice:  swapChain.SwapThree.Price,
 	})
 
 	if err != nil {
@@ -1664,11 +1662,18 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 
 	var swapOneOrder *ExchangeModel.BinanceOrder = nil
 
+	swapChain, err := m.SwapRepository.GetSwapChainById(swapAction.SwapChainId)
+
+	if err != nil {
+		log.Printf("Swap chain %d is not found", swapAction.SwapChainId)
+		return
+	}
+
 	if swapAction.SwapOneExternalId == nil {
 		swapPair, err := m.SwapRepository.GetSwapPairBySymbol(swapAction.SwapOneSymbol)
 		var binanceOrder ExchangeModel.BinanceOrder
 
-		if swapAction.IsSSB() || swapAction.IsSBB() {
+		if swapChain.IsSSB() || swapChain.IsSBB() {
 			binanceOrder, err = m.Binance.LimitOrder(
 				swapAction.SwapOneSymbol,
 				m.Formatter.FormatQuantity(swapPair, swapAction.StartQuantity),
@@ -1816,7 +1821,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 		swapPair, err := m.SwapRepository.GetSwapPairBySymbol(swapAction.SwapTwoSymbol)
 		var binanceOrder ExchangeModel.BinanceOrder
 
-		if swapAction.IsSSB() {
+		if swapChain.IsSSB() {
 			binanceOrder, err = m.Binance.LimitOrder(
 				swapAction.SwapTwoSymbol,
 				m.Formatter.FormatQuantity(swapPair, quantity),
@@ -1826,7 +1831,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			)
 		}
 
-		if swapAction.IsSBB() {
+		if swapChain.IsSBB() {
 			binanceOrder, err = m.Binance.LimitOrder(
 				swapAction.SwapTwoSymbol,
 				m.Formatter.FormatQuantity(swapPair, quantity/swapAction.SwapTwoPrice),
@@ -1942,7 +1947,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 		swapPair, err := m.SwapRepository.GetSwapPairBySymbol(swapAction.SwapThreeSymbol)
 		var binanceOrder ExchangeModel.BinanceOrder
 
-		if swapAction.IsSSB() || swapAction.IsSBB() {
+		if swapChain.IsSSB() || swapChain.IsSBB() {
 			binanceOrder, err = m.Binance.LimitOrder(
 				swapAction.SwapThreeSymbol,
 				m.Formatter.FormatQuantity(swapPair, quantity/swapAction.SwapThreePrice),

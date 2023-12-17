@@ -36,11 +36,3 @@ type SwapAction struct {
 func (a *SwapAction) IsPending() bool {
 	return a.Status == SwapActionStatusPending
 }
-
-func (a *SwapAction) IsSSB() bool {
-	return a.Status == SwapTransitionTypeSellSellBuy
-}
-
-func (a *SwapAction) IsSBB() bool {
-	return a.Status == SwapTransitionTypeSellBuyBuy
-}

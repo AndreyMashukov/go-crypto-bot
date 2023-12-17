@@ -7,6 +7,7 @@ import (
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
 	"io"
 	"log"
+	"math"
 	"time"
 )
 
@@ -34,7 +35,10 @@ func (s *SwapManager) CalculateSwapOptions(symbol string) {
 			sellBuyBuy.BestChain.Percent.Value(),
 		)
 
-		_ = s.UpdateSwapChain(*sellBuyBuy.BestChain)
+		swapChainEntity := s.UpdateSwapChain(*sellBuyBuy.BestChain)
+
+		// Set to cache, will be read in MakerService
+		s.SwapRepository.SaveSwapChainCache(swapChainEntity.SwapOne.BaseAsset, swapChainEntity)
 	}
 
 	sellSellBuy := s.SellSellBuy(symbol)
@@ -66,20 +70,35 @@ func (s *SwapManager) UpdateSwapChain(BestChain BestSwapChain) model.SwapChainEn
 	var swapOneId int64 = 0
 	var swapOneTwo int64 = 0
 	var swapOneThree int64 = 0
+	var maxPercent model.Percent
+	var maxPercentTimestamp *int64 = nil
+	nowTimestamp := time.Now().Unix()
+
 	if err == nil {
 		swapChainId = swapChainEntity.Id
 		swapOneId = swapChainEntity.SwapOne.Id
 		swapOneTwo = swapChainEntity.SwapTwo.Id
 		swapOneThree = swapChainEntity.SwapThree.Id
+		maxPercentTimestamp = swapChainEntity.MaxPercentTimestamp
+		if swapChainEntity.MaxPercent.Lt(BestChain.Percent) || swapChainEntity.MaxPercentTimestamp == nil {
+			maxPercentTimestamp = &nowTimestamp
+		}
+
+		maxPercent = model.Percent(math.Max(swapChainEntity.MaxPercent.Value(), BestChain.Percent.Value()))
+	} else {
+		maxPercent = BestChain.Percent
+		maxPercentTimestamp = &nowTimestamp
 	}
 
 	swapChainEntity = model.SwapChainEntity{
-		Id:        swapChainId,
-		Title:     BestChain.Title,
-		Type:      BestChain.Type,
-		Hash:      BestChain.Hash,
-		Percent:   BestChain.Percent,
-		Timestamp: BestChain.Timestamp,
+		Id:                  swapChainId,
+		Title:               BestChain.Title,
+		Type:                BestChain.Type,
+		Hash:                BestChain.Hash,
+		Percent:             BestChain.Percent,
+		MaxPercent:          maxPercent,
+		Timestamp:           nowTimestamp,
+		MaxPercentTimestamp: maxPercentTimestamp,
 		SwapOne: &model.SwapTransitionEntity{
 			Id:   swapOneId,
 			Type: BestChain.BuyOne.Type,
@@ -155,9 +174,7 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 			continue
 		}
 
-		option0Price := option0.SellPrice
-		// first sell is -2 points
-		// option0Price -= option0.MinPrice * 2
+		option0Price := option0.BuyPrice - option0.MinPrice
 		option0Price = s.Formatter.FormatPrice(option0, option0Price)
 		buy0Quantity := initialBalance //s.Formatter.FormatQuantity(option0, initialBalance)
 
@@ -180,9 +197,7 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 				continue
 			}
 
-			option1Price := option1.SellPrice
-			// sell -3 points
-			// option1Price -= option1.MinPrice * 2
+			option1Price := option1.BuyPrice - option1.MinPrice
 			option1Price = s.Formatter.FormatPrice(option1, option1Price)
 			buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option1, buy0.Balance)
 
@@ -209,9 +224,7 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 					continue
 				}
 
-				option2Price := option2.BuyPrice
-				// buy +4 points
-				// option2Price += option2.MinPrice * 4
+				option2Price := option2.SellPrice + option2.MinPrice
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)
 				sell1Quantity := buy1.Balance //s.Formatter.FormatQuantity(option2, buy1.Balance)
 
@@ -313,9 +326,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 			continue
 		}
 
-		option0Price := option0.SellPrice
-		// first sell is -2 points
-		option0Price -= option0.MinPrice * 2
+		option0Price := option0.BuyPrice - option0.MinPrice
 		option0Price = s.Formatter.FormatPrice(option0, option0Price)
 		buy0Quantity := initialBalance //s.Formatter.FormatQuantity(option0, initialBalance)
 
@@ -342,9 +353,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 				continue
 			}
 
-			option1Price := option1.BuyPrice
-			// buy +2 points
-			option1Price += option1.MinPrice * 2
+			option1Price := option1.SellPrice + option1.MinPrice
 			option1Price = s.Formatter.FormatPrice(option1, option1Price)
 			buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option1, buy0.Balance)
 
@@ -371,9 +380,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 					continue
 				}
 
-				option2Price := option2.BuyPrice
-				// buy +4 points
-				option2Price += option2.MinPrice * 4
+				option2Price := option2.SellPrice + option2.MinPrice
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)
 				sell1Quantity := buy1.Balance //s.Formatter.FormatQuantity(option2, buy1.Balance)
 

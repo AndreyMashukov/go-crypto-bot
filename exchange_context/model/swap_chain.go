@@ -27,6 +27,7 @@ func (s *SwapTransitionEntity) IsSell() bool {
 	return s.Type == SwapTransitionOperationTypeSell
 }
 
+const SwapTransitionTypeSellBuyBuy = "SBB"
 const SwapTransitionTypeSellSellBuy = "SSB"
 const SwapTransitionOperationTypeSell = "SELL"
 const SwapTransitionOperationTypeBuy = "BUY"
@@ -44,6 +45,6 @@ type SwapChainEntity struct {
 	Timestamp int64                 `json:"timestamp"`
 }
 
-func (s SwapChainEntity) IsBBS() bool {
+func (s SwapChainEntity) IsSSB() bool {
 	return s.Type == SwapTransitionTypeSellSellBuy
 }

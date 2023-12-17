@@ -14,7 +14,7 @@ type SwapValidator struct {
 }
 
 func (s SwapValidator) Validate(entity model.SwapChainEntity) error {
-	if !entity.IsBBS() {
+	if !entity.IsSSB() {
 		return errors.New(fmt.Sprintf("Swap [%s] unsupported type given.", entity.Title))
 	}
 

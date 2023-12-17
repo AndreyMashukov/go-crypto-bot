@@ -125,6 +125,100 @@ func (repo *SwapRepository) GetSwapChains(baseAsset string) []model.SwapChainEnt
 	return list
 }
 
+func (s *SwapRepository) GetSwapChainById(id int64) (model.SwapChainEntity, error) {
+	var swapChain model.SwapChainEntity
+	swapChain.SwapOne = &model.SwapTransitionEntity{}
+	swapChain.SwapTwo = &model.SwapTransitionEntity{}
+	swapChain.SwapThree = &model.SwapTransitionEntity{}
+
+	err := s.DB.QueryRow(`
+		SELECT
+		    sc.id as Id,
+		    sc.title as Title,
+		    sc.type as Type,
+		    sc.hash as Hash,
+		    sc.percent as Percent,
+		    sc.max_percent as MaxPercent,
+		    sc.max_percent_timestamp as MaxPercentTimestamp,
+		    sc.timestamp as Timestamp,
+		    one.id as OneId,
+		    one.type as OneType,
+		    one.symbol as OneSymbol,
+		    one.base_asset as OneBaseAsset,
+		    one.quote_asset as OneQuoteAsset,
+		    one.operation as OneOperation,
+		    one.quantity as OneQuantity,
+		    one.price as OnePrice,
+		    one.level as OneLevel,
+		    two.id as TwoId,
+		    two.type as TwoType,
+		    two.symbol as TwoSymbol,
+		    two.base_asset as TwoBaseAsset,
+		    two.quote_asset as TwoQuoteAsset,
+		    two.operation as TwoOperation,
+		    two.quantity as TwoQuantity,
+		    two.price as TwoPrice,
+		    two.level as TwoLevel,
+		    three.id as ThreeId,
+		    three.type as ThreeType,
+		    three.symbol as ThreeSymbol,
+		    three.base_asset as ThreeBaseAsset,
+		    three.quote_asset as ThreeQuoteAsset,
+		    three.operation as ThreeOperation,
+		    three.quantity as ThreeQuantity,
+		    three.price as ThreePrice,
+		    three.level as ThreeLevel
+		FROM swap_chain sc
+		INNER JOIN swap_transition one ON one.id = sc.swap_one
+		INNER JOIN swap_transition two ON two.id = sc.swap_two
+		INNER JOIN swap_transition three ON three.id = sc.swap_three
+		WHERE sc.id = ?
+	`,
+		id,
+	).Scan(
+		&swapChain.Id,
+		&swapChain.Title,
+		&swapChain.Type,
+		&swapChain.Hash,
+		&swapChain.Percent,
+		&swapChain.MaxPercent,
+		&swapChain.MaxPercentTimestamp,
+		&swapChain.Timestamp,
+		&swapChain.SwapOne.Id,
+		&swapChain.SwapOne.Type,
+		&swapChain.SwapOne.Symbol,
+		&swapChain.SwapOne.BaseAsset,
+		&swapChain.SwapOne.QuoteAsset,
+		&swapChain.SwapOne.Operation,
+		&swapChain.SwapOne.Quantity,
+		&swapChain.SwapOne.Price,
+		&swapChain.SwapOne.Level,
+		&swapChain.SwapTwo.Id,
+		&swapChain.SwapTwo.Type,
+		&swapChain.SwapTwo.Symbol,
+		&swapChain.SwapTwo.BaseAsset,
+		&swapChain.SwapTwo.QuoteAsset,
+		&swapChain.SwapTwo.Operation,
+		&swapChain.SwapTwo.Quantity,
+		&swapChain.SwapTwo.Price,
+		&swapChain.SwapTwo.Level,
+		&swapChain.SwapThree.Id,
+		&swapChain.SwapThree.Type,
+		&swapChain.SwapThree.Symbol,
+		&swapChain.SwapThree.BaseAsset,
+		&swapChain.SwapThree.QuoteAsset,
+		&swapChain.SwapThree.Operation,
+		&swapChain.SwapThree.Quantity,
+		&swapChain.SwapThree.Price,
+		&swapChain.SwapThree.Level,
+	)
+	if err != nil {
+		return swapChain, err
+	}
+
+	return swapChain, nil
+}
+
 func (s *SwapRepository) GetSwapChain(hash string) (model.SwapChainEntity, error) {
 	var swapChain model.SwapChainEntity
 	swapChain.SwapOne = &model.SwapTransitionEntity{}

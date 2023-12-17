@@ -11,10 +11,11 @@ import (
 type SwapValidator struct {
 	SwapRepository *ExchangeRepository.SwapRepository
 	Formatter      *Formatter
+	SwapMinPercent float64
 }
 
 func (s SwapValidator) Validate(entity model.SwapChainEntity) error {
-	minPercent := model.Percent(1.00)
+	minPercent := model.Percent(s.SwapMinPercent)
 
 	if entity.Percent.Lt(minPercent) {
 		return errors.New(fmt.Sprintf("Swap [%s] too small percent %.2f.", entity.Title, entity.Percent))
@@ -60,10 +61,10 @@ func (s SwapValidator) CalculatePercent(entity model.SwapChainEntity) model.Perc
 		balance = (balance / swapTwoPrice.SellPrice) - (balance/swapTwoPrice.SellPrice)*0.002
 	}
 	swapThreePrice, _ := s.SwapRepository.GetSwapPairBySymbol(entity.SwapThree.GetSymbol())
-	if entity.SwapTwo.IsBuy() {
+	if entity.SwapThree.IsBuy() {
 		balance = (balance / swapThreePrice.BuyPrice) - (balance/swapThreePrice.BuyPrice)*0.002
 	}
-	if entity.SwapTwo.IsSell() {
+	if entity.SwapThree.IsSell() {
 		balance = (balance * swapThreePrice.BuyPrice) - (balance*swapThreePrice.BuyPrice)*0.002
 	}
 	return s.Formatter.ComparePercentage(initialBalance, balance) - 100

@@ -27,23 +27,30 @@ func (s *SwapTransitionEntity) IsSell() bool {
 	return s.Type == SwapTransitionOperationTypeSell
 }
 
+const SwapTransitionTypeSellBuyBuy = "SBB"
 const SwapTransitionTypeSellSellBuy = "SSB"
 const SwapTransitionOperationTypeSell = "SELL"
 const SwapTransitionOperationTypeBuy = "BUY"
 
 // SwapChainEntity (Entity)
 type SwapChainEntity struct {
-	Id        int64                 `json:"id"`
-	Title     string                `json:"title"`
-	Type      string                `json:"type"`
-	Hash      string                `json:"hash"`
-	SwapOne   *SwapTransitionEntity `json:"swapOne"`
-	SwapTwo   *SwapTransitionEntity `json:"swapTwo"`
-	SwapThree *SwapTransitionEntity `json:"swapThree"`
-	Percent   Percent               `json:"percent"`
-	Timestamp int64                 `json:"timestamp"`
+	Id                  int64                 `json:"id"`
+	Title               string                `json:"title"`
+	Type                string                `json:"type"`
+	Hash                string                `json:"hash"`
+	SwapOne             *SwapTransitionEntity `json:"swapOne"`
+	SwapTwo             *SwapTransitionEntity `json:"swapTwo"`
+	SwapThree           *SwapTransitionEntity `json:"swapThree"`
+	Percent             Percent               `json:"percent"`
+	Timestamp           int64                 `json:"timestamp"`
+	MaxPercent          Percent               `json:"maxPercent"`
+	MaxPercentTimestamp *int64                `json:"maxPercentTimestamp"`
 }
 
-func (s SwapChainEntity) IsBBS() bool {
+func (s SwapChainEntity) IsSSB() bool {
 	return s.Type == SwapTransitionTypeSellSellBuy
+}
+
+func (s SwapChainEntity) IsSBB() bool {
+	return s.Type == SwapTransitionTypeSellBuyBuy
 }

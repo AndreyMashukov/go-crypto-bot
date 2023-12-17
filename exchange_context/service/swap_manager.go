@@ -101,8 +101,14 @@ func (s *SwapManager) CalculateSwapOptions(symbol string) {
 		}
 
 		if swapChainId > 0 {
+			if buyBuySell.BestChain.Percent.Gte(swapChainEntity.MaxPercent) {
+				swapChainEntity.MaxPercent = buyBuySell.BestChain.Percent
+				swapChainEntity.MaxPercentTimestamp = &buyBuySell.BestChain.Timestamp
+			}
 			_ = s.SwapRepository.UpdateSwapChain(swapChainEntity)
 		} else {
+			swapChainEntity.MaxPercent = buyBuySell.BestChain.Percent
+			swapChainEntity.MaxPercentTimestamp = &buyBuySell.BestChain.Timestamp
 			_, _ = s.SwapRepository.CreateSwapChain(swapChainEntity)
 		}
 

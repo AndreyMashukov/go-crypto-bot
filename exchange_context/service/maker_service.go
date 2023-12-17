@@ -259,7 +259,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 								violation := m.SwapValidator.Validate(possibleSwap)
 
 								if violation == nil {
-									chainCurrentPercent := m.SwapValidator.CalculateSSBPercent(possibleSwap)
+									chainCurrentPercent := m.SwapValidator.CalculatePercent(possibleSwap)
 									log.Printf(
 										"[%s] EXTRA BUY FAILED -> Swap chain [%s] is found for order #%d, initial percent: %.2f, current = %.2f",
 										order.Symbol,
@@ -895,7 +895,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 							violation := m.SwapValidator.Validate(possibleSwap)
 
 							if violation == nil {
-								chainCurrentPercent := m.SwapValidator.CalculateSSBPercent(possibleSwap)
+								chainCurrentPercent := m.SwapValidator.CalculatePercent(possibleSwap)
 								log.Printf(
 									"[%s] Swap chain [%s] is found for order #%d, initial percent: %.2f, current = %.2f",
 									binanceOrder.Symbol,
@@ -1644,8 +1644,6 @@ func (m *MakerService) makeSwap(order ExchangeModel.Order, swapChain ExchangeMod
 func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 	swapAction, err := m.SwapRepository.GetActiveSwapAction(order)
 
-	// todo: validate only BBS supported...
-
 	if err != nil {
 		log.Printf("[%s] Swap processing error: %s", order.Symbol, err.Error())
 
@@ -1668,14 +1666,19 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 
 	if swapAction.SwapOneExternalId == nil {
 		swapPair, err := m.SwapRepository.GetSwapPairBySymbol(swapAction.SwapOneSymbol)
+		var binanceOrder ExchangeModel.BinanceOrder
 
-		binanceOrder, err := m.Binance.LimitOrder(
-			swapAction.SwapOneSymbol,
-			m.Formatter.FormatQuantity(swapPair, swapAction.StartQuantity),
-			m.Formatter.FormatPrice(swapPair, swapAction.SwapOnePrice),
-			"SELL",
-			"GTC",
-		)
+		if swapAction.IsSSB() || swapAction.IsSBB() {
+			binanceOrder, err = m.Binance.LimitOrder(
+				swapAction.SwapOneSymbol,
+				m.Formatter.FormatQuantity(swapPair, swapAction.StartQuantity),
+				m.Formatter.FormatPrice(swapPair, swapAction.SwapOnePrice),
+				"SELL",
+				"GTC",
+			)
+		} else {
+			err = errors.New("Swap type is not supported")
+		}
 
 		if err != nil {
 			log.Printf("[%s] Swap error: %s", order.Symbol, err.Error())
@@ -1811,14 +1814,27 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 		log.Printf("[%s] Swap two balance %s is %f, operation SELL %s", order.Symbol, assetTwo, balance, swapAction.SwapTwoSymbol)
 
 		swapPair, err := m.SwapRepository.GetSwapPairBySymbol(swapAction.SwapTwoSymbol)
+		var binanceOrder ExchangeModel.BinanceOrder
 
-		binanceOrder, err := m.Binance.LimitOrder(
-			swapAction.SwapTwoSymbol,
-			m.Formatter.FormatQuantity(swapPair, quantity),
-			m.Formatter.FormatPrice(swapPair, swapAction.SwapTwoPrice),
-			"SELL",
-			"GTC",
-		)
+		if swapAction.IsSSB() {
+			binanceOrder, err = m.Binance.LimitOrder(
+				swapAction.SwapTwoSymbol,
+				m.Formatter.FormatQuantity(swapPair, quantity),
+				m.Formatter.FormatPrice(swapPair, swapAction.SwapTwoPrice),
+				"SELL",
+				"GTC",
+			)
+		}
+
+		if swapAction.IsSBB() {
+			binanceOrder, err = m.Binance.LimitOrder(
+				swapAction.SwapTwoSymbol,
+				m.Formatter.FormatQuantity(swapPair, quantity/swapAction.SwapTwoPrice),
+				m.Formatter.FormatPrice(swapPair, swapAction.SwapTwoPrice),
+				"BUY",
+				"GTC",
+			)
+		}
 
 		if err != nil {
 			log.Printf("[%s] Swap error: %s", order.Symbol, err.Error())
@@ -1924,14 +1940,19 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 		log.Printf("[%s] Swap three balance %s is %f, operation BUY %s", order.Symbol, assetThree, balance, swapAction.SwapThreeSymbol)
 
 		swapPair, err := m.SwapRepository.GetSwapPairBySymbol(swapAction.SwapThreeSymbol)
+		var binanceOrder ExchangeModel.BinanceOrder
 
-		binanceOrder, err := m.Binance.LimitOrder(
-			swapAction.SwapThreeSymbol,
-			m.Formatter.FormatQuantity(swapPair, quantity/swapAction.SwapThreePrice),
-			m.Formatter.FormatPrice(swapPair, swapAction.SwapThreePrice),
-			"BUY",
-			"GTC",
-		)
+		if swapAction.IsSSB() || swapAction.IsSBB() {
+			binanceOrder, err = m.Binance.LimitOrder(
+				swapAction.SwapThreeSymbol,
+				m.Formatter.FormatQuantity(swapPair, quantity/swapAction.SwapThreePrice),
+				m.Formatter.FormatPrice(swapPair, swapAction.SwapThreePrice),
+				"BUY",
+				"GTC",
+			)
+		} else {
+			err = errors.New("Swap type is not supported")
+		}
 
 		if err != nil {
 			log.Printf("[%s] Swap error: %s", order.Symbol, err.Error())

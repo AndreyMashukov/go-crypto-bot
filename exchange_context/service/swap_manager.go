@@ -395,7 +395,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 				buy1 := SwapTransition{
 					Type:          model.SwapTransitionTypeSellBuyBuy,
 					BaseAsset:     asset,
-					QuoteAsset:    buy0.QuoteAsset,
+					QuoteAsset:    buy0.BaseAsset,
 					Operation:     model.SwapTransitionOperationTypeBuy,
 					BaseQuantity:  0.00,
 					QuoteQuantity: buy1Quantity,

@@ -645,7 +645,7 @@ func (s *SwapRepository) GetActiveSwapAction(order model.Order) (model.SwapActio
 		    sa.swap_three_price as SwapThreePrice,
 		    sa.swap_three_timestamp as SwapThreeTimestamp
 		FROM swap_action sa
-		WHERE sa.order_id = ? AND (sa.status = ? OR sa.status = ?)
+		WHERE sa.order_id = ? AND sa.status IN (?, ?)
 	`,
 		order.Id, model.SwapActionStatusPending, model.SwapActionStatusProcess,
 	).Scan(

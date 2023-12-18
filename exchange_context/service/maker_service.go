@@ -95,6 +95,13 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		log.Printf("[%s] Swap Order [%d] Mode: processing...", symbol, order.Id)
 		m.ProcessSwap(order)
 		return
+	} else if m.SwapEnabled {
+		swapAction, err := m.SwapRepository.GetActiveSwapAction(order)
+		if err == nil && swapAction.OrderId == order.Id {
+			log.Printf("[%s] Swap Recovered for Order [%d] Mode: processing...", symbol, order.Id)
+			m.ProcessSwap(order)
+			return
+		}
 	}
 
 	if err == nil && tradeLimit.IsExtraChargeEnabled() {
@@ -258,7 +265,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 							}
 
 							for _, possibleSwap := range possibleSwaps {
-								violation := m.SwapValidator.Validate(possibleSwap)
+								violation := m.SwapValidator.Validate(possibleSwap, order)
 
 								if violation == nil {
 									chainCurrentPercent := m.SwapValidator.CalculatePercent(possibleSwap)
@@ -300,7 +307,7 @@ func (m *MakerService) calculateSellQuantity(order ExchangeModel.Order) float64 
 
 	m.recoverCommission(order)
 	sellQuantity := order.GetRemainingToSellQuantity()
-	balance, err := m.BalanceService.GetAssetBalance(order.GetBaseAsset())
+	balance, err := m.BalanceService.GetAssetBalance(order.GetBaseAsset(), true)
 
 	if err != nil {
 		return sellQuantity
@@ -503,7 +510,7 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 
 	// Check balance for new order
 	if cached == nil {
-		usdtAvailableBalance, err := m.BalanceService.GetAssetBalance("USDT")
+		usdtAvailableBalance, err := m.BalanceService.GetAssetBalance("USDT", true)
 
 		if err != nil {
 			return errors.New(fmt.Sprintf("[%s] BUY balance error: %s", order.Symbol, err.Error()))
@@ -531,7 +538,7 @@ func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Excha
 		// todo: add commission???
 	}
 
-	balanceBefore, balanceErr := m.BalanceService.GetAssetBalance(order.GetBaseAsset())
+	balanceBefore, balanceErr := m.BalanceService.GetAssetBalance(order.GetBaseAsset(), true)
 
 	binanceOrder, err := m.tryLimitOrder(extraOrder, "BUY", 120)
 
@@ -622,7 +629,7 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 
 	// Check balance for new order
 	if cached == nil {
-		usdtAvailableBalance, err := m.BalanceService.GetAssetBalance("USDT")
+		usdtAvailableBalance, err := m.BalanceService.GetAssetBalance("USDT", true)
 
 		if err != nil {
 			return errors.New(fmt.Sprintf("[%s] BUY balance error: %s", symbol, err.Error()))
@@ -660,7 +667,7 @@ func (m *MakerService) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, p
 		// todo: add commission???
 	}
 
-	balanceBefore, balanceErr := m.BalanceService.GetAssetBalance(order.GetBaseAsset())
+	balanceBefore, balanceErr := m.BalanceService.GetAssetBalance(order.GetBaseAsset(), true)
 
 	binanceOrder, err := m.tryLimitOrder(order, "BUY", 480)
 
@@ -894,7 +901,7 @@ func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, se
 						}
 
 						for _, possibleSwap := range possibleSwaps {
-							violation := m.SwapValidator.Validate(possibleSwap)
+							violation := m.SwapValidator.Validate(possibleSwap, openedBuyPosition)
 
 							if violation == nil {
 								chainCurrentPercent := m.SwapValidator.CalculatePercent(possibleSwap)
@@ -1541,7 +1548,7 @@ func (m *MakerService) recoverCommission(order ExchangeModel.Order) {
 	}
 	assetSymbol := order.GetBaseAsset()
 
-	balanceAfter, err := m.BalanceService.GetAssetBalance(assetSymbol)
+	balanceAfter, err := m.BalanceService.GetAssetBalance(assetSymbol, true)
 
 	if err != nil {
 		log.Printf("[%s] Can't recover commission: %s", order.Status, err.Error())
@@ -1563,7 +1570,7 @@ func (m *MakerService) recoverCommission(order ExchangeModel.Order) {
 
 func (m *MakerService) UpdateCommission(balanceBefore float64, order ExchangeModel.Order) {
 	assetSymbol := order.GetBaseAsset()
-	balanceAfter, err := m.BalanceService.GetAssetBalance(assetSymbol)
+	balanceAfter, err := m.BalanceService.GetAssetBalance(assetSymbol, true)
 
 	if err != nil {
 		log.Printf("[%s] Can't update commission: %s", order.Status, err.Error())
@@ -1588,7 +1595,7 @@ func (m *MakerService) UpdateCommission(balanceBefore float64, order ExchangeMod
 }
 
 func (m *MakerService) makeSwap(order ExchangeModel.Order, swapChain ExchangeModel.SwapChainEntity) {
-	assetBalance, err := m.BalanceService.GetAssetBalance(swapChain.SwapOne.BaseAsset)
+	assetBalance, err := m.BalanceService.GetAssetBalance(swapChain.SwapOne.BaseAsset, false)
 
 	if err != nil {
 		return
@@ -1653,7 +1660,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 		return
 	}
 
-	balanceBefore, _ := m.BalanceService.GetAssetBalance(swapAction.Asset)
+	balanceBefore, _ := m.BalanceService.GetAssetBalance(swapAction.Asset, false)
 
 	if swapAction.IsPending() {
 		swapAction.Status = ExchangeModel.SwapActionStatusProcess
@@ -1664,17 +1671,6 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 
 	swapChain, err := m.SwapRepository.GetSwapChainById(swapAction.SwapChainId)
 
-	if swapChain.IsSBB() {
-		swapAction.Status = ExchangeModel.SwapActionStatusCanceled
-		nowTimestamp := time.Now().Unix()
-		swapAction.EndTimestamp = &nowTimestamp
-		swapAction.EndQuantity = &swapAction.StartQuantity
-		_ = m.SwapRepository.UpdateSwapAction(swapAction)
-		order.Swap = false
-		_ = m.OrderRepository.Update(order)
-		return
-	}
-
 	if err != nil {
 		log.Printf("Swap chain %d is not found", swapAction.SwapChainId)
 		return
@@ -1682,19 +1678,13 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 
 	if swapAction.SwapOneExternalId == nil {
 		swapPair, err := m.SwapRepository.GetSwapPairBySymbol(swapAction.SwapOneSymbol)
-		var binanceOrder ExchangeModel.BinanceOrder
-
-		if swapChain.IsSSB() || swapChain.IsSBB() {
-			binanceOrder, err = m.Binance.LimitOrder(
-				swapAction.SwapOneSymbol,
-				m.Formatter.FormatQuantity(swapPair, swapAction.StartQuantity),
-				m.Formatter.FormatPrice(swapPair, swapAction.SwapOnePrice),
-				"SELL",
-				"GTC",
-			)
-		} else {
-			err = errors.New("Swap type is not supported")
-		}
+		binanceOrder, err := m.Binance.LimitOrder(
+			swapAction.SwapOneSymbol,
+			m.Formatter.FormatQuantity(swapPair, swapAction.StartQuantity),
+			m.Formatter.FormatPrice(swapPair, swapAction.SwapOnePrice),
+			"SELL",
+			"GTC",
+		)
 
 		if err != nil {
 			log.Printf(
@@ -1762,9 +1752,10 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			swapPair, err := m.SwapRepository.GetSwapPairBySymbol(binanceOrder.Symbol)
 
 			log.Printf(
-				"[%s] Swap [%d] one processing, status %s [%d], price %f, current = %f, Executed %f of %f",
-				binanceOrder.Symbol,
+				"[%s] Swap [%d] one [%s] processing, status %s [%d], price %f, current = %f, Executed %f of %f",
+				swapAction.SwapOneSymbol,
 				swapAction.Id,
+				binanceOrder.Side,
 				binanceOrder.Status,
 				binanceOrder.OrderId,
 				binanceOrder.Price,
@@ -1837,7 +1828,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 
 	if swapAction.SwapTwoExternalId == nil {
 		m.BalanceService.InvalidateBalanceCache(assetTwo)
-		balance, _ := m.BalanceService.GetAssetBalance(assetTwo)
+		balance, _ := m.BalanceService.GetAssetBalance(assetTwo, false)
 		// Calculate how much we earn, and sell it!
 		quantity := swapOneOrder.ExecutedQty * swapOneOrder.Price
 
@@ -1929,9 +1920,10 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			swapPair, err := m.SwapRepository.GetSwapPairBySymbol(binanceOrder.Symbol)
 
 			log.Printf(
-				"[%s] Swap [%d] two processing, status %s [%d], price %f, current = %f, Executed %f of %f",
-				binanceOrder.Symbol,
+				"[%s] Swap [%d] two [%s] processing, status %s [%d], price %f, current = %f, Executed %f of %f",
+				swapAction.SwapTwoSymbol,
 				swapAction.Id,
+				binanceOrder.Side,
 				binanceOrder.Status,
 				binanceOrder.OrderId,
 				binanceOrder.Price,
@@ -1970,25 +1962,14 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 		}
 	}
 
-	var assetThree string = ""
-	if swapChain.IsSSB() {
-		assetThree = strings.ReplaceAll(swapTwoOrder.Symbol, assetTwo, "")
-	}
-	if swapChain.IsSBB() {
-		assetThree = assetTwo
-	}
-
-	if assetThree == "" {
-		log.Printf("Swap [%d] type is not supported", swapAction.Id)
-		return
-	}
+	assetThree := strings.ReplaceAll(swapTwoOrder.Symbol, assetTwo, "")
 
 	// step 3
 	var swapThreeOrder *ExchangeModel.BinanceOrder = nil
 
 	if swapAction.SwapThreeExternalId == nil {
 		m.BalanceService.InvalidateBalanceCache(assetThree)
-		balance, _ := m.BalanceService.GetAssetBalance(assetThree)
+		balance, _ := m.BalanceService.GetAssetBalance(assetThree, false)
 		quantity := swapTwoOrder.ExecutedQty * swapTwoOrder.Price
 
 		if quantity > balance {
@@ -2071,9 +2052,10 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			swapPair, err := m.SwapRepository.GetSwapPairBySymbol(binanceOrder.Symbol)
 
 			log.Printf(
-				"[%s] Swap [%d] three processing, status %s [%d], price %f, current = %f, Executed %f of %f",
-				binanceOrder.Symbol,
+				"[%s] Swap [%d] three [%s] processing, status %s [%d], price %f, current = %f, Executed %f of %f",
+				swapAction.SwapThreeSymbol,
 				swapAction.Id,
+				binanceOrder.Side,
 				binanceOrder.Status,
 				binanceOrder.OrderId,
 				binanceOrder.Price,
@@ -2128,7 +2110,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 	_ = m.OrderRepository.Update(order)
 
 	m.BalanceService.InvalidateBalanceCache(swapAction.Asset)
-	balanceAfter, _ := m.BalanceService.GetAssetBalance(swapAction.Asset)
+	balanceAfter, _ := m.BalanceService.GetAssetBalance(swapAction.Asset, false)
 
 	log.Printf(
 		"[%s] Swap funished, balance %s before = %f after = %f",

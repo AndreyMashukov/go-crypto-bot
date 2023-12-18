@@ -15,6 +15,10 @@ type SwapValidator struct {
 }
 
 func (s SwapValidator) Validate(entity model.SwapChainEntity) error {
+	if entity.IsSBB() {
+		return errors.New("SBB is disabled")
+	}
+
 	minPercent := model.Percent(s.SwapMinPercent)
 
 	if entity.Percent.Lt(minPercent) {

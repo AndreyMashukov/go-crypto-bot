@@ -1687,6 +1687,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 
 		if err != nil {
 			log.Printf("[%s] Swap error: %s", order.Symbol, err.Error())
+			time.Sleep(time.Minute)
 			return
 		}
 

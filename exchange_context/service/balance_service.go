@@ -22,10 +22,10 @@ func (b *BalanceService) InvalidateBalanceCache(asset string) {
 	b.RDB.Del(*b.Ctx, b.getBalanceCacheKey(asset))
 }
 
-func (b *BalanceService) GetAssetBalance(asset string) (float64, error) {
+func (b *BalanceService) GetAssetBalance(asset string, cache bool) (float64, error) {
 	cached := b.RDB.Get(*b.Ctx, b.getBalanceCacheKey(asset)).Val()
 
-	if len(cached) > 0 {
+	if len(cached) > 0 && cache {
 		balanceCached, err := strconv.ParseFloat(cached, 64)
 
 		if err == nil {
@@ -44,7 +44,7 @@ func (b *BalanceService) GetAssetBalance(asset string) (float64, error) {
 			log.Printf("[%s] Free balance is: %f", asset, assetBalance.Free)
 			log.Printf("[%s] Locked balance is: %f", asset, assetBalance.Locked)
 
-			b.RDB.Set(*b.Ctx, b.getBalanceCacheKey(asset), assetBalance.Free, time.Minute*5)
+			b.RDB.Set(*b.Ctx, b.getBalanceCacheKey(asset), assetBalance.Free, time.Minute)
 			return assetBalance.Free, nil
 		}
 	}

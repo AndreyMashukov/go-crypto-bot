@@ -26,12 +26,12 @@ func (s *SwapManager) CalculateSwapOptions(symbol string) {
 			"[%s] Swap Chain Found! %s sell-> %s(%f) buy-> %s(%f) buy-> %s(%f) = %.2f percent profit",
 			asset,
 			asset,
-			sellBuyBuy.BestChain.BuyOne.QuoteAsset,
-			sellBuyBuy.BestChain.BuyOne.Price,
-			sellBuyBuy.BestChain.BuyTwo.BaseAsset,
-			sellBuyBuy.BestChain.BuyTwo.Price,
-			sellBuyBuy.BestChain.SellOne.BaseAsset,
-			sellBuyBuy.BestChain.SellOne.Price,
+			sellBuyBuy.BestChain.SwapOne.QuoteAsset,
+			sellBuyBuy.BestChain.SwapOne.Price,
+			sellBuyBuy.BestChain.SwapTwo.BaseAsset,
+			sellBuyBuy.BestChain.SwapTwo.Price,
+			sellBuyBuy.BestChain.SwapThree.BaseAsset,
+			sellBuyBuy.BestChain.SwapThree.Price,
 			sellBuyBuy.BestChain.Percent.Value(),
 		)
 
@@ -48,12 +48,12 @@ func (s *SwapManager) CalculateSwapOptions(symbol string) {
 			"[%s] Swap Chain Found! %s sell-> %s(%f) sell-> %s(%f) buy-> %s(%f) = %.2f percent profit",
 			asset,
 			asset,
-			sellSellBuy.BestChain.BuyOne.QuoteAsset,
-			sellSellBuy.BestChain.BuyOne.Price,
-			sellSellBuy.BestChain.BuyTwo.QuoteAsset,
-			sellSellBuy.BestChain.BuyTwo.Price,
-			sellSellBuy.BestChain.SellOne.BaseAsset,
-			sellSellBuy.BestChain.SellOne.Price,
+			sellSellBuy.BestChain.SwapOne.QuoteAsset,
+			sellSellBuy.BestChain.SwapOne.Price,
+			sellSellBuy.BestChain.SwapTwo.QuoteAsset,
+			sellSellBuy.BestChain.SwapTwo.Price,
+			sellSellBuy.BestChain.SwapThree.BaseAsset,
+			sellSellBuy.BestChain.SwapThree.Price,
 			sellSellBuy.BestChain.Percent.Value(),
 		)
 
@@ -101,48 +101,48 @@ func (s *SwapManager) UpdateSwapChain(BestChain BestSwapChain) model.SwapChainEn
 		MaxPercentTimestamp: maxPercentTimestamp,
 		SwapOne: &model.SwapTransitionEntity{
 			Id:   swapOneId,
-			Type: BestChain.BuyOne.Type,
+			Type: BestChain.SwapOne.Type,
 			Symbol: fmt.Sprintf(
 				"%s%s",
-				BestChain.BuyOne.BaseAsset,
-				BestChain.BuyOne.QuoteAsset,
+				BestChain.SwapOne.BaseAsset,
+				BestChain.SwapOne.QuoteAsset,
 			),
-			BaseAsset:  BestChain.BuyOne.BaseAsset,
-			QuoteAsset: BestChain.BuyOne.QuoteAsset,
-			Operation:  BestChain.BuyOne.Operation,
-			Quantity:   BestChain.BuyOne.BaseQuantity,
-			Price:      BestChain.BuyOne.Price,
-			Level:      BestChain.BuyOne.Level,
+			BaseAsset:  BestChain.SwapOne.BaseAsset,
+			QuoteAsset: BestChain.SwapOne.QuoteAsset,
+			Operation:  BestChain.SwapOne.Operation,
+			Quantity:   BestChain.SwapOne.BaseQuantity,
+			Price:      BestChain.SwapOne.Price,
+			Level:      BestChain.SwapOne.Level,
 		},
 		SwapTwo: &model.SwapTransitionEntity{
 			Id:   swapOneTwo,
-			Type: BestChain.BuyTwo.Type,
+			Type: BestChain.SwapTwo.Type,
 			Symbol: fmt.Sprintf(
 				"%s%s",
-				BestChain.BuyTwo.BaseAsset,
-				BestChain.BuyTwo.QuoteAsset,
+				BestChain.SwapTwo.BaseAsset,
+				BestChain.SwapTwo.QuoteAsset,
 			),
-			BaseAsset:  BestChain.BuyTwo.BaseAsset,
-			QuoteAsset: BestChain.BuyTwo.QuoteAsset,
-			Operation:  BestChain.BuyTwo.Operation,
-			Quantity:   BestChain.BuyTwo.BaseQuantity,
-			Price:      BestChain.BuyTwo.Price,
-			Level:      BestChain.BuyTwo.Level,
+			BaseAsset:  BestChain.SwapTwo.BaseAsset,
+			QuoteAsset: BestChain.SwapTwo.QuoteAsset,
+			Operation:  BestChain.SwapTwo.Operation,
+			Quantity:   BestChain.SwapTwo.BaseQuantity,
+			Price:      BestChain.SwapTwo.Price,
+			Level:      BestChain.SwapTwo.Level,
 		},
 		SwapThree: &model.SwapTransitionEntity{
 			Id:   swapOneThree,
-			Type: BestChain.SellOne.Type,
+			Type: BestChain.SwapThree.Type,
 			Symbol: fmt.Sprintf(
 				"%s%s",
-				BestChain.SellOne.BaseAsset,
-				BestChain.SellOne.QuoteAsset,
+				BestChain.SwapThree.BaseAsset,
+				BestChain.SwapThree.QuoteAsset,
 			),
-			BaseAsset:  BestChain.SellOne.BaseAsset,
-			QuoteAsset: BestChain.SellOne.QuoteAsset,
-			Operation:  BestChain.SellOne.Operation,
-			Quantity:   BestChain.SellOne.QuoteQuantity,
-			Price:      BestChain.SellOne.Price,
-			Level:      BestChain.SellOne.Level,
+			BaseAsset:  BestChain.SwapThree.BaseAsset,
+			QuoteAsset: BestChain.SwapThree.QuoteAsset,
+			Operation:  BestChain.SwapThree.Operation,
+			Quantity:   BestChain.SwapThree.QuoteQuantity,
+			Price:      BestChain.SwapThree.Price,
+			Level:      BestChain.SwapThree.Level,
 		},
 	}
 
@@ -176,6 +176,7 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 
 		option0Price := option0.SellPrice - (option0.MinPrice * 2)
 		option0Price = s.Formatter.FormatPrice(option0, option0Price)
+		//log.Printf("[%s] formatted [1] %f -> %f", option0.Symbol, option0.BuyPrice, option0Price)
 		buy0Quantity := initialBalance //s.Formatter.FormatQuantity(option0, initialBalance)
 
 		buy0 := SwapTransition{
@@ -199,6 +200,7 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 
 			option1Price := option1.SellPrice
 			option1Price = s.Formatter.FormatPrice(option1, option1Price)
+			//log.Printf("[%s] formatted [1] %f -> %f", option1.Symbol, option1.BuyPrice, option1Price)
 			buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option1, buy0.Balance)
 
 			buy1 := SwapTransition{
@@ -226,6 +228,7 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 
 				option2Price := option2.BuyPrice
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)
+				//log.Printf("[%s] formatted [2] %f -> %f", option2.Symbol, option2.BuyPrice, option2Price)
 				sell1Quantity := buy1.Balance //s.Formatter.FormatQuantity(option2, buy1.Balance)
 
 				sellBalance := (sell1Quantity / option2Price) - (sell1Quantity/option2Price)*0.002
@@ -269,9 +272,9 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 						Type:      model.SwapTransitionTypeSellSellBuy,
 						Title:     title,
 						Hash:      fmt.Sprintf("%x", h.Sum(nil)),
-						BuyOne:    &buy0,
-						BuyTwo:    &buy1,
-						SellOne:   &sell0,
+						SwapOne:   &buy0,
+						SwapTwo:   &buy1,
+						SwapThree: &sell0,
 						Percent:   profit,
 						Timestamp: time.Now().Unix(),
 					}
@@ -328,6 +331,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 
 		option0Price := option0.SellPrice - (option0.MinPrice * 2)
 		option0Price = s.Formatter.FormatPrice(option0, option0Price)
+		//log.Printf("[%s] formatted [3] %f -> %f", option0.Symbol, option0.SellPrice, option0Price)
 		buy0Quantity := initialBalance //s.Formatter.FormatQuantity(option0, initialBalance)
 
 		buy0 := SwapTransition{
@@ -355,6 +359,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 
 			option1Price := option1.BuyPrice
 			option1Price = s.Formatter.FormatPrice(option1, option1Price)
+			//log.Printf("[%s] formatted [4] %f -> %f", option1.Symbol, option1.BuyPrice, option1Price)
 			buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option1, buy0.Balance)
 
 			buy1 := SwapTransition{
@@ -382,6 +387,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 
 				option2Price := option2.BuyPrice
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)
+				//log.Printf("[%s] formatted [5] %f -> %f", option2.Symbol, option2.BuyPrice, option2Price)
 				sell1Quantity := buy1.Balance //s.Formatter.FormatQuantity(option2, buy1.Balance)
 
 				sellBalance := (sell1Quantity / option2Price) - (sell1Quantity/option2Price)*0.002
@@ -417,9 +423,9 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 						Type:      model.SwapTransitionTypeSellBuyBuy,
 						Title:     title,
 						Hash:      fmt.Sprintf("%x", h.Sum(nil)),
-						BuyOne:    &buy0,
-						BuyTwo:    &buy1,
-						SellOne:   &sell0,
+						SwapOne:   &buy0,
+						SwapTwo:   &buy1,
+						SwapThree: &sell0,
 						Percent:   profit,
 						Timestamp: time.Now().Unix(),
 					}
@@ -470,9 +476,9 @@ type BestSwapChain struct {
 	Title     string          `json:"title"`
 	Type      string          `json:"type"`
 	Hash      string          `json:"hash"`
-	BuyOne    *SwapTransition `json:"buyOne"`
-	BuyTwo    *SwapTransition `json:"buyTwo"`
-	SellOne   *SwapTransition `json:"sellOne"`
+	SwapOne   *SwapTransition `json:"swapOne"`
+	SwapTwo   *SwapTransition `json:"swapTwo"`
+	SwapThree *SwapTransition `json:"swapThree"`
 	Percent   model.Percent   `json:"percent"`
 	Timestamp int64           `json:"timestamp"`
 }

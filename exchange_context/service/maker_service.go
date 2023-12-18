@@ -1686,8 +1686,24 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 		}
 
 		if err != nil {
-			log.Printf("[%s] Swap error: %s", order.Symbol, err.Error())
-			time.Sleep(time.Minute)
+			log.Printf(
+				"[%s] Swap [%d] error: %s",
+				order.Symbol,
+				swapAction.Id,
+				err.Error(),
+			)
+
+			orderStatus := "ERROR"
+			swapAction.SwapOneExternalStatus = &orderStatus
+			swapAction.Status = ExchangeModel.SwapActionStatusCanceled
+			nowTimestamp := time.Now().Unix()
+			swapAction.EndTimestamp = &nowTimestamp
+			swapAction.EndQuantity = &swapAction.StartQuantity
+			_ = m.SwapRepository.UpdateSwapAction(swapAction)
+			order.Swap = false
+			_ = m.OrderRepository.Update(order)
+			// invalidate balance cache
+			m.BalanceService.InvalidateBalanceCache(swapAction.Asset)
 			return
 		}
 
@@ -1735,8 +1751,9 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			swapPair, err := m.SwapRepository.GetSwapPairBySymbol(binanceOrder.Symbol)
 
 			log.Printf(
-				"[%s] Swap one processing, status %s [%d], price %f, current = %f, Executed %f of %f",
+				"[%s] Swap [%d] one processing, status %s [%d], price %f, current = %f, Executed %f of %f",
 				binanceOrder.Symbol,
+				swapAction.Id,
 				binanceOrder.Status,
 				binanceOrder.OrderId,
 				binanceOrder.Price,
@@ -1817,7 +1834,14 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			quantity = balance
 		}
 
-		log.Printf("[%s] Swap two balance %s is %f, operation SELL %s", order.Symbol, assetTwo, balance, swapAction.SwapTwoSymbol)
+		log.Printf(
+			"[%s] Swap [%d] two balance %s is %f, operation SELL %s",
+			order.Symbol,
+			swapAction.Id,
+			assetTwo,
+			balance,
+			swapAction.SwapTwoSymbol,
+		)
 
 		swapPair, err := m.SwapRepository.GetSwapPairBySymbol(swapAction.SwapTwoSymbol)
 		var binanceOrder ExchangeModel.BinanceOrder
@@ -1843,7 +1867,12 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 		}
 
 		if err != nil {
-			log.Printf("[%s] Swap error: %s", order.Symbol, err.Error())
+			log.Printf(
+				"[%s] Swap [%d] error: %s",
+				order.Symbol,
+				swapAction.Id,
+				err.Error(),
+			)
 			return
 		}
 
@@ -1889,8 +1918,9 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			swapPair, err := m.SwapRepository.GetSwapPairBySymbol(binanceOrder.Symbol)
 
 			log.Printf(
-				"[%s] Swap two processing, status %s [%d], price %f, current = %f, Executed %f of %f",
+				"[%s] Swap [%d] two processing, status %s [%d], price %f, current = %f, Executed %f of %f",
 				binanceOrder.Symbol,
+				swapAction.Id,
 				binanceOrder.Status,
 				binanceOrder.OrderId,
 				binanceOrder.Price,
@@ -1929,7 +1959,18 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 		}
 	}
 
-	assetThree := strings.ReplaceAll(swapTwoOrder.Symbol, assetTwo, "")
+	var assetThree string = ""
+	if swapChain.IsSSB() {
+		assetThree = strings.ReplaceAll(swapTwoOrder.Symbol, assetTwo, "")
+	}
+	if swapChain.IsSBB() {
+		assetThree = assetTwo
+	}
+
+	if assetThree == "" {
+		log.Printf("Swap [%d] type is not supported", swapAction.Id)
+		return
+	}
 
 	// step 3
 	var swapThreeOrder *ExchangeModel.BinanceOrder = nil
@@ -1943,7 +1984,14 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			quantity = balance
 		}
 
-		log.Printf("[%s] Swap three balance %s is %f, operation BUY %s", order.Symbol, assetThree, balance, swapAction.SwapThreeSymbol)
+		log.Printf(
+			"[%s] Swap [%d] three balance %s is %f, operation BUY %s",
+			order.Symbol,
+			swapAction.Id,
+			assetThree,
+			balance,
+			swapAction.SwapThreeSymbol,
+		)
 
 		swapPair, err := m.SwapRepository.GetSwapPairBySymbol(swapAction.SwapThreeSymbol)
 		var binanceOrder ExchangeModel.BinanceOrder
@@ -1961,7 +2009,12 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 		}
 
 		if err != nil {
-			log.Printf("[%s] Swap error: %s", order.Symbol, err.Error())
+			log.Printf(
+				"[%s] Swap [%d] three error: %s",
+				order.Symbol,
+				swapAction.Id,
+				err.Error(),
+			)
 			return
 		}
 
@@ -2007,8 +2060,9 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			swapPair, err := m.SwapRepository.GetSwapPairBySymbol(binanceOrder.Symbol)
 
 			log.Printf(
-				"[%s] Swap three processing, status %s [%d], price %f, current = %f, Executed %f of %f",
+				"[%s] Swap [%d] three processing, status %s [%d], price %f, current = %f, Executed %f of %f",
 				binanceOrder.Symbol,
+				swapAction.Id,
 				binanceOrder.Status,
 				binanceOrder.OrderId,
 				binanceOrder.Price,

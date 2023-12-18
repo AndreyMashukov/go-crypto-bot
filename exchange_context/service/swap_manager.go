@@ -381,7 +381,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 					continue
 				}
 
-				if option2.QuoteAsset != buy1.BaseAsset {
+				if option2.QuoteAsset != buy1.QuoteAsset {
 					continue
 				}
 

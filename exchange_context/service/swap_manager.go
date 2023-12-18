@@ -174,7 +174,7 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 			continue
 		}
 
-		option0Price := option0.BuyPrice - option0.MinPrice
+		option0Price := option0.SellPrice - (option0.MinPrice * 2)
 		option0Price = s.Formatter.FormatPrice(option0, option0Price)
 		buy0Quantity := initialBalance //s.Formatter.FormatQuantity(option0, initialBalance)
 
@@ -197,7 +197,7 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 				continue
 			}
 
-			option1Price := option1.BuyPrice - option1.MinPrice
+			option1Price := option1.SellPrice
 			option1Price = s.Formatter.FormatPrice(option1, option1Price)
 			buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option1, buy0.Balance)
 
@@ -224,7 +224,7 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 					continue
 				}
 
-				option2Price := option2.SellPrice + option2.MinPrice
+				option2Price := option2.BuyPrice
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)
 				sell1Quantity := buy1.Balance //s.Formatter.FormatQuantity(option2, buy1.Balance)
 
@@ -326,7 +326,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 			continue
 		}
 
-		option0Price := option0.BuyPrice - option0.MinPrice
+		option0Price := option0.SellPrice - (option0.MinPrice * 2)
 		option0Price = s.Formatter.FormatPrice(option0, option0Price)
 		buy0Quantity := initialBalance //s.Formatter.FormatQuantity(option0, initialBalance)
 
@@ -353,7 +353,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 				continue
 			}
 
-			option1Price := option1.SellPrice + option1.MinPrice
+			option1Price := option1.BuyPrice
 			option1Price = s.Formatter.FormatPrice(option1, option1Price)
 			buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option1, buy0.Balance)
 
@@ -380,7 +380,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 					continue
 				}
 
-				option2Price := option2.SellPrice + option2.MinPrice
+				option2Price := option2.BuyPrice
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)
 				sell1Quantity := buy1.Balance //s.Formatter.FormatQuantity(option2, buy1.Balance)
 

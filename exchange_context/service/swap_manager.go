@@ -332,22 +332,22 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 		option0Price := option0.SellPrice - (option0.MinPrice * 2)
 		option0Price = s.Formatter.FormatPrice(option0, option0Price)
 		//log.Printf("[%s] formatted [3] %f -> %f", option0.Symbol, option0.SellPrice, option0Price)
-		buy0Quantity := initialBalance //s.Formatter.FormatQuantity(option0, initialBalance)
+		sell0Quantity := initialBalance //s.Formatter.FormatQuantity(option0, initialBalance)
 
-		buy0 := SwapTransition{
+		sell0 := SwapTransition{
 			Type:          model.SwapTransitionTypeSellBuyBuy,
 			BaseAsset:     asset,
 			QuoteAsset:    option0.QuoteAsset,
 			Operation:     model.SwapTransitionOperationTypeSell,
-			BaseQuantity:  buy0Quantity,
+			BaseQuantity:  sell0Quantity,
 			QuoteQuantity: 0.00,
 			Price:         option0Price,
-			Balance:       (buy0Quantity * option0Price) - (buy0Quantity*option0Price)*0.002,
+			Balance:       (sell0Quantity * option0Price) - (sell0Quantity*option0Price)*0.002,
 			Level:         0,
 			Transitions:   make([]SwapTransition, 0),
 		}
-		// log.Printf("[%s] 1 BUY %s -> %s | %f x %f = %f", asset, buy0.BaseAsset, buy0.QuoteAsset, buy0.BaseQuantity, buy0.Price, buy0.Balance)
-		options1 := s.ExchangeRepository.GetSwapPairsByQuoteAsset(buy0.QuoteAsset)
+		// log.Printf("[%s] 1 BUY %s -> %s | %f x %f = %f", asset, sell0.BaseAsset, sell0.QuoteAsset, sell0.BaseQuantity, sell0.Price, sell0.Balance)
+		options1 := s.ExchangeRepository.GetSwapPairsByQuoteAsset(sell0.QuoteAsset)
 		for _, option1 := range options1 {
 			if option1.IsPriceExpired() {
 				continue
@@ -360,60 +360,60 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 			option1Price := option1.BuyPrice
 			option1Price = s.Formatter.FormatPrice(option1, option1Price)
 			//log.Printf("[%s] formatted [4] %f -> %f", option1.Symbol, option1.BuyPrice, option1Price)
-			buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option1, buy0.Balance)
+			buy0Quantity := sell0.Balance //s.Formatter.FormatQuantity(option1, sell0.Balance)
 
-			buy1 := SwapTransition{
+			buy0 := SwapTransition{
 				Type:          model.SwapTransitionTypeSellBuyBuy,
 				BaseAsset:     option1.BaseAsset,
 				QuoteAsset:    option1.QuoteAsset,
-				Operation:     model.SwapTransitionOperationTypeSell,
-				BaseQuantity:  buy1Quantity,
+				Operation:     model.SwapTransitionOperationTypeBuy,
+				BaseQuantity:  buy0Quantity,
 				QuoteQuantity: 0.00,
 				Price:         option1Price,
-				Balance:       (buy1Quantity / option1Price) - (buy1Quantity/option1Price)*0.002,
+				Balance:       (buy0Quantity / option1Price) - (buy0Quantity/option1Price)*0.002,
 				Level:         1,
 				Transitions:   make([]SwapTransition, 0),
 			}
-			// log.Printf("[%s] 2 BUY %s -> %s | %f x %f = %f", asset, buy1.BaseAsset, buy1.QuoteAsset, buy1.BaseQuantity, buy1.Price, buy1.Balance)
-			options2 := s.ExchangeRepository.GetSwapPairsByBaseAsset(asset)
+			// log.Printf("[%s] 2 BUY %s -> %s | %f x %f = %f", asset, buy0.BaseAsset, buy0.QuoteAsset, buy0.BaseQuantity, buy0.Price, buy0.Balance)
+			options2 := s.ExchangeRepository.GetSwapPairsByQuoteAsset(option1.BaseAsset)
 			for _, option2 := range options2 {
 				if option2.IsPriceExpired() {
 					continue
 				}
 
-				if option2.QuoteAsset != buy1.QuoteAsset {
+				if option2.BaseAsset != asset {
 					continue
 				}
 
 				option2Price := option2.BuyPrice
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)
 				//log.Printf("[%s] formatted [5] %f -> %f", option2.Symbol, option2.BuyPrice, option2Price)
-				sell1Quantity := buy1.Balance //s.Formatter.FormatQuantity(option2, buy1.Balance)
+				buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option2, buy0.Balance)
 
-				sellBalance := (sell1Quantity / option2Price) - (sell1Quantity/option2Price)*0.002
+				sellBalance := (buy1Quantity / option2Price) - (buy1Quantity/option2Price)*0.002
 
-				sell0 := SwapTransition{
+				buy1 := SwapTransition{
 					Type:          model.SwapTransitionTypeSellBuyBuy,
 					BaseAsset:     asset,
-					QuoteAsset:    buy1.QuoteAsset,
+					QuoteAsset:    buy0.QuoteAsset,
 					Operation:     model.SwapTransitionOperationTypeBuy,
 					BaseQuantity:  0.00,
-					QuoteQuantity: sell1Quantity,
+					QuoteQuantity: buy1Quantity,
 					Price:         option2Price,
 					Balance:       sellBalance,
 					Level:         2,
 					Transitions:   make([]SwapTransition, 0),
 				}
 
-				profit := s.Formatter.ComparePercentage(buy0.BaseQuantity, sellBalance) - 100
+				profit := s.Formatter.ComparePercentage(sell0.BaseQuantity, sellBalance) - 100
 
 				if bestChain == nil || profit.Gt(bestChain.Percent) {
 					title := fmt.Sprintf(
 						"%s sell-> %s buy-> %s buy-> %s",
 						asset,
-						buy0.QuoteAsset,
+						sell0.QuoteAsset,
+						buy0.BaseAsset,
 						buy1.BaseAsset,
-						sell0.BaseAsset,
 					)
 
 					h := md5.New()
@@ -423,30 +423,30 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 						Type:      model.SwapTransitionTypeSellBuyBuy,
 						Title:     title,
 						Hash:      fmt.Sprintf("%x", h.Sum(nil)),
-						SwapOne:   &buy0,
-						SwapTwo:   &buy1,
-						SwapThree: &sell0,
+						SwapOne:   &sell0,
+						SwapTwo:   &buy0,
+						SwapThree: &buy1,
 						Percent:   profit,
 						Timestamp: time.Now().Unix(),
 					}
 					bestChain = &bbsChain
 				}
 
-				buy1.Transitions = append(buy1.Transitions, sell0)
+				buy0.Transitions = append(buy0.Transitions, buy1)
 			}
 
-			if len(buy1.Transitions) == 0 {
+			if len(buy0.Transitions) == 0 {
 				continue
 			}
 
-			buy0.Transitions = append(buy0.Transitions, buy1)
+			sell0.Transitions = append(sell0.Transitions, buy0)
 		}
 
-		if len(buy0.Transitions) == 0 {
+		if len(sell0.Transitions) == 0 {
 			continue
 		}
 
-		transitions = append(transitions, buy0)
+		transitions = append(transitions, sell0)
 	}
 
 	if bestChain == nil {

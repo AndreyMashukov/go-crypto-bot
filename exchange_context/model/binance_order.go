@@ -34,7 +34,7 @@ func (b *BinanceOrder) IsNew() bool {
 }
 
 func (b *BinanceOrder) IsExpired() bool {
-	return b.Status == "EXPIRED"
+	return b.Status == "EXPIRED" || b.Status == "EXPIRED_IN_MATCH"
 }
 
 func (b *BinanceOrder) IsFilled() bool {

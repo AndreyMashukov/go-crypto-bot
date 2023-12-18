@@ -1664,6 +1664,17 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 
 	swapChain, err := m.SwapRepository.GetSwapChainById(swapAction.SwapChainId)
 
+	if swapChain.IsSBB() {
+		swapAction.Status = ExchangeModel.SwapActionStatusCanceled
+		nowTimestamp := time.Now().Unix()
+		swapAction.EndTimestamp = &nowTimestamp
+		swapAction.EndQuantity = &swapAction.StartQuantity
+		_ = m.SwapRepository.UpdateSwapAction(swapAction)
+		order.Swap = false
+		_ = m.OrderRepository.Update(order)
+		return
+	}
+
 	if err != nil {
 		log.Printf("Swap chain %d is not found", swapAction.SwapChainId)
 		return

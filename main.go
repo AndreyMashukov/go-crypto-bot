@@ -126,11 +126,11 @@ func main() {
 	}
 
 	// Swap Settings
-	swapMinPercentValid := 1.15
-	swapOrderOnProfitPercent := -1.05
+	swapMinPercentValid := 0.8
+	swapOrderOnProfitPercent := -1.00
 	var swapOpenedSellOrderFromHoursOpened int64 = 2
-	//swapMinPercentValid := 0.2
-	//swapOrderOnProfitPercent := 1.00
+	//swapMinPercentValid := 0.1
+	//swapOrderOnProfitPercent := 10.00
 	//var swapOpenedSellOrderFromHoursOpened int64 = 0
 
 	swapValidator := ExchangeService.SwapValidator{
@@ -228,10 +228,10 @@ func main() {
 
 		go func(swapPairs []ExchangeModel.SwapPair) {
 			for {
-				time.Sleep(time.Second * 30)
+				time.Sleep(time.Second * 19)
 				for _, swapPair := range swapPairs {
-					time.Sleep(time.Millisecond * 10)
 					orderBook, err := binance.GetDepth(swapPair.Symbol)
+					// save support + resistance levels
 					if err == nil && len(orderBook.Asks) >= 10 && len(orderBook.Bids) >= 10 {
 						orderDepth := orderBook.ToDepth(swapPair.Symbol)
 						swapPair.BuyPrice = orderDepth.Bids[0][0].Value

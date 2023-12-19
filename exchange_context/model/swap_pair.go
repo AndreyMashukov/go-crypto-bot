@@ -23,11 +23,11 @@ func (s SwapPair) IsPriceExpired() bool {
 }
 
 func (s SwapPair) IsBullMarket() bool {
-	return s.BuyVolume/2 >= s.SellVolume
+	return s.BuyVolume/s.SellVolume >= 1.60
 }
 
 func (s SwapPair) IsBearMarket() bool {
-	return s.SellVolume/2 >= s.BuyVolume
+	return s.SellVolume/s.BuyVolume >= 1.60
 }
 
 func (s SwapPair) IsQuietMarket() bool {

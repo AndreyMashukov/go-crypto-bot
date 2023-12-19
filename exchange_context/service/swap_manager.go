@@ -162,7 +162,7 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 			continue
 		}
 
-		if !option0.IsBullMarket() {
+		if !option0.IsBullMarket() && !option0.IsGainer() {
 			continue
 		}
 
@@ -191,7 +191,7 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 				continue
 			}
 
-			if !option1.IsBullMarket() {
+			if !option1.IsBullMarket() && !option1.IsGainer() {
 				continue
 			}
 
@@ -224,7 +224,7 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 					continue
 				}
 
-				if !option2.IsBearMarket() {
+				if !option2.IsBearMarket() && !option2.IsLooser() {
 					continue
 				}
 
@@ -332,7 +332,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 			continue
 		}
 
-		if !option0.IsBullMarket() {
+		if !option0.IsBullMarket() && !option0.IsGainer() {
 			continue
 		}
 
@@ -365,7 +365,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 				continue
 			}
 
-			if !option1.IsBearMarket() {
+			if !option1.IsBearMarket() && !option1.IsLooser() {
 				continue
 			}
 
@@ -398,7 +398,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 					continue
 				}
 
-				if !option2.IsBearMarket() {
+				if !option2.IsBearMarket() && !option2.IsLooser() {
 					continue
 				}
 

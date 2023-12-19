@@ -196,7 +196,8 @@ func (repo *ExchangeRepository) CreateSwapPair(swapPair model.SwapPair) (*int64,
 		    min_quantity = ?,
 		    min_price = ?,
 		    sell_volume = ?,
-		    buy_volume = ?
+		    buy_volume = ?,
+		    daily_percent = ?
 	`,
 		swapPair.SourceSymbol,
 		swapPair.Symbol,
@@ -210,6 +211,7 @@ func (repo *ExchangeRepository) CreateSwapPair(swapPair model.SwapPair) (*int64,
 		swapPair.MinPrice,
 		swapPair.SellVolume,
 		swapPair.BuyVolume,
+		swapPair.DailyPercent,
 	)
 
 	if err != nil {
@@ -236,7 +238,8 @@ func (repo *ExchangeRepository) UpdateSwapPair(swapPair model.SwapPair) error {
 		    sp.min_quantity = ?,
 		    sp.min_price = ?,
 		    sp.sell_volume = ?,
-		    sp.buy_volume = ?
+		    sp.buy_volume = ?,
+		    sp.daily_percent = ?
 		WHERE sp.id = ?
 	`,
 		swapPair.SourceSymbol,
@@ -251,6 +254,7 @@ func (repo *ExchangeRepository) UpdateSwapPair(swapPair model.SwapPair) error {
 		swapPair.MinPrice,
 		swapPair.SellVolume,
 		swapPair.BuyVolume,
+		swapPair.DailyPercent,
 		swapPair.Id,
 	)
 
@@ -277,7 +281,8 @@ func (e *ExchangeRepository) GetSwapPairs() []model.SwapPair {
 		    sp.min_quantity as MinQuantity,
 		    sp.min_price as MinPrice,
 		    sp.sell_volume as SellVolume,
-		    sp.buy_volume as BuyVolume
+		    sp.buy_volume as BuyVolume,
+		    sp.daily_percent as DailyPercent
 		FROM swap_pair sp
 	`)
 	defer res.Close()
@@ -304,6 +309,7 @@ func (e *ExchangeRepository) GetSwapPairs() []model.SwapPair {
 			&swapPair.MinPrice,
 			&swapPair.SellVolume,
 			&swapPair.BuyVolume,
+			&swapPair.DailyPercent,
 		)
 
 		if err != nil {
@@ -331,7 +337,8 @@ func (e *ExchangeRepository) GetSwapPairsByBaseAsset(baseAsset string) []model.S
 		    sp.min_quantity as MinQuantity,
 		    sp.min_price as MinPrice,
 		    sp.sell_volume as SellVolume,
-		    sp.buy_volume as BuyVolume
+		    sp.buy_volume as BuyVolume,
+		    sp.daily_percent as DailyPercent
 		FROM swap_pair sp 
 		WHERE sp.base_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price
 	`, baseAsset)
@@ -359,6 +366,7 @@ func (e *ExchangeRepository) GetSwapPairsByBaseAsset(baseAsset string) []model.S
 			&swapPair.MinPrice,
 			&swapPair.SellVolume,
 			&swapPair.BuyVolume,
+			&swapPair.DailyPercent,
 		)
 
 		if err != nil {
@@ -386,7 +394,8 @@ func (e *ExchangeRepository) GetSwapPairsByQuoteAsset(quoteAsset string) []model
 		    sp.min_quantity as MinQuantity,
 		    sp.min_price as MinPrice,
 		    sp.sell_volume as SellVolume,
-		    sp.buy_volume as BuyVolume
+		    sp.buy_volume as BuyVolume,
+		    sp.daily_percent as DailyPercent
 		FROM swap_pair sp 
 		WHERE sp.quote_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price
 	`, quoteAsset)
@@ -414,6 +423,7 @@ func (e *ExchangeRepository) GetSwapPairsByQuoteAsset(quoteAsset string) []model
 			&swapPair.MinPrice,
 			&swapPair.SellVolume,
 			&swapPair.BuyVolume,
+			&swapPair.DailyPercent,
 		)
 
 		if err != nil {
@@ -442,7 +452,8 @@ func (e *ExchangeRepository) GetSwapPair(symbol string) (model.SwapPair, error) 
 		    sp.min_quantity as MinQuantity,
 		    sp.min_price as MinPrice,
 		    sp.sell_volume as SellVolume,
-		    sp.buy_volume as BuyVolume
+		    sp.buy_volume as BuyVolume,
+		    sp.daily_percent as DailyPercent
 		FROM swap_pair sp
 		WHERE sp.symbol = ?
 	`,
@@ -461,6 +472,7 @@ func (e *ExchangeRepository) GetSwapPair(symbol string) (model.SwapPair, error) 
 		&swapPair.MinPrice,
 		&swapPair.SellVolume,
 		&swapPair.BuyVolume,
+		&swapPair.DailyPercent,
 	)
 
 	if err != nil {

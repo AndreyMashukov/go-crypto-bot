@@ -12,8 +12,8 @@ import (
 )
 
 type SwapManager struct {
-	ExchangeRepository *ExchangeRepository.ExchangeRepository
-	SwapRepository     *ExchangeRepository.SwapRepository
+	ExchangeRepository ExchangeRepository.SwapPairRepositoryInterface
+	SwapRepository     ExchangeRepository.SwapBasicRepositoryInterface
 	Formatter          *Formatter
 }
 
@@ -162,7 +162,11 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 			continue
 		}
 
-		option0Price := option0.SellPrice - (option0.MinPrice * 2)
+		if !option0.IsBullMarket() {
+			continue
+		}
+
+		option0Price := option0.SellPrice
 		option0Price = s.Formatter.FormatPrice(option0, option0Price)
 		//log.Printf("[%s] formatted [1] %f -> %f", option0.Symbol, option0.BuyPrice, option0Price)
 		buy0Quantity := initialBalance //s.Formatter.FormatQuantity(option0, initialBalance)
@@ -187,7 +191,11 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 				continue
 			}
 
-			option1Price := option1.SellPrice - (option1.MinPrice * 2)
+			if !option1.IsBullMarket() {
+				continue
+			}
+
+			option1Price := option1.SellPrice
 			option1Price = s.Formatter.FormatPrice(option1, option1Price)
 			//log.Printf("[%s] formatted [1] %f -> %f", option1.Symbol, option1.BuyPrice, option1Price)
 			buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option1, buy0.Balance)
@@ -216,7 +224,11 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 					continue
 				}
 
-				option2Price := option2.BuyPrice + (option2.MinPrice * 4)
+				if !option2.IsBearMarket() {
+					continue
+				}
+
+				option2Price := option2.BuyPrice
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)
 				//log.Printf("[%s] formatted [2] %f -> %f", option2.Symbol, option2.BuyPrice, option2Price)
 				sell1Quantity := buy1.Balance //s.Formatter.FormatQuantity(option2, buy1.Balance)
@@ -237,7 +249,7 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 					Transitions:   make([]SwapTransition, 0),
 				}
 
-				profit := s.Formatter.ComparePercentage(buy0.BaseQuantity, sellBalance) - 100
+				profit := model.Percent(s.Formatter.ToFixed(s.Formatter.ComparePercentage(buy0.BaseQuantity, sellBalance).Value()-100, 2))
 
 				if bestChain == nil || profit.Gt(bestChain.Percent) {
 					title := fmt.Sprintf(
@@ -320,7 +332,11 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 			continue
 		}
 
-		option0Price := option0.SellPrice - (option0.MinPrice * 2)
+		if !option0.IsBullMarket() {
+			continue
+		}
+
+		option0Price := option0.SellPrice
 		option0Price = s.Formatter.FormatPrice(option0, option0Price)
 		//log.Printf("[%s] formatted [3] %f -> %f", option0.Symbol, option0.SellPrice, option0Price)
 		sell0Quantity := initialBalance //s.Formatter.FormatQuantity(option0, initialBalance)
@@ -349,7 +365,11 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 				continue
 			}
 
-			option1Price := option1.BuyPrice + (option1.MinPrice * 2)
+			if !option1.IsBearMarket() {
+				continue
+			}
+
+			option1Price := option1.BuyPrice
 			option1Price = s.Formatter.FormatPrice(option1, option1Price)
 			//log.Printf("[%s] formatted [4] %f -> %f", option1.Symbol, option1.BuyPrice, option1Price)
 			buy0Quantity := sell0.Balance //s.Formatter.FormatQuantity(option1, sell0.Balance)
@@ -378,7 +398,11 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 					continue
 				}
 
-				option2Price := option2.BuyPrice + (option2.MinPrice * 4)
+				if !option2.IsBearMarket() {
+					continue
+				}
+
+				option2Price := option2.BuyPrice
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)
 				//log.Printf("[%s] formatted [5] %f -> %f", option2.Symbol, option2.BuyPrice, option2Price)
 				buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option2, buy0.Balance)
@@ -399,7 +423,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 					Transitions:   make([]SwapTransition, 0),
 				}
 
-				profit := s.Formatter.ComparePercentage(sell0.BaseQuantity, sellBalance) - 100
+				profit := model.Percent(s.Formatter.ToFixed(s.Formatter.ComparePercentage(sell0.BaseQuantity, sellBalance).Value()-100, 2))
 
 				if bestChain == nil || profit.Gt(bestChain.Percent) {
 					title := fmt.Sprintf(
@@ -413,7 +437,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 					h := md5.New()
 					_, _ = io.WriteString(h, title)
 
-					bbsChain := BestSwapChain{
+					sbbChain := BestSwapChain{
 						Type:      model.SwapTransitionTypeSellBuyBuy,
 						Title:     title,
 						Hash:      fmt.Sprintf("%x", h.Sum(nil)),
@@ -423,7 +447,7 @@ func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
 						Percent:   profit,
 						Timestamp: time.Now().Unix(),
 					}
-					bestChain = &bbsChain
+					bestChain = &sbbChain
 				}
 
 				buy0.Transitions = append(buy0.Transitions, buy1)

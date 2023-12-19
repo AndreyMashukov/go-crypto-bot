@@ -1,0 +1,53 @@
+[
+  {
+    "id": 58,
+    "sourceSymbol": "SOLUSDT",
+    "symbol": "SOLETH",
+    "baseAsset": "SOL",
+    "quoteAsset": "ETH",
+    "buyPrice": 0.03123,
+    "priceTimestamp": 1702947581,
+    "minNotional": 0.001,
+    "minQuantity": 0.001,
+    "minPrice": 0.00001,
+    "sellPrice": 0.03474,
+    "maxPercent": 0,
+    "maxPercentTimestamp": null,
+    "buyVolume": 1.00,
+    "sellVolume": 2.00
+  },
+  {
+    "id": 97,
+    "sourceSymbol": "ETHUSDT",
+    "symbol": "ETHGBP",
+    "baseAsset": "ETH",
+    "quoteAsset": "GBP",
+    "buyPrice": 1782.94,
+    "priceTimestamp": 1702947585,
+    "minNotional": 5,
+    "minQuantity": 0.0001,
+    "minPrice": 0.01,
+    "sellPrice": 1743.08,
+    "maxPercent": 0,
+    "maxPercentTimestamp": null,
+    "buyVolume": 1.00,
+    "sellVolume": 2.00
+  },
+  {
+    "id": 106,
+    "sourceSymbol": "SOLUSDT",
+    "symbol": "SOLGBP",
+    "baseAsset": "SOL",
+    "quoteAsset": "GBP",
+    "buyPrice": 51.38,
+    "priceTimestamp": 1702947586,
+    "minNotional": 5,
+    "minQuantity": 0.01,
+    "minPrice": 0.01,
+    "sellPrice": 58.58,
+    "maxPercent": 0,
+    "maxPercentTimestamp": null,
+    "buyVolume": 2.00,
+    "sellVolume": 1.00
+  }
+]

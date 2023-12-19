@@ -12,6 +12,40 @@ import (
 	"time"
 )
 
+type SwapPairRepositoryInterface interface {
+	CreateSwapPair(swapPair model.SwapPair) (*int64, error)
+	UpdateSwapPair(swapPair model.SwapPair) error
+	GetSwapPairs() []model.SwapPair
+	GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair
+	GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair
+	GetSwapPair(symbol string) (model.SwapPair, error)
+}
+
+type ExchangeRepositoryInterface interface {
+	GetSubscribedSymbols() []model.Symbol
+	GetTradeLimits() []model.TradeLimit
+	GetTradeLimit(symbol string) (model.TradeLimit, error)
+	CreateTradeLimit(limit model.TradeLimit) (*int64, error)
+	CreateSwapPair(swapPair model.SwapPair) (*int64, error)
+	UpdateSwapPair(swapPair model.SwapPair) error
+	GetSwapPairs() []model.SwapPair
+	GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair
+	GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair
+	GetSwapPair(symbol string) (model.SwapPair, error)
+	UpdateTradeLimit(limit model.TradeLimit) error
+	GetLastKLine(symbol string) *model.KLine
+	AddKLine(kLine model.KLine)
+	KLineList(symbol string, reverse bool, size int64) []model.KLine
+	GetPeriodMaxPrice(symbol string, period int64) float64
+	GetPeriodMinPrice(symbol string, period int64) float64
+	SetDepth(depth model.Depth)
+	GetDepth(symbol string) model.Depth
+	AddTrade(trade model.Trade)
+	TradeList(symbol string) []model.Trade
+	SetDecision(decision model.Decision)
+	GetDecision(strategy string) *model.Decision
+}
+
 type ExchangeRepository struct {
 	DB         *sql.DB
 	RDB        *redis.Client
@@ -160,7 +194,9 @@ func (repo *ExchangeRepository) CreateSwapPair(swapPair model.SwapPair) (*int64,
 		    price_timestamp = ?,
 		    min_notional = ?,
 		    min_quantity = ?,
-		    min_price = ?
+		    min_price = ?,
+		    sell_volume = ?,
+		    buy_volume = ?
 	`,
 		swapPair.SourceSymbol,
 		swapPair.Symbol,
@@ -172,6 +208,8 @@ func (repo *ExchangeRepository) CreateSwapPair(swapPair model.SwapPair) (*int64,
 		swapPair.MinNotional,
 		swapPair.MinQuantity,
 		swapPair.MinPrice,
+		swapPair.SellVolume,
+		swapPair.BuyVolume,
 	)
 
 	if err != nil {
@@ -196,7 +234,9 @@ func (repo *ExchangeRepository) UpdateSwapPair(swapPair model.SwapPair) error {
 		    sp.price_timestamp = ?,
 		    sp.min_notional = ?,
 		    sp.min_quantity = ?,
-		    sp.min_price = ?
+		    sp.min_price = ?,
+		    sp.sell_volume = ?,
+		    sp.buy_volume = ?
 		WHERE sp.id = ?
 	`,
 		swapPair.SourceSymbol,
@@ -209,6 +249,8 @@ func (repo *ExchangeRepository) UpdateSwapPair(swapPair model.SwapPair) error {
 		swapPair.MinNotional,
 		swapPair.MinQuantity,
 		swapPair.MinPrice,
+		swapPair.SellVolume,
+		swapPair.BuyVolume,
 		swapPair.Id,
 	)
 
@@ -233,7 +275,9 @@ func (e *ExchangeRepository) GetSwapPairs() []model.SwapPair {
 		    sp.price_timestamp as PriceTimestamp,
 		    sp.min_notional as MinNotional,
 		    sp.min_quantity as MinQuantity,
-		    sp.min_price as MinPrice
+		    sp.min_price as MinPrice,
+		    sp.sell_volume as SellVolume,
+		    sp.buy_volume as BuyVolume
 		FROM swap_pair sp
 	`)
 	defer res.Close()
@@ -258,6 +302,8 @@ func (e *ExchangeRepository) GetSwapPairs() []model.SwapPair {
 			&swapPair.MinNotional,
 			&swapPair.MinQuantity,
 			&swapPair.MinPrice,
+			&swapPair.SellVolume,
+			&swapPair.BuyVolume,
 		)
 
 		if err != nil {
@@ -283,7 +329,9 @@ func (e *ExchangeRepository) GetSwapPairsByBaseAsset(baseAsset string) []model.S
 		    sp.price_timestamp as PriceTimestamp,
 		    sp.min_notional as MinNotional,
 		    sp.min_quantity as MinQuantity,
-		    sp.min_price as MinPrice
+		    sp.min_price as MinPrice,
+		    sp.sell_volume as SellVolume,
+		    sp.buy_volume as BuyVolume
 		FROM swap_pair sp 
 		WHERE sp.base_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price
 	`, baseAsset)
@@ -309,6 +357,8 @@ func (e *ExchangeRepository) GetSwapPairsByBaseAsset(baseAsset string) []model.S
 			&swapPair.MinNotional,
 			&swapPair.MinQuantity,
 			&swapPair.MinPrice,
+			&swapPair.SellVolume,
+			&swapPair.BuyVolume,
 		)
 
 		if err != nil {
@@ -334,7 +384,9 @@ func (e *ExchangeRepository) GetSwapPairsByQuoteAsset(quoteAsset string) []model
 		    sp.price_timestamp as PriceTimestamp,
 		    sp.min_notional as MinNotional,
 		    sp.min_quantity as MinQuantity,
-		    sp.min_price as MinPrice
+		    sp.min_price as MinPrice,
+		    sp.sell_volume as SellVolume,
+		    sp.buy_volume as BuyVolume
 		FROM swap_pair sp 
 		WHERE sp.quote_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price
 	`, quoteAsset)
@@ -360,6 +412,8 @@ func (e *ExchangeRepository) GetSwapPairsByQuoteAsset(quoteAsset string) []model
 			&swapPair.MinNotional,
 			&swapPair.MinQuantity,
 			&swapPair.MinPrice,
+			&swapPair.SellVolume,
+			&swapPair.BuyVolume,
 		)
 
 		if err != nil {
@@ -386,7 +440,9 @@ func (e *ExchangeRepository) GetSwapPair(symbol string) (model.SwapPair, error) 
 		    sp.price_timestamp as PriceTimestamp,
 		    sp.min_notional as MinNotional,
 		    sp.min_quantity as MinQuantity,
-		    sp.min_price as MinPrice
+		    sp.min_price as MinPrice,
+		    sp.sell_volume as SellVolume,
+		    sp.buy_volume as BuyVolume
 		FROM swap_pair sp
 		WHERE sp.symbol = ?
 	`,
@@ -403,6 +459,8 @@ func (e *ExchangeRepository) GetSwapPair(symbol string) (model.SwapPair, error) 
 		&swapPair.MinNotional,
 		&swapPair.MinQuantity,
 		&swapPair.MinPrice,
+		&swapPair.SellVolume,
+		&swapPair.BuyVolume,
 	)
 
 	if err != nil {

@@ -11,6 +11,30 @@ import (
 	"time"
 )
 
+type SwapBasicRepositoryInterface interface {
+	GetSwapChain(hash string) (model.SwapChainEntity, error)
+	CreateSwapChain(swapChain model.SwapChainEntity) (*int64, error)
+	UpdateSwapChain(swapChain model.SwapChainEntity) error
+	SaveSwapChainCache(asset string, entity model.SwapChainEntity)
+}
+
+type SwapRepositoryInterface interface {
+	GetSwapChains(baseAsset string) []model.SwapChainEntity
+	GetSwapChainById(id int64) (model.SwapChainEntity, error)
+	GetSwapChain(hash string) (model.SwapChainEntity, error)
+	CreateSwapTransition(transition model.SwapTransitionEntity) (*int64, error)
+	CreateSwapChain(swapChain model.SwapChainEntity) (*int64, error)
+	UpdateSwapChain(swapChain model.SwapChainEntity) error
+	UpdateSwapTransition(transition model.SwapTransitionEntity) error
+	InvalidateSwapChainCache(asset string)
+	SaveSwapChainCache(asset string, entity model.SwapChainEntity)
+	GetSwapChainCache(asset string) *model.SwapChainEntity
+	CreateSwapAction(action model.SwapAction) (*int64, error)
+	UpdateSwapAction(action model.SwapAction) error
+	GetActiveSwapAction(order model.Order) (model.SwapAction, error)
+	GetSwapPairBySymbol(symbol string) (model.SwapPair, error)
+}
+
 type SwapRepository struct {
 	DB         *sql.DB
 	RDB        *redis.Client

@@ -253,9 +253,9 @@ func main() {
 				}
 
 				for _, swapPair := range swapPairs {
-					go func(symbol string) {
-						swapManager.CalculateSwapOptions(symbol)
-					}(swapPair.Symbol)
+					go func(baseAsset string) {
+						swapManager.CalculateSwapOptions(baseAsset)
+					}(swapPair.BaseAsset)
 				}
 				iterator++
 				if iterator > 20 {

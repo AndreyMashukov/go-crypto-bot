@@ -16,6 +16,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -252,10 +253,19 @@ func main() {
 					}
 				}
 
+				baseAssets := make([]string, 0)
+
 				for _, swapPair := range swapPairs {
+					if slices.Contains(baseAssets, swapPair.BaseAsset) {
+						continue
+					}
+
+					baseAssets = append(baseAssets, swapPair.BaseAsset)
+				}
+				for _, baseAsset := range baseAssets {
 					go func(baseAsset string) {
 						swapManager.CalculateSwapOptions(baseAsset)
-					}(swapPair.BaseAsset)
+					}(baseAsset)
 				}
 				iterator++
 				if iterator > 20 {

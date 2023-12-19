@@ -219,21 +219,30 @@ func main() {
 	}
 
 	if swapEnabled {
-		swapPairs := exchangeRepository.GetSwapPairs()
 		swapManager := ExchangeService.SwapManager{
 			ExchangeRepository: &exchangeRepository,
 			SwapRepository:     &swapRepository,
 			Formatter:          &formatter,
 		}
 
-		go func(swapPairs []ExchangeModel.SwapPair) {
+		go func() {
+			iterator := 0
 			for {
 				time.Sleep(time.Second * 19)
+
+				swapPairs := exchangeRepository.GetSwapPairs()
 				for _, swapPair := range swapPairs {
 					orderBook, err := binance.GetDepth(swapPair.Symbol)
 					// save support + resistance levels
 					if err == nil && len(orderBook.Asks) >= 10 && len(orderBook.Bids) >= 10 {
 						orderDepth := orderBook.ToDepth(swapPair.Symbol)
+						if iterator == 0 {
+							kline := binance.GetKLines(swapPair.Symbol, "1d", 1)[0].ToKLine(swapPair.Symbol)
+							swapPair.DailyPercent = formatter.ToFixed(
+								(formatter.ComparePercentage(kline.Open, kline.Close) - 100).Value(),
+								2,
+							)
+						}
 						swapPair.BuyPrice = orderDepth.Bids[0][0].Value
 						swapPair.SellPrice = orderDepth.Asks[0][0].Value
 						swapPair.SellVolume = formatter.ToFixed(orderDepth.GetAskVolume(), 2)
@@ -248,8 +257,12 @@ func main() {
 						swapManager.CalculateSwapOptions(symbol)
 					}(swapPair.Symbol)
 				}
+				iterator++
+				if iterator > 20 {
+					iterator = 0
+				}
 			}
-		}(swapPairs)
+		}()
 	}
 
 	go func() {

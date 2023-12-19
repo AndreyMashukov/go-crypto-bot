@@ -14,3 +14,4 @@ ALTER TABLE orders ADD CONSTRAINT order_external_id_symbol UNIQUE (external_id,s
 # -----
 alter table swap_pair add column sell_volume double unsigned default 0.00;
 alter table swap_pair add column buy_volume double unsigned default 0.00;
+alter table swap_pair add column daily_percent double default 0.00;

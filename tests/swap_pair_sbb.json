@@ -14,7 +14,8 @@
     "maxPercent": 0,
     "maxPercentTimestamp": null,
     "buyVolume": 1.00,
-    "sellVolume": 2.00
+    "sellVolume": 2.00,
+    "dailyPercent": -1.50
   },
   {
     "id": 97,
@@ -31,7 +32,8 @@
     "maxPercent": 0,
     "maxPercentTimestamp": null,
     "buyVolume": 1.00,
-    "sellVolume": 2.00
+    "sellVolume": 2.00,
+    "dailyPercent": -1.50
   },
   {
     "id": 106,
@@ -48,6 +50,7 @@
     "maxPercent": 0,
     "maxPercentTimestamp": null,
     "buyVolume": 2.00,
-    "sellVolume": 1.00
+    "sellVolume": 1.00,
+    "dailyPercent": -1.50
   }
 ]

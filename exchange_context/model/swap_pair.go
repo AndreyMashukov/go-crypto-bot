@@ -16,6 +16,15 @@ type SwapPair struct {
 	MinPrice       float64 `json:"minPrice"`
 	BuyVolume      float64 `json:"buyVolume"`
 	SellVolume     float64 `json:"sellVolume"`
+	DailyPercent   float64 `json:"dailyPercent"`
+}
+
+func (s SwapPair) IsGainer() bool {
+	return s.DailyPercent >= 0.5
+}
+
+func (s SwapPair) IsLooser() bool {
+	return s.DailyPercent <= -0.5
 }
 
 func (s SwapPair) IsPriceExpired() bool {

@@ -219,6 +219,12 @@ func main() {
 		ExchangeRepository: exchangeRepository,
 	}
 
+	swapUpdater := ExchangeService.SwapUpdater{
+		ExchangeRepository: &exchangeRepository,
+		Formatter:          &formatter,
+		Binance:            &binance,
+	}
+
 	if swapEnabled {
 		swapManager := ExchangeService.SwapManager{
 			ExchangeRepository: &exchangeRepository,
@@ -226,42 +232,49 @@ func main() {
 			Formatter:          &formatter,
 		}
 
+		// existing swaps real time monitoring
+		go func() {
+			for {
+				swapPairs := exchangeRepository.GetSwapPairs()
+				assets := make([]string, 0)
+				for _, swapPair := range swapPairs {
+					possibleSwap := swapRepository.GetSwapChainCache(swapPair.BaseAsset)
+					if possibleSwap != nil {
+						if !slices.Contains(assets, swapPair.BaseAsset) {
+							assets = append(assets, swapPair.BaseAsset)
+						}
+
+						swapUpdater.UpdateSwapPair(swapPair, false)
+					}
+				}
+
+				for _, asset := range assets {
+					go func(asset string) {
+						swapManager.CalculateSwapOptions(asset)
+					}(asset)
+				}
+				time.Sleep(time.Second)
+			}
+		}()
+
+		// new possible swaps search algorithm
 		go func() {
 			iterator := 0
 			for {
-				time.Sleep(time.Second * 19)
-
+				time.Sleep(time.Second * 20)
+				baseAssets := make([]string, 0)
 				swapPairs := exchangeRepository.GetSwapPairs()
 				for _, swapPair := range swapPairs {
-					orderBook, err := binance.GetDepth(swapPair.Symbol)
-					// save support + resistance levels
-					if err == nil && len(orderBook.Asks) >= 10 && len(orderBook.Bids) >= 10 {
-						orderDepth := orderBook.ToDepth(swapPair.Symbol)
-						if iterator == 0 {
-							kline := binance.GetKLines(swapPair.Symbol, "1d", 1)[0].ToKLine(swapPair.Symbol)
-							swapPair.DailyPercent = formatter.ToFixed(
-								(formatter.ComparePercentage(kline.Open, kline.Close) - 100).Value(),
-								2,
-							)
+					possibleSwap := swapRepository.GetSwapChainCache(swapPair.BaseAsset)
+					if possibleSwap == nil {
+						if !slices.Contains(baseAssets, swapPair.BaseAsset) {
+							baseAssets = append(baseAssets, swapPair.BaseAsset)
 						}
-						swapPair.BuyPrice = orderDepth.Bids[0][0].Value
-						swapPair.SellPrice = orderDepth.Asks[0][0].Value
-						swapPair.SellVolume = formatter.ToFixed(orderDepth.GetAskVolume(), 2)
-						swapPair.BuyVolume = formatter.ToFixed(orderDepth.GetBidVolume(), 2)
-						swapPair.PriceTimestamp = time.Now().Unix()
-						_ = exchangeRepository.UpdateSwapPair(swapPair)
+
+						swapUpdater.UpdateSwapPair(swapPair, iterator == 0)
 					}
 				}
 
-				baseAssets := make([]string, 0)
-
-				for _, swapPair := range swapPairs {
-					if slices.Contains(baseAssets, swapPair.BaseAsset) {
-						continue
-					}
-
-					baseAssets = append(baseAssets, swapPair.BaseAsset)
-				}
 				for _, baseAsset := range baseAssets {
 					go func(baseAsset string) {
 						swapManager.CalculateSwapOptions(baseAsset)

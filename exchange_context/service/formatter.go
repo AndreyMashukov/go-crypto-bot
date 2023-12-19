@@ -54,3 +54,12 @@ func (m *Formatter) FormatQuantity(limit ExchangeModel.TradeLimitInterface, quan
 func (m *Formatter) ComparePercentage(first float64, second float64) ExchangeModel.Percent {
 	return ExchangeModel.Percent(second * 100 / first)
 }
+
+func (m *Formatter) Round(num float64) int {
+	return int(num + math.Copysign(0.5, num))
+}
+
+func (m *Formatter) ToFixed(num float64, precision int) float64 {
+	output := math.Pow(10, float64(precision))
+	return float64(m.Round(num*output)) / output
+}

@@ -3,21 +3,35 @@ package model
 import "time"
 
 type SwapPair struct {
-	Id             int64
-	SourceSymbol   string
-	Symbol         string
-	BaseAsset      string
-	QuoteAsset     string
-	BuyPrice       float64
-	SellPrice      float64
-	PriceTimestamp int64
-	MinNotional    float64
-	MinQuantity    float64
-	MinPrice       float64
+	Id             int64   `json:"id"`
+	SourceSymbol   string  `json:"sourceSymbol"`
+	Symbol         string  `json:"symbol"`
+	BaseAsset      string  `json:"baseAsset"`
+	QuoteAsset     string  `json:"quoteAsset"`
+	BuyPrice       float64 `json:"buyPrice"`
+	SellPrice      float64 `json:"sellPrice"`
+	PriceTimestamp int64   `json:"priceTimestamp"`
+	MinNotional    float64 `json:"minNotional"`
+	MinQuantity    float64 `json:"minQuantity"`
+	MinPrice       float64 `json:"minPrice"`
+	BuyVolume      float64 `json:"buyVolume"`
+	SellVolume     float64 `json:"sellVolume"`
 }
 
 func (s SwapPair) IsPriceExpired() bool {
 	return (time.Now().Unix() - (s.PriceTimestamp)) > 60
+}
+
+func (s SwapPair) IsBullMarket() bool {
+	return s.BuyVolume/2 >= s.SellVolume
+}
+
+func (s SwapPair) IsBearMarket() bool {
+	return s.SellVolume/2 >= s.BuyVolume
+}
+
+func (s SwapPair) IsQuietMarket() bool {
+	return !s.IsBullMarket() && !s.IsBearMarket()
 }
 
 func (s SwapPair) GetMinPrice() float64 {

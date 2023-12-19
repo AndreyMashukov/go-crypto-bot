@@ -126,7 +126,7 @@ func main() {
 	}
 
 	// Swap Settings
-	swapMinPercentValid := 0.8
+	swapMinPercentValid := 0.75
 	swapOrderOnProfitPercent := -1.00
 	var swapOpenedSellOrderFromHoursOpened int64 = 2
 	//swapMinPercentValid := 0.1
@@ -236,6 +236,8 @@ func main() {
 						orderDepth := orderBook.ToDepth(swapPair.Symbol)
 						swapPair.BuyPrice = orderDepth.Bids[0][0].Value
 						swapPair.SellPrice = orderDepth.Asks[0][0].Value
+						swapPair.SellVolume = orderDepth.GetAskVolume()
+						swapPair.BuyVolume = orderDepth.GetBidVolume()
 						swapPair.PriceTimestamp = time.Now().Unix()
 						_ = exchangeRepository.UpdateSwapPair(swapPair)
 					}

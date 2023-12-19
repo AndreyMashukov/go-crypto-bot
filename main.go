@@ -236,8 +236,8 @@ func main() {
 						orderDepth := orderBook.ToDepth(swapPair.Symbol)
 						swapPair.BuyPrice = orderDepth.Bids[0][0].Value
 						swapPair.SellPrice = orderDepth.Asks[0][0].Value
-						swapPair.SellVolume = orderDepth.GetAskVolume()
-						swapPair.BuyVolume = orderDepth.GetBidVolume()
+						swapPair.SellVolume = formatter.ToFixed(orderDepth.GetAskVolume(), 2)
+						swapPair.BuyVolume = formatter.ToFixed(orderDepth.GetBidVolume(), 2)
 						swapPair.PriceTimestamp = time.Now().Unix()
 						_ = exchangeRepository.UpdateSwapPair(swapPair)
 					}

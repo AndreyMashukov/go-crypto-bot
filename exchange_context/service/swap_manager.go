@@ -17,9 +17,8 @@ type SwapManager struct {
 	Formatter          *Formatter
 }
 
-func (s *SwapManager) CalculateSwapOptions(symbol string) {
-	sellBuyBuy := s.SellBuyBuy(symbol)
-	asset := symbol[:len(symbol)-3]
+func (s *SwapManager) CalculateSwapOptions(asset string) {
+	sellBuyBuy := s.SellBuyBuy(asset)
 
 	if sellBuyBuy.BestChain != nil && sellBuyBuy.BestChain.Percent.Gte(0.10) {
 		log.Printf(
@@ -41,7 +40,7 @@ func (s *SwapManager) CalculateSwapOptions(symbol string) {
 		s.SwapRepository.SaveSwapChainCache(swapChainEntity.SwapOne.BaseAsset, swapChainEntity)
 	}
 
-	sellSellBuy := s.SellSellBuy(symbol)
+	sellSellBuy := s.SellSellBuy(asset)
 
 	if sellSellBuy.BestChain != nil && sellSellBuy.BestChain.Percent.Gte(0.10) {
 		log.Printf(
@@ -143,8 +142,7 @@ func (s *SwapManager) UpdateSwapChain(BestChain BestSwapChain) model.SwapChainEn
 	return swapChainEntity
 }
 
-func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
-	asset := symbol[:len(symbol)-3]
+func (s *SwapManager) SellSellBuy(asset string) BBSArbitrageChain {
 	initialBalance := 100.00
 
 	transitions := make([]SwapTransition, 0)
@@ -313,8 +311,7 @@ func (s *SwapManager) SellSellBuy(symbol string) BBSArbitrageChain {
 	return chain
 }
 
-func (s *SwapManager) SellBuyBuy(symbol string) BBSArbitrageChain {
-	asset := symbol[:len(symbol)-3]
+func (s *SwapManager) SellBuyBuy(asset string) BBSArbitrageChain {
 	initialBalance := 100.00
 
 	transitions := make([]SwapTransition, 0)

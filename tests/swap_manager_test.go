@@ -117,7 +117,7 @@ func TestSwapSellSellBuy(t *testing.T) {
 		Formatter:          &service.Formatter{},
 	}
 
-	swapManager.CalculateSwapOptions("SOLETH")
+	swapManager.CalculateSwapOptions("SOL")
 	chain := swapRepoMock.savedChain
 	assertion := assert.New(t)
 	assertion.Equal(14.17, chain.Percent.Value())
@@ -185,7 +185,7 @@ func TestSwapSellBuyBuy(t *testing.T) {
 		Formatter:          &service.Formatter{},
 	}
 
-	swapManager.CalculateSwapOptions("SOLETH")
+	swapManager.CalculateSwapOptions("SOL")
 	chain := swapRepoMock.savedChain
 	assertion := assert.New(t)
 	assertion.Equal(4.58, chain.Percent.Value())

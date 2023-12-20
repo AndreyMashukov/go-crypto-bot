@@ -34,7 +34,7 @@ func (s *SSBSwapFinder) Find(asset string) model.BBSArbitrageChain {
 
 		// Do not validate first order for gainer/looser and bull/bear
 
-		option0Price := option0.SellPrice
+		option0Price := option0.SellPrice - (option0.MinPrice * 2)
 		option0Price = s.Formatter.FormatPrice(option0, option0Price)
 		//log.Printf("[%s] formatted [1] %f -> %f", option0.Symbol, option0.BuyPrice, option0Price)
 		buy0Quantity := initialBalance //s.Formatter.FormatQuantity(option0, initialBalance)
@@ -63,7 +63,7 @@ func (s *SSBSwapFinder) Find(asset string) model.BBSArbitrageChain {
 				continue
 			}
 
-			option1Price := option1.SellPrice
+			option1Price := option1.SellPrice - (option1.MinPrice * 2)
 			option1Price = s.Formatter.FormatPrice(option1, option1Price)
 			//log.Printf("[%s] formatted [1] %f -> %f", option1.Symbol, option1.BuyPrice, option1Price)
 			buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option1, buy0.Balance)

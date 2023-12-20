@@ -261,7 +261,7 @@ func main() {
 
 				for _, asset := range assets {
 					go func(asset string) {
-						//log.Printf("realtime swap check: %s", asset)
+						log.Printf("realtime swap check: %s", asset)
 						swapManager.CalculateSwapOptions(asset)
 					}(asset)
 				}

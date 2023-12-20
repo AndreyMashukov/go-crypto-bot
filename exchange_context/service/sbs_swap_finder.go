@@ -112,7 +112,7 @@ func (s *SBSSwapFinder) Find(asset string) model.BBSArbitrageChain {
 					Type:          model.SwapTransitionTypeSellBuySell,
 					BaseAsset:     asset,
 					QuoteAsset:    buy0.BaseAsset,
-					Operation:     model.SwapTransitionOperationTypeBuy,
+					Operation:     model.SwapTransitionOperationTypeSell,
 					BaseQuantity:  0.00,
 					QuoteQuantity: buy1Quantity,
 					Price:         option2Price,

@@ -138,7 +138,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 	}
 
 	if sellScore >= buyScore {
-		log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
+		//log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
 
 		marketDepth := m.GetDepth(tradeLimit.Symbol)
 
@@ -187,7 +187,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 	}
 
 	if buyScore > sellScore {
-		log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
+		//log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
 		marketDepth := m.GetDepth(tradeLimit.Symbol)

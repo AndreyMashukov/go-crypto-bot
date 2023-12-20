@@ -81,11 +81,11 @@ func (s SwapValidator) validateSwap(entity model.SwapTransitionEntity, order mod
 		return errors.New(fmt.Sprintf("Swap [%s:%s] price is expired", entity.Operation, entity.Symbol))
 	}
 
-	if entity.IsBuy() && s.Formatter.ComparePercentage(entity.Price, swapCurrentKline.BuyPrice).Gte(100.15) {
+	if entity.IsBuy() && s.Formatter.ComparePercentage(entity.Price, swapCurrentKline.BuyPrice).Gte(100.10) {
 		return errors.New(fmt.Sprintf("Swap [%s:%s] price is too high", entity.Operation, entity.Symbol))
 	}
 
-	if entity.IsSell() && s.Formatter.ComparePercentage(entity.Price, swapCurrentKline.SellPrice).Lte(99.85) {
+	if entity.IsSell() && s.Formatter.ComparePercentage(entity.Price, swapCurrentKline.SellPrice).Lte(99.90) {
 		return errors.New(fmt.Sprintf("Swap [%s:%s] price is too low", entity.Operation, entity.Symbol))
 	}
 

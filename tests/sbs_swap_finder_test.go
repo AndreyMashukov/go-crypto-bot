@@ -50,7 +50,7 @@ func TestSwapSellBuySell(t *testing.T) {
 
 	chain := sbsFinder.Find("ETH").BestChain
 	assertion := assert.New(t)
-	assertion.Equal(4.05, chain.Percent.Value())
+	assertion.Equal(3.68, chain.Percent.Value())
 	assertion.Equal("SBS", chain.Type)
 	assertion.Equal("ETH sell-> BTC buy-> XRP sell-> ETH", chain.Title)
 	assertion.Equal("ETHBTC", chain.SwapOne.Symbol)
@@ -58,7 +58,7 @@ func TestSwapSellBuySell(t *testing.T) {
 	assertion.Equal("XRPBTC", chain.SwapTwo.Symbol)
 	assertion.Equal(0.00001426, chain.SwapTwo.Price)
 	assertion.Equal("XRPETH", chain.SwapThree.Symbol)
-	assertion.Equal(0.0002785, chain.SwapThree.Price)
+	assertion.Equal(0.0002775, chain.SwapThree.Price)
 	// base amount is 100
-	assertion.Greater(100*chain.SwapOne.Price/chain.SwapTwo.Price*chain.SwapThree.Price, 104.60)
+	assertion.Greater(100*chain.SwapOne.Price/chain.SwapTwo.Price*chain.SwapThree.Price, 104.30)
 }

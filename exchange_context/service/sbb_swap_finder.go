@@ -100,7 +100,7 @@ func (s *SBBSwapFinder) Find(asset string) model.BBSArbitrageChain {
 					continue
 				}
 
-				option2Price := option2.BuyPrice
+				option2Price := option2.BuyPrice + (option2.MinPrice * 10)
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)
 				//log.Printf("[%s] formatted [5] %f -> %f", option2.Symbol, option2.BuyPrice, option2Price)
 				buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option2, buy0.Balance)

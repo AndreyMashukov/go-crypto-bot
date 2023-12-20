@@ -62,13 +62,13 @@ func TestSwapSellBuyBuy(t *testing.T) {
 
 	chain := swapManager.Find("SOL").BestChain
 	assertion := assert.New(t)
-	assertion.Equal(4.24, chain.Percent.Value())
+	assertion.Equal(4.21, chain.Percent.Value())
 	assertion.Equal("SBB", chain.Type)
 	assertion.Equal("SOL sell-> GBP buy-> ETH buy-> SOL", chain.Title)
 	assertion.Equal("SOLGBP", chain.SwapOne.Symbol)
-	assertion.Equal(58.58, chain.SwapOne.Price)
+	assertion.Equal(58.56, chain.SwapOne.Price)
 	assertion.Equal("ETHGBP", chain.SwapTwo.Symbol)
-	assertion.Equal(1782.94, chain.SwapTwo.Price)
+	assertion.Equal(1782.96, chain.SwapTwo.Price)
 	assertion.Equal("SOLETH", chain.SwapThree.Symbol)
 	assertion.Equal(0.03133, chain.SwapThree.Price)
 	// base amount is 100

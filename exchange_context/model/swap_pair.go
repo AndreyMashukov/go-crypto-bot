@@ -20,11 +20,11 @@ type SwapPair struct {
 }
 
 func (s SwapPair) IsGainer() bool {
-	return s.DailyPercent >= 0.5
+	return s.DailyPercent >= 0.4
 }
 
 func (s SwapPair) IsLooser() bool {
-	return s.DailyPercent <= -0.5
+	return s.DailyPercent <= -0.4
 }
 
 func (s SwapPair) IsPriceExpired() bool {

@@ -160,9 +160,7 @@ func (s *SwapManager) SellSellBuy(asset string) BBSArbitrageChain {
 			continue
 		}
 
-		if !option0.IsBullMarket() && !option0.IsGainer() {
-			continue
-		}
+		// Do not validate first order for gainer/looser and bull/bear
 
 		option0Price := option0.SellPrice
 		option0Price = s.Formatter.FormatPrice(option0, option0Price)
@@ -329,9 +327,7 @@ func (s *SwapManager) SellBuyBuy(asset string) BBSArbitrageChain {
 			continue
 		}
 
-		if !option0.IsBullMarket() && !option0.IsGainer() {
-			continue
-		}
+		// Do not validate first order for gainer/looser and bull/bear
 
 		option0Price := option0.SellPrice
 		option0Price = s.Formatter.FormatPrice(option0, option0Price)

@@ -127,7 +127,7 @@ func main() {
 	}
 
 	// Swap Settings
-	swapMinPercentValid := 0.75
+	swapMinPercentValid := 0.70
 	swapOrderOnProfitPercent := -1.00
 	var swapOpenedSellOrderFromHoursOpened int64 = 2
 	//swapMinPercentValid := 0.1
@@ -250,6 +250,7 @@ func main() {
 
 				for _, asset := range assets {
 					go func(asset string) {
+						//log.Printf("realtime swap check: %s", asset)
 						swapManager.CalculateSwapOptions(asset)
 					}(asset)
 				}

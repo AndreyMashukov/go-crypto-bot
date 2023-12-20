@@ -1858,7 +1858,7 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 			)
 		}
 
-		if swapChain.IsSBB() {
+		if swapChain.IsSBB() || swapChain.IsSBS() {
 			binanceOrder, err = m.Binance.LimitOrder(
 				swapAction.SwapTwoSymbol,
 				m.Formatter.FormatQuantity(swapPair, quantity/swapAction.SwapTwoPrice),
@@ -1996,8 +1996,16 @@ func (m *MakerService) ProcessSwap(order ExchangeModel.Order) {
 				"BUY",
 				"GTC",
 			)
-		} else {
-			err = errors.New("Swap type is not supported")
+		}
+
+		if swapChain.IsSBS() {
+			binanceOrder, err = m.Binance.LimitOrder(
+				swapAction.SwapThreeSymbol,
+				m.Formatter.FormatQuantity(swapPair, quantity),
+				m.Formatter.FormatPrice(swapPair, swapAction.SwapThreePrice),
+				"SELL",
+				"GTC",
+			)
 		}
 
 		if err != nil {

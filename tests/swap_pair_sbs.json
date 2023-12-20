@@ -1,0 +1,50 @@
+[
+  {
+    "id": 144,
+    "sourceSymbol": "ETHUSDT",
+    "symbol": "ETHBTC",
+    "baseAsset": "ETH",
+    "quoteAsset": "BTC",
+    "buyPrice": 0.05159,
+    "priceTimestamp": 1703071564,
+    "minNotional": 0.0001,
+    "minQuantity": 0.0001,
+    "minPrice": 0.00001,
+    "sellPrice": 0.0536,
+    "sellVolume": 35.17,
+    "buyVolume": 36.36,
+    "dailyPercent": 0.21
+  },
+  {
+    "id": 157,
+    "sourceSymbol": "XRPUSDT",
+    "symbol": "XRPBTC",
+    "baseAsset": "XRP",
+    "quoteAsset": "BTC",
+    "buyPrice": 0.00001426,
+    "priceTimestamp": 1703071565,
+    "minNotional": 0.0001,
+    "minQuantity": 1,
+    "minPrice": 0.00000001,
+    "sellPrice": 0.00001427,
+    "sellVolume": 12.42,
+    "buyVolume": 13.69,
+    "dailyPercent": -0.40
+  },
+  {
+    "id": 158,
+    "sourceSymbol": "XRPUSDT",
+    "symbol": "XRPETH",
+    "baseAsset": "XRP",
+    "quoteAsset": "ETH",
+    "buyPrice": 0.0002764,
+    "priceTimestamp": 1703071565,
+    "minNotional": 0.001,
+    "minQuantity": 1,
+    "minPrice": 0.0000001,
+    "sellPrice": 0.0002785,
+    "sellVolume": 41.74,
+    "buyVolume": 29.53,
+    "dailyPercent": 0.21
+  }
+]

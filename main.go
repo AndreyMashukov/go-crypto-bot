@@ -227,9 +227,20 @@ func main() {
 
 	if swapEnabled {
 		swapManager := ExchangeService.SwapManager{
-			ExchangeRepository: &exchangeRepository,
-			SwapRepository:     &swapRepository,
-			Formatter:          &formatter,
+			SwapRepository: &swapRepository,
+			Formatter:      &formatter,
+			SBSSwapFinder: &ExchangeService.SBSSwapFinder{
+				ExchangeRepository: &exchangeRepository,
+				Formatter:          &formatter,
+			},
+			SSBSwapFinder: &ExchangeService.SSBSwapFinder{
+				ExchangeRepository: &exchangeRepository,
+				Formatter:          &formatter,
+			},
+			SBBSwapFinder: &ExchangeService.SBBSwapFinder{
+				ExchangeRepository: &exchangeRepository,
+				Formatter:          &formatter,
+			},
 		}
 
 		// existing swaps real time monitoring

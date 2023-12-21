@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/service"
 	"os"
@@ -85,6 +86,144 @@ func TestSwapSellBuyBuy(t *testing.T) {
 		ExecutedQuantity: 100,
 	}
 
-	err = validator.Validate(swapChainBuilder.BuildEntity(*chain, chain.Percent, 0, 0, 0, 0, 0, 0), order)
+	swapChain := swapChainBuilder.BuildEntity(*chain, chain.Percent, 0, 0, 0, 0, 0, 0)
+	err = validator.Validate(swapChain, order)
 	assertion.Nil(err)
+
+	// execute
+
+	balanceServiceMock := new(BalanceServiceMock)
+	orderRepositoryMock := new(OrderUpdaterMock)
+	binanceMock := new(ExchangeOrderAPIMock)
+
+	assetBalance := order.ExecutedQuantity
+
+	balanceServiceMock.On("GetAssetBalance", "SOL", false).Times(1).Return(order.ExecutedQuantity, nil)
+	swapRepoMock.On("UpdateSwapAction", mock.Anything).Return(nil)
+	swapRepoMock.On("GetActiveSwapAction", order).Return(model.SwapAction{
+		Id:              990,
+		OrderId:         order.Id,
+		BotId:           1,
+		SwapChainId:     swapChain.Id,
+		Asset:           swapChain.SwapOne.BaseAsset,
+		Status:          model.SwapActionStatusPending,
+		StartTimestamp:  time.Now().Unix(),
+		StartQuantity:   assetBalance,
+		SwapOneSymbol:   swapChain.SwapOne.GetSymbol(),
+		SwapOnePrice:    swapChain.SwapOne.Price,
+		SwapTwoSymbol:   swapChain.SwapTwo.GetSymbol(),
+		SwapTwoPrice:    swapChain.SwapTwo.Price,
+		SwapThreeSymbol: swapChain.SwapThree.GetSymbol(),
+		SwapThreePrice:  swapChain.SwapThree.Price,
+	}, nil)
+	swapRepoMock.On("GetSwapChainById", swapChain.Id).Return(swapChain, nil)
+
+	binanceMock.On("LimitOrder", "SOLGBP", 100.00, 58.56, "SELL", "GTC").Return(model.BinanceOrder{
+		Status:      "NEW",
+		OrderId:     int64(19),
+		Symbol:      "SOLGBP",
+		ExecutedQty: 0.00,
+		OrigQty:     100.00,
+		Price:       58.56,
+	}, nil)
+	binanceMock.On("QueryOrder", "SOLGBP", int64(19)).Times(1).Return(model.BinanceOrder{
+		Status:      "PARTIALLY_FILLED",
+		OrderId:     int64(19),
+		ExecutedQty: 80.00,
+		OrigQty:     100.00,
+		Symbol:      "SOLGBP",
+		Price:       58.56,
+	}, nil)
+	binanceMock.On("QueryOrder", "SOLGBP", int64(19)).Times(2).Return(model.BinanceOrder{
+		Status:      "FILLED",
+		OrderId:     int64(19),
+		ExecutedQty: 100.00,
+		OrigQty:     100.00,
+		Symbol:      "SOLGBP",
+		Price:       58.56,
+	}, nil)
+
+	balanceServiceMock.On("GetAssetBalance", "GBP", false).Return(5856.00, nil)
+
+	binanceMock.On("LimitOrder", "ETHGBP", 3.2844, 1782.96, "BUY", "GTC").Return(model.BinanceOrder{
+		Status:      "NEW",
+		OrderId:     int64(20),
+		Symbol:      "ETHGBP",
+		ExecutedQty: 0.00,
+		OrigQty:     3.284,
+		Price:       1782.96,
+	}, nil)
+	binanceMock.On("QueryOrder", "ETHGBP", int64(20)).Times(1).Return(model.BinanceOrder{
+		Status:      "PARTIALLY_FILLED",
+		OrderId:     int64(20),
+		Symbol:      "ETHGBP",
+		ExecutedQty: 1.272,
+		OrigQty:     3.284,
+		Price:       1782.96,
+	}, nil)
+	binanceMock.On("QueryOrder", "ETHGBP", int64(20)).Times(2).Return(model.BinanceOrder{
+		Status:      "FILLED",
+		OrderId:     int64(20),
+		Symbol:      "ETHGBP",
+		ExecutedQty: 3.284,
+		OrigQty:     3.284,
+		Price:       1782.96,
+	}, nil)
+	balanceServiceMock.On("GetAssetBalance", "ETH", false).Return(3.282, nil)
+
+	binanceMock.On("LimitOrder", "SOLETH", 104.755, 0.03133, "BUY", "GTC").Return(model.BinanceOrder{
+		Status:      "NEW",
+		OrderId:     int64(21),
+		Symbol:      "SOLETH",
+		ExecutedQty: 0.00,
+		OrigQty:     104.755,
+		Price:       0.03133,
+	}, nil)
+	binanceMock.On("QueryOrder", "SOLETH", int64(21)).Times(1).Return(model.BinanceOrder{
+		Status:      "PARTIALLY_FILLED",
+		OrderId:     int64(21),
+		Symbol:      "SOLETH",
+		ExecutedQty: 12.00,
+		OrigQty:     104.755,
+		Price:       0.03133,
+	}, nil)
+	binanceMock.On("QueryOrder", "SOLETH", int64(21)).Times(2).Return(model.BinanceOrder{
+		Status:      "FILLED",
+		OrderId:     int64(21),
+		Symbol:      "SOLETH",
+		ExecutedQty: 114.755,
+		OrigQty:     104.755,
+		Price:       0.03133,
+	}, nil)
+
+	orderRepositoryMock.On("Update", mock.Anything).Once().Return(nil)
+	swapRepoMock.On("UpdateSwapAction", mock.Anything).Return(nil)
+	balanceServiceMock.On("InvalidateBalanceCache", "SOL").Once()
+	balanceServiceMock.On("GetAssetBalance", "SOL", false).Times(2).Return(104.72, nil)
+
+	timeoutServiceMock := new(TimeoutServiceMock)
+	timeoutServiceMock.On("WaitSeconds", int64(5)).Times(3)
+	timeoutServiceMock.On("WaitSeconds", int64(7)).Times(3)
+
+	executor := service.SwapExecutor{
+		SwapRepository:  swapRepoMock,
+		OrderRepository: orderRepositoryMock,
+		BalanceService:  balanceServiceMock,
+		Binance:         binanceMock,
+		TimeoutService:  timeoutServiceMock,
+		Formatter:       &service.Formatter{},
+	}
+
+	executor.Execute(order)
+
+	assertion.Equal(114.755, *swapRepoMock.swapAction.EndQuantity)
+	assertion.Equal(int64(19), *swapRepoMock.swapAction.SwapOneExternalId)
+	assertion.Equal("SOLGBP", swapRepoMock.swapAction.SwapOneSymbol)
+	assertion.Equal("FILLED", *swapRepoMock.swapAction.SwapOneExternalStatus)
+	assertion.Equal(int64(20), *swapRepoMock.swapAction.SwapTwoExternalId)
+	assertion.Equal("ETHGBP", swapRepoMock.swapAction.SwapTwoSymbol)
+	assertion.Equal("FILLED", *swapRepoMock.swapAction.SwapTwoExternalStatus)
+	assertion.Equal(int64(21), *swapRepoMock.swapAction.SwapThreeExternalId)
+	assertion.Equal("SOLETH", swapRepoMock.swapAction.SwapThreeSymbol)
+	assertion.Equal("FILLED", *swapRepoMock.swapAction.SwapThreeExternalStatus)
 }

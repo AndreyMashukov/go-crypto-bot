@@ -11,6 +11,11 @@ import (
 	"time"
 )
 
+type BalanceServiceInterface interface {
+	GetAssetBalance(asset string, cache bool) (float64, error)
+	InvalidateBalanceCache(asset string)
+}
+
 type BalanceService struct {
 	RDB        *redis.Client
 	Ctx        *context.Context

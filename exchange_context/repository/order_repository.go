@@ -12,6 +12,10 @@ import (
 	"time"
 )
 
+type OrderUpdaterInterface interface {
+	Update(order ExchangeModel.Order) error
+}
+
 type OrderRepository struct {
 	DB         *sql.DB
 	RDB        *redis.Client

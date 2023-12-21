@@ -17,6 +17,12 @@ import (
 	"time"
 )
 
+type ExchangeOrderAPIInterface interface {
+	LimitOrder(symbol string, quantity float64, price float64, operation string, timeInForce string) (model.BinanceOrder, error)
+	QueryOrder(symbol string, orderId int64) (model.BinanceOrder, error)
+	CancelOrder(symbol string, orderId int64) (model.BinanceOrder, error)
+}
+
 type Binance struct {
 	ApiKey         string
 	ApiSecret      string

@@ -2,10 +2,8 @@ package tests
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/service"
 	"os"
@@ -14,7 +12,6 @@ import (
 )
 
 func TestSwapSellBuyBuy(t *testing.T) {
-	swapRepoMock := new(SwapRepositoryMock)
 	exchangeRepoMock := new(ExchangeRepositoryMock)
 
 	b, err := os.ReadFile("swap_pair_sbb.json") // just pass the file name
@@ -51,10 +48,6 @@ func TestSwapSellBuyBuy(t *testing.T) {
 	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "GBP").Return(options2)
 	//exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "GBP").Return(options2)
 
-	swapRepoMock.On("GetSwapChain", "f99d6ebc52c3b0ae372a6a58c4d76d66").Return(model.SwapChainEntity{}, errors.New("Not found!"))
-	swapRepoMock.On("CreateSwapChain", mock.Anything).Return(99, nil)
-	swapRepoMock.On("SaveSwapChainCache", "SOL", mock.Anything).Once()
-
 	swapManager := service.SBBSwapFinder{
 		Formatter:          &service.Formatter{},
 		ExchangeRepository: exchangeRepoMock,
@@ -73,4 +66,25 @@ func TestSwapSellBuyBuy(t *testing.T) {
 	assertion.Equal(0.03133, chain.SwapThree.Price)
 	// base amount is 100
 	assertion.Greater(100*chain.SwapOne.Price/chain.SwapTwo.Price/chain.SwapThree.Price, 104.80)
+
+	// validate
+	swapRepoMock := new(SwapRepositoryMock)
+
+	swapRepoMock.On("GetSwapPairBySymbol", "SOLETH").Return(options0[0], nil)
+	swapRepoMock.On("GetSwapPairBySymbol", "ETHGBP").Return(options2[0], nil)
+	swapRepoMock.On("GetSwapPairBySymbol", "SOLGBP").Return(options2[1], nil)
+
+	swapChainBuilder := service.SwapChainBuilder{}
+	validator := service.SwapValidator{
+		SwapRepository: swapRepoMock,
+		Formatter:      &service.Formatter{},
+		SwapMinPercent: 0.1,
+	}
+
+	order := model.Order{
+		ExecutedQuantity: 100,
+	}
+
+	err = validator.Validate(swapChainBuilder.BuildEntity(*chain, chain.Percent, 0, 0, 0, 0, 0, 0), order)
+	assertion.Nil(err)
 }

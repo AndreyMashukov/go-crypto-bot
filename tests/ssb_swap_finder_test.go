@@ -2,10 +2,8 @@ package tests
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/service"
 	"os"
@@ -13,63 +11,9 @@ import (
 	"time"
 )
 
-type ExchangeRepositoryMock struct {
-	mock.Mock
-}
-
-func (m *ExchangeRepositoryMock) CreateSwapPair(swapPair model.SwapPair) (*int64, error) {
-	args := m.Called(swapPair)
-	id := int64(args.Int(1))
-	return &id, args.Error(0)
-}
-func (m *ExchangeRepositoryMock) UpdateSwapPair(swapPair model.SwapPair) error {
-	args := m.Called(swapPair)
-	return args.Error(0)
-}
-func (m *ExchangeRepositoryMock) GetSwapPairs() []model.SwapPair {
-	args := m.Called()
-	return args.Get(0).([]model.SwapPair)
-}
-func (m *ExchangeRepositoryMock) GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair {
-	args := m.Called(baseAsset)
-	return args.Get(0).([]model.SwapPair)
-}
-func (m *ExchangeRepositoryMock) GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair {
-	args := m.Called(quoteAsset)
-	return args.Get(0).([]model.SwapPair)
-}
-func (m *ExchangeRepositoryMock) GetSwapPair(symbol string) (model.SwapPair, error) {
-	args := m.Called(symbol)
-	return args.Get(0).(model.SwapPair), args.Error(0)
-}
-
-type SwapRepositoryMock struct {
-	mock.Mock
-	savedChain model.SwapChainEntity
-}
-
-func (m *SwapRepositoryMock) GetSwapChain(hash string) (model.SwapChainEntity, error) {
-	args := m.Called(hash)
-	return args.Get(0).(model.SwapChainEntity), args.Error(1)
-}
-func (m *SwapRepositoryMock) CreateSwapChain(swapChain model.SwapChainEntity) (*int64, error) {
-	m.savedChain = swapChain
-	args := m.Called(swapChain)
-	id := int64(args.Int(0))
-	return &id, args.Error(1)
-}
-func (m *SwapRepositoryMock) UpdateSwapChain(swapChain model.SwapChainEntity) error {
-	args := m.Called(swapChain)
-	return args.Error(0)
-}
-func (m *SwapRepositoryMock) SaveSwapChainCache(asset string, entity model.SwapChainEntity) {
-	m.Called(asset, entity)
-}
-
 // TestHelloName calls greetings.Hello with a name, checking
 // for a valid return value.
 func TestSwapSellSellBuy(t *testing.T) {
-	swapRepoMock := new(SwapRepositoryMock)
 	exchangeRepoMock := new(ExchangeRepositoryMock)
 
 	b, err := os.ReadFile("swap_pair_ssb.json") // just pass the file name
@@ -105,10 +49,6 @@ func TestSwapSellSellBuy(t *testing.T) {
 	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "ETH").Return(options1)
 	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "GBP").Return(options4)
 
-	swapRepoMock.On("GetSwapChain", "39bcff3625afb6b785a1a2b01620133c").Return(model.SwapChainEntity{}, errors.New("Not found!"))
-	swapRepoMock.On("CreateSwapChain", mock.Anything).Return(99, nil)
-	swapRepoMock.On("SaveSwapChainCache", "SOL", mock.Anything).Once()
-
 	swapManager := &service.SSBSwapFinder{
 		Formatter:          &service.Formatter{},
 		ExchangeRepository: exchangeRepoMock,
@@ -127,4 +67,25 @@ func TestSwapSellSellBuy(t *testing.T) {
 	assertion.Equal(52.48, chain.SwapThree.Price)
 	// base amount is 100
 	assertion.Greater(100*chain.SwapOne.Price*chain.SwapTwo.Price/chain.SwapThree.Price, 114.50)
+
+	// validate
+	swapRepoMock := new(SwapRepositoryMock)
+
+	swapRepoMock.On("GetSwapPairBySymbol", "SOLETH").Return(options0[0], nil)
+	swapRepoMock.On("GetSwapPairBySymbol", "ETHGBP").Return(options1[0], nil)
+	swapRepoMock.On("GetSwapPairBySymbol", "SOLGBP").Return(options2[0], nil)
+
+	swapChainBuilder := service.SwapChainBuilder{}
+	validator := service.SwapValidator{
+		SwapRepository: swapRepoMock,
+		Formatter:      &service.Formatter{},
+		SwapMinPercent: 0.1,
+	}
+
+	order := model.Order{
+		ExecutedQuantity: 100,
+	}
+
+	err = validator.Validate(swapChainBuilder.BuildEntity(*chain, chain.Percent, 0, 0, 0, 0, 0, 0), order)
+	assertion.Nil(err)
 }

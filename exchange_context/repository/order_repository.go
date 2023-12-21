@@ -35,7 +35,9 @@ func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation strin
 			repo.DeleteBinanceOrder(*cached)
 		}
 
-		return dto, nil
+		if dto.ExecutedQuantity > 0 {
+			return dto, nil
+		}
 	}
 
 	order, err := repo.getOpenedOrder(symbol, operation)

@@ -60,6 +60,44 @@ func (s SwapChainEntity) IsSBS() bool {
 	return s.Type == SwapTransitionTypeSellBuySell
 }
 
+func (s SwapChainEntity) GetNotional(quantity float64, index int64) float64 {
+	if s.IsSBB() {
+		if index == 0 {
+			return s.SwapOne.Price * quantity
+		}
+		if index == 1 {
+			return s.SwapOne.Price * quantity
+		}
+		if index == 2 {
+			return s.SwapOne.Price * quantity / s.SwapTwo.Price
+		}
+	}
+	if s.IsSSB() {
+		if index == 0 {
+			return s.SwapOne.Price * quantity
+		}
+		if index == 1 {
+			return s.SwapOne.Price * quantity * s.SwapTwo.Price
+		}
+		if index == 2 {
+			return s.SwapOne.Price * quantity * s.SwapTwo.Price
+		}
+	}
+	if s.IsSBS() {
+		if index == 0 {
+			return s.SwapOne.Price * quantity
+		}
+		if index == 1 {
+			return s.SwapOne.Price * quantity
+		}
+		if index == 2 {
+			return s.SwapOne.Price * quantity / s.SwapTwo.Price * s.SwapThree.Price
+		}
+	}
+
+	return 0.00
+}
+
 type SwapTransition struct {
 	Symbol        string           `json:"symbol"`
 	Type          string           `json:"type"`

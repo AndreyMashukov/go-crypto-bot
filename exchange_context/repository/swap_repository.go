@@ -16,6 +16,7 @@ type SwapBasicRepositoryInterface interface {
 	CreateSwapChain(swapChain model.SwapChainEntity) (*int64, error)
 	UpdateSwapChain(swapChain model.SwapChainEntity) error
 	SaveSwapChainCache(asset string, entity model.SwapChainEntity)
+	GetSwapPairBySymbol(symbol string) (model.SwapPair, error)
 }
 
 type SwapRepositoryInterface interface {
@@ -720,7 +721,10 @@ func (e *SwapRepository) GetSwapPairBySymbol(symbol string) (model.SwapPair, err
 		    sp.price_timestamp as PriceTimestamp,
 		    sp.min_notional as MinNotional,
 		    sp.min_quantity as MinQuantity,
-		    sp.min_price as MinPrice
+		    sp.min_price as MinPrice,
+		    sp.sell_volume as SellVolume,
+		    sp.buy_volume as BuyVolume,
+		    sp.daily_percent as DailyPercent
 		FROM swap_pair sp 
 		WHERE sp.symbol = ?
 	`, symbol).Scan(
@@ -735,6 +739,9 @@ func (e *SwapRepository) GetSwapPairBySymbol(symbol string) (model.SwapPair, err
 		&swapPair.MinNotional,
 		&swapPair.MinQuantity,
 		&swapPair.MinPrice,
+		&swapPair.SellVolume,
+		&swapPair.BuyVolume,
+		&swapPair.DailyPercent,
 	)
 
 	if err != nil {

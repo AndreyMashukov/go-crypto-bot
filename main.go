@@ -227,8 +227,9 @@ func main() {
 
 	if swapEnabled {
 		swapManager := ExchangeService.SwapManager{
-			SwapRepository: &swapRepository,
-			Formatter:      &formatter,
+			SwapChainBuilder: &ExchangeService.SwapChainBuilder{},
+			SwapRepository:   &swapRepository,
+			Formatter:        &formatter,
 			SBSSwapFinder: &ExchangeService.SBSSwapFinder{
 				ExchangeRepository: &exchangeRepository,
 				Formatter:          &formatter,

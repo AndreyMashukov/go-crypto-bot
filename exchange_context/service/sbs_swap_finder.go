@@ -110,8 +110,8 @@ func (s *SBSSwapFinder) Find(asset string) model.BBSArbitrageChain {
 				sell1 := model.SwapTransition{
 					Symbol:        option2.Symbol,
 					Type:          model.SwapTransitionTypeSellBuySell,
-					BaseAsset:     asset,
-					QuoteAsset:    buy0.BaseAsset,
+					BaseAsset:     option2.BaseAsset,
+					QuoteAsset:    option2.QuoteAsset,
 					Operation:     model.SwapTransitionOperationTypeSell,
 					BaseQuantity:  0.00,
 					QuoteQuantity: buy1Quantity,
@@ -128,8 +128,8 @@ func (s *SBSSwapFinder) Find(asset string) model.BBSArbitrageChain {
 						"%s sell-> %s buy-> %s sell-> %s",
 						asset,
 						sell0.QuoteAsset,
-						buy0.BaseAsset,
 						sell1.BaseAsset,
+						sell1.QuoteAsset,
 					)
 
 					h := md5.New()

@@ -9,11 +9,12 @@ import (
 )
 
 type SwapManager struct {
-	SwapRepository ExchangeRepository.SwapBasicRepositoryInterface
-	Formatter      *Formatter
-	SBBSwapFinder  *SBBSwapFinder
-	SSBSwapFinder  *SSBSwapFinder
-	SBSSwapFinder  *SBSSwapFinder
+	SwapRepository   ExchangeRepository.SwapBasicRepositoryInterface
+	Formatter        *Formatter
+	SBBSwapFinder    *SBBSwapFinder
+	SSBSwapFinder    *SSBSwapFinder
+	SBSSwapFinder    *SBSSwapFinder
+	SwapChainBuilder *SwapChainBuilder
 }
 
 func (s *SwapManager) CalculateSwapOptions(asset string) {
@@ -88,8 +89,8 @@ func (s *SwapManager) UpdateSwapChain(BestChain model.BestSwapChain) model.SwapC
 	swapChainEntity, err := s.SwapRepository.GetSwapChain(BestChain.Hash)
 	var swapChainId int64 = 0
 	var swapOneId int64 = 0
-	var swapOneTwo int64 = 0
-	var swapOneThree int64 = 0
+	var swapTwoId int64 = 0
+	var swapThreeId int64 = 0
 	var maxPercent model.Percent
 	var maxPercentTimestamp *int64 = nil
 	nowTimestamp := time.Now().Unix()
@@ -97,8 +98,8 @@ func (s *SwapManager) UpdateSwapChain(BestChain model.BestSwapChain) model.SwapC
 	if err == nil {
 		swapChainId = swapChainEntity.Id
 		swapOneId = swapChainEntity.SwapOne.Id
-		swapOneTwo = swapChainEntity.SwapTwo.Id
-		swapOneThree = swapChainEntity.SwapThree.Id
+		swapTwoId = swapChainEntity.SwapTwo.Id
+		swapThreeId = swapChainEntity.SwapThree.Id
 		maxPercentTimestamp = swapChainEntity.MaxPercentTimestamp
 		if swapChainEntity.MaxPercent.Lt(BestChain.Percent) || swapChainEntity.MaxPercentTimestamp == nil {
 			maxPercentTimestamp = &nowTimestamp
@@ -110,49 +111,16 @@ func (s *SwapManager) UpdateSwapChain(BestChain model.BestSwapChain) model.SwapC
 		maxPercentTimestamp = &nowTimestamp
 	}
 
-	swapChainEntity = model.SwapChainEntity{
-		Id:                  swapChainId,
-		Title:               BestChain.Title,
-		Type:                BestChain.Type,
-		Hash:                BestChain.Hash,
-		Percent:             BestChain.Percent,
-		MaxPercent:          maxPercent,
-		Timestamp:           nowTimestamp,
-		MaxPercentTimestamp: maxPercentTimestamp,
-		SwapOne: &model.SwapTransitionEntity{
-			Id:         swapOneId,
-			Type:       BestChain.SwapOne.Type,
-			Symbol:     BestChain.SwapOne.Symbol,
-			BaseAsset:  BestChain.SwapOne.BaseAsset,
-			QuoteAsset: BestChain.SwapOne.QuoteAsset,
-			Operation:  BestChain.SwapOne.Operation,
-			Quantity:   BestChain.SwapOne.BaseQuantity,
-			Price:      BestChain.SwapOne.Price,
-			Level:      BestChain.SwapOne.Level,
-		},
-		SwapTwo: &model.SwapTransitionEntity{
-			Id:         swapOneTwo,
-			Type:       BestChain.SwapTwo.Type,
-			Symbol:     BestChain.SwapTwo.Symbol,
-			BaseAsset:  BestChain.SwapTwo.BaseAsset,
-			QuoteAsset: BestChain.SwapTwo.QuoteAsset,
-			Operation:  BestChain.SwapTwo.Operation,
-			Quantity:   BestChain.SwapTwo.BaseQuantity,
-			Price:      BestChain.SwapTwo.Price,
-			Level:      BestChain.SwapTwo.Level,
-		},
-		SwapThree: &model.SwapTransitionEntity{
-			Id:         swapOneThree,
-			Type:       BestChain.SwapThree.Type,
-			Symbol:     BestChain.SwapThree.Symbol,
-			BaseAsset:  BestChain.SwapThree.BaseAsset,
-			QuoteAsset: BestChain.SwapThree.QuoteAsset,
-			Operation:  BestChain.SwapThree.Operation,
-			Quantity:   BestChain.SwapThree.QuoteQuantity,
-			Price:      BestChain.SwapThree.Price,
-			Level:      BestChain.SwapThree.Level,
-		},
-	}
+	swapChainEntity = s.SwapChainBuilder.BuildEntity(
+		BestChain,
+		maxPercent,
+		swapChainId,
+		nowTimestamp,
+		*maxPercentTimestamp,
+		swapOneId,
+		swapTwoId,
+		swapThreeId,
+	)
 
 	if swapChainId > 0 {
 		_ = s.SwapRepository.UpdateSwapChain(swapChainEntity)

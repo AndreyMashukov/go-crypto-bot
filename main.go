@@ -127,7 +127,7 @@ func main() {
 	}
 
 	// Swap Settings
-	swapMinPercentValid := 0.70
+	swapMinPercentValid := 10.70
 	swapOrderOnProfitPercent := -1.00
 	var swapOpenedSellOrderFromHoursOpened int64 = 2
 	//swapMinPercentValid := 0.1

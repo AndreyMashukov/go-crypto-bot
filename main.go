@@ -127,7 +127,7 @@ func main() {
 	}
 
 	// Swap Settings
-	swapMinPercentValid := 10.70
+	swapMinPercentValid := 0.70
 	swapOrderOnProfitPercent := -1.00
 	var swapOpenedSellOrderFromHoursOpened int64 = 2
 	//swapMinPercentValid := 0.1
@@ -171,6 +171,14 @@ func main() {
 		CurrentBot:         currentBot,
 		BalanceService:     &balanceService,
 		SwapEnabled:        swapEnabled,
+		SwapExecutor: &ExchangeService.SwapExecutor{
+			BalanceService:  &balanceService,
+			SwapRepository:  &swapRepository,
+			OrderRepository: &orderRepository,
+			Binance:         &binance,
+			Formatter:       &formatter,
+			TimeoutService:  &ExchangeService.TimeoutService{},
+		},
 	}
 
 	orderController := controller.OrderController{

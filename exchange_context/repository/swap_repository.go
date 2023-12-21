@@ -17,6 +17,9 @@ type SwapBasicRepositoryInterface interface {
 	UpdateSwapChain(swapChain model.SwapChainEntity) error
 	SaveSwapChainCache(asset string, entity model.SwapChainEntity)
 	GetSwapPairBySymbol(symbol string) (model.SwapPair, error)
+	GetActiveSwapAction(order model.Order) (model.SwapAction, error)
+	UpdateSwapAction(action model.SwapAction) error
+	GetSwapChainById(id int64) (model.SwapChainEntity, error)
 }
 
 type SwapRepositoryInterface interface {

@@ -9,7 +9,7 @@ import (
 )
 
 type SwapValidator struct {
-	SwapRepository *ExchangeRepository.SwapRepository
+	SwapRepository ExchangeRepository.SwapBasicRepositoryInterface
 	Formatter      *Formatter
 	SwapMinPercent float64
 }
@@ -21,19 +21,19 @@ func (s SwapValidator) Validate(entity model.SwapChainEntity, order model.Order)
 		return errors.New(fmt.Sprintf("Swap [%s] too small percent %.2f.", entity.Title, entity.Percent))
 	}
 
-	err := s.validateSwap(*entity.SwapOne, order)
+	err := s.validateSwap(entity, order, 0)
 
 	if err != nil {
 		return err
 	}
 
-	err = s.validateSwap(*entity.SwapTwo, order)
+	err = s.validateSwap(entity, order, 1)
 
 	if err != nil {
 		return err
 	}
 
-	err = s.validateSwap(*entity.SwapThree, order)
+	err = s.validateSwap(entity, order, 2)
 
 	if err != nil {
 		return err
@@ -70,11 +70,23 @@ func (s SwapValidator) CalculatePercent(entity model.SwapChainEntity) model.Perc
 	return s.Formatter.ComparePercentage(initialBalance, balance) - 100
 }
 
-func (s SwapValidator) validateSwap(entity model.SwapTransitionEntity, order model.Order) error {
+func (s SwapValidator) validateSwap(chain model.SwapChainEntity, order model.Order, index int64) error {
+	var entity model.SwapTransitionEntity
+
+	if 0 == index {
+		entity = *chain.SwapOne
+	}
+	if 1 == index {
+		entity = *chain.SwapTwo
+	}
+	if 2 == index {
+		entity = *chain.SwapThree
+	}
+
 	swapCurrentKline, err := s.SwapRepository.GetSwapPairBySymbol(entity.GetSymbol())
 
 	if err != nil {
-		return errors.New(fmt.Sprintf("Swap [%s:%s] current price is unknown", entity.Operation, entity.Symbol))
+		return errors.New(fmt.Sprintf("Swap [%s:%s] current price is unknown (%s)", entity.Operation, entity.Symbol, err.Error()))
 	}
 
 	if (time.Now().Unix() - swapCurrentKline.PriceTimestamp) > 60 {
@@ -89,12 +101,14 @@ func (s SwapValidator) validateSwap(entity model.SwapTransitionEntity, order mod
 		return errors.New(fmt.Sprintf("Swap [%s:%s] price is too low", entity.Operation, entity.Symbol))
 	}
 
-	notional := entity.Price * order.ExecutedQuantity
+	notional := chain.GetNotional(order.ExecutedQuantity, index)
+
 	if notional < swapCurrentKline.MinNotional {
 		return errors.New(fmt.Sprintf(
-			"Swap [%s:%s] Notinal %f < %f",
+			"Swap [%s:%s] Notional index = %d | %f < %f",
 			entity.Operation,
 			entity.Symbol,
+			index,
 			notional,
 			swapCurrentKline.MinNotional,
 		))

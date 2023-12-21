@@ -61,4 +61,25 @@ func TestSwapSellBuySell(t *testing.T) {
 	assertion.Equal(0.0002775, chain.SwapThree.Price)
 	// base amount is 100
 	assertion.Greater(100*chain.SwapOne.Price/chain.SwapTwo.Price*chain.SwapThree.Price, 104.10)
+
+	// validate
+	swapRepoMock := new(SwapRepositoryMock)
+
+	swapRepoMock.On("GetSwapPairBySymbol", "ETHBTC").Return(options0[0], nil)
+	swapRepoMock.On("GetSwapPairBySymbol", "XRPBTC").Return(options1[0], nil)
+	swapRepoMock.On("GetSwapPairBySymbol", "XRPETH").Return(options2[1], nil)
+
+	swapChainBuilder := service.SwapChainBuilder{}
+	validator := service.SwapValidator{
+		SwapRepository: swapRepoMock,
+		Formatter:      &service.Formatter{},
+		SwapMinPercent: 0.1,
+	}
+
+	order := model.Order{
+		ExecutedQuantity: 100,
+	}
+
+	err = validator.Validate(swapChainBuilder.BuildEntity(*chain, chain.Percent, 0, 0, 0, 0, 0, 0), order)
+	assertion.Nil(err)
 }

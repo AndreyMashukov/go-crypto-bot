@@ -566,7 +566,7 @@ func (s *SwapExecutor) ExecuteSwapThree(
 					return nil
 				}
 
-				log.Printf("Swap three [%d] rollback: %s", swapAction.Id, err.Error())
+				log.Printf("Swap three [%d] force swap: %s", swapAction.Id, err.Error())
 			}
 
 			if binanceOrder.IsPartiallyFilled() {
@@ -738,7 +738,7 @@ func (s *SwapExecutor) TryForceSwapThree(
 
 	if percent.Lt(minSwapRollbackPercent) {
 		return errors.New(fmt.Sprintf(
-			"[%s] Is not possible to rollback: %f -> %f",
+			"[%s] Is not possible to force swap: %f -> %f",
 			swapChain.Type,
 			swapAction.StartQuantity,
 			endQuantity,
@@ -805,7 +805,7 @@ func (s *SwapExecutor) TryForceSwapThree(
 
 			if !binanceOrder.IsFilled() {
 				log.Printf(
-					"Can not fill rollback order, status: %s | price: %f, current: %f [%.2f%s] %f -> %f",
+					"Can not fill force swap order, status: %s | price: %f, current: %f [%.2f%s] %f -> %f",
 					binanceOrder.Status,
 					binanceOrder.Price,
 					swapPair.BuyPrice,
@@ -838,9 +838,9 @@ func (s *SwapExecutor) TryForceSwapThree(
 			}
 			return nil
 		} else {
-			return errors.New(fmt.Sprintf("Can't rollback swap, percent is too low: %.2f%s", percent, "%"))
+			return errors.New(fmt.Sprintf("Can't force swap, percent is too low: %.2f%s", percent, "%"))
 		}
 	}
 
-	return errors.New("Can't rollback swap")
+	return errors.New("Can't force swap")
 }

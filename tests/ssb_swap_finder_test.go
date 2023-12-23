@@ -120,98 +120,120 @@ func TestSwapSellSellBuy(t *testing.T) {
 	swapRepoMock.On("GetSwapChainById", swapChain.Id).Return(swapChain, nil)
 
 	binanceMock.On("LimitOrder", "SOLETH", 100.00, 0.03372, "SELL", "GTC").Return(model.BinanceOrder{
-		Status:      "NEW",
-		OrderId:     int64(16),
-		Symbol:      "SOLETH",
-		ExecutedQty: 0.00,
-		OrigQty:     100.00,
-		Price:       0.03372,
+		Status:              "NEW",
+		OrderId:             int64(16),
+		Symbol:              "SOLETH",
+		ExecutedQty:         0.00,
+		OrigQty:             100.00,
+		Price:               0.03372,
+		Side:                "SELL",
+		CummulativeQuoteQty: 00.00,
 	}, nil)
 	binanceMock.On("QueryOrder", "SOLETH", int64(16)).Times(1).Return(model.BinanceOrder{
-		Status:      "PARTIALLY_FILLED",
-		OrderId:     int64(16),
-		ExecutedQty: 80.00,
-		OrigQty:     100.00,
-		Symbol:      "SOLETH",
-		Price:       0.03372,
+		Status:              "PARTIALLY_FILLED",
+		OrderId:             int64(16),
+		ExecutedQty:         80.00,
+		OrigQty:             100.00,
+		Symbol:              "SOLETH",
+		Price:               0.03372,
+		Side:                "SELL",
+		CummulativeQuoteQty: 80 * 0.03372,
 	}, nil)
 	binanceMock.On("QueryOrder", "SOLETH", int64(16)).Times(2).Return(model.BinanceOrder{
-		Status:      "FILLED",
-		OrderId:     int64(16),
-		ExecutedQty: 100.00,
-		OrigQty:     100.00,
-		Symbol:      "SOLETH",
-		Price:       0.03372,
+		Status:              "FILLED",
+		OrderId:             int64(16),
+		ExecutedQty:         100.00,
+		OrigQty:             100.00,
+		Symbol:              "SOLETH",
+		Price:               0.03372,
+		Side:                "SELL",
+		CummulativeQuoteQty: 100 * 0.03372,
 	}, nil)
 
-	balanceServiceMock.On("GetAssetBalance", "ETH", false).Return(3.372, nil)
+	ethInitialBalance := 2.99
+	balanceServiceMock.On("GetAssetBalance", "ETH", false).Return(3.372+ethInitialBalance, nil)
 
 	binanceMock.On("LimitOrder", "ETHGBP", 3.372, 1783.06, "SELL", "GTC").Return(model.BinanceOrder{
-		Status:      "NEW",
-		OrderId:     int64(17),
-		Symbol:      "ETHGBP",
-		ExecutedQty: 0.00,
-		OrigQty:     3.372,
-		Price:       1783.06,
+		Status:              "NEW",
+		OrderId:             int64(17),
+		Symbol:              "ETHGBP",
+		ExecutedQty:         0.00,
+		OrigQty:             3.372,
+		Price:               1783.06,
+		Side:                "SELL",
+		CummulativeQuoteQty: 0.00,
 	}, nil)
 	binanceMock.On("QueryOrder", "ETHGBP", int64(17)).Times(1).Return(model.BinanceOrder{
-		Status:      "PARTIALLY_FILLED",
-		OrderId:     int64(17),
-		Symbol:      "ETHGBP",
-		ExecutedQty: 1.272,
-		OrigQty:     3.372,
-		Price:       1783.06,
+		Status:              "PARTIALLY_FILLED",
+		OrderId:             int64(17),
+		Symbol:              "ETHGBP",
+		ExecutedQty:         1.272,
+		OrigQty:             3.372,
+		Price:               1783.06,
+		Side:                "SELL",
+		CummulativeQuoteQty: 1.272 * 1783.06,
 	}, nil)
 	binanceMock.On("QueryOrder", "ETHGBP", int64(17)).Times(2).Return(model.BinanceOrder{
-		Status:      "FILLED",
-		OrderId:     int64(17),
-		Symbol:      "ETHGBP",
-		ExecutedQty: 3.372,
-		OrigQty:     3.372,
-		Price:       1783.06,
+		Status:              "FILLED",
+		OrderId:             int64(17),
+		Symbol:              "ETHGBP",
+		ExecutedQty:         3.372,
+		OrigQty:             3.372,
+		Price:               1783.06,
+		Side:                "SELL",
+		CummulativeQuoteQty: 3.372 * 1783.06,
 	}, nil)
-	balanceServiceMock.On("GetAssetBalance", "GBP", false).Return(6012.476, nil)
+	gbpInitialBalance := 2300.99
+	balanceServiceMock.On("GetAssetBalance", "GBP", false).Return(6012.476+gbpInitialBalance, nil)
 
 	binanceMock.On("LimitOrder", "SOLGBP", 114.56, 52.48, "BUY", "GTC").Return(model.BinanceOrder{
-		Status:      "NEW",
-		OrderId:     int64(18),
-		Symbol:      "SOLGBP",
-		ExecutedQty: 0.00,
-		OrigQty:     114.56,
-		Price:       52.48,
+		Status:              "NEW",
+		OrderId:             int64(18),
+		Symbol:              "SOLGBP",
+		ExecutedQty:         0.00,
+		OrigQty:             114.56,
+		Price:               52.48,
+		Side:                "BUY",
+		CummulativeQuoteQty: 0.00,
 	}, nil)
 	binanceMock.On("QueryOrder", "SOLGBP", int64(18)).Times(1).Return(model.BinanceOrder{
-		Status:      "PARTIALLY_FILLED",
-		OrderId:     int64(18),
-		Symbol:      "SOLGBP",
-		ExecutedQty: 12.00,
-		OrigQty:     114.56,
-		Price:       52.48,
+		Status:              "PARTIALLY_FILLED",
+		OrderId:             int64(18),
+		Symbol:              "SOLGBP",
+		ExecutedQty:         12.00,
+		OrigQty:             114.56,
+		Price:               52.48,
+		Side:                "BUY",
+		CummulativeQuoteQty: 12.00 * 52.48,
 	}, nil)
 	binanceMock.On("QueryOrder", "SOLGBP", int64(18)).Times(2).Return(model.BinanceOrder{
-		Status:      "FILLED",
-		OrderId:     int64(18),
-		Symbol:      "SOLGBP",
-		ExecutedQty: 114.56,
-		OrigQty:     114.56,
-		Price:       52.48,
+		Status:              "FILLED",
+		OrderId:             int64(18),
+		Symbol:              "SOLGBP",
+		ExecutedQty:         114.56,
+		OrigQty:             114.56,
+		Price:               52.48,
+		Side:                "BUY",
+		CummulativeQuoteQty: 114.56 * 52.48,
 	}, nil)
 
 	orderRepositoryMock.On("Update", mock.Anything).Once().Return(nil)
 	swapRepoMock.On("UpdateSwapAction", mock.Anything).Return(nil)
 	balanceServiceMock.On("InvalidateBalanceCache", "SOL").Once()
-	balanceServiceMock.On("GetAssetBalance", "SOL", false).Times(2).Return(114.54, nil)
+	solInitialBalance := 9.00
+	balanceServiceMock.On("GetAssetBalance", "SOL", false).Times(2).Return(114.54+solInitialBalance, nil)
 
-	timeoutServiceMock := new(TimeoutServiceMock)
-	timeoutServiceMock.On("WaitSeconds", int64(5)).Times(3)
-	timeoutServiceMock.On("WaitSeconds", int64(7)).Times(3)
+	timeServiceMock := new(TimeServiceMock)
+	timeServiceMock.On("WaitSeconds", int64(5)).Times(3)
+	timeServiceMock.On("WaitSeconds", int64(7)).Times(3)
+	timeServiceMock.On("GetNowDiffMinutes", mock.Anything).Return(0.50)
 
 	executor := service.SwapExecutor{
 		SwapRepository:  swapRepoMock,
 		OrderRepository: orderRepositoryMock,
 		BalanceService:  balanceServiceMock,
 		Binance:         binanceMock,
-		TimeoutService:  timeoutServiceMock,
+		TimeoutService:  timeServiceMock,
 		Formatter:       &service.Formatter{},
 	}
 

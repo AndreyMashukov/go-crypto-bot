@@ -177,7 +177,7 @@ func main() {
 			OrderRepository: &orderRepository,
 			Binance:         &binance,
 			Formatter:       &formatter,
-			TimeoutService:  &ExchangeService.TimeoutService{},
+			TimeoutService:  &ExchangeService.TimeService{},
 		},
 	}
 

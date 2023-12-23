@@ -116,10 +116,14 @@ func (b *ExchangeOrderAPIMock) CancelOrder(symbol string, orderId int64) (model.
 	return args.Get(0).(model.BinanceOrder), args.Error(1)
 }
 
-type TimeoutServiceMock struct {
+type TimeServiceMock struct {
 	mock.Mock
 }
 
-func (t *TimeoutServiceMock) WaitSeconds(seconds int64) {
+func (t *TimeServiceMock) WaitSeconds(seconds int64) {
 	_ = t.Called(seconds)
+}
+func (t *TimeServiceMock) GetNowDiffMinutes(unixTime int64) float64 {
+	args := t.Called(unixTime)
+	return args.Get(0).(float64)
 }

@@ -557,7 +557,7 @@ func (s *SwapExecutor) ExecuteSwapThree(
 
 			// 2 hours can not process third step
 			if binanceOrder.IsNew() && s.TimeoutService.GetNowDiffMinutes(*swapAction.SwapTwoTimestamp) > 10 {
-				err = s.TryRollbackSwapThree(swapAction)
+				err = s.TryRollbackSwapThree(swapAction, swapChain, swapTwoOrder, assetThree)
 				if err == nil {
 					// rolled back successfully!
 					return nil
@@ -581,9 +581,21 @@ func (s *SwapExecutor) TryRollbackSwapTwo(
 		return errors.New("Swap chain type is not supported")
 	}
 
-	_, err := s.Binance.CancelOrder(action.SwapTwoSymbol, *action.SwapTwoExternalId)
+	minSwapRollbackPercent := ExchangeModel.Percent(0.25)
+
+	// pre-validate rollback...
+	swapPair, err := s.SwapRepository.GetSwapPairBySymbol(action.SwapOneSymbol)
 	if err != nil {
 		return err
+	}
+
+	price := swapPair.BuyPrice + swapPair.MinPrice
+
+	endQuantity := s.Formatter.FormatQuantity(swapPair, swapOneOrder.CummulativeQuoteQty/price)
+	percent := s.Formatter.ComparePercentage(action.StartQuantity, endQuantity) - 100
+
+	if percent.Lt(minSwapRollbackPercent) {
+		return errors.New(fmt.Sprintf("Is not possible to rollback: %f -> %f", action.StartQuantity, endQuantity))
 	}
 
 	balance, err := s.BalanceService.GetAssetBalance(asset, false)
@@ -592,14 +604,19 @@ func (s *SwapExecutor) TryRollbackSwapTwo(
 		return err
 	}
 
+	_, err = s.Binance.CancelOrder(action.SwapTwoSymbol, *action.SwapTwoExternalId)
+	if err != nil {
+		return err
+	}
+
 	for i := 1.00; i <= 100.00; i++ {
-		swapPair, err := s.SwapRepository.GetSwapPairBySymbol(action.SwapOneSymbol)
+		swapPair, err = s.SwapRepository.GetSwapPairBySymbol(action.SwapOneSymbol)
 
 		if err != nil {
 			return err
 		}
 
-		price := swapPair.BuyPrice + (swapPair.MinPrice * i)
+		price = swapPair.BuyPrice + (swapPair.MinPrice * i)
 		quantity := swapOneOrder.CummulativeQuoteQty
 
 		if quantity > balance {
@@ -610,10 +627,10 @@ func (s *SwapExecutor) TryRollbackSwapTwo(
 			return errors.New("Notional filter")
 		}
 
-		endQuantity := s.Formatter.FormatQuantity(swapPair, quantity/price)
-		percent := s.Formatter.ComparePercentage(action.StartQuantity, endQuantity) - 100
+		endQuantity = s.Formatter.FormatQuantity(swapPair, quantity/price)
+		percent = s.Formatter.ComparePercentage(action.StartQuantity, endQuantity) - 100
 
-		if percent.Gt(0.25) {
+		if percent.Gte(minSwapRollbackPercent) {
 			binanceOrder, err := s.Binance.LimitOrder(
 				swapOneOrder.Symbol,
 				endQuantity,
@@ -624,18 +641,23 @@ func (s *SwapExecutor) TryRollbackSwapTwo(
 			if err != nil {
 				return err
 			}
-			// save information about rollback transaction...
+
 			if !binanceOrder.IsFilled() {
 				log.Printf(
-					"Can not fill rollback order, status: %s | price: %f, current: %f",
+					"Can not fill rollback order, status: %s | price: %f, current: %f [%.2f%s] %f -> %f",
 					binanceOrder.Status,
 					binanceOrder.Price,
 					swapPair.BuyPrice,
+					percent,
+					"%",
+					action.StartQuantity,
+					endQuantity,
 				)
 				s.TimeoutService.WaitSeconds(5)
 				continue
 			}
 
+			// save information about rollback transaction...
 			action.EndQuantity = &binanceOrder.ExecutedQty
 			now := time.Now().Unix()
 			action.EndTimestamp = &now
@@ -659,6 +681,151 @@ func (s *SwapExecutor) TryRollbackSwapTwo(
 	return errors.New("Can't rollback swap, all attempts are finished")
 }
 
-func (s *SwapExecutor) TryRollbackSwapThree(action *ExchangeModel.SwapAction) error {
+func (s *SwapExecutor) TryRollbackSwapThree(
+	swapAction *ExchangeModel.SwapAction,
+	swapChain ExchangeModel.SwapChainEntity,
+	swapTwoOrder ExchangeModel.BinanceOrder,
+	asset string,
+) error {
+	if !swapChain.IsSSB() && !swapChain.IsSBS() && !swapChain.IsSBB() {
+		return errors.New("Swap chain type is not supported")
+	}
+
+	minSwapRollbackPercent := ExchangeModel.Percent(0.25)
+
+	// pre-validate rollback...
+	swapPair, err := s.SwapRepository.GetSwapPairBySymbol(swapAction.SwapThreeSymbol)
+	if err != nil {
+		return err
+	}
+
+	price := swapPair.BuyPrice + swapPair.MinPrice
+	if swapChain.IsSBS() {
+		price = swapPair.SellPrice - swapPair.MinPrice
+	}
+
+	quantity := swapTwoOrder.CummulativeQuoteQty
+
+	if swapChain.IsSBS() || swapChain.IsSBB() {
+		quantity = swapTwoOrder.ExecutedQty
+	}
+
+	endQuantity := quantity * price
+	if swapChain.IsSSB() || swapChain.IsSBB() {
+		endQuantity = quantity / price
+	}
+
+	if endQuantity == 0.00 {
+		return errors.New("Incorrect swap calculation")
+	}
+
+	percent := s.Formatter.ComparePercentage(swapAction.StartQuantity, endQuantity) - 100
+
+	if percent.Lt(minSwapRollbackPercent) {
+		return errors.New(fmt.Sprintf(
+			"[%s] Is not possible to rollback: %f -> %f",
+			swapChain.Type,
+			swapAction.StartQuantity,
+			endQuantity,
+		))
+	}
+
+	_, err = s.Binance.CancelOrder(swapAction.SwapThreeSymbol, *swapAction.SwapThreeExternalId)
+	if err != nil {
+		return err
+	}
+
+	balance, err := s.BalanceService.GetAssetBalance(asset, false)
+
+	if err != nil {
+		return err
+	}
+
+	if quantity > balance {
+		quantity = balance
+	}
+
+	for i := 1.00; i <= 100.00; i++ {
+		swapPair, err = s.SwapRepository.GetSwapPairBySymbol(swapAction.SwapThreeSymbol)
+
+		if err != nil {
+			return err
+		}
+
+		price = swapPair.BuyPrice + (swapPair.MinPrice * i)
+
+		if swapChain.IsSBS() {
+			price = swapPair.SellPrice - (swapPair.MinPrice * i)
+		}
+
+		predictedEndQty := quantity / price
+		if swapChain.IsSBS() {
+			predictedEndQty = quantity
+		}
+
+		percent = s.Formatter.ComparePercentage(swapAction.StartQuantity, predictedEndQty) - 100
+
+		if percent.Gte(minSwapRollbackPercent) {
+			var binanceOrder ExchangeModel.BinanceOrder
+
+			if swapChain.IsSSB() || swapChain.IsSBB() {
+				binanceOrder, err = s.Binance.LimitOrder(
+					swapAction.SwapThreeSymbol,
+					s.Formatter.FormatQuantity(swapPair, quantity/price),
+					s.Formatter.FormatPrice(swapPair, price),
+					"BUY",
+					"IOC",
+				)
+			}
+
+			if swapChain.IsSBS() {
+				binanceOrder, err = s.Binance.LimitOrder(
+					swapAction.SwapThreeSymbol,
+					s.Formatter.FormatQuantity(swapPair, quantity),
+					s.Formatter.FormatPrice(swapPair, price),
+					"SELL",
+					"IOC",
+				)
+			}
+
+			if !binanceOrder.IsFilled() {
+				log.Printf(
+					"Can not fill rollback order, status: %s | price: %f, current: %f [%.2f%s] %f -> %f",
+					binanceOrder.Status,
+					binanceOrder.Price,
+					swapPair.BuyPrice,
+					percent,
+					"%",
+					swapAction.StartQuantity,
+					endQuantity,
+				)
+				s.TimeoutService.WaitSeconds(5)
+				continue
+			}
+
+			// save information about rollback transaction...
+			swapAction.EndQuantity = &binanceOrder.ExecutedQty
+			if swapChain.IsSBS() {
+				swapAction.EndQuantity = &binanceOrder.CummulativeQuoteQty
+			}
+			now := time.Now().Unix()
+			swapAction.EndTimestamp = &now
+			status := fmt.Sprintf("%s_RB", binanceOrder.Status)
+			swapAction.SwapThreeTimestamp = &now
+			swapAction.SwapThreeExternalStatus = &status
+			swapAction.SwapThreePrice = binanceOrder.Price
+			swapAction.SwapThreeSymbol = binanceOrder.Symbol
+			swapAction.SwapThreeExternalId = &binanceOrder.OrderId
+			swapAction.Status = ExchangeModel.SwapActionStatusSuccess
+			err = s.SwapRepository.UpdateSwapAction(*swapAction)
+			if err != nil {
+				panic(err)
+			}
+			return nil
+		} else {
+			return errors.New(fmt.Sprintf("Can't rollback swap, percent is too low: %.2f%s", percent, "%"))
+		}
+	}
+
 	return errors.New("Can't rollback swap")
 }

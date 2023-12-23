@@ -577,17 +577,17 @@ func (s *SwapExecutor) TryRollbackSwapTwo(
 	swapOneOrder ExchangeModel.BinanceOrder,
 	asset string,
 ) error {
-	balance, err := s.BalanceService.GetAssetBalance(asset, false)
-
-	if err != nil {
-		return err
-	}
-
 	if !swapChain.IsSSB() && !swapChain.IsSBS() && !swapChain.IsSBB() {
 		return errors.New("Swap chain type is not supported")
 	}
 
-	_, err = s.Binance.CancelOrder(action.SwapTwoSymbol, *action.SwapTwoExternalId)
+	_, err := s.Binance.CancelOrder(action.SwapTwoSymbol, *action.SwapTwoExternalId)
+	if err != nil {
+		return err
+	}
+
+	balance, err := s.BalanceService.GetAssetBalance(asset, false)
+
 	if err != nil {
 		return err
 	}

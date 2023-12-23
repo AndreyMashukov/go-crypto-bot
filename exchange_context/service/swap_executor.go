@@ -335,7 +335,6 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 		_ = s.SwapRepository.UpdateSwapAction(*swapAction)
 	}
 
-	// todo: if expired, clear and call recursively
 	if !swapTwoOrder.IsFilled() {
 		s.TimeoutService.WaitSeconds(5)
 		for {
@@ -383,20 +382,21 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 				return nil
 			}
 
-			if binanceOrder.IsPartiallyFilled() {
-				s.TimeoutService.WaitSeconds(7)
-			} else {
-				s.TimeoutService.WaitSeconds(15)
-			}
-
+			// todo: rollback trigger...
 			// 2 hours can not process second step
-			if binanceOrder.IsNew() && s.TimeoutService.GetNowDiffMinutes(*swapAction.SwapOneTimestamp) > 30 {
+			if binanceOrder.IsNew() && s.TimeoutService.GetNowDiffMinutes(*swapAction.SwapOneTimestamp) > 5 {
 				err = s.TryRollbackSwapTwo(swapAction, swapChain, swapOneOrder, assetTwo)
 				if err == nil {
 					return nil
 				}
 
 				log.Printf("Swap two [%d] rollback: %s", swapAction.Id, err.Error())
+			}
+
+			if binanceOrder.IsPartiallyFilled() {
+				s.TimeoutService.WaitSeconds(7)
+			} else {
+				s.TimeoutService.WaitSeconds(15)
 			}
 		}
 	}
@@ -543,6 +543,32 @@ func (s *SwapExecutor) ExecuteSwapThree(
 				return nil
 			}
 
+			currentPrice := swapPair.BuyPrice
+			priceDeadlineReached := false
+			if swapChain.IsSBS() {
+				currentPrice = swapPair.SellPrice
+			}
+			priceDiff := s.Formatter.ComparePercentage(binanceOrder.Price, currentPrice) - 100
+
+			// todo: half of minimum swap percent
+			if (swapChain.IsSSB() || swapChain.IsSBB()) && priceDiff.Gte(0.15) {
+				priceDeadlineReached = true
+			}
+			if swapChain.IsSBS() && priceDiff.Lte(-0.15) {
+				priceDeadlineReached = true
+			}
+
+			// 2 hours can not process third step
+			if binanceOrder.IsNew() && (s.TimeoutService.GetNowDiffMinutes(*swapAction.SwapTwoTimestamp) > 10 || priceDeadlineReached) {
+				err = s.TryForceSwapThree(swapAction, swapChain, swapTwoOrder, assetThree)
+				if err == nil {
+					// rolled back successfully!
+					return nil
+				}
+
+				log.Printf("Swap three [%d] rollback: %s", swapAction.Id, err.Error())
+			}
+
 			if binanceOrder.IsPartiallyFilled() {
 				swapAction.EndQuantity = &binanceOrder.ExecutedQty
 				_ = s.SwapRepository.UpdateSwapAction(*swapAction)
@@ -553,17 +579,6 @@ func (s *SwapExecutor) ExecuteSwapThree(
 				s.TimeoutService.WaitSeconds(7)
 			} else {
 				s.TimeoutService.WaitSeconds(15)
-			}
-
-			// 2 hours can not process third step
-			if binanceOrder.IsNew() && s.TimeoutService.GetNowDiffMinutes(*swapAction.SwapTwoTimestamp) > 10 {
-				err = s.TryRollbackSwapThree(swapAction, swapChain, swapTwoOrder, assetThree)
-				if err == nil {
-					// rolled back successfully!
-					return nil
-				}
-
-				log.Printf("Swap three [%d] rollback: %s", swapAction.Id, err.Error())
 			}
 		}
 	}
@@ -681,7 +696,7 @@ func (s *SwapExecutor) TryRollbackSwapTwo(
 	return errors.New("Can't rollback swap, all attempts are finished")
 }
 
-func (s *SwapExecutor) TryRollbackSwapThree(
+func (s *SwapExecutor) TryForceSwapThree(
 	swapAction *ExchangeModel.SwapAction,
 	swapChain ExchangeModel.SwapChainEntity,
 	swapTwoOrder ExchangeModel.BinanceOrder,
@@ -810,7 +825,7 @@ func (s *SwapExecutor) TryRollbackSwapThree(
 			}
 			now := time.Now().Unix()
 			swapAction.EndTimestamp = &now
-			status := fmt.Sprintf("%s_RB", binanceOrder.Status)
+			status := fmt.Sprintf("%s_FORCE", binanceOrder.Status)
 			swapAction.SwapThreeTimestamp = &now
 			swapAction.SwapThreeExternalStatus = &status
 			swapAction.SwapThreePrice = binanceOrder.Price

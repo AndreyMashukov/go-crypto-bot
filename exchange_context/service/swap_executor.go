@@ -611,7 +611,7 @@ func (s *SwapExecutor) TryRollbackSwapTwo(
 		}
 
 		endQuantity := s.Formatter.FormatQuantity(swapPair, quantity/price)
-		percent := s.Formatter.ComparePercentage(action.StartQuantity, endQuantity)
+		percent := s.Formatter.ComparePercentage(action.StartQuantity, endQuantity) - 100
 
 		if percent.Gt(0.25) {
 			binanceOrder, err := s.Binance.LimitOrder(

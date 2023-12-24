@@ -46,6 +46,13 @@ type ExchangeRepositoryInterface interface {
 	GetDecision(strategy string) *model.Decision
 }
 
+type ExchangePriceStorageInterface interface {
+	GetLastKLine(symbol string) *model.KLine
+	GetPeriodMinPrice(symbol string, period int64) float64
+	GetDepth(symbol string) model.Depth
+	SetDepth(depth model.Depth)
+}
+
 type ExchangeRepository struct {
 	DB         *sql.DB
 	RDB        *redis.Client

@@ -40,7 +40,7 @@ func (t TradeLimit) GetBaseAsset() string {
 	return strings.ReplaceAll(t.Symbol, "USDT", "")
 }
 
-func (t TradeLimit) GetMinProfitPercent() Percent {
+func (t *TradeLimit) GetMinProfitPercent() Percent {
 	if t.MinProfitPercent < 0 {
 		return Percent(t.MinProfitPercent * -1)
 	} else {
@@ -58,4 +58,8 @@ func (t *TradeLimit) GetBuyOnFallPercent() Percent {
 
 func (t *TradeLimit) IsExtraChargeEnabled() bool {
 	return t.BuyOnFallPercent != 0.00
+}
+
+func (t *TradeLimit) GetClosePrice(buyPrice float64) float64 {
+	return buyPrice * (100 + t.GetMinProfitPercent().Value()) / 100
 }

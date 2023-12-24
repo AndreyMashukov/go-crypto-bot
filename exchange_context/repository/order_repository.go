@@ -16,6 +16,10 @@ type OrderUpdaterInterface interface {
 	Update(order ExchangeModel.Order) error
 }
 
+type OrderCachedReaderInterface interface {
+	GetOpenedOrderCached(symbol string, operation string) (ExchangeModel.Order, error)
+}
+
 type OrderRepository struct {
 	DB         *sql.DB
 	RDB        *redis.Client

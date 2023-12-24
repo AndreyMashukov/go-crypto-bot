@@ -23,7 +23,6 @@ type MakerService struct {
 	Binance            *ExchangeClient.Binance
 	LockChannel        *chan ExchangeModel.Lock
 	Formatter          *Formatter
-	FrameService       *FrameService
 	Lock               map[string]bool
 	TradeLockMutex     sync.RWMutex
 	MinDecisions       float64
@@ -36,6 +35,7 @@ type MakerService struct {
 	SwapSellOrderDays  int64
 	SwapProfitPercent  float64
 	SwapExecutor       *SwapExecutor
+	PriceCalculator    *PriceCalculator
 }
 
 func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
@@ -141,7 +141,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 	if sellScore >= buyScore {
 		//log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
 
-		marketDepth := m.GetDepth(tradeLimit.Symbol)
+		marketDepth := m.PriceCalculator.GetDepth(tradeLimit.Symbol)
 
 		if len(marketDepth.Asks) < 3 && manualOrder == nil {
 			log.Printf("[%s] Too small ASKs amount: %d\n", symbol, len(marketDepth.Asks))
@@ -156,7 +156,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		if err == nil {
 			order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 			if err == nil {
-				price := m.calculateSellPrice(tradeLimit, order)
+				price := m.PriceCalculator.CalculateSell(tradeLimit, order)
 				smaFormatted := m.Formatter.FormatPrice(tradeLimit, smaValue)
 
 				if manualOrder != nil && strings.ToUpper(manualOrder.Operation) == "SELL" {
@@ -191,7 +191,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		//log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
-		marketDepth := m.GetDepth(tradeLimit.Symbol)
+		marketDepth := m.PriceCalculator.GetDepth(tradeLimit.Symbol)
 
 		if len(marketDepth.Bids) < 3 && manualOrder == nil {
 			log.Printf("[%s] Too small BIDs amount: %d\n", symbol, len(marketDepth.Bids))
@@ -199,7 +199,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		}
 
 		if err == nil {
-			price, err := m.CalculateBuyPrice(tradeLimit)
+			price, err := m.PriceCalculator.CalculateBuy(tradeLimit)
 
 			if err != nil {
 				lastKline := m.ExchangeRepository.GetLastKLine(symbol)
@@ -320,162 +320,6 @@ func (m *MakerService) calculateSellQuantity(order ExchangeModel.Order) float64 
 	}
 
 	return balance
-}
-
-func (m *MakerService) calculateSellPrice(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order) float64 {
-	marketDepth := m.GetDepth(tradeLimit.Symbol)
-	avgPrice := marketDepth.GetBestAvgAsk()
-
-	if 0.00 == avgPrice {
-		return m.Formatter.FormatPrice(tradeLimit, avgPrice)
-	}
-
-	minPrice := m.Formatter.FormatPrice(tradeLimit, order.GetMinClosePrice(tradeLimit))
-	openedOrder, err := m.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
-
-	if err != nil {
-		return 0.00
-	}
-
-	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
-	if lastKline == nil {
-		return 0.00
-	}
-
-	currentPrice := lastKline.Close
-
-	if avgPrice > minPrice {
-		log.Printf("[%s] Choosen AVG sell price %f", tradeLimit.Symbol, avgPrice)
-		minPrice = avgPrice
-	}
-
-	var frame ExchangeModel.Frame
-	orderHours := openedOrder.GetHoursOpened()
-
-	if orderHours >= 48.00 {
-		log.Printf("[%s] Order is opened for %d hours, will be used 8-hours frame", tradeLimit.Symbol, orderHours)
-		frame = m.FrameService.GetFrame(tradeLimit.Symbol, "2h", 4)
-	} else {
-		frame = m.FrameService.GetFrame(tradeLimit.Symbol, "2h", 8)
-	}
-
-	bestFrameSell, err := frame.GetBestFrameSell(marketDepth)
-
-	if err == nil {
-		if bestFrameSell[0] > minPrice {
-			minPrice = bestFrameSell[0]
-			log.Printf(
-				"[%s] Choosen Frame [low:%f - high:%f] Sell price = %f",
-				tradeLimit.Symbol,
-				frame.AvgLow,
-				frame.AvgHigh,
-				minPrice,
-			)
-		}
-	} else {
-		log.Printf("[%s] Sell Frame: %s, current = %f", tradeLimit.Symbol, err.Error(), currentPrice)
-	}
-
-	if currentPrice > minPrice {
-		minPrice = currentPrice
-		log.Printf("[%s] Choosen Current sell price %f", tradeLimit.Symbol, minPrice)
-	}
-
-	profit := (minPrice - order.Price) * order.ExecutedQuantity
-
-	log.Printf("[%s] Sell price = %f, expected profit = %f$", order.Symbol, minPrice, profit)
-
-	return m.Formatter.FormatPrice(tradeLimit, minPrice)
-}
-
-func (m *MakerService) CalculateBuyPrice(tradeLimit ExchangeModel.TradeLimit) (float64, error) {
-	// todo: check manual!!!!
-
-	marketDepth := m.GetDepth(tradeLimit.Symbol)
-	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
-
-	if lastKline == nil {
-		return 0.00, errors.New(fmt.Sprintf("[%s] Current price is unknown, wait...", tradeLimit.Symbol))
-	}
-
-	minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, 200)
-	order, err := m.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
-
-	// Extra charge by current price
-	if err == nil && order.GetProfitPercent(lastKline.Close).Lte(tradeLimit.GetBuyOnFallPercent()) {
-		extraBuyPrice := minPrice
-		// todo: For next extras has to be used last extra order
-		if order.GetHoursOpened() >= 24 {
-			extraBuyPrice = lastKline.Close
-			log.Printf(
-				"[%s] Extra buy price is %f (more than 24 hours), profit: %.2f",
-				tradeLimit.Symbol,
-				extraBuyPrice,
-				order.GetProfitPercent(lastKline.Close).Value(),
-			)
-		} else {
-			extraBuyPrice = minPrice
-			log.Printf(
-				"[%s] Extra buy price is %f (less than 24 hours), profit: %.2f",
-				tradeLimit.Symbol,
-				extraBuyPrice,
-				order.GetProfitPercent(lastKline.Close),
-			)
-		}
-
-		if extraBuyPrice > lastKline.Close {
-			extraBuyPrice = lastKline.Close
-		}
-
-		return m.Formatter.FormatPrice(tradeLimit, extraBuyPrice), nil
-	}
-
-	frame := m.FrameService.GetFrame(tradeLimit.Symbol, "2h", 6)
-	bestFramePrice, err := frame.GetBestFrameBuy(tradeLimit, marketDepth)
-	buyPrice := minPrice
-
-	if err == nil {
-		if buyPrice > bestFramePrice[1] {
-			buyPrice = bestFramePrice[1]
-		}
-	} else {
-		log.Printf("[%s] Buy Frame Error: %s, current = %f", tradeLimit.Symbol, err.Error(), lastKline.Close)
-		potentialOpenPrice := lastKline.Close
-		for {
-			closePrice := potentialOpenPrice * (100 + tradeLimit.GetMinProfitPercent().Value()) / 100
-
-			if closePrice <= frame.AvgHigh {
-				break
-			}
-
-			potentialOpenPrice -= tradeLimit.MinPrice
-		}
-
-		if buyPrice > potentialOpenPrice {
-			buyPrice = potentialOpenPrice
-			log.Printf("[%s] Choosen potential open price = %f", tradeLimit.Symbol, buyPrice)
-		}
-	}
-
-	if buyPrice > lastKline.Close {
-		buyPrice = lastKline.Close
-	}
-
-	log.Printf(
-		"[%s] Trade Frame [low:%f - high:%f](%.2f%s/%.2f%s): BUY Price = %f [min(200) = %f, current = %f]",
-		tradeLimit.Symbol,
-		frame.AvgLow,
-		frame.AvgHigh,
-		frame.GetMediumVolatilityPercent(),
-		"%",
-		frame.GetVolatilityPercent(),
-		"%",
-		buyPrice,
-		minPrice,
-		lastKline.Close,
-	)
-
-	return m.Formatter.FormatPrice(tradeLimit, buyPrice), nil
 }
 
 func (m *MakerService) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64, sellVolume float64, buyVolume float64, smaValue float64) error {
@@ -835,7 +679,7 @@ func (m *MakerService) tryLimitOrder(order ExchangeModel.Order, operation string
 }
 
 func (m *MakerService) waitExecution(binanceOrder ExchangeModel.BinanceOrder, seconds int64) (ExchangeModel.BinanceOrder, error) {
-	depth := m.GetDepth(binanceOrder.Symbol)
+	depth := m.PriceCalculator.GetDepth(binanceOrder.Symbol)
 
 	var currentPosition int
 	var book [2]ExchangeModel.Number
@@ -1390,24 +1234,6 @@ func (m *MakerService) tradeLimit(symbol string) *ExchangeModel.TradeLimit {
 	}
 
 	return nil
-}
-
-func (m *MakerService) SetDepth(depth ExchangeModel.Depth) {
-	m.ExchangeRepository.SetDepth(depth)
-}
-
-func (m *MakerService) GetDepth(symbol string) ExchangeModel.Depth {
-	depth := m.ExchangeRepository.GetDepth(symbol)
-
-	if len(depth.Asks) == 0 && len(depth.Bids) == 0 {
-		book, err := m.Binance.GetDepth(symbol)
-		if err == nil {
-			depth = book.ToDepth(symbol)
-			m.SetDepth(depth)
-		}
-	}
-
-	return depth
 }
 
 func (m *MakerService) UpdateSwapPairs() {

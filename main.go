@@ -58,6 +58,8 @@ func main() {
 		HttpClient:     &httpClient,
 		Channel:        make(chan []byte),
 		SocketWriter:   make(chan []byte),
+		RDB:            rdb,
+		Ctx:            &ctx,
 	}
 	binance.Connect(os.Getenv("BINANCE_WS_DSN")) // "wss://testnet.binance.vision/ws-api/v3"
 
@@ -151,6 +153,14 @@ func main() {
 		CurrentBot: currentBot,
 	}
 
+	priceCalculator := ExchangeService.PriceCalculator{
+		OrderRepository:    &orderRepository,
+		ExchangeRepository: &exchangeRepository,
+		Binance:            &binance,
+		Formatter:          &formatter,
+		FrameService:       &frameService,
+	}
+
 	makerService := ExchangeService.MakerService{
 		SwapValidator:      &swapValidator,
 		OrderRepository:    &orderRepository,
@@ -161,7 +171,6 @@ func main() {
 		Lock:               make(map[string]bool),
 		TradeLockMutex:     sync.RWMutex{},
 		Formatter:          &formatter,
-		FrameService:       &frameService,
 		MinDecisions:       4.00,
 		HoldScore:          75.00,
 		SwapSellOrderDays:  swapOpenedSellOrderFromHoursOpened,
@@ -179,13 +188,14 @@ func main() {
 			Formatter:       &formatter,
 			TimeoutService:  &ExchangeService.TimeService{},
 		},
+		PriceCalculator: &priceCalculator,
 	}
 
 	orderController := controller.OrderController{
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,
 		Formatter:          &formatter,
-		MakerService:       &makerService,
+		PriceCalculator:    &priceCalculator,
 		CurrentBot:         currentBot,
 	}
 
@@ -390,7 +400,7 @@ func main() {
 	go func() {
 		for {
 			depth := <-depthChannel
-			makerService.SetDepth(depth)
+			exchangeRepository.SetDepth(depth)
 		}
 	}()
 

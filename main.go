@@ -154,11 +154,16 @@ func main() {
 	}
 
 	priceCalculator := ExchangeService.PriceCalculator{
-		OrderRepository:    &orderRepository,
-		ExchangeRepository: &exchangeRepository,
-		Binance:            &binance,
-		Formatter:          &formatter,
-		FrameService:       &frameService,
+		OrderRepository:              &orderRepository,
+		ExchangeRepository:           &exchangeRepository,
+		Binance:                      &binance,
+		Formatter:                    &formatter,
+		FrameService:                 &frameService,
+		MinPriceMinutesPeriod:        200,
+		FrameInterval:                "2h",
+		FramePeriod:                  20,
+		BuyPriceHistoryCheckInterval: "1d",
+		BuyPriceHistoryCheckPeriod:   14,
 	}
 
 	makerService := ExchangeService.MakerService{

@@ -127,3 +127,59 @@ func (t *TimeServiceMock) GetNowDiffMinutes(unixTime int64) float64 {
 	args := t.Called(unixTime)
 	return args.Get(0).(float64)
 }
+
+type ExchangePriceStorageMock struct {
+	mock.Mock
+}
+
+func (e *ExchangePriceStorageMock) GetLastKLine(symbol string) *model.KLine {
+	args := e.Called(symbol)
+	kLine := args.Get(0).(*model.KLine)
+	return kLine
+}
+func (e *ExchangePriceStorageMock) GetPeriodMinPrice(symbol string, period int64) float64 {
+	args := e.Called(symbol, period)
+	return args.Get(0).(float64)
+}
+func (e *ExchangePriceStorageMock) GetDepth(symbol string) model.Depth {
+	args := e.Called(symbol)
+	return args.Get(0).(model.Depth)
+}
+func (e *ExchangePriceStorageMock) SetDepth(depth model.Depth) {
+	_ = e.Called(depth)
+}
+
+type OrderCachedReaderMock struct {
+	mock.Mock
+}
+
+func (o *OrderCachedReaderMock) GetOpenedOrderCached(symbol string, operation string) (model.Order, error) {
+	args := o.Called(symbol, operation)
+	return args.Get(0).(model.Order), args.Error(1)
+}
+
+type FrameServiceMock struct {
+	mock.Mock
+}
+
+func (f *FrameServiceMock) GetFrame(symbol string, interval string, limit int64) model.Frame {
+	args := f.Called(symbol, interval, limit)
+	return args.Get(0).(model.Frame)
+}
+
+type ExchangePriceAPIMock struct {
+	mock.Mock
+}
+
+func (e *ExchangePriceAPIMock) GetDepth(symbol string) (model.OrderBook, error) {
+	args := e.Called(symbol)
+	return args.Get(0).(model.OrderBook), args.Error(1)
+}
+func (e *ExchangePriceAPIMock) GetKLines(symbol string, interval string, limit int64) []model.KLineHistory {
+	args := e.Called(symbol, interval, limit)
+	return args.Get(0).([]model.KLineHistory)
+}
+func (e *ExchangePriceAPIMock) GetKLinesCached(symbol string, interval string, limit int64) []model.KLineHistory {
+	args := e.Called(symbol, interval, limit)
+	return args.Get(0).([]model.KLineHistory)
+}

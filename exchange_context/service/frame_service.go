@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+type FrameServiceInterface interface {
+	GetFrame(symbol string, interval string, limit int64) model.Frame
+}
+
 type FrameService struct {
 	Binance *client.Binance
 	RDB     *redis.Client
@@ -29,7 +33,7 @@ func (f *FrameService) GetFrame(symbol string, interval string, limit int64) mod
 		}
 	}
 
-	kLines := f.Binance.GetKLines(symbol, interval, limit)
+	kLines := f.Binance.GetKLinesCached(symbol, interval, limit)
 
 	highSum := 0.00
 	lowSum := 0.00

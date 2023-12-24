@@ -14,7 +14,7 @@ type OrderController struct {
 	OrderRepository    *ExchangeRepository.OrderRepository
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
 	Formatter          *service.Formatter
-	MakerService       *service.MakerService
+	PriceCalculator    *service.PriceCalculator
 	CurrentBot         *model.Bot
 }
 
@@ -147,7 +147,7 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 		return
 	}
 
-	minPrice, buyError := o.MakerService.CalculateBuyPrice(tradeLimit)
+	minPrice, buyError := o.PriceCalculator.CalculateBuy(tradeLimit)
 
 	if buyError != nil {
 		http.Error(w, fmt.Sprintf("Ошибка: %s", buyError.Error()), http.StatusBadRequest)

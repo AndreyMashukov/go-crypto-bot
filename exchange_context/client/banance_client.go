@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/json"
@@ -8,6 +9,7 @@ import (
 	"fmt"
 	uuid2 "github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/redis/go-redis/v9"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	"log"
 	"net/http"
@@ -23,6 +25,12 @@ type ExchangeOrderAPIInterface interface {
 	CancelOrder(symbol string, orderId int64) (model.BinanceOrder, error)
 }
 
+type ExchangePriceAPIInterface interface {
+	GetDepth(symbol string) (model.OrderBook, error)
+	GetKLines(symbol string, interval string, limit int64) []model.KLineHistory
+	GetKLinesCached(symbol string, interval string, limit int64) []model.KLineHistory
+}
+
 type Binance struct {
 	ApiKey         string
 	ApiSecret      string
@@ -32,6 +40,8 @@ type Binance struct {
 	connection   *websocket.Conn
 	Channel      chan []byte
 	SocketWriter chan []byte
+	RDB          *redis.Client
+	Ctx          *context.Context
 }
 
 func (b *Binance) Connect(address string) {
@@ -259,6 +269,25 @@ func (b *Binance) GetKLines(symbol string, interval string, limit int64) []model
 	}
 
 	return response.Result
+}
+
+func (b *Binance) GetKLinesCached(symbol string, interval string, limit int64) []model.KLineHistory {
+	cacheKey := fmt.Sprintf("klines-history-%s-%s-%d", symbol, interval, limit)
+	res := b.RDB.Get(*b.Ctx, cacheKey).Val()
+	if len(res) == 0 {
+		kLines := b.GetKLines(symbol, interval, limit)
+		encoded, err := json.Marshal(kLines)
+		if err == nil {
+			b.RDB.Set(*b.Ctx, cacheKey, string(encoded), time.Minute*5)
+		}
+
+		return kLines
+	}
+
+	var kLines []model.KLineHistory
+	_ = json.Unmarshal([]byte(res), &kLines)
+
+	return kLines
 }
 
 func (b *Binance) GetExchangeData(symbols []string) (*model.ExchangeInfo, error) {

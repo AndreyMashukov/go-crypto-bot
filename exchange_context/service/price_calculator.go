@@ -235,7 +235,7 @@ func (m *PriceCalculator) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPric
 		closePrice := limit.GetClosePrice(buyPrice)
 		var closePriceMetTimes int64 = 0
 		for _, kline := range kLines {
-			if kline.GetHighPrice() >= closePrice {
+			if kline.High >= closePrice {
 				closePriceMetTimes++
 			}
 		}

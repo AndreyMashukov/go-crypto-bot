@@ -290,6 +290,7 @@ func (b *Binance) GetKLinesCached(symbol string, interval string, limit int64) [
 	_ = json.Unmarshal([]byte(res), &kLines)
 
 	if len(kLines.Result) < int(limit) {
+		log.Printf("[%s] kline[%s] history cache invalid: Wrong length %d < %d", symbol, interval, len(kLines.Result), limit)
 		b.RDB.Del(*b.Ctx, cacheKey)
 		return b.GetKLines(symbol, interval, limit)
 	}

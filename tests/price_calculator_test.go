@@ -23,11 +23,16 @@ func TestCalculateBuyPriceByFrame1(t *testing.T) {
 	binanceMock := new(ExchangePriceAPIMock)
 
 	priceCalculator := service.PriceCalculator{
-		ExchangeRepository: exchangeRepoMock,
-		OrderRepository:    orderRepositoryMock,
-		FrameService:       frameServiceMock,
-		Binance:            binanceMock,
-		Formatter:          &service.Formatter{},
+		ExchangeRepository:           exchangeRepoMock,
+		OrderRepository:              orderRepositoryMock,
+		FrameService:                 frameServiceMock,
+		Binance:                      binanceMock,
+		Formatter:                    &service.Formatter{},
+		MinPriceMinutesPeriod:        200,
+		FrameInterval:                "2h",
+		FramePeriod:                  20,
+		BuyPriceHistoryCheckInterval: "1d",
+		BuyPriceHistoryCheckPeriod:   14,
 	}
 
 	tradeLimit := model.TradeLimit{
@@ -94,11 +99,16 @@ func TestCalculateBuyPriceByFrame2(t *testing.T) {
 	binanceMock := new(ExchangePriceAPIMock)
 
 	priceCalculator := service.PriceCalculator{
-		ExchangeRepository: exchangeRepoMock,
-		OrderRepository:    orderRepositoryMock,
-		FrameService:       frameServiceMock,
-		Binance:            binanceMock,
-		Formatter:          &service.Formatter{},
+		ExchangeRepository:           exchangeRepoMock,
+		OrderRepository:              orderRepositoryMock,
+		FrameService:                 frameServiceMock,
+		Binance:                      binanceMock,
+		Formatter:                    &service.Formatter{},
+		MinPriceMinutesPeriod:        200,
+		FrameInterval:                "2h",
+		FramePeriod:                  20,
+		BuyPriceHistoryCheckInterval: "1d",
+		BuyPriceHistoryCheckPeriod:   14,
 	}
 
 	tradeLimit := model.TradeLimit{
@@ -165,11 +175,16 @@ func TestCalculateBuyPriceByFrame3(t *testing.T) {
 	binanceMock := new(ExchangePriceAPIMock)
 
 	priceCalculator := service.PriceCalculator{
-		ExchangeRepository: exchangeRepoMock,
-		OrderRepository:    orderRepositoryMock,
-		FrameService:       frameServiceMock,
-		Binance:            binanceMock,
-		Formatter:          &service.Formatter{},
+		ExchangeRepository:           exchangeRepoMock,
+		OrderRepository:              orderRepositoryMock,
+		FrameService:                 frameServiceMock,
+		Binance:                      binanceMock,
+		Formatter:                    &service.Formatter{},
+		MinPriceMinutesPeriod:        200,
+		FrameInterval:                "2h",
+		FramePeriod:                  20,
+		BuyPriceHistoryCheckInterval: "1d",
+		BuyPriceHistoryCheckPeriod:   14,
 	}
 
 	tradeLimit := model.TradeLimit{

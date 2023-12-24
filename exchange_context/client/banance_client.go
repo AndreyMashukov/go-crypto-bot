@@ -289,6 +289,11 @@ func (b *Binance) GetKLinesCached(symbol string, interval string, limit int64) [
 	var kLines model.BinanceKLineResponse
 	_ = json.Unmarshal([]byte(res), &kLines)
 
+	if len(kLines.Result) < int(limit) {
+		b.RDB.Del(*b.Ctx, cacheKey)
+		return b.GetKLines(symbol, interval, limit)
+	}
+
 	return kLines.Result
 }
 

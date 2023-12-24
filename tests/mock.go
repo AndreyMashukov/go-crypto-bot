@@ -179,7 +179,7 @@ func (e *ExchangePriceAPIMock) GetKLines(symbol string, interval string, limit i
 	args := e.Called(symbol, interval, limit)
 	return args.Get(0).([]model.KLineHistory)
 }
-func (e *ExchangePriceAPIMock) GetKLinesCached(symbol string, interval string, limit int64) []model.KLineHistory {
+func (e *ExchangePriceAPIMock) GetKLinesCached(symbol string, interval string, limit int64) []model.KLine {
 	args := e.Called(symbol, interval, limit)
-	return args.Get(0).([]model.KLineHistory)
+	return args.Get(0).([]model.KLine)
 }

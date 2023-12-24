@@ -54,30 +54,30 @@ func TestCalculateBuyPriceByFrame1(t *testing.T) {
 		AvgHigh: 1400.00,
 		AvgLow:  1300.00,
 	})
-	binanceMock.On("GetKLinesCached", "ETHUSDT", "1d", int64(14)).Return([]model.KLineHistory{
+	binanceMock.On("GetKLinesCached", "ETHUSDT", "1d", int64(14)).Return([]model.KLine{
 		{
-			High: "1480.00",
+			High: 1480.00,
 		},
 		{
-			High: "1480.00",
+			High: 1480.00,
 		},
 		{
-			High: "1480.00",
+			High: 1480.00,
 		},
 		{
-			High: "1480.00",
+			High: 1480.00,
 		},
 		{
-			High: "1480.00",
+			High: 1480.00,
 		},
 		{
-			High: "1480.00",
+			High: 1480.00,
 		},
 		{
-			High: "1480.00",
+			High: 1480.00,
 		},
 		{
-			High: "1480.00",
+			High: 1480.00,
 		},
 	})
 
@@ -130,30 +130,30 @@ func TestCalculateBuyPriceByFrame2(t *testing.T) {
 		AvgHigh: 1400.00,
 		AvgLow:  1300.00,
 	})
-	binanceMock.On("GetKLinesCached", "ETHUSDT", "1d", int64(14)).Return([]model.KLineHistory{
+	binanceMock.On("GetKLinesCached", "ETHUSDT", "1d", int64(14)).Return([]model.KLine{
 		{
-			High: "1480.00",
+			High: 1480.00,
 		},
 		{
-			High: "1480.00",
+			High: 1480.00,
 		},
 		{
-			High: "1480.00",
+			High: 1480.00,
 		},
 		{
-			High: "1480.00",
+			High: 1480.00,
 		},
 		{
-			High: "1480.00",
+			High: 1480.00,
 		},
 		{
-			High: "1480.00",
+			High: 1480.00,
 		},
 		{
-			High: "1480.00",
+			High: 1480.00,
 		},
 		{
-			High: "1480.00",
+			High: 1480.00,
 		},
 	})
 
@@ -206,30 +206,30 @@ func TestCalculateBuyPriceByFrame3(t *testing.T) {
 		AvgHigh: 1400.00,
 		AvgLow:  1300.00,
 	})
-	binanceMock.On("GetKLinesCached", "ETHUSDT", "1d", int64(14)).Return([]model.KLineHistory{
+	binanceMock.On("GetKLinesCached", "ETHUSDT", "1d", int64(14)).Return([]model.KLine{
 		{
-			High: "1200.00",
+			High: 1200.00,
 		},
 		{
-			High: "1220.00",
+			High: 1220.00,
 		},
 		{
-			High: "1160.00",
+			High: 1160.00,
 		},
 		{
-			High: "1160.00",
+			High: 1160.00,
 		},
 		{
-			High: "1210.00",
+			High: 1210.00,
 		},
 		{
-			High: "1310.00",
+			High: 1310.00,
 		},
 		{
-			High: "1310.00",
+			High: 1310.00,
 		},
 		{
-			High: "1310.00",
+			High: 1310.00,
 		},
 	})
 

@@ -272,11 +272,13 @@ func (b *Binance) GetKLines(symbol string, interval string, limit int64) []model
 }
 
 func (b *Binance) GetKLinesCached(symbol string, interval string, limit int64) []model.KLineHistory {
-	cacheKey := fmt.Sprintf("klines-history-%s-%s-%d", symbol, interval, limit)
+	cacheKey := fmt.Sprintf("klines-history-period-%s-%s-%d", symbol, interval, limit)
 	res := b.RDB.Get(*b.Ctx, cacheKey).Val()
 	if len(res) == 0 {
 		kLines := b.GetKLines(symbol, interval, limit)
-		encoded, err := json.Marshal(kLines)
+		encoded, err := json.Marshal(model.BinanceKLineResponse{
+			Result: kLines,
+		})
 		if err == nil {
 			b.RDB.Set(*b.Ctx, cacheKey, string(encoded), time.Minute*5)
 		}
@@ -284,10 +286,10 @@ func (b *Binance) GetKLinesCached(symbol string, interval string, limit int64) [
 		return kLines
 	}
 
-	var kLines []model.KLineHistory
+	var kLines model.BinanceKLineResponse
 	_ = json.Unmarshal([]byte(res), &kLines)
 
-	return kLines
+	return kLines.Result
 }
 
 func (b *Binance) GetExchangeData(symbols []string) (*model.ExchangeInfo, error) {

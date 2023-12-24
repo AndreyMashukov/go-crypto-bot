@@ -28,7 +28,7 @@ type ExchangeOrderAPIInterface interface {
 type ExchangePriceAPIInterface interface {
 	GetDepth(symbol string) (model.OrderBook, error)
 	GetKLines(symbol string, interval string, limit int64) []model.KLineHistory
-	GetKLinesCached(symbol string, interval string, limit int64) []model.KLineHistory
+	GetKLinesCached(symbol string, interval string, limit int64) []model.KLine
 }
 
 type Binance struct {
@@ -271,14 +271,17 @@ func (b *Binance) GetKLines(symbol string, interval string, limit int64) []model
 	return response.Result
 }
 
-func (b *Binance) GetKLinesCached(symbol string, interval string, limit int64) []model.KLineHistory {
-	cacheKey := fmt.Sprintf("klines-history-period-%s-%s-%d", symbol, interval, limit)
+func (b *Binance) GetKLinesCached(symbol string, interval string, limit int64) []model.KLine {
+	cacheKey := fmt.Sprintf("interval-kline-history-%s-%s-%d", symbol, interval, limit)
 	res := b.RDB.Get(*b.Ctx, cacheKey).Val()
 	if len(res) == 0 {
-		kLines := b.GetKLines(symbol, interval, limit)
-		encoded, err := json.Marshal(model.BinanceKLineResponse{
-			Result: kLines,
-		})
+		historyKLines := b.GetKLines(symbol, interval, limit)
+		kLines := make([]model.KLine, 0)
+		for _, historyKLine := range historyKLines {
+			kLines = append(kLines, historyKLine.ToKLine(symbol))
+		}
+
+		encoded, err := json.Marshal(kLines)
 		if err == nil {
 			b.RDB.Set(*b.Ctx, cacheKey, string(encoded), time.Minute*5)
 		}
@@ -286,16 +289,15 @@ func (b *Binance) GetKLinesCached(symbol string, interval string, limit int64) [
 		return kLines
 	}
 
-	var kLines model.BinanceKLineResponse
-	_ = json.Unmarshal([]byte(res), &kLines)
-
-	if len(kLines.Result) < int(limit) {
-		log.Printf("[%s] kline[%s] history cache invalid: Wrong length %d < %d", symbol, interval, len(kLines.Result), limit)
+	var kLines []model.KLine
+	err := json.Unmarshal([]byte(res), &kLines)
+	if err != nil {
+		log.Printf("[%s] kline[%s] history cache invalid: Wrong length %d < %d", symbol, interval, len(kLines), limit)
 		b.RDB.Del(*b.Ctx, cacheKey)
-		return b.GetKLines(symbol, interval, limit)
+		return b.GetKLinesCached(symbol, interval, limit)
 	}
 
-	return kLines.Result
+	return kLines
 }
 
 func (b *Binance) GetExchangeData(symbols []string) (*model.ExchangeInfo, error) {

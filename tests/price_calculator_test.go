@@ -23,23 +23,23 @@ func TestCalculateBuyPriceByFrame1(t *testing.T) {
 	binanceMock := new(ExchangePriceAPIMock)
 
 	priceCalculator := service.PriceCalculator{
-		ExchangeRepository:           exchangeRepoMock,
-		OrderRepository:              orderRepositoryMock,
-		FrameService:                 frameServiceMock,
-		Binance:                      binanceMock,
-		Formatter:                    &service.Formatter{},
+		ExchangeRepository: exchangeRepoMock,
+		OrderRepository:    orderRepositoryMock,
+		FrameService:       frameServiceMock,
+		Binance:            binanceMock,
+		Formatter:          &service.Formatter{},
+	}
+
+	tradeLimit := model.TradeLimit{
+		Symbol:                       "ETHUSDT",
+		MinPrice:                     0.01,
+		MinQuantity:                  0.0001,
+		MinProfitPercent:             2.50,
 		MinPriceMinutesPeriod:        200,
 		FrameInterval:                "2h",
 		FramePeriod:                  20,
 		BuyPriceHistoryCheckInterval: "1d",
 		BuyPriceHistoryCheckPeriod:   14,
-	}
-
-	tradeLimit := model.TradeLimit{
-		Symbol:           "ETHUSDT",
-		MinPrice:         0.01,
-		MinQuantity:      0.0001,
-		MinProfitPercent: 2.50,
 	}
 	exchangeRepoMock.On("GetDepth", "ETHUSDT").Return(depth.Depth)
 	binanceMock.On("GetDepth", "ETHUSDT").Times(0)
@@ -99,23 +99,23 @@ func TestCalculateBuyPriceByFrame2(t *testing.T) {
 	binanceMock := new(ExchangePriceAPIMock)
 
 	priceCalculator := service.PriceCalculator{
-		ExchangeRepository:           exchangeRepoMock,
-		OrderRepository:              orderRepositoryMock,
-		FrameService:                 frameServiceMock,
-		Binance:                      binanceMock,
-		Formatter:                    &service.Formatter{},
+		ExchangeRepository: exchangeRepoMock,
+		OrderRepository:    orderRepositoryMock,
+		FrameService:       frameServiceMock,
+		Binance:            binanceMock,
+		Formatter:          &service.Formatter{},
+	}
+
+	tradeLimit := model.TradeLimit{
+		Symbol:                       "ETHUSDT",
+		MinPrice:                     0.01,
+		MinQuantity:                  0.0001,
+		MinProfitPercent:             2.50,
 		MinPriceMinutesPeriod:        200,
 		FrameInterval:                "2h",
 		FramePeriod:                  20,
 		BuyPriceHistoryCheckInterval: "1d",
 		BuyPriceHistoryCheckPeriod:   14,
-	}
-
-	tradeLimit := model.TradeLimit{
-		Symbol:           "ETHUSDT",
-		MinPrice:         0.01,
-		MinQuantity:      0.0001,
-		MinProfitPercent: 2.50,
 	}
 	exchangeRepoMock.On("GetDepth", "ETHUSDT").Return(depth.Depth)
 	binanceMock.On("GetDepth", "ETHUSDT").Times(0)
@@ -175,23 +175,23 @@ func TestCalculateBuyPriceByFrame3(t *testing.T) {
 	binanceMock := new(ExchangePriceAPIMock)
 
 	priceCalculator := service.PriceCalculator{
-		ExchangeRepository:           exchangeRepoMock,
-		OrderRepository:              orderRepositoryMock,
-		FrameService:                 frameServiceMock,
-		Binance:                      binanceMock,
-		Formatter:                    &service.Formatter{},
+		ExchangeRepository: exchangeRepoMock,
+		OrderRepository:    orderRepositoryMock,
+		FrameService:       frameServiceMock,
+		Binance:            binanceMock,
+		Formatter:          &service.Formatter{},
+	}
+
+	tradeLimit := model.TradeLimit{
+		Symbol:                       "ETHUSDT",
+		MinPrice:                     0.01,
+		MinQuantity:                  0.0001,
+		MinProfitPercent:             2.50,
 		MinPriceMinutesPeriod:        200,
 		FrameInterval:                "2h",
 		FramePeriod:                  20,
 		BuyPriceHistoryCheckInterval: "1d",
 		BuyPriceHistoryCheckPeriod:   14,
-	}
-
-	tradeLimit := model.TradeLimit{
-		Symbol:           "ETHUSDT",
-		MinPrice:         0.01,
-		MinQuantity:      0.0001,
-		MinProfitPercent: 2.50,
 	}
 	exchangeRepoMock.On("GetDepth", "ETHUSDT").Return(depth.Depth)
 	binanceMock.On("GetDepth", "ETHUSDT").Times(0)

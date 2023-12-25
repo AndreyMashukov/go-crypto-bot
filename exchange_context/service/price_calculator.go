@@ -10,16 +10,11 @@ import (
 )
 
 type PriceCalculator struct {
-	ExchangeRepository           repository.ExchangePriceStorageInterface
-	OrderRepository              repository.OrderCachedReaderInterface
-	FrameService                 FrameServiceInterface
-	Binance                      client.ExchangePriceAPIInterface
-	Formatter                    *Formatter
-	MinPriceMinutesPeriod        int64
-	FrameInterval                string
-	FramePeriod                  int64
-	BuyPriceHistoryCheckInterval string
-	BuyPriceHistoryCheckPeriod   int64
+	ExchangeRepository repository.ExchangePriceStorageInterface
+	OrderRepository    repository.OrderCachedReaderInterface
+	FrameService       FrameServiceInterface
+	Binance            client.ExchangePriceAPIInterface
+	Formatter          *Formatter
 }
 
 func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, error) {
@@ -30,7 +25,7 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 		return 0.00, errors.New(fmt.Sprintf("[%s] Current price is unknown, wait...", tradeLimit.Symbol))
 	}
 
-	minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, m.MinPriceMinutesPeriod)
+	minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, tradeLimit.MinPriceMinutesPeriod)
 	order, err := m.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
 
 	// Extra charge by current price
@@ -61,7 +56,7 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 		return m.Formatter.FormatPrice(tradeLimit, extraBuyPrice), nil
 	}
 
-	frame := m.FrameService.GetFrame(tradeLimit.Symbol, m.FrameInterval, m.FramePeriod)
+	frame := m.FrameService.GetFrame(tradeLimit.Symbol, tradeLimit.FrameInterval, tradeLimit.FramePeriod)
 	bestFramePrice, err := m.GetBestFrameBuy(tradeLimit, marketDepth, frame)
 	buyPrice := minPrice
 
@@ -227,7 +222,7 @@ func (m *PriceCalculator) GetBestFrameBuy(limit model.TradeLimit, marketDepth mo
 }
 
 func (m *PriceCalculator) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice float64) float64 {
-	kLines := m.Binance.GetKLinesCached(limit.Symbol, m.BuyPriceHistoryCheckInterval, m.BuyPriceHistoryCheckPeriod)
+	kLines := m.Binance.GetKLinesCached(limit.Symbol, limit.BuyPriceHistoryCheckInterval, limit.BuyPriceHistoryCheckPeriod)
 
 	priceBefore := buyPrice
 
@@ -240,7 +235,7 @@ func (m *PriceCalculator) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPric
 			}
 		}
 
-		if closePriceMetTimes > (m.BuyPriceHistoryCheckPeriod / 2) {
+		if closePriceMetTimes > (limit.BuyPriceHistoryCheckPeriod / 2) {
 			break
 		}
 

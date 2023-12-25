@@ -79,7 +79,12 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 		    tl.min_profit_percent as MinProfitPercent,
 		    tl.is_enabled as IsEnabled,
 		    tl.usdt_extra_budget as USDTExtraBudget,
-		    tl.buy_on_fall_percent as BuyOnFallPercent
+		    tl.buy_on_fall_percent as BuyOnFallPercent,
+		    tl.min_price_minutes_period as MinPriceMinutesPeriod,
+		    tl.frame_interval as FrameInterval,
+		    tl.frame_period as FramePeriod,
+		    tl.buy_price_history_check_interval as BuyPriceHistoryCheckInterval,
+		    tl.buy_price_history_check_period as BuyPriceHistoryCheckPeriod
 		FROM trade_limit tl WHERE tl.bot_id = ?
 	`, e.CurrentBot.Id)
 	defer res.Close()
@@ -103,6 +108,11 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 			&tradeLimit.IsEnabled,
 			&tradeLimit.USDTExtraBudget,
 			&tradeLimit.BuyOnFallPercent,
+			&tradeLimit.MinPriceMinutesPeriod,
+			&tradeLimit.FrameInterval,
+			&tradeLimit.FramePeriod,
+			&tradeLimit.BuyPriceHistoryCheckInterval,
+			&tradeLimit.BuyPriceHistoryCheckPeriod,
 		)
 
 		if err != nil {
@@ -128,7 +138,12 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		    tl.min_profit_percent as MinProfitPercent,
 		    tl.is_enabled as IsEnabled,
 		    tl.usdt_extra_budget as USDTExtraBudget,
-		    tl.buy_on_fall_percent as BuyOnFallPercent
+		    tl.buy_on_fall_percent as BuyOnFallPercent,
+		    tl.min_price_minutes_period as MinPriceMinutesPeriod,
+		    tl.frame_interval as FrameInterval,
+		    tl.frame_period as FramePeriod,
+		    tl.buy_price_history_check_interval as BuyPriceHistoryCheckInterval,
+		    tl.buy_price_history_check_period as BuyPriceHistoryCheckPeriod
 		FROM trade_limit tl
 		WHERE tl.symbol = ? AND tl.bot_id = ?
 	`,
@@ -145,6 +160,11 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		&tradeLimit.IsEnabled,
 		&tradeLimit.USDTExtraBudget,
 		&tradeLimit.BuyOnFallPercent,
+		&tradeLimit.MinPriceMinutesPeriod,
+		&tradeLimit.FrameInterval,
+		&tradeLimit.FramePeriod,
+		&tradeLimit.BuyPriceHistoryCheckInterval,
+		&tradeLimit.BuyPriceHistoryCheckPeriod,
 	)
 	if err != nil {
 		return tradeLimit, err
@@ -165,6 +185,11 @@ func (repo *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64
 		    is_enabled = ?,
 		    usdt_extra_budget = ?,
 		    buy_on_fall_percent = ?,
+		    min_price_minutes_period = ?,
+		    frame_interval = ?,
+		    frame_period = ?,
+		    buy_price_history_check_interval = ?,
+		    buy_price_history_check_period = ?,
 		    bot_id = ?
 	`,
 		limit.Symbol,
@@ -176,6 +201,11 @@ func (repo *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64
 		limit.IsEnabled,
 		limit.USDTExtraBudget,
 		limit.BuyOnFallPercent,
+		limit.MinPriceMinutesPeriod,
+		limit.FrameInterval,
+		limit.FramePeriod,
+		limit.BuyPriceHistoryCheckInterval,
+		limit.BuyPriceHistoryCheckPeriod,
 		repo.CurrentBot.Id,
 	)
 
@@ -501,7 +531,12 @@ func (repo *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 		    tl.min_profit_percent = ?,
 		    tl.is_enabled = ?,
 		    tl.usdt_extra_budget = ?,
-		    tl.buy_on_fall_percent = ?
+		    tl.buy_on_fall_percent = ?,
+		    tl.min_price_minutes_period = ?,
+		    tl.frame_interval = ?,
+		    tl.frame_period = ?,
+		    tl.buy_price_history_check_interval = ?,
+		    tl.buy_price_history_check_period = ?
 		WHERE tl.id = ?
 	`,
 		limit.Symbol,
@@ -513,6 +548,11 @@ func (repo *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 		limit.IsEnabled,
 		limit.USDTExtraBudget,
 		limit.BuyOnFallPercent,
+		limit.MinPriceMinutesPeriod,
+		limit.FrameInterval,
+		limit.FramePeriod,
+		limit.BuyPriceHistoryCheckInterval,
+		limit.BuyPriceHistoryCheckPeriod,
 		limit.Id,
 	)
 

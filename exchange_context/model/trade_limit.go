@@ -22,6 +22,12 @@ type TradeLimit struct {
 	// Extra budget for market fall
 	USDTExtraBudget  float64 `json:"USDTExtraBudget"`
 	BuyOnFallPercent float64 `json:"buyOnFallPercent"`
+
+	MinPriceMinutesPeriod        int64  `json:"minPriceMinutesPeriod"`        //200,
+	FrameInterval                string `json:"frameInterval"`                //"2h",
+	FramePeriod                  int64  `json:"framePeriod"`                  //20,
+	BuyPriceHistoryCheckInterval string `json:"buyPriceHistoryCheckInterval"` //"1d",
+	BuyPriceHistoryCheckPeriod   int64  `json:"buyPriceHistoryCheckPeriod"`   //14,
 }
 
 func (t TradeLimit) GetMinPrice() float64 {

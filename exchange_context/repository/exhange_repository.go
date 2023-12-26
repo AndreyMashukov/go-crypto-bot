@@ -585,23 +585,12 @@ func (e *ExchangeRepository) GetLastKLine(symbol string) *model.KLine {
 
 func (e *ExchangeRepository) AddKLine(kLine model.KLine) {
 	lastKLines := e.KLineList(kLine.Symbol, false, 200)
-	duplicates := 0
 	encoded, _ := json.Marshal(kLine)
 
 	for _, lastKline := range lastKLines {
 		if lastKline.Timestamp == kLine.Timestamp {
 			e.RDB.LPop(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id)).Val()
-			duplicates++
 		}
-	}
-
-	if duplicates > 1 {
-		log.Printf(
-			"[%s] Removed Kline duplicates - %d [timestamp = %d]",
-			kLine.Symbol,
-			duplicates,
-			kLine.Timestamp,
-		)
 	}
 
 	e.RDB.LPush(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id), string(encoded))

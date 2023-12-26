@@ -33,13 +33,15 @@ func Listen(address string, tradeChannel chan<- []byte, streams []string, connec
 		}
 	}()
 
-	socketRequest := model.SocketStreamsRequest{
-		Id:     connectionId,
-		Method: "SUBSCRIBE",
-		Params: streams,
+	if len(streams) > 0 {
+		socketRequest := model.SocketStreamsRequest{
+			Id:     connectionId,
+			Method: "SUBSCRIBE",
+			Params: streams,
+		}
+		serialized, _ := json.Marshal(socketRequest)
+		_ = connection.WriteMessage(websocket.TextMessage, serialized)
 	}
-	serialized, _ := json.Marshal(socketRequest)
-	_ = connection.WriteMessage(websocket.TextMessage, serialized)
 
 	return connection
 }

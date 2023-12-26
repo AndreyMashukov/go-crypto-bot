@@ -17,39 +17,25 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"slices"
 	"strings"
 	"sync"
 	"time"
 )
 
-func getStreamBatch(
-	tradeLimits []ExchangeModel.TradeLimit,
-	exchangeRepository ExchangeRepository.ExchangeRepository,
-	binance ExchangeClient.Binance,
-) [][]string {
+func getStreamBatch(tradeLimits []ExchangeModel.TradeLimitInterface, events []string) [][]string {
 	streamBatch := make([][]string, 0)
 
 	streams := make([]string, 0)
-	events := [3]string{"@aggTrade", "@kline_1m", "@depth20@100ms"}
 
 	for _, tradeLimit := range tradeLimits {
 		for i := 0; i < len(events); i++ {
 			event := events[i]
-			streams = append(streams, fmt.Sprintf("%s%s", strings.ToLower(tradeLimit.Symbol), event))
+			streams = append(streams, fmt.Sprintf("%s%s", strings.ToLower(tradeLimit.GetSymbol()), event))
 		}
 
 		if len(streams) >= 24 {
 			streamBatch = append(streamBatch, streams)
 			streams = make([]string, 0)
-		}
-
-		history := binance.GetKLines(tradeLimit.Symbol, "1m", 200)
-
-		for _, kline := range history {
-			dto := kline.ToKLine(tradeLimit.Symbol)
-			exchangeRepository.AddKLine(kline.ToKLine(tradeLimit.Symbol))
-			log.Printf("[%s] Added history for [%d] = %.8f", dto.Symbol, dto.Timestamp, dto.Close)
 		}
 	}
 
@@ -282,6 +268,7 @@ func main() {
 		Binance:            &binance,
 	}
 
+	// todo: is master bot???
 	if swapEnabled {
 		swapManager := ExchangeService.SwapManager{
 			SwapChainBuilder: &ExchangeService.SwapChainBuilder{},
@@ -301,61 +288,67 @@ func main() {
 			},
 		}
 
+		swapKlineChannel := make(chan []byte)
+		defer close(swapKlineChannel)
 		// existing swaps real time monitoring
 		go func() {
 			for {
-				swapPairs := exchangeRepository.GetSwapPairs()
-				assets := make([]string, 0)
-				for _, swapPair := range swapPairs {
+				swapMsg := <-swapKlineChannel
+				swapSymbol := ""
+
+				if strings.Contains(string(swapMsg), "kline") {
+					var event ExchangeModel.KlineEvent
+					json.Unmarshal(swapMsg, &event)
+					kLine := event.KlineData.Kline
+					exchangeRepository.AddKLine(kLine)
+					swapSymbol = kLine.Symbol
+				}
+
+				if strings.Contains(string(swapMsg), "@depth20") {
+					var event ExchangeModel.OrderBookEvent
+					json.Unmarshal(swapMsg, &event)
+
+					depth := event.Depth.ToDepth(strings.ToUpper(strings.ReplaceAll(event.Stream, "@depth20@1000ms", "")))
+					exchangeRepository.SetDepth(depth)
+					swapSymbol = depth.Symbol
+				}
+
+				if swapSymbol == "" {
+					continue
+				}
+
+				swapPair, err := exchangeRepository.GetSwapPair(swapSymbol)
+				if err == nil {
+					swapUpdater.UpdateSwapPair(swapPair)
+
 					possibleSwap := swapRepository.GetSwapChainCache(swapPair.BaseAsset)
 					if possibleSwap != nil {
-						if !slices.Contains(assets, swapPair.BaseAsset) {
-							assets = append(assets, swapPair.BaseAsset)
-						}
-
-						swapUpdater.UpdateSwapPair(swapPair, false)
+						go func(asset string) {
+							swapManager.CalculateSwapOptions(asset)
+						}(swapPair.BaseAsset)
 					}
 				}
-
-				for _, asset := range assets {
-					go func(asset string) {
-						log.Printf("realtime swap check: %s", asset)
-						swapManager.CalculateSwapOptions(asset)
-					}(asset)
-				}
-				time.Sleep(time.Second)
 			}
 		}()
 
-		// new possible swaps search algorithm
-		go func() {
-			iterator := 0
-			for {
-				time.Sleep(time.Second * 20)
-				baseAssets := make([]string, 0)
-				swapPairs := exchangeRepository.GetSwapPairs()
-				for _, swapPair := range swapPairs {
-					possibleSwap := swapRepository.GetSwapChainCache(swapPair.BaseAsset)
-					if possibleSwap == nil {
-						if !slices.Contains(baseAssets, swapPair.BaseAsset) {
-							baseAssets = append(baseAssets, swapPair.BaseAsset)
-						}
+		swapWebsockets := make([]*websocket.Conn, 0)
 
-						swapUpdater.UpdateSwapPair(swapPair, iterator == 0)
-					}
-				}
+		swapPairCollection := make([]ExchangeModel.TradeLimitInterface, 0)
+		for _, swapPair := range exchangeRepository.GetSwapPairs() {
+			swapPairCollection = append(swapPairCollection, swapPair)
+		}
 
-				for _, baseAsset := range baseAssets {
-					go func(baseAsset string) {
-						swapManager.CalculateSwapOptions(baseAsset)
-					}(baseAsset)
-				}
-				iterator++
-				if iterator > 20 {
-					iterator = 0
-				}
-			}
-		}()
+		for index, streamBatchItem := range getStreamBatch(swapPairCollection, []string{"@kline_1m", "@depth20@1000ms"}) {
+			swapWebsockets = append(swapWebsockets, ExchangeClient.Listen(fmt.Sprintf(
+				"%s/stream?streams=%s",
+				"wss://stream.binance.com:9443",
+				strings.Join(streamBatchItem, "/"),
+			), swapKlineChannel, []string{}, 10000+int64(index)))
+
+			log.Printf("Swap batch %d websocket: %s", index, strings.Join(streamBatchItem, ", "))
+
+			defer swapWebsockets[index].Close()
+		}
 	}
 
 	go func() {
@@ -453,7 +446,19 @@ func main() {
 
 	websockets := make([]*websocket.Conn, 0)
 
-	for index, streamBatchItem := range getStreamBatch(tradeLimits, exchangeRepository, binance) {
+	tradeLimitCollection := make([]ExchangeModel.TradeLimitInterface, 0)
+	for _, limit := range tradeLimits {
+		tradeLimitCollection = append(tradeLimitCollection, limit)
+		history := binance.GetKLines(limit.GetSymbol(), "1m", 200)
+
+		for _, kline := range history {
+			dto := kline.ToKLine(limit.GetSymbol())
+			exchangeRepository.AddKLine(kline.ToKLine(limit.GetSymbol()))
+			log.Printf("[%s] Added history for [%d] = %.8f", dto.Symbol, dto.Timestamp, dto.Close)
+		}
+	}
+
+	for index, streamBatchItem := range getStreamBatch(tradeLimitCollection, []string{"@aggTrade", "@kline_1m", "@depth20@100ms"}) {
 		websockets = append(websockets, ExchangeClient.Listen(fmt.Sprintf(
 			"%s/ws/%s",
 			os.Getenv("BINANCE_STREAM_DSN"),

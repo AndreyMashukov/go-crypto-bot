@@ -88,7 +88,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			Symbol:  limit.Symbol,
 			Order:   openedOrder,
 			KLine:   *kLine,
-			Percent: model.Percent(o.Formatter.ToFixed((o.Formatter.ComparePercentage(openedOrder.Price, kLine.Close) - 100).Value(), 2)),
+			Percent: openedOrder.GetProfitPercent(kLine.Close),
 		})
 	}
 

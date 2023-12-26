@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 	ExchangeClient "gitlab.com/open-soft/go-crypto-bot/exchange_context/client"
@@ -21,6 +22,43 @@ import (
 	"sync"
 	"time"
 )
+
+func getStreamBatch(
+	tradeLimits []ExchangeModel.TradeLimit,
+	exchangeRepository ExchangeRepository.ExchangeRepository,
+	binance ExchangeClient.Binance,
+) [][]string {
+	streamBatch := make([][]string, 0)
+
+	streams := make([]string, 0)
+	events := [3]string{"@aggTrade", "@kline_1m", "@depth20@100ms"}
+
+	for _, tradeLimit := range tradeLimits {
+		for i := 0; i < len(events); i++ {
+			event := events[i]
+			streams = append(streams, fmt.Sprintf("%s%s", strings.ToLower(tradeLimit.Symbol), event))
+		}
+
+		if len(streams) >= 24 {
+			streamBatch = append(streamBatch, streams)
+			streams = make([]string, 0)
+		}
+
+		history := binance.GetKLines(tradeLimit.Symbol, "1m", 200)
+
+		for _, kline := range history {
+			dto := kline.ToKLine(tradeLimit.Symbol)
+			exchangeRepository.AddKLine(kline.ToKLine(tradeLimit.Symbol))
+			log.Printf("[%s] Added history for [%d] = %.8f", dto.Symbol, dto.Timestamp, dto.Close)
+		}
+	}
+
+	if len(streams) > 0 {
+		streamBatch = append(streamBatch, streams)
+	}
+
+	return streamBatch
+}
 
 func main() {
 	pwd, _ := os.Getwd()
@@ -407,36 +445,25 @@ func main() {
 
 	// todo: sync existed orders in Binance with bot database...
 
-	streams := make([]string, 0)
-	events := [3]string{"@aggTrade", "@kline_1m", "@depth20@100ms"}
-
-	for _, tradeLimit := range tradeLimits {
-		for i := 0; i < len(events); i++ {
-			event := events[i]
-			streams = append(streams, fmt.Sprintf("%s%s", strings.ToLower(tradeLimit.Symbol), event))
-		}
-
-		history := binance.GetKLines(tradeLimit.Symbol, "1m", 200)
-
-		for _, kline := range history {
-			dto := kline.ToKLine(tradeLimit.Symbol)
-			exchangeRepository.AddKLine(kline.ToKLine(tradeLimit.Symbol))
-			log.Printf("[%s] Added history for [%d] = %.8f", dto.Symbol, dto.Timestamp, dto.Close)
-		}
-	}
-
 	userDataStreamStart, err := binance.UserDataStreamStart()
 
 	if err != nil {
 		log.Println(err)
 	}
 
-	wsConnection := ExchangeClient.Listen(fmt.Sprintf(
-		"%s/ws/%s",
-		os.Getenv("BINANCE_STREAM_DSN"),
-		userDataStreamStart.ListenKey,
-	), eventChannel, streams, 1)
-	defer wsConnection.Close()
+	websockets := make([]*websocket.Conn, 0)
+
+	for index, streamBatchItem := range getStreamBatch(tradeLimits, exchangeRepository, binance) {
+		websockets = append(websockets, ExchangeClient.Listen(fmt.Sprintf(
+			"%s/ws/%s",
+			os.Getenv("BINANCE_STREAM_DSN"),
+			userDataStreamStart.ListenKey,
+		), eventChannel, streamBatchItem, int64(index)))
+
+		log.Printf("Batch %d websocket: %s", index, strings.Join(streamBatchItem, ", "))
+
+		defer websockets[index].Close()
+	}
 
 	http.ListenAndServe(":8080", nil)
 }

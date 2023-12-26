@@ -94,10 +94,18 @@ func (e *ExchangeController) GetChartListAction(w http.ResponseWriter, req *http
 		return
 	}
 
+	symbol := req.URL.Query().Get("symbol")
+
+	symbolFilter := make([]string, 0)
+
+	if len(symbol) > 0 {
+		symbolFilter = append(symbolFilter, symbol)
+	}
+
 	encoded := e.RDB.Get(*e.Ctx, fmt.Sprintf("chart-cache-bot-%d", e.CurrentBot.Id)).Val()
 
 	if len(encoded) == 0 {
-		chart := e.ChartService.GetCharts()
+		chart := e.ChartService.GetCharts(symbolFilter)
 		encodedRes, _ := json.Marshal(chart)
 		encoded = string(encodedRes)
 		e.RDB.Set(*e.Ctx, fmt.Sprintf("chart-cache-bot-%d", e.CurrentBot.Id), encoded, time.Second*5)

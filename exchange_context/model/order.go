@@ -112,3 +112,10 @@ func (o *Order) GetRemainingToSellQuantity() float64 {
 func (o *Order) IsSwap() bool {
 	return o.Swap
 }
+
+type Position struct {
+	Symbol  string  `json:"symbol"`
+	KLine   KLine   `json:"kLine"`
+	Order   Order   `json:"order"`
+	Percent Percent `json:"percent"`
+}

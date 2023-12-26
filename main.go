@@ -209,6 +209,7 @@ func main() {
 	http.HandleFunc("/trade/list/", exchangeController.GetTradeListAction)
 	http.HandleFunc("/chart/list", exchangeController.GetChartListAction)
 	http.HandleFunc("/order/list", orderController.GetOrderListAction)
+	http.HandleFunc("/order/position/list", orderController.GetPositionListAction)
 	http.HandleFunc("/order", orderController.PostManualOrderAction)
 	http.HandleFunc("/order/trade/list", orderController.GetOrderTradeListAction)
 	http.HandleFunc("/trade/limit/list", tradeController.GetTradeLimitsAction)

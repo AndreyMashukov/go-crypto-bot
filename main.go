@@ -407,6 +407,7 @@ func main() {
 		for {
 			// Read the channel, todo -> better to use select: https://go.dev/tour/concurrency/5
 			message := <-eventChannel
+			log.Println(string(message))
 
 			switch true {
 			case strings.Contains(string(message), "aggTrade"):
@@ -467,9 +468,7 @@ func main() {
 			history := binance.GetKLines(limit.GetSymbol(), "1m", 200)
 
 			for _, kline := range history {
-				dto := kline.ToKLine(limit.GetSymbol())
 				exchangeRepository.AddKLine(kline.ToKLine(limit.GetSymbol()))
-				log.Printf("[%s] Added history for [%d] = %.8f", dto.Symbol, dto.Timestamp, dto.Close)
 			}
 		}
 	}

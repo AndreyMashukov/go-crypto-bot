@@ -407,7 +407,7 @@ func main() {
 
 	// todo: sync existed orders in Binance with bot database...
 
-	streams := []string{}
+	streams := make([]string, 0)
 	events := [3]string{"@aggTrade", "@kline_1m", "@depth20@100ms"}
 
 	for _, tradeLimit := range tradeLimits {
@@ -416,15 +416,12 @@ func main() {
 			streams = append(streams, fmt.Sprintf("%s%s", strings.ToLower(tradeLimit.Symbol), event))
 		}
 
-		kLines := exchangeRepository.KLineList(tradeLimit.Symbol, false, 200)
-		if len(kLines) < 200 {
-			history := binance.GetKLines(tradeLimit.Symbol, "1m", 200)
+		history := binance.GetKLines(tradeLimit.Symbol, "1m", 200)
 
-			for _, kline := range history {
-				dto := kline.ToKLine(tradeLimit.Symbol)
-				exchangeRepository.AddKLine(kline.ToKLine(tradeLimit.Symbol))
-				log.Printf("[%s] Added history for [%d] = %.8f", dto.Symbol, dto.Timestamp, dto.Close)
-			}
+		for _, kline := range history {
+			dto := kline.ToKLine(tradeLimit.Symbol)
+			exchangeRepository.AddKLine(kline.ToKLine(tradeLimit.Symbol))
+			log.Printf("[%s] Added history for [%d] = %.8f", dto.Symbol, dto.Timestamp, dto.Close)
 		}
 	}
 

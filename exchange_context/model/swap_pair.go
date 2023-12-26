@@ -58,3 +58,7 @@ func (s SwapPair) GetMinQuantity() float64 {
 func (s SwapPair) GetBaseAsset() string {
 	return s.BaseAsset
 }
+
+func (s SwapPair) GetSymbol() string {
+	return s.Symbol
+}

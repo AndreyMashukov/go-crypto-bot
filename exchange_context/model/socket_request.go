@@ -110,6 +110,11 @@ type OrderBook struct {
 	Asks [][2]Number `json:"asks"`
 }
 
+type OrderBookEvent struct {
+	Stream string    `json:"stream"`
+	Depth  OrderBook `json:"data"`
+}
+
 func (o OrderBook) ToDepth(symbol string) Depth {
 	return Depth{
 		Symbol:    symbol,

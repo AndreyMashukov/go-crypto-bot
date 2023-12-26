@@ -7,6 +7,7 @@ type TradeLimitInterface interface {
 	GetBaseAsset() string
 	GetMinNotional() float64
 	GetMinQuantity() float64
+	GetSymbol() string
 }
 
 type TradeLimit struct {
@@ -32,6 +33,10 @@ type TradeLimit struct {
 
 func (t TradeLimit) GetMinPrice() float64 {
 	return t.MinPrice
+}
+
+func (t TradeLimit) GetSymbol() string {
+	return t.Symbol
 }
 
 func (t TradeLimit) GetMinNotional() float64 {

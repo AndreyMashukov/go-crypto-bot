@@ -13,18 +13,18 @@ type SwapUpdater struct {
 	Formatter          *Formatter
 }
 
-func (s SwapUpdater) UpdateSwapPair(swapPair model.SwapPair, dailyPercentUpdate bool) {
-	orderBook, err := s.Binance.GetDepth(swapPair.Symbol)
+func (s SwapUpdater) UpdateSwapPair(swapPair model.SwapPair) {
+	orderDepth := s.ExchangeRepository.GetDepth(swapPair.Symbol)
 	// save support + resistance levels
-	if err == nil && len(orderBook.Asks) >= 10 && len(orderBook.Bids) >= 10 {
-		orderDepth := orderBook.ToDepth(swapPair.Symbol)
-		if dailyPercentUpdate {
-			kline := s.Binance.GetKLinesCached(swapPair.Symbol, "1d", 1)[0]
+	if len(orderDepth.Asks) >= 10 && len(orderDepth.Bids) >= 10 {
+		kline := s.ExchangeRepository.GetLastKLine(swapPair.Symbol)
+		if kline != nil {
 			swapPair.DailyPercent = s.Formatter.ToFixed(
 				(s.Formatter.ComparePercentage(kline.Open, kline.Close) - 100).Value(),
 				2,
 			)
 		}
+
 		swapPair.BuyPrice = orderDepth.Bids[0][0].Value
 		swapPair.SellPrice = orderDepth.Asks[0][0].Value
 		swapPair.SellVolume = s.Formatter.ToFixed(orderDepth.GetAskVolume(), 2)

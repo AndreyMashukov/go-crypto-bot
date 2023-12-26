@@ -78,7 +78,7 @@ func (e *ChartService) GetCharts() []map[string][]any {
 				date, _ := time.Parse("2006-01-02 15:04:05", symbolOrder.CreatedAt)
 				orderTimestamp := date.UnixMilli() // convert date to timestamp
 
-				if orderTimestamp >= kLine.Timestamp && len(kLines) > kLineIndex && orderTimestamp < kLines[kLineIndex+1].Timestamp {
+				if orderTimestamp >= kLine.Timestamp && len(kLines) > kLineIndex+1 && orderTimestamp < kLines[kLineIndex+1].Timestamp {
 					if strings.ToUpper(symbolOrder.Operation) == "BUY" {
 						buyPoint.YAxis = symbolOrder.Price
 					} else {

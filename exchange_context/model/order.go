@@ -125,4 +125,5 @@ type Position struct {
 	SellPrice    float64 `json:"sellPrice"`
 	Profit       float64 `json:"profit"`
 	TargetProfit float64 `json:"targetProfit"`
+	OrderBook    Depth   `json:"orderBook"`
 }

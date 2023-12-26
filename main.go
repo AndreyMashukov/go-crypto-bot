@@ -405,21 +405,19 @@ func main() {
 
 	go func() {
 		for {
-			// Read the channel, todo -> better to use select: https://go.dev/tour/concurrency/5
 			message := <-eventChannel
-			log.Println(string(message))
 
 			switch true {
 			case strings.Contains(string(message), "aggTrade"):
-				var trade ExchangeModel.Trade
-				json.Unmarshal(message, &trade)
-				smaDecision := smaStrategy.Decide(trade)
+				var tradeEvent ExchangeModel.TradeEvent
+				json.Unmarshal(message, &tradeEvent)
+				smaDecision := smaStrategy.Decide(tradeEvent.Trade)
 				exchangeRepository.SetDecision(smaDecision)
 				break
 			case strings.Contains(string(message), "kline"):
-				var klineData ExchangeModel.KlineData
-				json.Unmarshal(message, &klineData)
-				kLine := klineData.Kline
+				var event ExchangeModel.KlineEvent
+				json.Unmarshal(message, &event)
+				kLine := event.KlineData.Kline
 
 				exchangeRepository.AddKLine(kLine)
 				baseKLineDecision := baseKLineStrategy.Decide(kLine)
@@ -428,9 +426,11 @@ func main() {
 				exchangeRepository.SetDecision(orderBasedDecision)
 
 				break
-			case strings.Contains(string(message), "depthUpdate"):
-				var depth ExchangeModel.Depth
-				json.Unmarshal(message, &depth)
+			case strings.Contains(string(message), "depth20"):
+				var event ExchangeModel.OrderBookEvent
+				json.Unmarshal(message, &event)
+
+				depth := event.Depth.ToDepth(strings.ToUpper(strings.ReplaceAll(event.Stream, "@depth20@100ms", "")))
 				depthDecision := marketDepthStrategy.Decide(depth)
 				exchangeRepository.SetDecision(depthDecision)
 				go func() {
@@ -447,10 +447,6 @@ func main() {
 			exchangeRepository.SetDepth(depth)
 		}
 	}()
-
-	// todo: sync existed orders in Binance with bot database...
-
-	userDataStreamStart, err := binance.UserDataStreamStart()
 
 	if err != nil {
 		log.Println(err)
@@ -475,10 +471,10 @@ func main() {
 
 	for index, streamBatchItem := range getStreamBatch(tradeLimitCollection, []string{"@aggTrade", "@kline_1m", "@depth20@100ms"}) {
 		websockets = append(websockets, ExchangeClient.Listen(fmt.Sprintf(
-			"%s/ws/%s",
+			"%s/stream?streams=%s",
 			os.Getenv("BINANCE_STREAM_DSN"),
-			userDataStreamStart.ListenKey,
-		), eventChannel, streamBatchItem, int64(index)))
+			strings.Join(streamBatchItem, "/"),
+		), eventChannel, []string{}, int64(index)))
 
 		log.Printf("Batch %d websocket: %s", index, strings.Join(streamBatchItem, ", "))
 

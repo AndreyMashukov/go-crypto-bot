@@ -85,6 +85,10 @@ func (o *Order) GetProfitPercent(currentPrice float64) Percent {
 	return Percent(math.Round((currentPrice-o.Price)*100/o.Price*100) / 100)
 }
 
+func (o *Order) GetQuoteProfit(sellPrice float64) float64 {
+	return (sellPrice - o.Price) * o.GetRemainingToSellQuantity()
+}
+
 func (o *Order) GetMinClosePrice(limit TradeLimit) float64 {
 	return o.Price * (100 + limit.GetMinProfitPercent().Value()) / 100
 }
@@ -114,8 +118,11 @@ func (o *Order) IsSwap() bool {
 }
 
 type Position struct {
-	Symbol  string  `json:"symbol"`
-	KLine   KLine   `json:"kLine"`
-	Order   Order   `json:"order"`
-	Percent Percent `json:"percent"`
+	Symbol       string  `json:"symbol"`
+	KLine        KLine   `json:"kLine"`
+	Order        Order   `json:"order"`
+	Percent      Percent `json:"percent"`
+	SellPrice    float64 `json:"sellPrice"`
+	Profit       float64 `json:"profit"`
+	TargetProfit float64 `json:"targetProfit"`
 }

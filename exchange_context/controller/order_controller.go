@@ -84,11 +84,16 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			continue
 		}
 
+		sellPrice := o.PriceCalculator.CalculateSell(limit, openedOrder)
+
 		positions = append(positions, model.Position{
-			Symbol:  limit.Symbol,
-			Order:   openedOrder,
-			KLine:   *kLine,
-			Percent: openedOrder.GetProfitPercent(kLine.Close),
+			Symbol:       limit.Symbol,
+			Order:        openedOrder,
+			KLine:        *kLine,
+			Percent:      openedOrder.GetProfitPercent(kLine.Close),
+			SellPrice:    sellPrice,
+			Profit:       openedOrder.GetQuoteProfit(kLine.Close),
+			TargetProfit: openedOrder.GetQuoteProfit(sellPrice),
 		})
 	}
 

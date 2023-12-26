@@ -94,6 +94,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			SellPrice:    sellPrice,
 			Profit:       openedOrder.GetQuoteProfit(kLine.Close),
 			TargetProfit: openedOrder.GetQuoteProfit(sellPrice),
+			OrderBook:    o.ExchangeRepository.GetDepth(limit.Symbol),
 		})
 	}
 

@@ -290,6 +290,17 @@ func main() {
 
 		swapKlineChannel := make(chan []byte)
 		defer close(swapKlineChannel)
+
+		go func() {
+			for {
+				for _, pair := range exchangeRepository.GetSwapPairs() {
+					swapManager.CalculateSwapOptions(pair.BaseAsset)
+				}
+
+				time.Sleep(time.Second)
+			}
+		}()
+
 		// existing swaps real time monitoring
 		go func() {
 			for {
@@ -449,12 +460,17 @@ func main() {
 	tradeLimitCollection := make([]ExchangeModel.TradeLimitInterface, 0)
 	for _, limit := range tradeLimits {
 		tradeLimitCollection = append(tradeLimitCollection, limit)
-		history := binance.GetKLines(limit.GetSymbol(), "1m", 200)
 
-		for _, kline := range history {
-			dto := kline.ToKLine(limit.GetSymbol())
-			exchangeRepository.AddKLine(kline.ToKLine(limit.GetSymbol()))
-			log.Printf("[%s] Added history for [%d] = %.8f", dto.Symbol, dto.Timestamp, dto.Close)
+		lastKline := exchangeRepository.GetLastKLine(limit.Symbol)
+		// 2 minutes delay - update all history
+		if lastKline == nil || time.Now().UnixMilli()-120000 > lastKline.Timestamp {
+			history := binance.GetKLines(limit.GetSymbol(), "1m", 200)
+
+			for _, kline := range history {
+				dto := kline.ToKLine(limit.GetSymbol())
+				exchangeRepository.AddKLine(kline.ToKLine(limit.GetSymbol()))
+				log.Printf("[%s] Added history for [%d] = %.8f", dto.Symbol, dto.Timestamp, dto.Close)
+			}
 		}
 	}
 

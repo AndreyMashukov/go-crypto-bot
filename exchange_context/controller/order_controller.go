@@ -29,7 +29,7 @@ func (o *OrderController) GetOrderTradeListAction(w http.ResponseWriter, req *ht
 	}
 
 	if req.Method != "GET" {
-		http.Error(w, "Разрешены только GET методы", http.StatusMethodNotAllowed)
+		http.Error(w, "Only GET method is allowed", http.StatusMethodNotAllowed)
 
 		return
 	}
@@ -44,6 +44,55 @@ func (o *OrderController) GetOrderTradeListAction(w http.ResponseWriter, req *ht
 
 	list := o.OrderRepository.GetTrades()
 	encoded, _ := json.Marshal(list)
+	fmt.Fprintf(w, string(encoded))
+}
+
+func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if req.Method == "OPTIONS" {
+		fmt.Fprintf(w, "OK")
+		return
+	}
+
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != o.CurrentBot.BotUuid {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
+
+	if req.Method != "GET" {
+		http.Error(w, "Only GET method is allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	positions := make([]model.Position, 0)
+
+	for _, limit := range o.ExchangeRepository.GetTradeLimits() {
+		openedOrder, err := o.OrderRepository.GetOpenedOrderCached(limit.Symbol, "BUY")
+		if err != nil {
+			continue
+		}
+
+		kLine := o.ExchangeRepository.GetLastKLine(limit.Symbol)
+		if kLine == nil {
+			continue
+		}
+
+		positions = append(positions, model.Position{
+			Symbol:  limit.Symbol,
+			Order:   openedOrder,
+			KLine:   *kLine,
+			Percent: model.Percent(o.Formatter.ToFixed((o.Formatter.ComparePercentage(openedOrder.Price, kLine.Close) - 100).Value(), 2)),
+		})
+	}
+
+	encoded, _ := json.Marshal(positions)
 	fmt.Fprintf(w, string(encoded))
 }
 
@@ -89,7 +138,7 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 	}
 
 	if req.Method != "POST" {
-		http.Error(w, "Разрешены только POST методы", http.StatusMethodNotAllowed)
+		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
 
 		return
 	}

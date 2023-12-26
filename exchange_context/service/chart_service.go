@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
+	"slices"
 	"strings"
 	"time"
 )
@@ -13,7 +14,7 @@ type ChartService struct {
 	OrderRepository    *ExchangeRepository.OrderRepository
 }
 
-func (e *ChartService) GetCharts() []map[string][]any {
+func (e *ChartService) GetCharts(symbolFilter []string) []map[string][]any {
 	charts := make([]map[string][]any, 0)
 
 	orders := e.OrderRepository.GetList()
@@ -24,6 +25,10 @@ func (e *ChartService) GetCharts() []map[string][]any {
 
 	for _, tradeLimit := range tradeLimits {
 		if !tradeLimit.IsEnabled {
+			continue
+		}
+
+		if len(symbolFilter) > 0 && !slices.Contains(symbolFilter, tradeLimit.Symbol) {
 			continue
 		}
 

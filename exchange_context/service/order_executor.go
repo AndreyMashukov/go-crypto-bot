@@ -750,11 +750,13 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 			log.Printf("[%s] QueryOrder: %s", binanceOrder.Symbol, err.Error())
 
 			if strings.Contains(err.Error(), "Order was canceled or expired") {
-				break
+				control <- "stop"
+				return binanceOrder, err
 			}
 
 			if strings.Contains(err.Error(), "Order does not exist") {
-				break
+				control <- "stop"
+				return binanceOrder, err
 			}
 
 			log.Printf("[%s] Retry query order...", binanceOrder.Symbol)
@@ -784,7 +786,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 				return binanceOrder, nil
 			}
 
-			break
+			return binanceOrder, errors.New("Order is expired")
 		}
 
 		if binanceOrder.IsCanceled() {
@@ -793,7 +795,8 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 				return binanceOrder, nil
 			}
 
-			break
+			control <- "stop"
+			return binanceOrder, errors.New("Order is cancelled")
 		}
 
 		if binanceOrder.IsFilled() {
@@ -831,7 +834,6 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 
 	if err != nil {
 		// Possible case: {"code": -2011,"msg": "Order was not canceled due to cancel restrictions."}
-
 		log.Printf("[%s] Cancel failed: %s", binanceOrder.Symbol, err.Error())
 		queryOrder, retryErr := m.Binance.QueryOrder(binanceOrder.Symbol, binanceOrder.OrderId)
 

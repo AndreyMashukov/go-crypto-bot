@@ -384,6 +384,7 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 
 			// 2 hours can not process second step
 			if binanceOrder.IsNew() && s.TimeoutService.GetNowDiffMinutes(*swapAction.SwapOneTimestamp) > 5 {
+				// todo: rollback savepoint!!!
 				err = s.TryRollbackSwapTwo(swapAction, swapChain, swapOneOrder, assetTwo)
 				if err == nil {
 					return nil
@@ -559,6 +560,7 @@ func (s *SwapExecutor) ExecuteSwapThree(
 
 			// 2 hours can not process third step
 			if binanceOrder.IsNew() && (s.TimeoutService.GetNowDiffMinutes(*swapAction.SwapTwoTimestamp) > 10 || priceDeadlineReached) {
+				// todo: force swap savepoint!!!
 				err = s.TryForceSwapThree(swapAction, swapChain, swapTwoOrder, assetThree)
 				if err == nil {
 					// rolled back successfully!
@@ -781,6 +783,8 @@ func (s *SwapExecutor) TryForceSwapThree(
 
 		if percent.Gte(minSwapRollbackPercent) {
 			var binanceOrder ExchangeModel.BinanceOrder
+
+			// todo: find required quantity in order book
 
 			if swapChain.IsSSB() || swapChain.IsSBB() {
 				binanceOrder, err = s.Binance.LimitOrder(

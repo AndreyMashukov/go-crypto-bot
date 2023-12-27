@@ -315,7 +315,7 @@ func main() {
 					swapManager.CalculateSwapOptions(pair.BaseAsset)
 				}
 
-				time.Sleep(time.Second)
+				time.Sleep(time.Millisecond * 250)
 			}
 		}()
 

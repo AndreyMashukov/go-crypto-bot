@@ -669,6 +669,7 @@ func (m *MakerService) tryLimitOrder(order ExchangeModel.Order, operation string
 		return binanceOrder, err
 	}
 
+	// todo: save sell order in buy order to make sure it is saved after processing...
 	binanceOrder, err = m.waitExecution(binanceOrder, ttl)
 
 	if err != nil {

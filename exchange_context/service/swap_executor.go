@@ -382,7 +382,6 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 				return nil
 			}
 
-			// todo: rollback trigger...
 			// 2 hours can not process second step
 			if binanceOrder.IsNew() && s.TimeoutService.GetNowDiffMinutes(*swapAction.SwapOneTimestamp) > 5 {
 				err = s.TryRollbackSwapTwo(swapAction, swapChain, swapOneOrder, assetTwo)

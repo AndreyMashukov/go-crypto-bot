@@ -36,3 +36,27 @@ type SwapAction struct {
 func (a *SwapAction) IsPending() bool {
 	return a.Status == SwapActionStatusPending
 }
+
+func (a *SwapAction) IsOneExpired() bool {
+	return *a.SwapOneExternalStatus == "EXPIRED" || *a.SwapOneExternalStatus == "EXPIRED_IN_MATCH"
+}
+
+func (a *SwapAction) IsOneCanceled() bool {
+	return *a.SwapOneExternalStatus == "CANCELED"
+}
+
+func (a *SwapAction) IsTwoExpired() bool {
+	return *a.SwapTwoExternalStatus == "EXPIRED" || *a.SwapTwoExternalStatus == "EXPIRED_IN_MATCH"
+}
+
+func (a *SwapAction) IsTwoCanceled() bool {
+	return *a.SwapTwoExternalStatus == "CANCELED"
+}
+
+func (a *SwapAction) IsThreeExpired() bool {
+	return *a.SwapThreeExternalStatus == "EXPIRED" || *a.SwapThreeExternalStatus == "EXPIRED_IN_MATCH"
+}
+
+func (a *SwapAction) IsThreeCanceled() bool {
+	return *a.SwapThreeExternalStatus == "CANCELED"
+}

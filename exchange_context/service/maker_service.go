@@ -1241,7 +1241,7 @@ func (m *MakerService) UpdateSwapPairs() {
 	exchangeInfo, _ := m.Binance.GetExchangeData(make([]string, 0))
 	tradeLimits := m.ExchangeRepository.GetTradeLimits()
 
-	supportedQuoteAssets := []string{"BTC", "ETH", "BNB", "TRX", "XRP", "EUR", "DAI", "TUSD", "GBP", "USDC", "AUD", "TRY", "BRL"}
+	supportedQuoteAssets := []string{"BTC", "ETH", "BNB", "TRX", "XRP", "EUR", "DAI", "TUSD", "USDC", "AUD", "TRY", "BRL"}
 
 	for _, tradeLimit := range tradeLimits {
 		if !tradeLimit.IsEnabled {

@@ -9,6 +9,12 @@ import (
 	"log"
 )
 
+type PriceCalculatorInterface interface {
+	CalculateBuy(tradeLimit model.TradeLimit) (float64, error)
+	CalculateSell(tradeLimit model.TradeLimit, order model.Order) float64
+	GetDepth(symbol string) model.Depth
+}
+
 type PriceCalculator struct {
 	ExchangeRepository repository.ExchangePriceStorageInterface
 	OrderRepository    repository.OrderCachedReaderInterface

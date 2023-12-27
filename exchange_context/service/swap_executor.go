@@ -11,12 +11,16 @@ import (
 	"time"
 )
 
+type SwapExecutorInterface interface {
+	Execute(order ExchangeModel.Order)
+}
+
 type SwapExecutor struct {
 	SwapRepository  repository.SwapBasicRepositoryInterface
 	OrderRepository repository.OrderUpdaterInterface
 	BalanceService  BalanceServiceInterface
 	Binance         client.ExchangeOrderAPIInterface
-	TimeoutService  TimeServiceInterface
+	TimeService     TimeServiceInterface
 	Formatter       *Formatter
 }
 
@@ -162,7 +166,7 @@ func (s *SwapExecutor) ExecuteSwapOne(swapAction *ExchangeModel.SwapAction, orde
 
 	// todo: if expired, clear and call recursively
 	if !swapOneOrder.IsFilled() {
-		s.TimeoutService.WaitSeconds(5)
+		s.TimeService.WaitSeconds(5)
 		for {
 			binanceOrder, err := s.Binance.QueryOrder(swapOneOrder.Symbol, swapOneOrder.OrderId)
 			if err != nil {
@@ -217,7 +221,7 @@ func (s *SwapExecutor) ExecuteSwapOne(swapAction *ExchangeModel.SwapAction, orde
 			}
 
 			// cancel if we can not start processing more than 1 minute
-			if binanceOrder.IsNew() && s.TimeoutService.GetNowDiffMinutes(swapAction.StartTimestamp) >= 1 {
+			if binanceOrder.IsNew() && s.TimeService.GetNowDiffMinutes(swapAction.StartTimestamp) >= 1 {
 				cancelOrder, err := s.Binance.CancelOrder(binanceOrder.Symbol, binanceOrder.OrderId)
 				if err == nil {
 					swapAction.SwapOneExternalStatus = &cancelOrder.Status
@@ -237,9 +241,9 @@ func (s *SwapExecutor) ExecuteSwapOne(swapAction *ExchangeModel.SwapAction, orde
 			}
 
 			if binanceOrder.IsPartiallyFilled() {
-				s.TimeoutService.WaitSeconds(7)
+				s.TimeService.WaitSeconds(7)
 			} else {
-				s.TimeoutService.WaitSeconds(15)
+				s.TimeService.WaitSeconds(15)
 			}
 		}
 	}
@@ -336,7 +340,7 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 	}
 
 	if !swapTwoOrder.IsFilled() {
-		s.TimeoutService.WaitSeconds(5)
+		s.TimeService.WaitSeconds(5)
 		for {
 			binanceOrder, err := s.Binance.QueryOrder(swapTwoOrder.Symbol, swapTwoOrder.OrderId)
 			if err != nil {
@@ -383,7 +387,7 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 			}
 
 			// 2 hours can not process second step
-			if binanceOrder.IsNew() && s.TimeoutService.GetNowDiffMinutes(*swapAction.SwapOneTimestamp) > 5 {
+			if binanceOrder.IsNew() && s.TimeService.GetNowDiffMinutes(*swapAction.SwapOneTimestamp) > 5 {
 				// todo: rollback savepoint!!!
 				err = s.TryRollbackSwapTwo(swapAction, swapChain, swapOneOrder, assetTwo)
 				if err == nil {
@@ -394,9 +398,9 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 			}
 
 			if binanceOrder.IsPartiallyFilled() {
-				s.TimeoutService.WaitSeconds(7)
+				s.TimeService.WaitSeconds(7)
 			} else {
-				s.TimeoutService.WaitSeconds(15)
+				s.TimeService.WaitSeconds(15)
 			}
 		}
 	}
@@ -497,7 +501,7 @@ func (s *SwapExecutor) ExecuteSwapThree(
 
 	// todo: if expired, clear and call recursively
 	if !swapThreeOrder.IsFilled() {
-		s.TimeoutService.WaitSeconds(5)
+		s.TimeService.WaitSeconds(5)
 		for {
 			binanceOrder, err := s.Binance.QueryOrder(swapThreeOrder.Symbol, swapThreeOrder.OrderId)
 			if err != nil {
@@ -559,7 +563,7 @@ func (s *SwapExecutor) ExecuteSwapThree(
 			}
 
 			// 2 hours can not process third step
-			if binanceOrder.IsNew() && (s.TimeoutService.GetNowDiffMinutes(*swapAction.SwapTwoTimestamp) > 10 || priceDeadlineReached) {
+			if binanceOrder.IsNew() && (s.TimeService.GetNowDiffMinutes(*swapAction.SwapTwoTimestamp) > 10 || priceDeadlineReached) {
 				// todo: force swap savepoint!!!
 				err = s.TryForceSwapThree(swapAction, swapChain, swapTwoOrder, assetThree)
 				if err == nil {
@@ -577,9 +581,9 @@ func (s *SwapExecutor) ExecuteSwapThree(
 				if (nowTimestamp-swapAction.StartTimestamp) > (3600*4) && binanceOrder.IsNearlyFilled() {
 					break // Do not cancel order, but check it later...
 				}
-				s.TimeoutService.WaitSeconds(7)
+				s.TimeService.WaitSeconds(7)
 			} else {
-				s.TimeoutService.WaitSeconds(15)
+				s.TimeService.WaitSeconds(15)
 			}
 		}
 	}
@@ -669,7 +673,7 @@ func (s *SwapExecutor) TryRollbackSwapTwo(
 					action.StartQuantity,
 					endQuantity,
 				)
-				s.TimeoutService.WaitSeconds(5)
+				s.TimeService.WaitSeconds(5)
 				continue
 			}
 
@@ -817,7 +821,7 @@ func (s *SwapExecutor) TryForceSwapThree(
 					swapAction.StartQuantity,
 					endQuantity,
 				)
-				s.TimeoutService.WaitSeconds(5)
+				s.TimeService.WaitSeconds(5)
 				continue
 			}
 

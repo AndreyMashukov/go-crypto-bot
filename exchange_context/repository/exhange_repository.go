@@ -21,6 +21,12 @@ type SwapPairRepositoryInterface interface {
 	GetSwapPair(symbol string) (model.SwapPair, error)
 }
 
+type ExchangeTradeInfoInterface interface {
+	GetLastKLine(symbol string) *model.KLine
+	GetTradeLimit(symbol string) (model.TradeLimit, error)
+	GetPeriodMinPrice(symbol string, period int64) float64
+}
+
 type ExchangeRepositoryInterface interface {
 	GetSubscribedSymbols() []model.Symbol
 	GetTradeLimits() []model.TradeLimit

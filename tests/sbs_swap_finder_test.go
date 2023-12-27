@@ -228,7 +228,7 @@ func TestSwapSellBuySell(t *testing.T) {
 		OrderRepository: orderRepositoryMock,
 		BalanceService:  balanceServiceMock,
 		Binance:         binanceMock,
-		TimeoutService:  timeServiceMock,
+		TimeService:     timeServiceMock,
 		Formatter:       &service.Formatter{},
 	}
 
@@ -495,7 +495,7 @@ func TestSwapSellBuySellForceSwap(t *testing.T) {
 		OrderRepository: orderRepositoryMock,
 		BalanceService:  balanceServiceMock,
 		Binance:         binanceMock,
-		TimeoutService:  timeServiceMock,
+		TimeService:     timeServiceMock,
 		Formatter:       &service.Formatter{},
 	}
 

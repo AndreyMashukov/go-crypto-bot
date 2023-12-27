@@ -23,6 +23,7 @@ type ExchangeOrderAPIInterface interface {
 	LimitOrder(symbol string, quantity float64, price float64, operation string, timeInForce string) (model.BinanceOrder, error)
 	QueryOrder(symbol string, orderId int64) (model.BinanceOrder, error)
 	CancelOrder(symbol string, orderId int64) (model.BinanceOrder, error)
+	GetOpenedOrders() ([]model.BinanceOrder, error)
 }
 
 type ExchangePriceAPIInterface interface {
@@ -216,7 +217,7 @@ func (b *Binance) GetDepth(symbol string) (model.OrderBook, error) {
 	return response.Result, nil
 }
 
-func (b *Binance) GetOpenedOrders() (*[]model.BinanceOrder, error) {
+func (b *Binance) GetOpenedOrders() ([]model.BinanceOrder, error) {
 	channel := make(chan []byte)
 	defer close(channel)
 
@@ -237,10 +238,10 @@ func (b *Binance) GetOpenedOrders() (*[]model.BinanceOrder, error) {
 	if response.Error != nil {
 		log.Println(socketRequest)
 		list := make([]model.BinanceOrder, 0)
-		return &list, errors.New(response.Error.Message)
+		return list, errors.New(response.Error.Message)
 	}
 
-	return &response.Result, nil
+	return response.Result, nil
 }
 
 func (b *Binance) GetKLines(symbol string, interval string, limit int64) []model.KLineHistory {

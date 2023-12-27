@@ -20,6 +20,19 @@ type OrderCachedReaderInterface interface {
 	GetOpenedOrderCached(symbol string, operation string) (ExchangeModel.Order, error)
 }
 
+type OrderStorageInterface interface {
+	Create(order ExchangeModel.Order) (*int64, error)
+	Update(order ExchangeModel.Order) error
+	DeleteManualOrder(symbol string)
+	Find(id int64) (ExchangeModel.Order, error)
+	GetClosesOrderList(buyOrder ExchangeModel.Order) []ExchangeModel.Order
+	DeleteBinanceOrder(order ExchangeModel.BinanceOrder)
+	GetOpenedOrderCached(symbol string, operation string) (ExchangeModel.Order, error)
+	GetManualOrder(symbol string) *ExchangeModel.ManualOrder
+	SetBinanceOrder(order ExchangeModel.BinanceOrder)
+	GetBinanceOrder(symbol string, operation string) *ExchangeModel.BinanceOrder
+}
+
 type OrderRepository struct {
 	DB         *sql.DB
 	RDB        *redis.Client

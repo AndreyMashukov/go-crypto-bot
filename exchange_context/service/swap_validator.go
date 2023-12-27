@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+type SwapValidatorInterface interface {
+	Validate(entity model.SwapChainEntity, order model.Order) error
+	CalculatePercent(entity model.SwapChainEntity) model.Percent
+}
+
 type SwapValidator struct {
 	SwapRepository ExchangeRepository.SwapBasicRepositoryInterface
 	Formatter      *Formatter

@@ -63,6 +63,13 @@ func main() {
 	db.SetMaxOpenConns(64)
 	db.SetConnMaxLifetime(time.Minute)
 
+	swapDb, err := sql.Open("mysql", os.Getenv("DATABASE_DSN")) // root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot
+	defer swapDb.Close()
+
+	swapDb.SetMaxIdleConns(64)
+	swapDb.SetMaxOpenConns(64)
+	swapDb.SetConnMaxLifetime(time.Minute)
+
 	if err != nil {
 		log.Fatal(fmt.Sprintf("MySQL can't connect: %s", err.Error()))
 	}
@@ -133,7 +140,7 @@ func main() {
 		CurrentBot: currentBot,
 	}
 	swapRepository := ExchangeRepository.SwapRepository{
-		DB:         db,
+		DB:         swapDb,
 		RDB:        rdb,
 		Ctx:        &ctx,
 		CurrentBot: currentBot,
@@ -185,34 +192,45 @@ func main() {
 		FrameService:       &frameService,
 	}
 
-	makerService := ExchangeService.MakerService{
-		SwapValidator:      &swapValidator,
+	timeService := ExchangeService.TimeService{}
+
+	orderExecutor := ExchangeService.OrderExecutor{
+		CurrentBot:         currentBot,
+		TimeService:        &timeService,
+		BalanceService:     &balanceService,
+		Binance:            &binance,
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,
+		PriceCalculator:    &priceCalculator,
 		SwapRepository:     &swapRepository,
-		Binance:            &binance,
-		LockChannel:        &lockTradeChannel,
-		Lock:               make(map[string]bool),
-		TradeLockMutex:     sync.RWMutex{},
-		Formatter:          &formatter,
-		MinDecisions:       4.00,
-		HoldScore:          75.00,
-		SwapSellOrderDays:  swapOpenedSellOrderFromHoursOpened,
-		SwapProfitPercent:  swapOrderOnProfitPercent,
-		RDB:                rdb,
-		Ctx:                &ctx,
-		CurrentBot:         currentBot,
-		BalanceService:     &balanceService,
-		SwapEnabled:        swapEnabled,
 		SwapExecutor: &ExchangeService.SwapExecutor{
 			BalanceService:  &balanceService,
 			SwapRepository:  &swapRepository,
 			OrderRepository: &orderRepository,
 			Binance:         &binance,
 			Formatter:       &formatter,
-			TimeoutService:  &ExchangeService.TimeService{},
+			TimeService:     &timeService,
 		},
-		PriceCalculator: &priceCalculator,
+		SwapValidator:     &swapValidator,
+		Formatter:         &formatter,
+		SwapSellOrderDays: swapOpenedSellOrderFromHoursOpened,
+		SwapEnabled:       swapEnabled,
+		SwapProfitPercent: swapOrderOnProfitPercent,
+		Lock:              make(map[string]bool),
+		TradeLockMutex:    sync.RWMutex{},
+		LockChannel:       &lockTradeChannel,
+	}
+
+	makerService := ExchangeService.MakerService{
+		OrderExecutor:      &orderExecutor,
+		OrderRepository:    &orderRepository,
+		ExchangeRepository: &exchangeRepository,
+		Binance:            &binance,
+		Formatter:          &formatter,
+		MinDecisions:       4.00,
+		HoldScore:          75.00,
+		CurrentBot:         currentBot,
+		PriceCalculator:    &priceCalculator,
 	}
 
 	orderController := controller.OrderController{
@@ -362,14 +380,14 @@ func main() {
 		}
 	}
 
-	go func() {
+	go func(orderExecutor *ExchangeService.OrderExecutor) {
 		for {
 			lock := <-lockTradeChannel
-			makerService.TradeLockMutex.Lock()
-			makerService.Lock[lock.Symbol] = lock.IsLocked
-			makerService.TradeLockMutex.Unlock()
+			orderExecutor.TradeLockMutex.Lock()
+			orderExecutor.Lock[lock.Symbol] = lock.IsLocked
+			orderExecutor.TradeLockMutex.Unlock()
 		}
-	}()
+	}(&orderExecutor)
 
 	tradeLimits := exchangeRepository.GetTradeLimits()
 

@@ -3,7 +3,6 @@ package service
 import (
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
-	"log"
 	"math"
 	"time"
 )
@@ -21,18 +20,18 @@ func (s *SwapManager) CalculateSwapOptions(asset string) {
 	sellBuyBuy := s.SBBSwapFinder.Find(asset)
 
 	if sellBuyBuy.BestChain != nil && sellBuyBuy.BestChain.Percent.Gte(0.10) {
-		log.Printf(
-			"[%s] Swap Chain Found! %s sell-> %s(%f) buy-> %s(%f) buy-> %s(%f) = %.2f percent profit",
-			asset,
-			asset,
-			sellBuyBuy.BestChain.SwapOne.QuoteAsset,
-			sellBuyBuy.BestChain.SwapOne.Price,
-			sellBuyBuy.BestChain.SwapTwo.BaseAsset,
-			sellBuyBuy.BestChain.SwapTwo.Price,
-			sellBuyBuy.BestChain.SwapThree.BaseAsset,
-			sellBuyBuy.BestChain.SwapThree.Price,
-			sellBuyBuy.BestChain.Percent.Value(),
-		)
+		//log.Printf(
+		//	"[%s] Swap Chain Found! %s sell-> %s(%f) buy-> %s(%f) buy-> %s(%f) = %.2f percent profit",
+		//	asset,
+		//	asset,
+		//	sellBuyBuy.BestChain.SwapOne.QuoteAsset,
+		//	sellBuyBuy.BestChain.SwapOne.Price,
+		//	sellBuyBuy.BestChain.SwapTwo.BaseAsset,
+		//	sellBuyBuy.BestChain.SwapTwo.Price,
+		//	sellBuyBuy.BestChain.SwapThree.BaseAsset,
+		//	sellBuyBuy.BestChain.SwapThree.Price,
+		//	sellBuyBuy.BestChain.Percent.Value(),
+		//)
 
 		swapChainEntity := s.UpdateSwapChain(*sellBuyBuy.BestChain)
 
@@ -43,18 +42,18 @@ func (s *SwapManager) CalculateSwapOptions(asset string) {
 	sellBuySell := s.SBSSwapFinder.Find(asset)
 
 	if sellBuySell.BestChain != nil && sellBuySell.BestChain.Percent.Gte(0.10) {
-		log.Printf(
-			"[%s] Swap Chain Found! %s sell-> %s(%f) buy-> %s(%f) sell-> %s(%f) = %.2f percent profit",
-			asset,
-			asset,
-			sellBuySell.BestChain.SwapOne.QuoteAsset,
-			sellBuySell.BestChain.SwapOne.Price,
-			sellBuySell.BestChain.SwapTwo.BaseAsset,
-			sellBuySell.BestChain.SwapTwo.Price,
-			sellBuySell.BestChain.SwapThree.BaseAsset,
-			sellBuySell.BestChain.SwapThree.Price,
-			sellBuySell.BestChain.Percent.Value(),
-		)
+		//log.Printf(
+		//	"[%s] Swap Chain Found! %s sell-> %s(%f) buy-> %s(%f) sell-> %s(%f) = %.2f percent profit",
+		//	asset,
+		//	asset,
+		//	sellBuySell.BestChain.SwapOne.QuoteAsset,
+		//	sellBuySell.BestChain.SwapOne.Price,
+		//	sellBuySell.BestChain.SwapTwo.BaseAsset,
+		//	sellBuySell.BestChain.SwapTwo.Price,
+		//	sellBuySell.BestChain.SwapThree.BaseAsset,
+		//	sellBuySell.BestChain.SwapThree.Price,
+		//	sellBuySell.BestChain.Percent.Value(),
+		//)
 
 		swapChainEntity := s.UpdateSwapChain(*sellBuySell.BestChain)
 
@@ -65,18 +64,18 @@ func (s *SwapManager) CalculateSwapOptions(asset string) {
 	sellSellBuy := s.SSBSwapFinder.Find(asset)
 
 	if sellSellBuy.BestChain != nil && sellSellBuy.BestChain.Percent.Gte(0.10) {
-		log.Printf(
-			"[%s] Swap Chain Found! %s sell-> %s(%f) sell-> %s(%f) buy-> %s(%f) = %.2f percent profit",
-			asset,
-			asset,
-			sellSellBuy.BestChain.SwapOne.QuoteAsset,
-			sellSellBuy.BestChain.SwapOne.Price,
-			sellSellBuy.BestChain.SwapTwo.QuoteAsset,
-			sellSellBuy.BestChain.SwapTwo.Price,
-			sellSellBuy.BestChain.SwapThree.BaseAsset,
-			sellSellBuy.BestChain.SwapThree.Price,
-			sellSellBuy.BestChain.Percent.Value(),
-		)
+		//log.Printf(
+		//	"[%s] Swap Chain Found! %s sell-> %s(%f) sell-> %s(%f) buy-> %s(%f) = %.2f percent profit",
+		//	asset,
+		//	asset,
+		//	sellSellBuy.BestChain.SwapOne.QuoteAsset,
+		//	sellSellBuy.BestChain.SwapOne.Price,
+		//	sellSellBuy.BestChain.SwapTwo.QuoteAsset,
+		//	sellSellBuy.BestChain.SwapTwo.Price,
+		//	sellSellBuy.BestChain.SwapThree.BaseAsset,
+		//	sellSellBuy.BestChain.SwapThree.Price,
+		//	sellSellBuy.BestChain.Percent.Value(),
+		//)
 
 		swapChainEntity := s.UpdateSwapChain(*sellSellBuy.BestChain)
 

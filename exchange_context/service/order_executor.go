@@ -339,7 +339,7 @@ func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchang
 	// commission can be around 0.4% (0.2% to one side)
 	// @see https://www.binance.com/en/fee/trading
 
-	if (totalExecuted + (totalExecuted * 0.015 * float64(len(closings)))) >= opened.ExecutedQuantity {
+	if (opened.ExecutedQuantity - totalExecuted) < tradeLimit.MinQuantity {
 		opened.Status = "closed"
 	}
 

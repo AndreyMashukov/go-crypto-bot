@@ -36,6 +36,16 @@ func (p Percent) Lt(percent Percent) bool {
 	return p.Value() < percent.Value()
 }
 
+type TgOrderNotification struct {
+	BotId     int64   `json:"bot"`
+	Price     float64 `json:"price"`
+	Quantity  float64 `json:"amount"`
+	Symbol    string  `json:"symbol"`
+	Operation string  `json:"operation"`
+	DateTime  string  `json:"dateTime"`
+	Details   string  `json:"details"`
+}
+
 type Order struct {
 	Id               int64    `json:"id"`
 	Symbol           string   `json:"symbol"`

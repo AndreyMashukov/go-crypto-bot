@@ -327,3 +327,14 @@ func (s *SwapValidatorMock) CalculatePercent(entity model.SwapChainEntity) model
 	args := s.Called(entity)
 	return args.Get(0).(model.Percent)
 }
+
+type TelegramNotificatorMock struct {
+	mock.Mock
+}
+
+func (s *TelegramNotificatorMock) SellOrder(order model.Order, bot model.Bot, details string) {
+	_ = s.Called(order, bot, details)
+}
+func (s *TelegramNotificatorMock) BuyOrder(order model.Order, bot model.Bot, details string) {
+	_ = s.Called(order, bot, details)
+}

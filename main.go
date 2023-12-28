@@ -194,15 +194,20 @@ func main() {
 
 	timeService := ExchangeService.TimeService{}
 
+	telegramNotificator := ExchangeService.TelegramNotificator{
+		AutoTradeHost: "https://autotrade.cloud",
+	}
+
 	orderExecutor := ExchangeService.OrderExecutor{
-		CurrentBot:         currentBot,
-		TimeService:        &timeService,
-		BalanceService:     &balanceService,
-		Binance:            &binance,
-		OrderRepository:    &orderRepository,
-		ExchangeRepository: &exchangeRepository,
-		PriceCalculator:    &priceCalculator,
-		SwapRepository:     &swapRepository,
+		CurrentBot:          currentBot,
+		TimeService:         &timeService,
+		BalanceService:      &balanceService,
+		Binance:             &binance,
+		OrderRepository:     &orderRepository,
+		ExchangeRepository:  &exchangeRepository,
+		PriceCalculator:     &priceCalculator,
+		TelegramNotificator: &telegramNotificator,
+		SwapRepository:      &swapRepository,
 		SwapExecutor: &ExchangeService.SwapExecutor{
 			BalanceService:  &balanceService,
 			SwapRepository:  &swapRepository,

@@ -34,6 +34,8 @@ func (t *TelegramNotificator) SellOrder(order model.Order, bot model.Bot, detail
 	err := t.SendMessage(encoded)
 	if err == nil {
 		log.Printf("[%s] Telegram SELL notification sent", order.Symbol)
+	} else {
+		log.Printf("[%s] Telegram notification error: %s", order.Symbol, err.Error())
 	}
 }
 
@@ -50,6 +52,8 @@ func (t *TelegramNotificator) BuyOrder(order model.Order, bot model.Bot, details
 	err := t.SendMessage(encoded)
 	if err == nil {
 		log.Printf("[%s] Telegram BUY notification sent", order.Symbol)
+	} else {
+		log.Printf("[%s] Telegram notification error: %s", order.Symbol, err.Error())
 	}
 }
 

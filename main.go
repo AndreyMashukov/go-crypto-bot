@@ -195,7 +195,7 @@ func main() {
 	timeService := ExchangeService.TimeService{}
 
 	telegramNotificator := ExchangeService.TelegramNotificator{
-		AutoTradeHost: "https://autotrade.cloud",
+		AutoTradeHost: "https://api.autotrade.cloud",
 	}
 
 	orderExecutor := ExchangeService.OrderExecutor{

@@ -24,6 +24,7 @@ func TestSellAction(t *testing.T) {
 	swapExecutor := new(SwapExecutorMock)
 	swapValidator := new(SwapValidatorMock)
 	timeService := new(TimeServiceMock)
+	telegramNotificatorMock := new(TelegramNotificatorMock)
 
 	lockChannel := make(chan model.Lock)
 
@@ -32,22 +33,23 @@ func TestSellAction(t *testing.T) {
 			Id:      999,
 			BotUuid: uuid.New().String(),
 		},
-		TimeService:        timeService,
-		BalanceService:     balanceService,
-		Binance:            binance,
-		OrderRepository:    orderRepository,
-		ExchangeRepository: exchangeRepository,
-		SwapRepository:     swapRepository,
-		PriceCalculator:    priceCalculator,
-		SwapExecutor:       swapExecutor,
-		SwapValidator:      swapValidator,
-		Formatter:          &service.Formatter{},
-		SwapSellOrderDays:  10,
-		SwapEnabled:        true,
-		SwapProfitPercent:  1.50,
-		LockChannel:        &lockChannel,
-		Lock:               make(map[string]bool),
-		TradeLockMutex:     sync.RWMutex{},
+		TimeService:         timeService,
+		BalanceService:      balanceService,
+		Binance:             binance,
+		OrderRepository:     orderRepository,
+		ExchangeRepository:  exchangeRepository,
+		SwapRepository:      swapRepository,
+		PriceCalculator:     priceCalculator,
+		SwapExecutor:        swapExecutor,
+		SwapValidator:       swapValidator,
+		Formatter:           &service.Formatter{},
+		SwapSellOrderDays:   10,
+		SwapEnabled:         true,
+		SwapProfitPercent:   1.50,
+		LockChannel:         &lockChannel,
+		Lock:                make(map[string]bool),
+		TradeLockMutex:      sync.RWMutex{},
+		TelegramNotificator: telegramNotificatorMock,
 	}
 
 	go func(orderExecutor *service.OrderExecutor) {
@@ -151,6 +153,8 @@ func TestSellAction(t *testing.T) {
 	balanceService.On("InvalidateBalanceCache", "USDT").Times(1)
 	balanceService.On("InvalidateBalanceCache", "ETH").Times(1)
 
+	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
+
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, 0, 0, 0)
 	assertion.Nil(err)
 	assertion.Equal("closed", orderRepository.Updated.Status)
@@ -170,6 +174,7 @@ func TestSellFoundFilled(t *testing.T) {
 	swapExecutor := new(SwapExecutorMock)
 	swapValidator := new(SwapValidatorMock)
 	timeService := new(TimeServiceMock)
+	telegramNotificatorMock := new(TelegramNotificatorMock)
 
 	lockChannel := make(chan model.Lock)
 
@@ -178,22 +183,23 @@ func TestSellFoundFilled(t *testing.T) {
 			Id:      999,
 			BotUuid: uuid.New().String(),
 		},
-		TimeService:        timeService,
-		BalanceService:     balanceService,
-		Binance:            binance,
-		OrderRepository:    orderRepository,
-		ExchangeRepository: exchangeRepository,
-		SwapRepository:     swapRepository,
-		PriceCalculator:    priceCalculator,
-		SwapExecutor:       swapExecutor,
-		SwapValidator:      swapValidator,
-		Formatter:          &service.Formatter{},
-		SwapSellOrderDays:  10,
-		SwapEnabled:        true,
-		SwapProfitPercent:  1.50,
-		LockChannel:        &lockChannel,
-		Lock:               make(map[string]bool),
-		TradeLockMutex:     sync.RWMutex{},
+		TimeService:         timeService,
+		BalanceService:      balanceService,
+		Binance:             binance,
+		OrderRepository:     orderRepository,
+		ExchangeRepository:  exchangeRepository,
+		SwapRepository:      swapRepository,
+		PriceCalculator:     priceCalculator,
+		SwapExecutor:        swapExecutor,
+		SwapValidator:       swapValidator,
+		Formatter:           &service.Formatter{},
+		SwapSellOrderDays:   10,
+		SwapEnabled:         true,
+		SwapProfitPercent:   1.50,
+		LockChannel:         &lockChannel,
+		Lock:                make(map[string]bool),
+		TradeLockMutex:      sync.RWMutex{},
+		TelegramNotificator: telegramNotificatorMock,
 	}
 
 	go func(orderExecutor *service.OrderExecutor) {
@@ -289,6 +295,8 @@ func TestSellFoundFilled(t *testing.T) {
 	balanceService.On("InvalidateBalanceCache", "USDT").Times(1)
 	balanceService.On("InvalidateBalanceCache", "ETH").Times(1)
 
+	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
+
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, 0, 0, 0)
 	assertion.Nil(err)
 	assertion.Equal("closed", orderRepository.Updated.Status)
@@ -308,6 +316,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 	swapExecutor := new(SwapExecutorMock)
 	swapValidator := new(SwapValidatorMock)
 	timeService := new(TimeServiceMock)
+	telegramNotificatorMock := new(TelegramNotificatorMock)
 
 	lockChannel := make(chan model.Lock)
 
@@ -316,22 +325,23 @@ func TestSellCancelledInProcess(t *testing.T) {
 			Id:      999,
 			BotUuid: uuid.New().String(),
 		},
-		TimeService:        timeService,
-		BalanceService:     balanceService,
-		Binance:            binance,
-		OrderRepository:    orderRepository,
-		ExchangeRepository: exchangeRepository,
-		SwapRepository:     swapRepository,
-		PriceCalculator:    priceCalculator,
-		SwapExecutor:       swapExecutor,
-		SwapValidator:      swapValidator,
-		Formatter:          &service.Formatter{},
-		SwapSellOrderDays:  10,
-		SwapEnabled:        true,
-		SwapProfitPercent:  1.50,
-		LockChannel:        &lockChannel,
-		Lock:               make(map[string]bool),
-		TradeLockMutex:     sync.RWMutex{},
+		TimeService:         timeService,
+		BalanceService:      balanceService,
+		Binance:             binance,
+		OrderRepository:     orderRepository,
+		ExchangeRepository:  exchangeRepository,
+		SwapRepository:      swapRepository,
+		PriceCalculator:     priceCalculator,
+		SwapExecutor:        swapExecutor,
+		SwapValidator:       swapValidator,
+		Formatter:           &service.Formatter{},
+		SwapSellOrderDays:   10,
+		SwapEnabled:         true,
+		SwapProfitPercent:   1.50,
+		LockChannel:         &lockChannel,
+		Lock:                make(map[string]bool),
+		TradeLockMutex:      sync.RWMutex{},
+		TelegramNotificator: telegramNotificatorMock,
 	}
 
 	go func(orderExecutor *service.OrderExecutor) {
@@ -442,6 +452,7 @@ func TestSellQueryFail(t *testing.T) {
 	swapExecutor := new(SwapExecutorMock)
 	swapValidator := new(SwapValidatorMock)
 	timeService := new(TimeServiceMock)
+	telegramNotificatorMock := new(TelegramNotificatorMock)
 
 	lockChannel := make(chan model.Lock)
 
@@ -450,22 +461,23 @@ func TestSellQueryFail(t *testing.T) {
 			Id:      999,
 			BotUuid: uuid.New().String(),
 		},
-		TimeService:        timeService,
-		BalanceService:     balanceService,
-		Binance:            binance,
-		OrderRepository:    orderRepository,
-		ExchangeRepository: exchangeRepository,
-		SwapRepository:     swapRepository,
-		PriceCalculator:    priceCalculator,
-		SwapExecutor:       swapExecutor,
-		SwapValidator:      swapValidator,
-		Formatter:          &service.Formatter{},
-		SwapSellOrderDays:  10,
-		SwapEnabled:        true,
-		SwapProfitPercent:  1.50,
-		LockChannel:        &lockChannel,
-		Lock:               make(map[string]bool),
-		TradeLockMutex:     sync.RWMutex{},
+		TimeService:         timeService,
+		BalanceService:      balanceService,
+		Binance:             binance,
+		OrderRepository:     orderRepository,
+		ExchangeRepository:  exchangeRepository,
+		SwapRepository:      swapRepository,
+		PriceCalculator:     priceCalculator,
+		SwapExecutor:        swapExecutor,
+		SwapValidator:       swapValidator,
+		Formatter:           &service.Formatter{},
+		SwapSellOrderDays:   10,
+		SwapEnabled:         true,
+		SwapProfitPercent:   1.50,
+		LockChannel:         &lockChannel,
+		Lock:                make(map[string]bool),
+		TradeLockMutex:      sync.RWMutex{},
+		TelegramNotificator: telegramNotificatorMock,
 	}
 
 	go func(orderExecutor *service.OrderExecutor) {
@@ -567,6 +579,7 @@ func TestSellClosingAction(t *testing.T) {
 	swapExecutor := new(SwapExecutorMock)
 	swapValidator := new(SwapValidatorMock)
 	timeService := new(TimeServiceMock)
+	telegramNotificatorMock := new(TelegramNotificatorMock)
 
 	lockChannel := make(chan model.Lock)
 
@@ -575,22 +588,23 @@ func TestSellClosingAction(t *testing.T) {
 			Id:      999,
 			BotUuid: uuid.New().String(),
 		},
-		TimeService:        timeService,
-		BalanceService:     balanceService,
-		Binance:            binance,
-		OrderRepository:    orderRepository,
-		ExchangeRepository: exchangeRepository,
-		SwapRepository:     swapRepository,
-		PriceCalculator:    priceCalculator,
-		SwapExecutor:       swapExecutor,
-		SwapValidator:      swapValidator,
-		Formatter:          &service.Formatter{},
-		SwapSellOrderDays:  10,
-		SwapEnabled:        true,
-		SwapProfitPercent:  1.50,
-		LockChannel:        &lockChannel,
-		Lock:               make(map[string]bool),
-		TradeLockMutex:     sync.RWMutex{},
+		TimeService:         timeService,
+		BalanceService:      balanceService,
+		Binance:             binance,
+		OrderRepository:     orderRepository,
+		ExchangeRepository:  exchangeRepository,
+		SwapRepository:      swapRepository,
+		PriceCalculator:     priceCalculator,
+		SwapExecutor:        swapExecutor,
+		SwapValidator:       swapValidator,
+		Formatter:           &service.Formatter{},
+		SwapSellOrderDays:   10,
+		SwapEnabled:         true,
+		SwapProfitPercent:   1.50,
+		LockChannel:         &lockChannel,
+		Lock:                make(map[string]bool),
+		TradeLockMutex:      sync.RWMutex{},
+		TelegramNotificator: telegramNotificatorMock,
 	}
 
 	go func(orderExecutor *service.OrderExecutor) {
@@ -693,6 +707,8 @@ func TestSellClosingAction(t *testing.T) {
 	orderRepository.On("Update", mock.Anything).Times(1).Return(nil)
 	balanceService.On("InvalidateBalanceCache", "USDT").Times(1)
 	balanceService.On("InvalidateBalanceCache", "BTC").Times(1)
+
+	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
 
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "BTCUSDT", 43496.99, 0.00046, 0, 0, 0)
 	assertion.Nil(err)

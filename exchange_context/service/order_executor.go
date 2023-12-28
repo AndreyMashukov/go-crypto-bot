@@ -12,23 +12,24 @@ import (
 )
 
 type OrderExecutor struct {
-	CurrentBot         *ExchangeModel.Bot
-	TimeService        TimeServiceInterface
-	BalanceService     BalanceServiceInterface
-	Binance            ExchangeClient.ExchangeOrderAPIInterface
-	OrderRepository    ExchangeRepository.OrderStorageInterface
-	ExchangeRepository ExchangeRepository.ExchangeTradeInfoInterface
-	PriceCalculator    PriceCalculatorInterface
-	SwapRepository     ExchangeRepository.SwapBasicRepositoryInterface
-	SwapExecutor       SwapExecutorInterface
-	SwapValidator      SwapValidatorInterface
-	Formatter          *Formatter
-	SwapSellOrderDays  int64
-	SwapEnabled        bool
-	SwapProfitPercent  float64
-	Lock               map[string]bool
-	TradeLockMutex     sync.RWMutex
-	LockChannel        *chan ExchangeModel.Lock
+	CurrentBot          *ExchangeModel.Bot
+	TimeService         TimeServiceInterface
+	BalanceService      BalanceServiceInterface
+	Binance             ExchangeClient.ExchangeOrderAPIInterface
+	OrderRepository     ExchangeRepository.OrderStorageInterface
+	ExchangeRepository  ExchangeRepository.ExchangeTradeInfoInterface
+	PriceCalculator     PriceCalculatorInterface
+	SwapRepository      ExchangeRepository.SwapBasicRepositoryInterface
+	SwapExecutor        SwapExecutorInterface
+	SwapValidator       SwapValidatorInterface
+	TelegramNotificator TelegramNotificatorInterface
+	Formatter           *Formatter
+	SwapSellOrderDays   int64
+	SwapEnabled         bool
+	SwapProfitPercent   float64
+	Lock                map[string]bool
+	TradeLockMutex      sync.RWMutex
+	LockChannel         *chan ExchangeModel.Lock
 }
 
 func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64, sellVolume float64, buyVolume float64, smaValue float64) error {
@@ -155,6 +156,14 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 
 	m.OrderRepository.DeleteManualOrder(order.Symbol)
 
+	go func(extraOrder ExchangeModel.Order, tradeLimit ExchangeModel.TradeLimit) {
+		m.TelegramNotificator.BuyOrder(
+			extraOrder,
+			*m.CurrentBot,
+			fmt.Sprintf("Extra Charge! Sell when price will be around: %f USDT", m.PriceCalculator.CalculateSell(tradeLimit, extraOrder)),
+		)
+	}(extraOrder, tradeLimit)
+
 	return nil
 }
 
@@ -243,6 +252,14 @@ func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, 
 	if balanceErr == nil {
 		m.UpdateCommission(balanceBefore, order)
 	}
+
+	go func(order ExchangeModel.Order, tradeLimit ExchangeModel.TradeLimit) {
+		m.TelegramNotificator.BuyOrder(
+			order,
+			*m.CurrentBot,
+			fmt.Sprintf("Sell when price will be around: %f USDT", m.PriceCalculator.CalculateSell(tradeLimit, order)),
+		)
+	}(order, tradeLimit)
 
 	return nil
 }
@@ -352,6 +369,14 @@ func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchang
 
 		return err
 	}
+
+	go func(order ExchangeModel.Order, profit float64) {
+		m.TelegramNotificator.SellOrder(
+			order,
+			*m.CurrentBot,
+			fmt.Sprintf("Profit is: %f USDT", m.Formatter.ToFixed(profit, 2)),
+		)
+	}(order, profit)
 
 	return nil
 }

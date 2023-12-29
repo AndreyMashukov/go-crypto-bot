@@ -22,12 +22,12 @@ func (m *ExchangeRepositoryMock) GetSwapPairs() []model.SwapPair {
 	args := m.Called()
 	return args.Get(0).([]model.SwapPair)
 }
-func (m *ExchangeRepositoryMock) GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair {
-	args := m.Called(baseAsset)
+func (m *ExchangeRepositoryMock) GetSwapPairsByBaseAsset(baseAsset string, ignore string) []model.SwapPair {
+	args := m.Called(baseAsset, ignore)
 	return args.Get(0).([]model.SwapPair)
 }
-func (m *ExchangeRepositoryMock) GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair {
-	args := m.Called(quoteAsset)
+func (m *ExchangeRepositoryMock) GetSwapPairsByQuoteAsset(quoteAsset string, ignore string) []model.SwapPair {
+	args := m.Called(quoteAsset, ignore)
 	return args.Get(0).([]model.SwapPair)
 }
 func (m *ExchangeRepositoryMock) GetSwapPair(symbol string) (model.SwapPair, error) {

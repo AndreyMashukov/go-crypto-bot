@@ -23,7 +23,7 @@ func (s *SBBSwapFinder) Find(asset string) model.BBSArbitrageChain {
 		BestChain:   nil,
 	}
 
-	options0 := s.ExchangeRepository.GetSwapPairsByBaseAsset(asset)
+	options0 := s.ExchangeRepository.GetSwapPairsByBaseAsset(asset, "USDT")
 
 	var bestChain *model.BestSwapChain = nil
 
@@ -53,7 +53,7 @@ func (s *SBBSwapFinder) Find(asset string) model.BBSArbitrageChain {
 			Transitions:   make([]model.SwapTransition, 0),
 		}
 		// log.Printf("[%s] 1 BUY %s -> %s | %f x %f = %f", asset, sell0.BaseAsset, sell0.QuoteAsset, sell0.BaseQuantity, sell0.Price, sell0.Balance)
-		options1 := s.ExchangeRepository.GetSwapPairsByQuoteAsset(sell0.QuoteAsset)
+		options1 := s.ExchangeRepository.GetSwapPairsByQuoteAsset(sell0.QuoteAsset, "USDT")
 		for _, option1 := range options1 {
 			if option1.IsPriceExpired() {
 				continue
@@ -63,9 +63,9 @@ func (s *SBBSwapFinder) Find(asset string) model.BBSArbitrageChain {
 				continue
 			}
 
-			if !option1.IsBearMarket() && !option1.IsLooser() {
-				continue
-			}
+			//if !option1.IsBearMarket() && !option1.IsLooser() {
+			//	continue
+			//}
 
 			option1Price := option1.BuyPrice + (option1.MinPrice * 2)
 			option1Price = s.Formatter.FormatPrice(option1, option1Price)
@@ -86,7 +86,7 @@ func (s *SBBSwapFinder) Find(asset string) model.BBSArbitrageChain {
 				Transitions:   make([]model.SwapTransition, 0),
 			}
 			// log.Printf("[%s] 2 BUY %s -> %s | %f x %f = %f", asset, buy0.BaseAsset, buy0.QuoteAsset, buy0.BaseQuantity, buy0.Price, buy0.Balance)
-			options2 := s.ExchangeRepository.GetSwapPairsByQuoteAsset(option1.BaseAsset)
+			options2 := s.ExchangeRepository.GetSwapPairsByQuoteAsset(option1.BaseAsset, "USDT")
 			for _, option2 := range options2 {
 				if option2.IsPriceExpired() {
 					continue
@@ -96,9 +96,9 @@ func (s *SBBSwapFinder) Find(asset string) model.BBSArbitrageChain {
 					continue
 				}
 
-				if !option2.IsBearMarket() && !option2.IsLooser() {
-					continue
-				}
+				//if !option2.IsBearMarket() && !option2.IsLooser() {
+				//	continue
+				//}
 
 				option2Price := option2.BuyPrice + (option2.MinPrice * 10)
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)

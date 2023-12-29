@@ -260,85 +260,113 @@ func (m *MakerService) tradeLimit(symbol string) *ExchangeModel.TradeLimit {
 }
 
 func (m *MakerService) UpdateSwapPairs() {
-	swapMap := make(map[string][]ExchangeModel.ExchangeSymbol)
 	exchangeInfo, _ := m.Binance.GetExchangeData(make([]string, 0))
-	tradeLimits := m.ExchangeRepository.GetTradeLimits()
+	supportedBaseAsset := []string{
+		"ETH",
+		"ZEC",
+		"NEAR",
+		"ATOM",
+		"XMR",
+		"XLM",
+		"ETC",
+		"UNI",
+		"DOT",
+		"MATIC",
+		"LINK",
+		"DOGE",
+		"PERP",
+		"SOL",
+		"BTC",
+		"LTC",
+		"XRP",
+		"BNB",
+		"BCH",
+		"ADA",
+		"AVAX",
+		"SHIB",
+		// validate...
+		"LRC",
+		"QTUM",
+		"ZRX",
+		"KNC",
+		"FUN",
+		"IOTA",
+		"EOS",
+	}
+	supportedQuoteAssets := []string{
+		"BTC",
+		"ETH",
+		"BNB",
+		"TRX",
+		"XRP",
+		"EUR",
+		"DAI",
+		"TUSD",
+		"USDC",
+		"AUD",
+		"TRY",
+		"BRL",
+		"USDT",
+	}
 
-	supportedQuoteAssets := []string{"BTC", "ETH", "BNB", "TRX", "XRP", "EUR", "DAI", "TUSD", "USDC", "AUD", "TRY", "BRL"}
+	swapList := make([]ExchangeModel.ExchangeSymbol, 0)
 
-	for _, tradeLimit := range tradeLimits {
-		if !tradeLimit.IsEnabled {
+	for _, exchangeSymbol := range exchangeInfo.Symbols {
+		if !exchangeSymbol.IsTrading() {
 			continue
 		}
 
-		swapMap[tradeLimit.Symbol] = make([]ExchangeModel.ExchangeSymbol, 0)
-
-		for _, exchangeSymbol := range exchangeInfo.Symbols {
-			if !exchangeSymbol.IsTrading() {
-				continue
-			}
-
-			if exchangeSymbol.Symbol == tradeLimit.Symbol {
-				baseAsset := exchangeSymbol.BaseAsset
-				quoteAsset := exchangeSymbol.QuoteAsset
-
-				for _, exchangeItem := range exchangeInfo.Symbols {
-					if !exchangeItem.IsTrading() {
-						continue
-					}
-
-					if !slices.Contains(supportedQuoteAssets, exchangeItem.QuoteAsset) {
-						continue
-					}
-
-					if exchangeItem.BaseAsset == baseAsset && exchangeItem.QuoteAsset != quoteAsset {
-						swapMap[tradeLimit.Symbol] = append(swapMap[tradeLimit.Symbol], exchangeItem)
-					}
-				}
-			}
+		if !slices.Contains(supportedQuoteAssets, exchangeSymbol.QuoteAsset) {
+			continue
 		}
 
-		for _, exchangeItem := range swapMap[tradeLimit.Symbol] {
-			swapPair, err := m.ExchangeRepository.GetSwapPair(exchangeItem.Symbol)
-			if err != nil {
-				swapPair := ExchangeModel.SwapPair{
-					SourceSymbol:   tradeLimit.Symbol,
-					Symbol:         exchangeItem.Symbol,
-					BaseAsset:      exchangeItem.BaseAsset,
-					QuoteAsset:     exchangeItem.QuoteAsset,
-					BuyPrice:       0.00,
-					SellPrice:      0.00,
-					PriceTimestamp: 0,
-				}
+		if !slices.Contains(supportedBaseAsset, exchangeSymbol.BaseAsset) {
+			continue
+		}
 
-				for _, filter := range exchangeItem.Filters {
-					if filter.FilterType == "PRICE_FILTER" {
-						swapPair.MinPrice = *filter.MinPrice
-					}
-					if filter.FilterType == "LOT_SIZE" {
-						swapPair.MinQuantity = *filter.MinQuantity
-					}
-					if filter.FilterType == "NOTIONAL" {
-						swapPair.MinNotional = *filter.MinNotional
-					}
-				}
+		swapList = append(swapList, exchangeSymbol)
+	}
 
-				_, _ = m.ExchangeRepository.CreateSwapPair(swapPair)
-			} else {
-				for _, filter := range exchangeItem.Filters {
-					if filter.FilterType == "PRICE_FILTER" {
-						swapPair.MinPrice = *filter.MinPrice
-					}
-					if filter.FilterType == "LOT_SIZE" {
-						swapPair.MinQuantity = *filter.MinQuantity
-					}
-					if filter.FilterType == "NOTIONAL" {
-						swapPair.MinNotional = *filter.MinNotional
-					}
-				}
-
-				_ = m.ExchangeRepository.UpdateSwapPair(swapPair)
+	for _, exchangeItem := range swapList {
+		swapPair, err := m.ExchangeRepository.GetSwapPair(exchangeItem.Symbol)
+		if err != nil {
+			swapPair := ExchangeModel.SwapPair{
+				SourceSymbol:   exchangeItem.Symbol,
+				Symbol:         exchangeItem.Symbol,
+				BaseAsset:      exchangeItem.BaseAsset,
+				QuoteAsset:     exchangeItem.QuoteAsset,
+				BuyPrice:       0.00,
+				SellPrice:      0.00,
+				PriceTimestamp: 0,
 			}
+
+			for _, filter := range exchangeItem.Filters {
+				if filter.FilterType == "PRICE_FILTER" {
+					swapPair.MinPrice = *filter.MinPrice
+				}
+				if filter.FilterType == "LOT_SIZE" {
+					swapPair.MinQuantity = *filter.MinQuantity
+				}
+				if filter.FilterType == "NOTIONAL" {
+					swapPair.MinNotional = *filter.MinNotional
+				}
+			}
+
+			_, _ = m.ExchangeRepository.CreateSwapPair(swapPair)
+		} else {
+			for _, filter := range exchangeItem.Filters {
+				if filter.FilterType == "PRICE_FILTER" {
+					swapPair.MinPrice = *filter.MinPrice
+				}
+				if filter.FilterType == "LOT_SIZE" {
+					swapPair.MinQuantity = *filter.MinQuantity
+				}
+				if filter.FilterType == "NOTIONAL" {
+					swapPair.MinNotional = *filter.MinNotional
+				}
+			}
+
+			_ = m.ExchangeRepository.UpdateSwapPair(swapPair)
 		}
 	}
 }

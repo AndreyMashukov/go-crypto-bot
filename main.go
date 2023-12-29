@@ -17,6 +17,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -123,7 +124,7 @@ func main() {
 		}
 	}
 
-	swapEnabled := currentBot.Id == 1
+	swapEnabled := currentBot.BotUuid == "5b51a35f-76a6-4747-8461-850fff9f7c18"
 
 	log.Printf("Bot [%s] is initialized successfully", currentBot.BotUuid)
 
@@ -315,6 +316,14 @@ func main() {
 				ExchangeRepository: &exchangeRepository,
 				Formatter:          &formatter,
 			},
+			BSSSwapFinder: &ExchangeService.BSSSwapFinder{
+				ExchangeRepository: &exchangeRepository,
+				Formatter:          &formatter,
+			},
+			BBSSwapFinder: &ExchangeService.BBSSwapFinder{
+				ExchangeRepository: &exchangeRepository,
+				Formatter:          &formatter,
+			},
 		}
 
 		swapKlineChannel := make(chan []byte)
@@ -322,9 +331,17 @@ func main() {
 
 		go func() {
 			for {
+				baseAssets := make([]string, 0)
 				for _, pair := range exchangeRepository.GetSwapPairs() {
-					swapManager.CalculateSwapOptions(pair.BaseAsset)
+					if !slices.Contains(baseAssets, pair.BaseAsset) {
+						baseAssets = append(baseAssets, pair.BaseAsset)
+					}
 				}
+
+				for _, baseAsset := range baseAssets {
+					swapManager.CalculateSwapOptions(baseAsset)
+				}
+				swapManager.FindUsdtSwaps()
 
 				time.Sleep(time.Millisecond * 250)
 			}

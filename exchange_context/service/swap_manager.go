@@ -14,6 +14,21 @@ type SwapManager struct {
 	SSBSwapFinder    *SSBSwapFinder
 	SBSSwapFinder    *SBSSwapFinder
 	SwapChainBuilder *SwapChainBuilder
+	BSSSwapFinder    *BSSSwapFinder
+	BBSSwapFinder    *BBSSwapFinder
+}
+
+func (s *SwapManager) FindUsdtSwaps() {
+	buySellSell := s.BSSSwapFinder.Find("USDT")
+	if buySellSell.BestChain != nil && buySellSell.BestChain.Percent.Gte(0.10) {
+		swapChainEntity := s.UpdateSwapChain(*buySellSell.BestChain)
+		s.SwapRepository.SaveSwapChainCache("USDT", swapChainEntity)
+	}
+	buyBuySell := s.BBSSwapFinder.Find("USDT")
+	if buyBuySell.BestChain != nil && buyBuySell.BestChain.Percent.Gte(0.10) {
+		swapChainEntity := s.UpdateSwapChain(*buyBuySell.BestChain)
+		s.SwapRepository.SaveSwapChainCache("USDT", swapChainEntity)
+	}
 }
 
 func (s *SwapManager) CalculateSwapOptions(asset string) {

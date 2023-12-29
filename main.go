@@ -242,6 +242,8 @@ func main() {
 	}
 
 	orderController := controller.OrderController{
+		RDB:                rdb,
+		Ctx:                &ctx,
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,
 		Formatter:          &formatter,

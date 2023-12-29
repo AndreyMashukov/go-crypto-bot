@@ -520,9 +520,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 					if swapChain != nil {
 						possibleSwaps := m.SwapRepository.GetSwapChains(openedBuyPosition.GetBaseAsset())
 
-						if len(possibleSwaps) > 0 {
-							log.Printf("[%s] Found %d possible swaps...", openedBuyPosition.Symbol, len(possibleSwaps))
-						} else {
+						if len(possibleSwaps) == 0 {
 							m.SwapRepository.InvalidateSwapChainCache(openedBuyPosition.GetBaseAsset())
 						}
 

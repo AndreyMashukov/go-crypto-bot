@@ -26,6 +26,8 @@ func TestSellAction(t *testing.T) {
 	timeService := new(TimeServiceMock)
 	telegramNotificatorMock := new(TelegramNotificatorMock)
 
+	swapRepository.On("GetSwapChainCache", "ETH").Return(nil)
+
 	lockChannel := make(chan model.Lock)
 
 	orderExecutor := service.OrderExecutor{
@@ -176,6 +178,8 @@ func TestSellFoundFilled(t *testing.T) {
 	timeService := new(TimeServiceMock)
 	telegramNotificatorMock := new(TelegramNotificatorMock)
 
+	swapRepository.On("GetSwapChainCache", "ETH").Return(nil)
+
 	lockChannel := make(chan model.Lock)
 
 	orderExecutor := service.OrderExecutor{
@@ -318,6 +322,8 @@ func TestSellCancelledInProcess(t *testing.T) {
 	timeService := new(TimeServiceMock)
 	telegramNotificatorMock := new(TelegramNotificatorMock)
 
+	swapRepository.On("GetSwapChainCache", "ETH").Return(nil)
+
 	lockChannel := make(chan model.Lock)
 
 	orderExecutor := service.OrderExecutor{
@@ -454,6 +460,8 @@ func TestSellQueryFail(t *testing.T) {
 	timeService := new(TimeServiceMock)
 	telegramNotificatorMock := new(TelegramNotificatorMock)
 
+	swapRepository.On("GetSwapChainCache", "ETH").Return(nil)
+
 	lockChannel := make(chan model.Lock)
 
 	orderExecutor := service.OrderExecutor{
@@ -580,6 +588,8 @@ func TestSellClosingAction(t *testing.T) {
 	swapValidator := new(SwapValidatorMock)
 	timeService := new(TimeServiceMock)
 	telegramNotificatorMock := new(TelegramNotificatorMock)
+
+	swapRepository.On("GetSwapChainCache", "BTC").Return(nil)
 
 	lockChannel := make(chan model.Lock)
 

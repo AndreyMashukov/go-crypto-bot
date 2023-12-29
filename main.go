@@ -218,14 +218,15 @@ func main() {
 			Formatter:       &formatter,
 			TimeService:     &timeService,
 		},
-		SwapValidator:     &swapValidator,
-		Formatter:         &formatter,
-		SwapSellOrderDays: swapOpenedSellOrderFromHoursOpened,
-		SwapEnabled:       swapEnabled,
-		SwapProfitPercent: swapOrderOnProfitPercent,
-		Lock:              make(map[string]bool),
-		TradeLockMutex:    sync.RWMutex{},
-		LockChannel:       &lockTradeChannel,
+		SwapValidator:          &swapValidator,
+		Formatter:              &formatter,
+		SwapSellOrderDays:      swapOpenedSellOrderFromHoursOpened,
+		SwapEnabled:            swapEnabled,
+		SwapProfitPercent:      swapOrderOnProfitPercent,
+		TurboSwapProfitPercent: 20.00,
+		Lock:                   make(map[string]bool),
+		TradeLockMutex:         sync.RWMutex{},
+		LockChannel:            &lockTradeChannel,
 	}
 
 	makerService := ExchangeService.MakerService{

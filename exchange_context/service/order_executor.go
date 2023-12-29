@@ -404,9 +404,7 @@ func (m *OrderExecutor) TrySwap(order ExchangeModel.Order) {
 	if swapChain != nil && m.SwapEnabled {
 		possibleSwaps := m.SwapRepository.GetSwapChains(order.GetBaseAsset())
 
-		if len(possibleSwaps) > 0 {
-			log.Printf("[%s] Found %d possible swaps...", order.Symbol, len(possibleSwaps))
-		} else {
+		if len(possibleSwaps) == 0 {
 			m.SwapRepository.InvalidateSwapChainCache(order.GetBaseAsset())
 		}
 

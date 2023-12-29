@@ -75,8 +75,90 @@ func TestSwapSellBuyBuy(t *testing.T) {
 	swapRepoMock.On("GetSwapPairBySymbol", "ETHGBP").Return(options2[0], nil)
 	swapRepoMock.On("GetSwapPairBySymbol", "SOLGBP").Return(options2[1], nil)
 
+	binance := new(ExchangePriceAPIMock)
+
+	binance.On("GetKLinesCached", "SOLGBP", "1d", int64(14)).Return([]model.KLine{
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+	})
+	binance.On("GetKLinesCached", "ETHGBP", "1d", int64(14)).Return([]model.KLine{
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+	})
+	binance.On("GetKLinesCached", "SOLETH", "1d", int64(14)).Return([]model.KLine{
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+	})
+
 	swapChainBuilder := service.SwapChainBuilder{}
 	validator := service.SwapValidator{
+		Binance:        binance,
 		SwapRepository: swapRepoMock,
 		Formatter:      &service.Formatter{},
 		SwapMinPercent: 0.1,
@@ -302,8 +384,90 @@ func TestSwapSellBuyBuyRollback(t *testing.T) {
 	swapRepoMock.On("GetSwapPairBySymbol", "ETHGBP").Times(1).Return(options2[0], nil)
 	swapRepoMock.On("GetSwapPairBySymbol", "SOLGBP").Times(1).Return(options2[1], nil)
 
+	binance := new(ExchangePriceAPIMock)
+
+	binance.On("GetKLinesCached", "SOLGBP", "1d", int64(14)).Return([]model.KLine{
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+	})
+	binance.On("GetKLinesCached", "ETHGBP", "1d", int64(14)).Return([]model.KLine{
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+	})
+	binance.On("GetKLinesCached", "SOLETH", "1d", int64(14)).Return([]model.KLine{
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+	})
+
 	swapChainBuilder := service.SwapChainBuilder{}
 	validator := service.SwapValidator{
+		Binance:        binance,
 		SwapRepository: swapRepoMock,
 		Formatter:      &service.Formatter{},
 		SwapMinPercent: 0.1,
@@ -533,8 +697,90 @@ func TestSwapSellBuyBuyForceSwap(t *testing.T) {
 	swapRepoMock.On("GetSwapPairBySymbol", "ETHGBP").Times(1).Return(options2[0], nil)
 	swapRepoMock.On("GetSwapPairBySymbol", "SOLGBP").Times(1).Return(options2[1], nil)
 
+	binance := new(ExchangePriceAPIMock)
+
+	binance.On("GetKLinesCached", "SOLGBP", "1d", int64(14)).Return([]model.KLine{
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+		{
+			High: 58.57,
+		},
+	})
+	binance.On("GetKLinesCached", "ETHGBP", "1d", int64(14)).Return([]model.KLine{
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+		{
+			Low: 1782.95,
+		},
+	})
+	binance.On("GetKLinesCached", "SOLETH", "1d", int64(14)).Return([]model.KLine{
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+		{
+			Low: 0.03131,
+		},
+	})
+
 	swapChainBuilder := service.SwapChainBuilder{}
 	validator := service.SwapValidator{
+		Binance:        binance,
 		SwapRepository: swapRepoMock,
 		Formatter:      &service.Formatter{},
 		SwapMinPercent: 0.1,

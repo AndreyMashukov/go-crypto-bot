@@ -14,6 +14,11 @@ type ChartService struct {
 	OrderRepository    *ExchangeRepository.OrderRepository
 }
 
+type ChartResult struct {
+	Symbol string
+	Charts map[string][]any
+}
+
 func (e *ChartService) GetCharts(symbolFilter []string) []map[string][]any {
 	orders := e.OrderRepository.GetList()
 	orderMap := make(map[string][]model.Order)
@@ -41,23 +46,33 @@ func (e *ChartService) GetCharts(symbolFilter []string) []map[string][]any {
 		orderMap[order.Symbol] = append(orderMap[order.Symbol], order)
 	}
 
-	resultChannel := make(chan map[string][]any)
+	resultChannel := make(chan ChartResult)
 
 	for _, symbol := range symbols {
 		go func(symbol string, orderMap map[string][]model.Order) {
-			resultChannel <- e.processSymbol(symbol, orderMap)
+			resultChannel <- ChartResult{
+				Symbol: symbol,
+				Charts: e.processSymbol(symbol, orderMap),
+			}
 		}(symbol, orderMap)
 	}
 
 	charts := make([]map[string][]any, 0)
+	mapped := make(map[string]map[string][]any)
+	processed := 0
 
 	for {
-		list := <-resultChannel
-		charts = append(charts, list)
+		result := <-resultChannel
+		mapped[result.Symbol] = result.Charts
+		processed++
 
-		if len(charts) == len(symbols) {
+		if processed == len(symbols) {
 			break
 		}
+	}
+
+	for _, symbol := range symbols {
+		charts = append(charts, mapped[symbol])
 	}
 
 	return charts

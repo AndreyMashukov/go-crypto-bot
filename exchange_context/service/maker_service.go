@@ -144,6 +144,9 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 					if quantity >= tradeLimit.MinQuantity {
 						log.Printf("[%s] SELL QTY = %f", order.Symbol, quantity)
 						err = m.OrderExecutor.Sell(tradeLimit, order, symbol, price, quantity, sellVolume, buyVolume, smaFormatted)
+						if err != nil {
+							log.Printf("[%s] SELL error: %s", order.Symbol, err.Error())
+						}
 					} else {
 						log.Printf("[%s] SELL QTY = %f is too small!", order.Symbol, quantity)
 					}

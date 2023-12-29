@@ -12,24 +12,25 @@ import (
 )
 
 type OrderExecutor struct {
-	CurrentBot          *ExchangeModel.Bot
-	TimeService         TimeServiceInterface
-	BalanceService      BalanceServiceInterface
-	Binance             ExchangeClient.ExchangeOrderAPIInterface
-	OrderRepository     ExchangeRepository.OrderStorageInterface
-	ExchangeRepository  ExchangeRepository.ExchangeTradeInfoInterface
-	PriceCalculator     PriceCalculatorInterface
-	SwapRepository      ExchangeRepository.SwapBasicRepositoryInterface
-	SwapExecutor        SwapExecutorInterface
-	SwapValidator       SwapValidatorInterface
-	TelegramNotificator TelegramNotificatorInterface
-	Formatter           *Formatter
-	SwapSellOrderDays   int64
-	SwapEnabled         bool
-	SwapProfitPercent   float64
-	Lock                map[string]bool
-	TradeLockMutex      sync.RWMutex
-	LockChannel         *chan ExchangeModel.Lock
+	CurrentBot             *ExchangeModel.Bot
+	TimeService            TimeServiceInterface
+	BalanceService         BalanceServiceInterface
+	Binance                ExchangeClient.ExchangeOrderAPIInterface
+	OrderRepository        ExchangeRepository.OrderStorageInterface
+	ExchangeRepository     ExchangeRepository.ExchangeTradeInfoInterface
+	PriceCalculator        PriceCalculatorInterface
+	SwapRepository         ExchangeRepository.SwapBasicRepositoryInterface
+	SwapExecutor           SwapExecutorInterface
+	SwapValidator          SwapValidatorInterface
+	TelegramNotificator    TelegramNotificatorInterface
+	Formatter              *Formatter
+	SwapSellOrderDays      int64
+	SwapEnabled            bool
+	SwapProfitPercent      float64
+	TurboSwapProfitPercent float64
+	Lock                   map[string]bool
+	TradeLockMutex         sync.RWMutex
+	LockChannel            *chan ExchangeModel.Lock
 }
 
 func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64, sellVolume float64, buyVolume float64, smaValue float64) error {
@@ -514,7 +515,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 			if binanceOrder.IsSell() && binanceOrder.IsNew() && m.SwapEnabled {
 				openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
 				// Try arbitrage for long orders >= 4 hours and with profit < -1.00%
-				if err == nil && openedBuyPosition.GetHoursOpened() >= m.SwapSellOrderDays && openedBuyPosition.GetProfitPercent(kline.Close).Lte(ExchangeModel.Percent(m.SwapProfitPercent)) && !openedBuyPosition.IsSwap() {
+				if err == nil {
 					swapChain := m.SwapRepository.GetSwapChainCache(openedBuyPosition.GetBaseAsset())
 					if swapChain != nil {
 						possibleSwaps := m.SwapRepository.GetSwapChains(openedBuyPosition.GetBaseAsset())
@@ -526,6 +527,13 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 						}
 
 						for _, possibleSwap := range possibleSwaps {
+							turboSwap := possibleSwap.Percent.Gte(ExchangeModel.Percent(m.TurboSwapProfitPercent))
+							isTimeToSwap := openedBuyPosition.GetHoursOpened() >= m.SwapSellOrderDays && openedBuyPosition.GetProfitPercent(kline.Close).Lte(ExchangeModel.Percent(m.SwapProfitPercent)) && !openedBuyPosition.IsSwap()
+
+							if !turboSwap && !isTimeToSwap {
+								break
+							}
+
 							violation := m.SwapValidator.Validate(possibleSwap, openedBuyPosition)
 
 							if violation == nil {

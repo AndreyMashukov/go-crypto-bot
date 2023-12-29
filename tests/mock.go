@@ -80,7 +80,11 @@ func (s *SwapRepositoryMock) InvalidateSwapChainCache(asset string) {
 }
 func (s *SwapRepositoryMock) GetSwapChainCache(asset string) *model.SwapChainEntity {
 	args := s.Called(asset)
-	return args.Get(0).(*model.SwapChainEntity)
+	entity := args.Get(0)
+	if nil == entity {
+		return nil
+	}
+	return entity.(*model.SwapChainEntity)
 }
 func (s *SwapRepositoryMock) GetSwapChains(baseAsset string) []model.SwapChainEntity {
 	args := s.Called(baseAsset)

@@ -152,6 +152,7 @@ func main() {
 		OrderRepository:    &orderRepository,
 	}
 	exchangeController := controller.ExchangeController{
+		SwapRepository:     &swapRepository,
 		ExchangeRepository: &exchangeRepository,
 		ChartService:       &chartService,
 		RDB:                rdb,
@@ -168,6 +169,7 @@ func main() {
 	//var swapOpenedSellOrderFromHoursOpened int64 = 0
 
 	swapValidator := ExchangeService.SwapValidator{
+		Binance:        &binance,
 		SwapRepository: &swapRepository,
 		Formatter:      &formatter,
 		SwapMinPercent: swapMinPercentValid,
@@ -254,6 +256,7 @@ func main() {
 	http.HandleFunc("/kline/list/", exchangeController.GetKlineListAction)
 	http.HandleFunc("/depth/", exchangeController.GetDepthAction)
 	http.HandleFunc("/trade/list/", exchangeController.GetTradeListAction)
+	http.HandleFunc("/swap/list", exchangeController.GetSwapListAction)
 	http.HandleFunc("/chart/list", exchangeController.GetChartListAction)
 	http.HandleFunc("/order/list", orderController.GetOrderListAction)
 	http.HandleFunc("/order/position/list", orderController.GetPositionListAction)

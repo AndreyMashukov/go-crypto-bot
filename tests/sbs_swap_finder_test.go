@@ -70,8 +70,90 @@ func TestSwapSellBuySell(t *testing.T) {
 	swapRepoMock.On("GetSwapPairBySymbol", "XRPBTC").Return(options1[0], nil)
 	swapRepoMock.On("GetSwapPairBySymbol", "XRPETH").Return(options2[1], nil)
 
+	binance := new(ExchangePriceAPIMock)
+
+	binance.On("GetKLinesCached", "ETHBTC", "1d", int64(14)).Return([]model.KLine{
+		{
+			High: 0.05359,
+		},
+		{
+			High: 0.05359,
+		},
+		{
+			High: 0.05359,
+		},
+		{
+			High: 0.05359,
+		},
+		{
+			High: 0.05359,
+		},
+		{
+			High: 0.05359,
+		},
+		{
+			High: 0.05359,
+		},
+		{
+			High: 0.05359,
+		},
+	})
+	binance.On("GetKLinesCached", "XRPBTC", "1d", int64(14)).Return([]model.KLine{
+		{
+			Low: 0.00001425,
+		},
+		{
+			Low: 0.00001425,
+		},
+		{
+			Low: 0.00001425,
+		},
+		{
+			Low: 0.00001425,
+		},
+		{
+			Low: 0.00001425,
+		},
+		{
+			Low: 0.00001425,
+		},
+		{
+			Low: 0.00001425,
+		},
+		{
+			Low: 0.00001425,
+		},
+	})
+	binance.On("GetKLinesCached", "XRPETH", "1d", int64(14)).Return([]model.KLine{
+		{
+			High: 0.0002776,
+		},
+		{
+			High: 0.0002776,
+		},
+		{
+			High: 0.0002776,
+		},
+		{
+			High: 0.0002776,
+		},
+		{
+			High: 0.0002776,
+		},
+		{
+			High: 0.0002776,
+		},
+		{
+			High: 0.0002776,
+		},
+		{
+			High: 0.0002776,
+		},
+	})
+
 	swapChainBuilder := service.SwapChainBuilder{}
 	validator := service.SwapValidator{
+		Binance:        binance,
 		SwapRepository: swapRepoMock,
 		Formatter:      &service.Formatter{},
 		SwapMinPercent: 0.1,
@@ -304,8 +386,90 @@ func TestSwapSellBuySellForceSwap(t *testing.T) {
 	swapRepoMock.On("GetSwapPairBySymbol", "XRPBTC").Return(options1[0], nil)
 	swapRepoMock.On("GetSwapPairBySymbol", "XRPETH").Return(options2[1], nil)
 
+	binance := new(ExchangePriceAPIMock)
+
+	binance.On("GetKLinesCached", "ETHBTC", "1d", int64(14)).Return([]model.KLine{
+		{
+			High: 0.05359,
+		},
+		{
+			High: 0.05359,
+		},
+		{
+			High: 0.05359,
+		},
+		{
+			High: 0.05359,
+		},
+		{
+			High: 0.05359,
+		},
+		{
+			High: 0.05359,
+		},
+		{
+			High: 0.05359,
+		},
+		{
+			High: 0.05359,
+		},
+	})
+	binance.On("GetKLinesCached", "XRPBTC", "1d", int64(14)).Return([]model.KLine{
+		{
+			Low: 0.00001425,
+		},
+		{
+			Low: 0.00001425,
+		},
+		{
+			Low: 0.00001425,
+		},
+		{
+			Low: 0.00001425,
+		},
+		{
+			Low: 0.00001425,
+		},
+		{
+			Low: 0.00001425,
+		},
+		{
+			Low: 0.00001425,
+		},
+		{
+			Low: 0.00001425,
+		},
+	})
+	binance.On("GetKLinesCached", "XRPETH", "1d", int64(14)).Return([]model.KLine{
+		{
+			High: 0.0002776,
+		},
+		{
+			High: 0.0002776,
+		},
+		{
+			High: 0.0002776,
+		},
+		{
+			High: 0.0002776,
+		},
+		{
+			High: 0.0002776,
+		},
+		{
+			High: 0.0002776,
+		},
+		{
+			High: 0.0002776,
+		},
+		{
+			High: 0.0002776,
+		},
+	})
+
 	swapChainBuilder := service.SwapChainBuilder{}
 	validator := service.SwapValidator{
+		Binance:        binance,
 		SwapRepository: swapRepoMock,
 		Formatter:      &service.Formatter{},
 		SwapMinPercent: 0.1,

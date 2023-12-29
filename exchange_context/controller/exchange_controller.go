@@ -14,6 +14,7 @@ import (
 )
 
 type ExchangeController struct {
+	SwapRepository     *ExchangeRepository.SwapRepository
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
 	ChartService       *service.ChartService
 	RDB                *redis.Client
@@ -77,6 +78,24 @@ func (e *ExchangeController) GetTradeListAction(w http.ResponseWriter, req *http
 	symbol := strings.TrimPrefix(req.URL.Path, "/trade/list/")
 
 	list := e.ExchangeRepository.TradeList(symbol)
+	encoded, _ := json.Marshal(list)
+	fmt.Fprintf(w, string(encoded))
+}
+
+func (e *ExchangeController) GetSwapListAction(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != e.CurrentBot.BotUuid {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
+
+	list := e.SwapRepository.GetAvailableSwapChains()
 	encoded, _ := json.Marshal(list)
 	fmt.Fprintf(w, string(encoded))
 }

@@ -1,16 +1,21 @@
 package controller
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/redis/go-redis/v9"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/service"
 	"net/http"
 	"slices"
+	"time"
 )
 
 type OrderController struct {
+	RDB                *redis.Client
+	Ctx                *context.Context
 	OrderRepository    *ExchangeRepository.OrderRepository
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
 	Formatter          *service.Formatter
@@ -84,7 +89,22 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			continue
 		}
 
-		sellPrice := o.PriceCalculator.CalculateSell(limit, openedOrder)
+		var sellPrice float64
+
+		binanceOrder := o.OrderRepository.GetBinanceOrder(openedOrder.Symbol, "SELL")
+		if binanceOrder != nil {
+			sellPrice = binanceOrder.Price
+		} else {
+			sellPriceCacheKey := fmt.Sprintf("sell-price-%d", openedOrder.Id)
+			sellPriceCached := o.RDB.Get(*o.Ctx, sellPriceCacheKey).Val()
+			if len(sellPriceCached) > 0 {
+				_ = json.Unmarshal([]byte(sellPriceCached), &sellPrice)
+			} else {
+				sellPrice = o.PriceCalculator.CalculateSell(limit, openedOrder)
+				encoded, _ := json.Marshal(sellPrice)
+				o.RDB.Set(*o.Ctx, sellPriceCacheKey, string(encoded), time.Hour)
+			}
+		}
 
 		positions = append(positions, model.Position{
 			Symbol:       limit.Symbol,

@@ -422,8 +422,6 @@ func (m *OrderExecutor) TrySwap(order ExchangeModel.Order) {
 					chainCurrentPercent,
 				)
 				m.MakeSwap(order, possibleSwap)
-			} else {
-				log.Println(violation)
 			}
 		}
 	}
@@ -557,8 +555,6 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 										return
 									}
 								}
-							} else {
-								log.Println(violation)
 							}
 						}
 					}

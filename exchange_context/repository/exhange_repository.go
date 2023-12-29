@@ -16,8 +16,8 @@ type SwapPairRepositoryInterface interface {
 	CreateSwapPair(swapPair model.SwapPair) (*int64, error)
 	UpdateSwapPair(swapPair model.SwapPair) error
 	GetSwapPairs() []model.SwapPair
-	GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair
-	GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair
+	GetSwapPairsByBaseAsset(baseAsset string, ignore string) []model.SwapPair
+	GetSwapPairsByQuoteAsset(quoteAsset string, ignore string) []model.SwapPair
 	GetSwapPair(symbol string) (model.SwapPair, error)
 }
 
@@ -25,6 +25,10 @@ type ExchangeTradeInfoInterface interface {
 	GetLastKLine(symbol string) *model.KLine
 	GetTradeLimit(symbol string) (model.TradeLimit, error)
 	GetPeriodMinPrice(symbol string, period int64) float64
+}
+
+type TradeLimitReaderInterface interface {
+	GetTradeLimits() []model.TradeLimit
 }
 
 type ExchangeRepositoryInterface interface {
@@ -35,8 +39,8 @@ type ExchangeRepositoryInterface interface {
 	CreateSwapPair(swapPair model.SwapPair) (*int64, error)
 	UpdateSwapPair(swapPair model.SwapPair) error
 	GetSwapPairs() []model.SwapPair
-	GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair
-	GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair
+	GetSwapPairsByBaseAsset(baseAsset string, ignore string) []model.SwapPair
+	GetSwapPairsByQuoteAsset(quoteAsset string, ignore string) []model.SwapPair
 	GetSwapPair(symbol string) (model.SwapPair, error)
 	UpdateTradeLimit(limit model.TradeLimit) error
 	GetLastKLine(symbol string) *model.KLine
@@ -365,7 +369,7 @@ func (e *ExchangeRepository) GetSwapPairs() []model.SwapPair {
 	return list
 }
 
-func (e *ExchangeRepository) GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair {
+func (e *ExchangeRepository) GetSwapPairsByBaseAsset(baseAsset string, ignore string) []model.SwapPair {
 	res, err := e.DB.Query(`
 		SELECT
 		    sp.id as Id,
@@ -383,8 +387,8 @@ func (e *ExchangeRepository) GetSwapPairsByBaseAsset(baseAsset string) []model.S
 		    sp.buy_volume as BuyVolume,
 		    sp.daily_percent as DailyPercent
 		FROM swap_pair sp 
-		WHERE sp.base_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price
-	`, baseAsset)
+		WHERE sp.base_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price AND sp.quote_asset != ? AND sp.base_asset != ?
+	`, baseAsset, ignore, ignore)
 	defer res.Close()
 
 	if err != nil {
@@ -422,7 +426,7 @@ func (e *ExchangeRepository) GetSwapPairsByBaseAsset(baseAsset string) []model.S
 	return list
 }
 
-func (e *ExchangeRepository) GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair {
+func (e *ExchangeRepository) GetSwapPairsByQuoteAsset(quoteAsset string, ignore string) []model.SwapPair {
 	res, err := e.DB.Query(`
 		SELECT
 		    sp.id as Id,
@@ -440,8 +444,8 @@ func (e *ExchangeRepository) GetSwapPairsByQuoteAsset(quoteAsset string) []model
 		    sp.buy_volume as BuyVolume,
 		    sp.daily_percent as DailyPercent
 		FROM swap_pair sp 
-		WHERE sp.quote_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price
-	`, quoteAsset)
+		WHERE sp.quote_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price AND sp.quote_asset != ? AND sp.base_asset != ?
+	`, quoteAsset, ignore, ignore)
 	defer res.Close()
 
 	if err != nil {

@@ -30,6 +30,8 @@ func (s *SwapTransitionEntity) IsSell() bool {
 const SwapTransitionTypeSellBuySell = "SBS"
 const SwapTransitionTypeSellBuyBuy = "SBB"
 const SwapTransitionTypeSellSellBuy = "SSB"
+const SwapTransitionTypeBuySellSell = "BSS"
+const SwapTransitionTypeBuyBuySell = "BBS"
 const SwapTransitionOperationTypeSell = "SELL"
 const SwapTransitionOperationTypeBuy = "BUY"
 

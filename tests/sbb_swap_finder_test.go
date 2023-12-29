@@ -44,9 +44,9 @@ func TestSwapSellBuyBuy(t *testing.T) {
 	options3 = append(options3, options[0])
 	options3 = append(options3, options[2])
 
-	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "SOL").Return(options3)
-	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "ETH").Return(options0)
-	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "GBP").Return(options2)
+	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "SOL", "USDT").Return(options3)
+	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "ETH", "USDT").Return(options0)
+	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "GBP", "USDT").Return(options2)
 	//exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "GBP").Return(options2)
 
 	swapManager := service.SBBSwapFinder{
@@ -353,9 +353,9 @@ func TestSwapSellBuyBuyRollback(t *testing.T) {
 	options3 = append(options3, options[0])
 	options3 = append(options3, options[2])
 
-	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "SOL").Return(options3)
-	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "ETH").Return(options0)
-	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "GBP").Return(options2)
+	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "SOL", "USDT").Return(options3)
+	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "ETH", "USDT").Return(options0)
+	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "GBP", "USDT").Return(options2)
 	//exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "GBP").Return(options2)
 
 	swapManager := service.SBBSwapFinder{
@@ -666,9 +666,9 @@ func TestSwapSellBuyBuyForceSwap(t *testing.T) {
 	options3 = append(options3, options[0])
 	options3 = append(options3, options[2])
 
-	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "SOL").Return(options3)
-	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "ETH").Return(options0)
-	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "GBP").Return(options2)
+	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "SOL", "USDT").Return(options3)
+	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "ETH", "USDT").Return(options0)
+	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "GBP", "USDT").Return(options2)
 	//exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "GBP").Return(options2)
 
 	swapManager := service.SBBSwapFinder{

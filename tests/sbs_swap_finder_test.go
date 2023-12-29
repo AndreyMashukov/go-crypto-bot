@@ -40,9 +40,9 @@ func TestSwapSellBuySell(t *testing.T) {
 	options2 = append(options2, options[1])
 	options2 = append(options2, options[2])
 
-	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "ETH").Return(options0)
-	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "BTC").Return(options1)
-	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "XRP").Return(options2)
+	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "ETH", "USDT").Return(options0)
+	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "BTC", "USDT").Return(options1)
+	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "XRP", "USDT").Return(options2)
 
 	sbsFinder := service.SBSSwapFinder{
 		ExchangeRepository: exchangeRepoMock,
@@ -356,9 +356,9 @@ func TestSwapSellBuySellForceSwap(t *testing.T) {
 	options2 = append(options2, options[1])
 	options2 = append(options2, options[2])
 
-	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "ETH").Return(options0)
-	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "BTC").Return(options1)
-	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "XRP").Return(options2)
+	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "ETH", "USDT").Return(options0)
+	exchangeRepoMock.On("GetSwapPairsByQuoteAsset", "BTC", "USDT").Return(options1)
+	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "XRP", "USDT").Return(options2)
 
 	sbsFinder := service.SBSSwapFinder{
 		ExchangeRepository: exchangeRepoMock,

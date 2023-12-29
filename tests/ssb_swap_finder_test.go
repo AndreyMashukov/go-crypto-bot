@@ -46,9 +46,9 @@ func TestSwapSellSellBuy(t *testing.T) {
 
 	options4 := make([]model.SwapPair, 0)
 
-	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "SOL").Return(options3)
-	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "ETH").Return(options1)
-	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "GBP").Return(options4)
+	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "SOL", "USDT").Return(options3)
+	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "ETH", "USDT").Return(options1)
+	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "GBP", "USDT").Return(options4)
 
 	swapManager := &service.SSBSwapFinder{
 		Formatter:          &service.Formatter{},

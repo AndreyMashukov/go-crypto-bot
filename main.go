@@ -17,6 +17,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -322,8 +323,15 @@ func main() {
 
 		go func() {
 			for {
+				baseAssets := make([]string, 0)
 				for _, pair := range exchangeRepository.GetSwapPairs() {
-					swapManager.CalculateSwapOptions(pair.BaseAsset)
+					if !slices.Contains(baseAssets, pair.BaseAsset) {
+						baseAssets = append(baseAssets, pair.BaseAsset)
+					}
+				}
+
+				for _, baseAsset := range baseAssets {
+					swapManager.CalculateSwapOptions(baseAsset)
 				}
 
 				time.Sleep(time.Millisecond * 250)

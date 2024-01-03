@@ -226,22 +226,30 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 					log.Printf("[%s] No ASKs on the market", symbol)
 				}
 			} else {
-				profit := order.GetProfitPercent(lastKline.Close)
+				lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+				if lastKline != nil {
+					profit := order.GetProfitPercent(lastKline.Close)
 
-				if err == nil && profit.Lte(tradeLimit.GetBuyOnFallPercent()) {
-					err = m.OrderExecutor.BuyExtra(tradeLimit, order, price, sellVolume, buyVolume, smaValue)
-					if err != nil {
-						log.Printf("[%s] %s", symbol, err)
+					if err == nil && profit.Lte(tradeLimit.GetBuyOnFallPercent()) {
+						// extra buy on current price
+						if price < lastKline.Close {
+							price = lastKline.Close
+						}
 
-						m.OrderExecutor.TrySwap(order)
+						err = m.OrderExecutor.BuyExtra(tradeLimit, order, price, sellVolume, buyVolume, smaValue)
+						if err != nil {
+							log.Printf("[%s] %s", symbol, err)
+
+							m.OrderExecutor.TrySwap(order)
+						}
+					} else {
+						log.Printf(
+							"[%s] Extra charge is not allowed: %.2f of %.2f",
+							symbol,
+							profit.Value(),
+							tradeLimit.GetBuyOnFallPercent().Value(),
+						)
 					}
-				} else {
-					log.Printf(
-						"[%s] Extra charge is not allowed: %.2f of %.2f",
-						symbol,
-						profit.Value(),
-						tradeLimit.GetBuyOnFallPercent().Value(),
-					)
 				}
 			}
 		}

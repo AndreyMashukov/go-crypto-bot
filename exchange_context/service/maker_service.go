@@ -233,7 +233,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 					if err == nil && profit.Lte(tradeLimit.GetBuyOnFallPercent()) {
 						// extra buy on current price
 						if price < lastKline.Close {
-							price = lastKline.Close
+							price = m.Formatter.FormatPrice(tradeLimit, lastKline.Close)
 						}
 
 						err = m.OrderExecutor.BuyExtra(tradeLimit, order, price, sellVolume, buyVolume, smaValue)

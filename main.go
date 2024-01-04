@@ -189,6 +189,9 @@ func main() {
 
 	pythonMLBridge := ExchangeService.PythonMLBridge{
 		ExchangeRepository: &exchangeRepository,
+		CurrentBot:         currentBot,
+		RDB:                rdb,
+		Ctx:                &ctx,
 	}
 	pythonMLBridge.Initialize()
 	defer pythonMLBridge.Finalize()

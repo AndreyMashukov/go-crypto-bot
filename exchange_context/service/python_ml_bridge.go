@@ -5,9 +5,13 @@ package service
 import "C"
 import (
 	"archive/zip"
+	"context"
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/redis/go-redis/v9"
+	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
 	"io"
 	"log"
@@ -265,6 +269,9 @@ func PrepareDataset(symbol string) string {
 type PythonMLBridge struct {
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
 	Mutex              sync.RWMutex
+	RDB                *redis.Client
+	Ctx                *context.Context
+	CurrentBot         *ExchangeModel.Bot
 }
 
 func (p *PythonMLBridge) getModelFilePath(symbol string) string {
@@ -372,6 +379,16 @@ with open(result_path, 'w') as out:
 }
 
 func (p *PythonMLBridge) Predict(symbol string) (float64, error) {
+	var predictedPrice float64
+
+	predictedPriceCacheKey := fmt.Sprintf("predicted-price-%s-%d", symbol, p.CurrentBot.Id)
+	predictedPriceCached := p.RDB.Get(*p.Ctx, predictedPriceCacheKey).Val()
+
+	if len(predictedPriceCached) > 0 {
+		_ = json.Unmarshal([]byte(predictedPriceCached), &predictedPrice)
+		return predictedPrice, nil
+	}
+
 	p.Mutex.Lock()
 	defer p.Mutex.Unlock()
 
@@ -416,6 +433,9 @@ with open(result_path, 'w') as out:
 
 	text := string(fileContent)
 	result, _ := strconv.ParseFloat(strings.TrimSpace(text), 64)
+
+	encoded, _ := json.Marshal(result)
+	p.RDB.Set(*p.Ctx, predictedPriceCacheKey, string(encoded), time.Second*2)
 
 	return result, nil
 }

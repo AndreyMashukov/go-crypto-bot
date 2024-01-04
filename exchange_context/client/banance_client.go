@@ -272,6 +272,33 @@ func (b *Binance) GetKLines(symbol string, interval string, limit int64) []model
 	return response.Result
 }
 
+func (b *Binance) TradesAggregate(symbol string, limit int64) []model.Trade {
+	channel := make(chan []byte)
+	defer close(channel)
+
+	socketRequest := model.SocketRequest{
+		Id:     uuid2.New().String(),
+		Method: "trades.aggregate",
+		Params: make(map[string]any),
+	}
+
+	socketRequest.Params["symbol"] = symbol
+	socketRequest.Params["limit"] = limit
+	b.socketRequest(socketRequest, channel)
+	message := <-channel
+
+	var response model.BinanceAggTradesResponse
+	json.Unmarshal(message, &response)
+
+	if response.Error != nil {
+		log.Println(socketRequest)
+		list := make([]model.Trade, 0)
+		return list
+	}
+
+	return response.Result
+}
+
 func (b *Binance) GetKLinesCached(symbol string, interval string, limit int64) []model.KLine {
 	cacheKey := fmt.Sprintf("interval-kline-history-%s-%s-%d", symbol, interval, limit)
 	res := b.RDB.Get(*b.Ctx, cacheKey).Val()

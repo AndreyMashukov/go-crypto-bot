@@ -667,14 +667,45 @@ func (e *ExchangeRepository) GetDepth(symbol string) model.Depth {
 	return dto
 }
 
+func (e *ExchangeRepository) GetTradeVolumes(kLine model.KLine) (float64, float64) {
+	buyVolume := 0.00
+	sellVolume := 0.00
+
+	for _, trade := range e.TradeList(kLine.Symbol) {
+		if trade.Timestamp >= (kLine.Timestamp - 60000) {
+			if trade.GetOperation() == "BUY" {
+				buyVolume += trade.Price * trade.Quantity
+			} else {
+				sellVolume += trade.Price * trade.Quantity
+			}
+			continue
+		}
+
+		break
+	}
+
+	return buyVolume, sellVolume
+}
+
 func (e *ExchangeRepository) AddTrade(trade model.Trade) {
+	tradeCacheKey := fmt.Sprintf("trades-%s-%s", trade.Symbol, e.CurrentBot.Id)
+
+	lastTrades := e.TradeList(trade.Symbol)
 	encoded, _ := json.Marshal(trade)
-	e.RDB.LPush(*e.Ctx, fmt.Sprintf("trades-%s", trade.Symbol), string(encoded))
-	e.RDB.LTrim(*e.Ctx, fmt.Sprintf("trades-%s", trade.Symbol), 0, 100)
+
+	for _, lastTrade := range lastTrades {
+		if lastTrade.AggregateTradeId == trade.AggregateTradeId {
+			e.RDB.LPop(*e.Ctx, tradeCacheKey).Val()
+		}
+	}
+
+	e.RDB.LPush(*e.Ctx, tradeCacheKey, string(encoded))
+	e.RDB.LTrim(*e.Ctx, tradeCacheKey, 0, 2000)
 }
 
 func (e *ExchangeRepository) TradeList(symbol string) []model.Trade {
-	res := e.RDB.LRange(*e.Ctx, fmt.Sprintf("trades-%s", symbol), 0, 100).Val()
+	tradeCacheKey := fmt.Sprintf("trades-%s-%s", symbol, e.CurrentBot.Id)
+	res := e.RDB.LRange(*e.Ctx, tradeCacheKey, 0, 2000).Val()
 	list := make([]model.Trade, 0)
 
 	for _, str := range res {
@@ -683,7 +714,6 @@ func (e *ExchangeRepository) TradeList(symbol string) []model.Trade {
 		list = append(list, dto)
 	}
 
-	slices.Reverse(list)
 	return list
 }
 

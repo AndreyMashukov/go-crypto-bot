@@ -300,3 +300,10 @@ type BinanceKLineResponse struct {
 	Result []KLineHistory `json:"result"`
 	Error  *Error         `json:"error"`
 }
+
+type BinanceAggTradesResponse struct {
+	Id     string  `json:"id"`
+	Status int64   `json:"status"`
+	Result []Trade `json:"result"`
+	Error  *Error  `json:"error"`
+}

@@ -187,6 +187,13 @@ func main() {
 		CurrentBot: currentBot,
 	}
 
+	pythonMLBridge := ExchangeService.PythonMLBridge{
+		ExchangeRepository: &exchangeRepository,
+		Binance:            &binance,
+	}
+	pythonMLBridge.Initialize()
+	defer pythonMLBridge.Finalize()
+
 	priceCalculator := ExchangeService.PriceCalculator{
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,
@@ -243,6 +250,7 @@ func main() {
 	}
 
 	orderController := controller.OrderController{
+		PythonMLBridge:     &pythonMLBridge,
 		RDB:                rdb,
 		Ctx:                &ctx,
 		OrderRepository:    &orderRepository,
@@ -411,6 +419,15 @@ func main() {
 	tradeLimits := exchangeRepository.GetTradeLimits()
 
 	for _, limit := range tradeLimits {
+		go func(limit ExchangeModel.TradeLimit) {
+			for {
+				// todo: write to database and read from database
+				_ = pythonMLBridge.LearnModel(limit.Symbol)
+				timeService.WaitSeconds(60 * 500)
+			}
+		}(limit)
+		// learn every 1000 minutes
+
 		go func(symbol string) {
 			for {
 				currentDecisions := make([]ExchangeModel.Decision, 0)

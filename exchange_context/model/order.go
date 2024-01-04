@@ -128,11 +128,12 @@ func (o *Order) IsSwap() bool {
 }
 
 type Position struct {
-	Symbol       string  `json:"symbol"`
-	KLine        KLine   `json:"kLine"`
-	Order        Order   `json:"order"`
-	Percent      Percent `json:"percent"`
-	SellPrice    float64 `json:"sellPrice"`
-	Profit       float64 `json:"profit"`
-	TargetProfit float64 `json:"targetProfit"`
+	Symbol         string  `json:"symbol"`
+	KLine          KLine   `json:"kLine"`
+	Order          Order   `json:"order"`
+	Percent        Percent `json:"percent"`
+	SellPrice      float64 `json:"sellPrice"`
+	PredictedPrice float64 `json:"predictedPrice"`
+	Profit         float64 `json:"profit"`
+	TargetProfit   float64 `json:"targetProfit"`
 }

@@ -1,0 +1,11 @@
+prefix=/go/src/app
+exec_prefix=${prefix}
+libdir=${exec_prefix}
+includedir=/usr/include/python3.11
+
+Name: Python
+Description: Python library embedded
+Requires:
+Version: 3.11.6
+Libs: -L${libdir} -lpython3.11 -lpthread -lm
+Cflags: -I${includedir}

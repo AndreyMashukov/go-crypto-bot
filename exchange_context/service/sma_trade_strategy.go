@@ -30,10 +30,10 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 		}
 	}
 
-	tradeSlice := list[len(list)-maxPeriod:]
+	tradeSlice := list[0:maxPeriod]
 
-	sellSma := s.calculateSMA(tradeSlice[len(tradeSlice)-sellPeriod:])
-	buySma := s.calculateSMA(tradeSlice[len(tradeSlice)-buyPeriod:])
+	sellSma := s.calculateSMA(tradeSlice[0:sellPeriod])
+	buySma := s.calculateSMA(tradeSlice[0:buyPeriod])
 
 	buyVolumeS, sellVolumeS := s.getByAndSellVolume(tradeSlice[len(tradeSlice)-sellPeriod:])
 	buyVolumeB, sellVolumeB := s.getByAndSellVolume(tradeSlice[len(tradeSlice)-buyPeriod:])

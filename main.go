@@ -189,7 +189,6 @@ func main() {
 
 	pythonMLBridge := ExchangeService.PythonMLBridge{
 		ExchangeRepository: &exchangeRepository,
-		Binance:            &binance,
 	}
 	pythonMLBridge.Initialize()
 	defer pythonMLBridge.Finalize()
@@ -423,7 +422,7 @@ func main() {
 			for {
 				// todo: write to database and read from database
 				_ = pythonMLBridge.LearnModel(limit.Symbol)
-				timeService.WaitSeconds(60 * 500)
+				timeService.WaitSeconds(3600 * 6)
 			}
 		}(limit)
 		// learn every 1000 minutes

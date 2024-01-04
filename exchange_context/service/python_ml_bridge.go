@@ -4,22 +4,266 @@ package service
 // #include <Python.h>
 import "C"
 import (
+	"archive/zip"
 	"encoding/csv"
 	"errors"
 	"fmt"
-	"gitlab.com/open-soft/go-crypto-bot/exchange_context/client"
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
 )
 
+type KlineCSV struct {
+	OpenTime                 string
+	Open                     string
+	High                     string
+	Low                      string
+	Close                    string
+	Volume                   string
+	CloseTime                string
+	QuoteAssetVolume         string
+	NumberOfTrades           string
+	TakerBuyBaseAssetVolume  string
+	TakerBuyQuoteAssetVolume string
+	Ignore                   string
+}
+
+func (k *KlineCSV) GetOpenTime() int64 {
+	time, _ := strconv.ParseInt(k.OpenTime, 10, 64)
+
+	return time
+}
+
+func (k *KlineCSV) GetCloseTime() int64 {
+	time, _ := strconv.ParseInt(k.CloseTime, 10, 64)
+
+	return time
+}
+
+func (k *KlineCSV) UnmarshalCSV(csv string) (err error) {
+	panic(csv)
+
+	return err
+}
+
+func ReadCSV(filePath string) [][]string {
+	defer os.Remove(filePath)
+	in, err := os.Open(filePath)
+	if err != nil {
+		panic(err)
+	}
+	defer in.Close()
+
+	csvReader := csv.NewReader(in)
+	records, err := csvReader.ReadAll()
+	if err != nil {
+		panic(err)
+	}
+
+	return records
+}
+
+type TradeCSV struct {
+	TradeId      string
+	Price        string
+	Qty          string
+	Time         string
+	IsBuyerMaker string
+}
+
+func (c *TradeCSV) GetOperation() string {
+	if c.IsBuyerMaker == "True" {
+		return "SELL"
+	}
+
+	return "BUY"
+}
+
+func (c *TradeCSV) GetVolume() float64 {
+	quantity, _ := strconv.ParseFloat(c.Qty, 64)
+	price, _ := strconv.ParseFloat(c.Price, 64)
+
+	return price * quantity
+}
+
+func (c *TradeCSV) GetTime() int64 {
+	time, _ := strconv.ParseInt(c.Time, 10, 64)
+
+	return time
+}
+
+func DownloadFile(filepath string, url string) error {
+	// Get the data
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Create the file
+	out, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	// Write the body to file
+	_, err = io.Copy(out, resp.Body)
+	return err
+}
+
+func Unzip(path string) string {
+	defer os.Remove(path)
+
+	archive, err := zip.OpenReader(path)
+	if err != nil {
+		panic(err)
+	}
+	defer archive.Close()
+
+	for _, f := range archive.File {
+		filePath := f.Name
+		fmt.Println("unzipping file ", filePath)
+
+		dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		if err != nil {
+			panic(err)
+		}
+
+		fileInArchive, err := f.Open()
+		if err != nil {
+			panic(err)
+		}
+
+		if _, err := io.Copy(dstFile, fileInArchive); err != nil {
+			panic(err)
+		}
+
+		dstFile.Close()
+		fileInArchive.Close()
+		return filePath
+	}
+
+	return ""
+}
+
+func PrepareDataset(symbol string) string {
+	datasetPath := fmt.Sprintf("/go/src/app/datasets/dataset_%s.csv", symbol)
+	csvFile, err := os.Create(datasetPath)
+
+	if err != nil {
+		log.Fatalf("failed creating file: %s", err)
+	}
+
+	csvWriter := csv.NewWriter(csvFile)
+
+	kLines := make([]KlineCSV, 0)
+	tradesPath := fmt.Sprintf("%s-trades.csv.zip", symbol)
+
+	dateString := time.Now().UTC().Add(time.Duration(-24) * time.Hour).Format("2006-01-02")
+
+	_ = DownloadFile(tradesPath, fmt.Sprintf("https://data.binance.vision/data/spot/daily/trades/%s/%s-trades-%s.zip",
+		symbol,
+		symbol,
+		dateString,
+	))
+
+	trades := ReadCSV(Unzip(tradesPath))
+
+	kLinesPath := fmt.Sprintf("%s-1m.csv.zip", symbol)
+	_ = DownloadFile(kLinesPath, fmt.Sprintf("https://data.binance.vision/data/spot/daily/klines/%s/1m/%s-1m-%s.zip",
+		symbol,
+		symbol,
+		dateString,
+	))
+
+	tradeIndex := 0
+
+	for _, record := range ReadCSV(Unzip(kLinesPath)) {
+		kline := KlineCSV{
+			OpenTime:         record[0],
+			Open:             record[1],
+			High:             record[2],
+			Low:              record[3],
+			Close:            record[4],
+			Volume:           record[5],
+			CloseTime:        record[6],
+			QuoteAssetVolume: record[7],
+			NumberOfTrades:   record[8],
+		}
+		kLines = append(kLines, kline)
+
+		sellVolume := 0.00
+		buyVolume := 0.00
+
+		seen := false
+		tradeAmount := 0
+
+		for index, trade := range trades {
+			tradeCSV := TradeCSV{
+				TradeId:      trade[0],
+				Price:        trade[1],
+				Qty:          trade[2],
+				Time:         trade[4],
+				IsBuyerMaker: trade[5],
+			}
+
+			if tradeCSV.GetTime() > kline.GetOpenTime() && tradeCSV.GetTime() <= kline.GetCloseTime() {
+				if tradeCSV.GetOperation() == "BUY" {
+					buyVolume += tradeCSV.GetVolume()
+				} else {
+					sellVolume += tradeCSV.GetVolume()
+				}
+				tradeAmount++
+				seen = true
+				continue
+			}
+
+			if seen {
+				tradeIndex = index
+				trades = trades[tradeIndex:]
+				break
+			}
+		}
+
+		row := []string{
+			kline.Open,
+			kline.High,
+			kline.Low,
+			kline.Close,
+			kline.Volume,
+			fmt.Sprintf("%f", sellVolume),
+			fmt.Sprintf("%f", buyVolume),
+		}
+		_ = csvWriter.Write(row)
+		csvWriter.Flush()
+
+		// trade Id	price	qty	quoteQty	time	isBuyerMaker	isBestMatch
+		log.Printf(
+			"[%s] Sell Volume: %f, Buy volume: %f, Close = %s",
+			symbol,
+			sellVolume,
+			buyVolume,
+			kline.Close,
+		)
+	}
+
+	csvWriter.Flush()
+
+	csvFile.Close()
+
+	return datasetPath
+}
+
 type PythonMLBridge struct {
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
-	Binance            *client.Binance
 	Mutex              sync.RWMutex
 }
 
@@ -63,56 +307,7 @@ func (p *PythonMLBridge) LearnModel(symbol string) error {
 	p.Mutex.Lock()
 	defer p.Mutex.Unlock()
 
-	history := p.Binance.GetKLines(symbol, "1m", 1000)
-
-	trades := p.Binance.TradesAggregate(symbol, 1000)
-
-	log.Printf(
-		"Learn [%s] model: klines: %d, trades: %d",
-		symbol,
-		len(history),
-		len(trades),
-	)
-
-	datasetPath := fmt.Sprintf("/go/src/app/datasets/dataset_%s.csv", symbol)
-
-	csvFile, err := os.Create(datasetPath)
-
-	if err != nil {
-		log.Fatalf("failed creating file: %s", err)
-	}
-
-	csvWriter := csv.NewWriter(csvFile)
-
-	for _, kLine := range history {
-		buyVolume := 0.00
-		sellVolume := 0.00
-
-		for _, trade := range trades {
-			if trade.Timestamp >= kLine.CloseTime-60000 && trade.Timestamp < kLine.CloseTime {
-				if trade.GetOperation() == "BUY" {
-					buyVolume += trade.Price * trade.Quantity
-				} else {
-					sellVolume += trade.Price * trade.Quantity
-				}
-			}
-		}
-
-		row := []string{
-			kLine.Open,
-			kLine.High,
-			kLine.Low,
-			kLine.Close,
-			kLine.Volume,
-			fmt.Sprintf("%f", sellVolume),
-			fmt.Sprintf("%f", buyVolume),
-		}
-		_ = csvWriter.Write(row)
-		csvWriter.Flush()
-	}
-
-	csvWriter.Flush()
-	_ = csvFile.Close()
+	datasetPath := PrepareDataset(symbol)
 
 	resultPath := p.getResultFilePath(symbol)
 	modelFilePath := p.getModelFilePath(symbol)

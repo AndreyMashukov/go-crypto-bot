@@ -726,3 +726,155 @@ func TestSellClosingAction(t *testing.T) {
 	assertion.Equal(42026.08, orderRepository.Updated.Price)
 	assertion.Equal(openedExternalId, *orderRepository.Updated.ExternalId)
 }
+
+func TestSellClosingTrxAction(t *testing.T) {
+	assertion := assert.New(t)
+
+	balanceService := new(BalanceServiceMock)
+	binance := new(ExchangeOrderAPIMock)
+	orderRepository := new(OrderStorageMock)
+	exchangeRepository := new(ExchangeTradeInfoMock)
+	swapRepository := new(SwapRepositoryMock)
+	priceCalculator := new(PriceCalculatorMock)
+	swapExecutor := new(SwapExecutorMock)
+	swapValidator := new(SwapValidatorMock)
+	timeService := new(TimeServiceMock)
+	telegramNotificatorMock := new(TelegramNotificatorMock)
+
+	swapRepository.On("GetSwapChainCache", "TRX").Return(nil)
+
+	lockChannel := make(chan model.Lock)
+
+	orderExecutor := service.OrderExecutor{
+		CurrentBot: &model.Bot{
+			Id:      999,
+			BotUuid: uuid.New().String(),
+		},
+		TimeService:         timeService,
+		BalanceService:      balanceService,
+		Binance:             binance,
+		OrderRepository:     orderRepository,
+		ExchangeRepository:  exchangeRepository,
+		SwapRepository:      swapRepository,
+		PriceCalculator:     priceCalculator,
+		SwapExecutor:        swapExecutor,
+		SwapValidator:       swapValidator,
+		Formatter:           &service.Formatter{},
+		SwapSellOrderDays:   10,
+		SwapEnabled:         true,
+		SwapProfitPercent:   1.50,
+		LockChannel:         &lockChannel,
+		Lock:                make(map[string]bool),
+		TradeLockMutex:      sync.RWMutex{},
+		TelegramNotificator: telegramNotificatorMock,
+	}
+
+	go func(orderExecutor *service.OrderExecutor) {
+		for {
+			lock := <-lockChannel
+			orderExecutor.TradeLockMutex.Lock()
+			orderExecutor.Lock[lock.Symbol] = lock.IsLocked
+			orderExecutor.TradeLockMutex.Unlock()
+		}
+	}(&orderExecutor)
+
+	initialBinanceOrder := model.BinanceOrder{
+		OrderId:     999,
+		Symbol:      "TRXUSDT",
+		Side:        "SELL",
+		ExecutedQty: 0.00,
+		OrigQty:     382.1,   //382.5
+		Price:       0.10692, // 0.10457
+		Status:      "NEW",
+	}
+	timeService.On("GetNowDateTimeString").Return("2023-12-28 00:52:00")
+	orderRepository.On("GetBinanceOrder", "TRXUSDT", "SELL").Return(nil)
+	binance.On("GetOpenedOrders").Return([]model.BinanceOrder{
+		initialBinanceOrder,
+	}, nil)
+	orderRepository.On("SetBinanceOrder", mock.Anything).Times(1)
+	priceCalculator.On("GetDepth", "TRXUSDT").Return(model.Depth{
+		Symbol: "TRXUSDT",
+		Asks: [][2]model.Number{
+			{
+				{
+					0.10692,
+				},
+				{
+					0.009,
+				},
+			},
+		},
+		Bids: [][2]model.Number{
+			{
+				{
+					0.10692,
+				},
+				{
+					0.009,
+				},
+			},
+		},
+	})
+	tradeLimit := model.TradeLimit{
+		Symbol:           "TRXUSDT",
+		MinProfitPercent: 2.25,
+		MinPrice:         0.00001,
+		MinQuantity:      0.1,
+	}
+	exchangeRepository.On("GetTradeLimit", "TRXUSDT").Return(tradeLimit, nil)
+	timeService.On("GetNowUnix").Times(1).Return(0)
+	for i := 2; i < 1002; i++ {
+		timeService.On("GetNowUnix").Times(i).Return(480)
+	}
+	exchangeRepository.On("GetLastKLine", "TRXUSDT").Return(&model.KLine{
+		Symbol: "TRXUSDT",
+		Close:  0.10692,
+	})
+	openedExternalId := int64(988)
+	openedOrder := model.Order{
+		ExternalId:       &openedExternalId,
+		Status:           "opened",
+		Symbol:           "TRXUSDT",
+		Quantity:         382.5,
+		Price:            0.10457,
+		CreatedAt:        time.Now().Format("2006-01-02 15:04:05"),
+		ExecutedQuantity: 382.5,
+	}
+	orderRepository.On("GetOpenedOrderCached", "TRXUSDT", "BUY").Return(openedOrder, nil)
+	orderRepository.On("GetManualOrder", "TRXUSDT").Return(nil)
+	timeService.On("WaitMilliseconds", int64(20)).Maybe()
+	binance.On("QueryOrder", "TRXUSDT", int64(999)).Return(model.BinanceOrder{
+		OrderId:             999,
+		Symbol:              "TRXUSDT",
+		Side:                "SELL",
+		ExecutedQty:         382.1,
+		OrigQty:             382.1,   //382.5
+		Price:               0.10692, // 0.10457
+		Status:              "FILLED",
+		CummulativeQuoteQty: 382.1 * 0.10692,
+	}, nil)
+	orderRepository.On("DeleteBinanceOrder", initialBinanceOrder).Times(1)
+	orderId := int64(100)
+	orderRepository.On("Create", mock.Anything).Return(&orderId, nil)
+	orderRepository.On("DeleteManualOrder", "TRXUSDT").Times(1)
+	orderRepository.On("Find", orderId).Times(1).Return(model.Order{}, nil)
+	orderRepository.On("GetClosesOrderList", openedOrder).Times(1).Return([]model.Order{
+		{
+			Status:           "closed",
+			ExecutedQuantity: 382.1,
+			Price:            0.10692,
+		},
+	})
+	orderRepository.On("Update", mock.Anything).Times(1).Return(nil)
+	balanceService.On("InvalidateBalanceCache", "USDT").Times(1)
+	balanceService.On("InvalidateBalanceCache", "TRX").Times(1)
+
+	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
+
+	err := orderExecutor.Sell(tradeLimit, openedOrder, "TRXUSDT", 0.10692, 382.1, 0, 0, 0)
+	assertion.Nil(err)
+	assertion.Equal("closed", orderRepository.Updated.Status)
+	assertion.Equal(0.10457, orderRepository.Updated.Price)
+	assertion.Equal(openedExternalId, *orderRepository.Updated.ExternalId)
+}

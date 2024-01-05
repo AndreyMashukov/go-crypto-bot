@@ -188,6 +188,7 @@ func main() {
 	}
 
 	pythonMLBridge := ExchangeService.PythonMLBridge{
+		DataSetBuilder:     &ExchangeService.DataSetBuilder{},
 		ExchangeRepository: &exchangeRepository,
 		CurrentBot:         currentBot,
 		RDB:                rdb,

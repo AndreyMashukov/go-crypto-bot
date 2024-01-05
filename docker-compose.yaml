@@ -23,8 +23,7 @@ services:
     #environment:
       # your backend here
     volumes:
-      - ./trade.log:/go/src/app/trade.log
-      - ./kline.log:/go/src/app/kline.log
+      - .docker/datasets:/go/src/app/datasets
 
   mysql:
     platform: linux/x86_64

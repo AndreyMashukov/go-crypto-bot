@@ -1,4 +1,5 @@
-.docker
+.docker/data
+.docker/image
 trade.log
 kline.log
 #test2.csv

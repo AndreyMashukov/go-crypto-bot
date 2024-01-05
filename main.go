@@ -424,7 +424,13 @@ func main() {
 		go func(limit ExchangeModel.TradeLimit) {
 			for {
 				// todo: write to database and read from database
-				_ = pythonMLBridge.LearnModel(limit.Symbol)
+				err := pythonMLBridge.LearnModel(limit.Symbol)
+				if err != nil {
+					log.Printf("[%s] %s", limit.Symbol, err.Error())
+					timeService.WaitSeconds(60)
+					continue
+				}
+
 				timeService.WaitSeconds(3600 * 6)
 			}
 		}(limit)

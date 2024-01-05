@@ -128,7 +128,7 @@ func Unzip(path string) (string, error) {
 
 	archive, err := zip.OpenReader(path)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	defer archive.Close()
 
@@ -146,7 +146,8 @@ func Unzip(path string) (string, error) {
 			return "", err
 		}
 
-		if _, err := io.Copy(dstFile, fileInArchive); err != nil {
+		_, err = io.Copy(dstFile, fileInArchive)
+		if err != nil {
 			return "", err
 		}
 

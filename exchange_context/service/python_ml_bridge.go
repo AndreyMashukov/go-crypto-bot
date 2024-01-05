@@ -401,6 +401,12 @@ func (p *PythonMLBridge) Predict(symbol string) (float64, error) {
 		return predictedPrice, nil
 	}
 
+	modelFilePath := p.getModelFilePath(symbol)
+	_, err := os.Stat(modelFilePath)
+	if err != nil {
+		return 0.00, err
+	}
+
 	p.Mutex.Lock()
 	defer p.Mutex.Unlock()
 
@@ -413,7 +419,6 @@ func (p *PythonMLBridge) Predict(symbol string) (float64, error) {
 	buyVolume, sellVolume := p.ExchangeRepository.GetTradeVolumes(*kLine)
 
 	resultPath := p.getResultFilePath(symbol)
-	modelFilePath := p.getModelFilePath(symbol)
 
 	pyCode := fmt.Sprintf(string([]byte(`
 test = pd.DataFrame(np.c_[%f, %f, %f, %f, %f, %f], columns = ['volume','buy_vol', 'sell_vol', 'open', 'low', 'high'])

@@ -123,7 +123,7 @@ func DownloadFile(filepath string, url string) error {
 	return err
 }
 
-func Unzip(path string) string {
+func Unzip(path string) (string, error) {
 	defer os.Remove(path)
 
 	archive, err := zip.OpenReader(path)
@@ -138,32 +138,32 @@ func Unzip(path string) string {
 
 		dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 		if err != nil {
-			panic(err)
+			return "", err
 		}
 
 		fileInArchive, err := f.Open()
 		if err != nil {
-			panic(err)
+			return "", err
 		}
 
 		if _, err := io.Copy(dstFile, fileInArchive); err != nil {
-			panic(err)
+			return "", err
 		}
 
 		dstFile.Close()
 		fileInArchive.Close()
-		return filePath
+		return filePath, nil
 	}
 
-	return ""
+	return "", errors.New("not found")
 }
 
-func PrepareDataset(symbol string) string {
+func PrepareDataset(symbol string) (string, error) {
 	datasetPath := fmt.Sprintf("/go/src/app/datasets/dataset_%s.csv", symbol)
 	csvFile, err := os.Create(datasetPath)
 
 	if err != nil {
-		log.Fatalf("failed creating file: %s", err)
+		return "", err
 	}
 
 	csvWriter := csv.NewWriter(csvFile)
@@ -179,7 +179,11 @@ func PrepareDataset(symbol string) string {
 		dateString,
 	))
 
-	trades := ReadCSV(Unzip(tradesPath))
+	unzipped, err := Unzip(tradesPath)
+	if err != nil {
+		return "", err
+	}
+	trades := ReadCSV(unzipped)
 
 	kLinesPath := fmt.Sprintf("%s-1m.csv.zip", symbol)
 	_ = DownloadFile(kLinesPath, fmt.Sprintf("https://data.binance.vision/data/spot/daily/klines/%s/1m/%s-1m-%s.zip",
@@ -190,7 +194,11 @@ func PrepareDataset(symbol string) string {
 
 	tradeIndex := 0
 
-	for _, record := range ReadCSV(Unzip(kLinesPath)) {
+	unzipped, err = Unzip(kLinesPath)
+	if err != nil {
+		return "", err
+	}
+	for _, record := range ReadCSV(unzipped) {
 		kline := KlineCSV{
 			OpenTime:         record[0],
 			Open:             record[1],
@@ -263,7 +271,7 @@ func PrepareDataset(symbol string) string {
 
 	csvFile.Close()
 
-	return datasetPath
+	return datasetPath, nil
 }
 
 type PythonMLBridge struct {
@@ -314,7 +322,10 @@ func (p *PythonMLBridge) LearnModel(symbol string) error {
 	p.Mutex.Lock()
 	defer p.Mutex.Unlock()
 
-	datasetPath := PrepareDataset(symbol)
+	datasetPath, err := PrepareDataset(symbol)
+	if err != nil {
+		return err
+	}
 
 	resultPath := p.getResultFilePath(symbol)
 	modelFilePath := p.getModelFilePath(symbol)

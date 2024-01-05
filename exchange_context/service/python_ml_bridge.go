@@ -124,13 +124,13 @@ func DownloadFile(filepath string, url string) error {
 }
 
 func Unzip(path string) (string, error) {
+	archive, err := zip.OpenReader(path)
+	defer archive.Close()
 	defer os.Remove(path)
 
-	archive, err := zip.OpenReader(path)
 	if err != nil {
 		return "", err
 	}
-	defer archive.Close()
 
 	for _, f := range archive.File {
 		filePath := f.Name
@@ -172,13 +172,17 @@ func PrepareDataset(symbol string) (string, error) {
 	kLines := make([]KlineCSV, 0)
 	tradesPath := fmt.Sprintf("%s-trades.csv.zip", symbol)
 
-	dateString := time.Now().UTC().Add(time.Duration(-24) * time.Hour).Format("2006-01-02")
+	dateString := time.Now().UTC().Add(time.Duration(-36) * time.Hour).Format("2006-01-02")
 
-	_ = DownloadFile(tradesPath, fmt.Sprintf("https://data.binance.vision/data/spot/daily/trades/%s/%s-trades-%s.zip",
+	err = DownloadFile(tradesPath, fmt.Sprintf("https://data.binance.vision/data/spot/daily/trades/%s/%s-trades-%s.zip",
 		symbol,
 		symbol,
 		dateString,
 	))
+
+	if err != nil {
+		return "", err
+	}
 
 	unzipped, err := Unzip(tradesPath)
 	if err != nil {
@@ -187,11 +191,14 @@ func PrepareDataset(symbol string) (string, error) {
 	trades := ReadCSV(unzipped)
 
 	kLinesPath := fmt.Sprintf("%s-1m.csv.zip", symbol)
-	_ = DownloadFile(kLinesPath, fmt.Sprintf("https://data.binance.vision/data/spot/daily/klines/%s/1m/%s-1m-%s.zip",
+	err = DownloadFile(kLinesPath, fmt.Sprintf("https://data.binance.vision/data/spot/daily/klines/%s/1m/%s-1m-%s.zip",
 		symbol,
 		symbol,
 		dateString,
 	))
+	if err != nil {
+		return "", err
+	}
 
 	tradeIndex := 0
 

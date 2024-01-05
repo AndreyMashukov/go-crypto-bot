@@ -4,18 +4,14 @@ package service
 // #include <Python.h>
 import "C"
 import (
-	"archive/zip"
 	"context"
-	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
-	"io"
 	"log"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -24,265 +20,8 @@ import (
 	"unsafe"
 )
 
-type KlineCSV struct {
-	OpenTime                 string
-	Open                     string
-	High                     string
-	Low                      string
-	Close                    string
-	Volume                   string
-	CloseTime                string
-	QuoteAssetVolume         string
-	NumberOfTrades           string
-	TakerBuyBaseAssetVolume  string
-	TakerBuyQuoteAssetVolume string
-	Ignore                   string
-}
-
-func (k *KlineCSV) GetOpenTime() int64 {
-	time, _ := strconv.ParseInt(k.OpenTime, 10, 64)
-
-	return time
-}
-
-func (k *KlineCSV) GetCloseTime() int64 {
-	time, _ := strconv.ParseInt(k.CloseTime, 10, 64)
-
-	return time
-}
-
-func (k *KlineCSV) UnmarshalCSV(csv string) (err error) {
-	panic(csv)
-
-	return err
-}
-
-func ReadCSV(filePath string) [][]string {
-	defer os.Remove(filePath)
-	in, err := os.Open(filePath)
-	if err != nil {
-		panic(err)
-	}
-	defer in.Close()
-
-	csvReader := csv.NewReader(in)
-	records, err := csvReader.ReadAll()
-	if err != nil {
-		panic(err)
-	}
-
-	return records
-}
-
-type TradeCSV struct {
-	TradeId      string
-	Price        string
-	Qty          string
-	Time         string
-	IsBuyerMaker string
-}
-
-func (c *TradeCSV) GetOperation() string {
-	if c.IsBuyerMaker == "True" {
-		return "SELL"
-	}
-
-	return "BUY"
-}
-
-func (c *TradeCSV) GetVolume() float64 {
-	quantity, _ := strconv.ParseFloat(c.Qty, 64)
-	price, _ := strconv.ParseFloat(c.Price, 64)
-
-	return price * quantity
-}
-
-func (c *TradeCSV) GetTime() int64 {
-	time, _ := strconv.ParseInt(c.Time, 10, 64)
-
-	return time
-}
-
-func DownloadFile(filepath string, url string) error {
-	// Get the data
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// Create the file
-	out, err := os.Create(filepath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	// Write the body to file
-	_, err = io.Copy(out, resp.Body)
-	return err
-}
-
-func Unzip(path string) (string, error) {
-	archive, err := zip.OpenReader(path)
-	defer archive.Close()
-	defer os.Remove(path)
-
-	if err != nil {
-		return "", err
-	}
-
-	for _, f := range archive.File {
-		filePath := f.Name
-		fmt.Println("unzipping file ", filePath)
-
-		dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-		if err != nil {
-			return "", err
-		}
-
-		fileInArchive, err := f.Open()
-		if err != nil {
-			return "", err
-		}
-
-		_, err = io.Copy(dstFile, fileInArchive)
-		if err != nil {
-			return "", err
-		}
-
-		dstFile.Close()
-		fileInArchive.Close()
-		return filePath, nil
-	}
-
-	return "", errors.New("not found")
-}
-
-func PrepareDataset(symbol string) (string, error) {
-	datasetPath := fmt.Sprintf("/go/src/app/datasets/dataset_%s.csv", symbol)
-	csvFile, err := os.Create(datasetPath)
-
-	if err != nil {
-		return "", err
-	}
-
-	csvWriter := csv.NewWriter(csvFile)
-
-	kLines := make([]KlineCSV, 0)
-	tradesPath := fmt.Sprintf("%s-trades.csv.zip", symbol)
-
-	dateString := time.Now().UTC().Add(time.Duration(-36) * time.Hour).Format("2006-01-02")
-
-	err = DownloadFile(tradesPath, fmt.Sprintf("https://data.binance.vision/data/spot/daily/trades/%s/%s-trades-%s.zip",
-		symbol,
-		symbol,
-		dateString,
-	))
-
-	if err != nil {
-		return "", err
-	}
-
-	unzipped, err := Unzip(tradesPath)
-	if err != nil {
-		return "", err
-	}
-	trades := ReadCSV(unzipped)
-
-	kLinesPath := fmt.Sprintf("%s-1m.csv.zip", symbol)
-	err = DownloadFile(kLinesPath, fmt.Sprintf("https://data.binance.vision/data/spot/daily/klines/%s/1m/%s-1m-%s.zip",
-		symbol,
-		symbol,
-		dateString,
-	))
-	if err != nil {
-		return "", err
-	}
-
-	tradeIndex := 0
-
-	unzipped, err = Unzip(kLinesPath)
-	if err != nil {
-		return "", err
-	}
-	for _, record := range ReadCSV(unzipped) {
-		kline := KlineCSV{
-			OpenTime:         record[0],
-			Open:             record[1],
-			High:             record[2],
-			Low:              record[3],
-			Close:            record[4],
-			Volume:           record[5],
-			CloseTime:        record[6],
-			QuoteAssetVolume: record[7],
-			NumberOfTrades:   record[8],
-		}
-		kLines = append(kLines, kline)
-
-		sellVolume := 0.00
-		buyVolume := 0.00
-
-		seen := false
-		tradeAmount := 0
-
-		for index, trade := range trades {
-			tradeCSV := TradeCSV{
-				TradeId:      trade[0],
-				Price:        trade[1],
-				Qty:          trade[2],
-				Time:         trade[4],
-				IsBuyerMaker: trade[5],
-			}
-
-			if tradeCSV.GetTime() > kline.GetOpenTime() && tradeCSV.GetTime() <= kline.GetCloseTime() {
-				if tradeCSV.GetOperation() == "BUY" {
-					buyVolume += tradeCSV.GetVolume()
-				} else {
-					sellVolume += tradeCSV.GetVolume()
-				}
-				tradeAmount++
-				seen = true
-				continue
-			}
-
-			if seen {
-				tradeIndex = index
-				trades = trades[tradeIndex:]
-				break
-			}
-		}
-
-		row := []string{
-			kline.Open,
-			kline.High,
-			kline.Low,
-			kline.Close,
-			kline.Volume,
-			fmt.Sprintf("%f", sellVolume),
-			fmt.Sprintf("%f", buyVolume),
-		}
-		_ = csvWriter.Write(row)
-		csvWriter.Flush()
-
-		// trade Id	price	qty	quoteQty	time	isBuyerMaker	isBestMatch
-		log.Printf(
-			"[%s] Sell Volume: %f, Buy volume: %f, Close = %s",
-			symbol,
-			sellVolume,
-			buyVolume,
-			kline.Close,
-		)
-	}
-
-	csvWriter.Flush()
-
-	csvFile.Close()
-
-	return datasetPath, nil
-}
-
 type PythonMLBridge struct {
+	DataSetBuilder     *DataSetBuilder
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
 	Mutex              sync.RWMutex
 	RDB                *redis.Client
@@ -327,13 +66,15 @@ func (p *PythonMLBridge) Finalize() {
 }
 
 func (p *PythonMLBridge) LearnModel(symbol string) error {
-	p.Mutex.Lock()
-	defer p.Mutex.Unlock()
-
-	datasetPath, err := PrepareDataset(symbol)
+	datasetPath, err := p.DataSetBuilder.PrepareDataset(symbol)
 	if err != nil {
 		return err
 	}
+
+	p.Mutex.Lock()
+	defer p.Mutex.Unlock()
+
+	defer os.Remove(datasetPath)
 
 	resultPath := p.getResultFilePath(symbol)
 	modelFilePath := p.getModelFilePath(symbol)

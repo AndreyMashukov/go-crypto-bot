@@ -193,6 +193,7 @@ func main() {
 		CurrentBot:         currentBot,
 		RDB:                rdb,
 		Ctx:                &ctx,
+		Learning:           true,
 	}
 	pythonMLBridge.Initialize()
 	defer pythonMLBridge.Finalize()
@@ -253,7 +254,6 @@ func main() {
 	}
 
 	orderController := controller.OrderController{
-		PythonMLBridge:     &pythonMLBridge,
 		RDB:                rdb,
 		Ctx:                &ctx,
 		OrderRepository:    &orderRepository,
@@ -476,6 +476,10 @@ func main() {
 				json.Unmarshal(message, &tradeEvent)
 				smaDecision := smaStrategy.Decide(tradeEvent.Trade)
 				exchangeRepository.SetDecision(smaDecision)
+				predicted, err := pythonMLBridge.Predict(tradeEvent.Trade.Symbol)
+				if err == nil {
+					exchangeRepository.SavePredict(predicted, tradeEvent.Trade.Symbol)
+				}
 				break
 			case strings.Contains(string(message), "kline"):
 				var event ExchangeModel.KlineEvent
@@ -487,6 +491,10 @@ func main() {
 				exchangeRepository.SetDecision(baseKLineDecision)
 				orderBasedDecision := orderBasedStrategy.Decide(kLine)
 				exchangeRepository.SetDecision(orderBasedDecision)
+				predicted, err := pythonMLBridge.Predict(kLine.Symbol)
+				if err == nil {
+					exchangeRepository.SavePredict(predicted, kLine.Symbol)
+				}
 
 				break
 			case strings.Contains(string(message), "depth20"):

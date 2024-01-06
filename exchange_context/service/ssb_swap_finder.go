@@ -117,7 +117,7 @@ func (s *SSBSwapFinder) Find(asset string) model.BBSArbitrageChain {
 					Transitions:   make([]model.SwapTransition, 0),
 				}
 
-				profit := model.Percent(s.Formatter.ToFixed(s.Formatter.ComparePercentage(buy0.BaseQuantity, sellBalance).Value()-100, 2))
+				profit := model.Percent(s.Formatter.ToFixed(s.Formatter.ComparePercentage(buy0.BaseQuantity, sellBalance).Value()-100.00, 2))
 
 				if bestChain == nil || profit.Gt(bestChain.Percent) {
 					title := fmt.Sprintf(

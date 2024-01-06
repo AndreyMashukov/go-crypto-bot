@@ -19,7 +19,7 @@ func (s SwapUpdater) UpdateSwapPair(swapPair model.SwapPair) {
 	if len(orderDepth.Asks) >= 10 && len(orderDepth.Bids) >= 10 {
 		kline := s.Binance.GetKLinesCached(swapPair.Symbol, "1d", 1)[0]
 		swapPair.DailyPercent = s.Formatter.ToFixed(
-			(s.Formatter.ComparePercentage(kline.Open, kline.Close) - 100).Value(),
+			(s.Formatter.ComparePercentage(kline.Open, kline.Close) - 100.00).Value(),
 			2,
 		)
 

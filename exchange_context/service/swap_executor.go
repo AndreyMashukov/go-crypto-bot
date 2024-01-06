@@ -552,7 +552,7 @@ func (s *SwapExecutor) ExecuteSwapThree(
 			if swapChain.IsSBS() {
 				currentPrice = swapPair.SellPrice
 			}
-			priceDiff := s.Formatter.ComparePercentage(binanceOrder.Price, currentPrice) - 100
+			priceDiff := s.Formatter.ComparePercentage(binanceOrder.Price, currentPrice) - 100.00
 
 			// todo: half of minimum swap percent
 			if (swapChain.IsSSB() || swapChain.IsSBB()) && priceDiff.Gte(0.15) {
@@ -612,7 +612,7 @@ func (s *SwapExecutor) TryRollbackSwapTwo(
 	price := swapPair.BuyPrice + swapPair.MinPrice
 
 	endQuantity := s.Formatter.FormatQuantity(swapPair, swapOneOrder.CummulativeQuoteQty/price)
-	percent := s.Formatter.ComparePercentage(action.StartQuantity, endQuantity) - 100
+	percent := s.Formatter.ComparePercentage(action.StartQuantity, endQuantity) - 100.00
 
 	if percent.Lt(minSwapRollbackPercent) {
 		return errors.New(fmt.Sprintf("Is not possible to rollback: %f -> %f", action.StartQuantity, endQuantity))
@@ -648,7 +648,7 @@ func (s *SwapExecutor) TryRollbackSwapTwo(
 		}
 
 		endQuantity = s.Formatter.FormatQuantity(swapPair, quantity/price)
-		percent = s.Formatter.ComparePercentage(action.StartQuantity, endQuantity) - 100
+		percent = s.Formatter.ComparePercentage(action.StartQuantity, endQuantity) - 100.00
 
 		if percent.Gte(minSwapRollbackPercent) {
 			binanceOrder, err := s.Binance.LimitOrder(
@@ -739,7 +739,7 @@ func (s *SwapExecutor) TryForceSwapThree(
 		return errors.New("Incorrect swap calculation")
 	}
 
-	percent := s.Formatter.ComparePercentage(swapAction.StartQuantity, endQuantity) - 100
+	percent := s.Formatter.ComparePercentage(swapAction.StartQuantity, endQuantity) - 100.00
 
 	if percent.Lt(minSwapRollbackPercent) {
 		return errors.New(fmt.Sprintf(
@@ -783,7 +783,7 @@ func (s *SwapExecutor) TryForceSwapThree(
 			predictedEndQty = quantity
 		}
 
-		percent = s.Formatter.ComparePercentage(swapAction.StartQuantity, predictedEndQty) - 100
+		percent = s.Formatter.ComparePercentage(swapAction.StartQuantity, predictedEndQty) - 100.00
 
 		if percent.Gte(minSwapRollbackPercent) {
 			var binanceOrder ExchangeModel.BinanceOrder

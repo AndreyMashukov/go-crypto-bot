@@ -509,7 +509,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 			end := m.TimeService.GetNowUnix()
 			kline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
-			if binanceOrder.IsSell() && binanceOrder.IsNew() && m.SwapEnabled {
+			if kline != nil && binanceOrder.IsSell() && binanceOrder.IsNew() && m.SwapEnabled {
 				openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
 				// Try arbitrage for long orders >= 4 hours and with profit < -1.00%
 				if err == nil {
@@ -562,7 +562,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 				}
 			}
 
-			if binanceOrder.IsBuy() && binanceOrder.IsNew() && binanceOrder.Price > kline.Close {
+			if kline != nil && binanceOrder.IsBuy() && binanceOrder.IsNew() && binanceOrder.Price > kline.Close {
 				fallPercent := ExchangeModel.Percent(100 - m.Formatter.ComparePercentage(binanceOrder.Price, kline.Close).Value())
 				minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, 200)
 
@@ -591,7 +591,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 			}
 
 			// [BUY] Check is it time to sell (maybe we have already partially filled)
-			if binanceOrder.IsBuy() && binanceOrder.IsPartiallyFilled() && binanceOrder.GetProfitPercent(kline.Close).Gte(tradeLimit.GetMinProfitPercent()) {
+			if kline != nil && binanceOrder.IsBuy() && binanceOrder.IsPartiallyFilled() && binanceOrder.GetProfitPercent(kline.Close).Gte(tradeLimit.GetMinProfitPercent()) {
 				log.Printf(
 					"[%s] Max profit percent reached, current profit is: %.2f, %s [%d] order is cancelled",
 					binanceOrder.Symbol,
@@ -607,7 +607,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 			}
 
 			// Check is time to extra buy, but we have sell partial...
-			if binanceOrder.IsSell() && binanceOrder.IsPartiallyFilled() {
+			if kline != nil && binanceOrder.IsSell() && binanceOrder.IsPartiallyFilled() {
 				openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
 				if err == nil && openedBuyPosition.GetProfitPercent(kline.Close).Lte(tradeLimit.GetBuyOnFallPercent()) {
 					log.Printf(
@@ -647,7 +647,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 
 				// check only new timeout
 				if end >= (start+*ttl) && binanceOrder.IsNew() {
-					if binanceOrder.IsSell() {
+					if kline != nil && binanceOrder.IsSell() {
 						openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
 						if err == nil {
 							profitPercent := openedBuyPosition.GetProfitPercent(kline.Close)
@@ -697,7 +697,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 						}
 					}
 
-					if binanceOrder.IsBuy() {
+					if kline != nil && binanceOrder.IsBuy() {
 						positionPercentage := m.Formatter.ComparePercentage(binanceOrder.Price, kline.Close)
 						if positionPercentage.Gte(101) {
 							log.Printf(

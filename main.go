@@ -292,8 +292,10 @@ func main() {
 		makerService.UpdateSwapPairs()
 	}
 
-	// todo: BuyExtraOnMarketFallStrategy
-	baseKLineStrategy := ExchangeService.BaseKLineStrategy{}
+	baseKLineStrategy := ExchangeService.BaseKLineStrategy{
+		ExchangeRepository: &exchangeRepository,
+		Formatter:          &formatter,
+	}
 	orderBasedStrategy := ExchangeService.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderRepository,
@@ -480,10 +482,10 @@ func main() {
 				if err == nil {
 					kLine := exchangeRepository.GetLastKLine(tradeEvent.Trade.Symbol)
 					if kLine != nil {
-						percent := formatter.ComparePercentage(kLine.Close, predicted) - 100.00
-						if percent.Lt(-0.5) || percent.Gt(0.5) {
+						percent := formatter.ComparePercentage(kLine.Close, predicted)
+						if percent.Lt(99.5) || percent.Gt(100.5) {
 							log.Printf(
-								"[%s] (Trade) prediction diff: %.2f%s, %f -> %f",
+								"[%s] (Trade) prediction diff: %.2f%s, %.12f -> %.12f",
 								kLine.Symbol,
 								percent,
 								"%",
@@ -499,18 +501,14 @@ func main() {
 				var event ExchangeModel.KlineEvent
 				json.Unmarshal(message, &event)
 				kLine := event.KlineData.Kline
-
 				exchangeRepository.AddKLine(kLine)
-				baseKLineDecision := baseKLineStrategy.Decide(kLine)
-				exchangeRepository.SetDecision(baseKLineDecision)
-				orderBasedDecision := orderBasedStrategy.Decide(kLine)
-				exchangeRepository.SetDecision(orderBasedDecision)
+
 				predicted, err := pythonMLBridge.Predict(kLine.Symbol)
 				if err == nil {
-					percent := formatter.ComparePercentage(kLine.Close, predicted) - 100.00
-					if percent.Lt(-0.5) || percent.Gt(0.5) {
+					percent := formatter.ComparePercentage(kLine.Close, predicted)
+					if percent.Lt(99.5) || percent.Gt(100.5) {
 						log.Printf(
-							"[%s] (KLine) prediction diff: %.2f%s, %f -> %f",
+							"[%s] (KLine) prediction diff: %.2f%s, %.12f -> %.12f",
 							kLine.Symbol,
 							percent,
 							"%",
@@ -520,6 +518,11 @@ func main() {
 					}
 					exchangeRepository.SavePredict(predicted, kLine.Symbol)
 				}
+
+				baseKLineDecision := baseKLineStrategy.Decide(kLine)
+				exchangeRepository.SetDecision(baseKLineDecision)
+				orderBasedDecision := orderBasedStrategy.Decide(kLine)
+				exchangeRepository.SetDecision(orderBasedDecision)
 
 				break
 			case strings.Contains(string(message), "depth20"):

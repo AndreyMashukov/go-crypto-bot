@@ -121,7 +121,7 @@ func (d *DataSetBuilder) DownloadFile(filepath string, url string) error {
 	return err
 }
 
-func (d *DataSetBuilder) Unzip(path string) (string, error) {
+func (d *DataSetBuilder) Unzip(path string, suffix string) (string, error) {
 	archive, err := zip.OpenReader(path)
 
 	if err != nil {
@@ -133,10 +133,11 @@ func (d *DataSetBuilder) Unzip(path string) (string, error) {
 
 	for _, f := range archive.File {
 		filePath := f.Name
+		dstFilePath := fmt.Sprintf("%s%s", filePath, suffix)
 		//fmt.Println("unzipping file ", filePath)
-		_ = os.Remove(filePath)
+		_ = os.Remove(dstFilePath)
 
-		dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		dstFile, err := os.OpenFile(dstFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 		if err != nil {
 			return "", err
 		}
@@ -153,13 +154,13 @@ func (d *DataSetBuilder) Unzip(path string) (string, error) {
 
 		dstFile.Close()
 		fileInArchive.Close()
-		return filePath, nil
+		return dstFilePath, nil
 	}
 
 	return "", errors.New("not found")
 }
 
-func (d *DataSetBuilder) GetSources(symbol string, dateString string) (string, string, error) {
+func (d *DataSetBuilder) GetSources(symbol string, dateString string) (string, string, string, error) {
 	tradesPath := fmt.Sprintf("/go/src/app/datasets/%s-trades.csv.zip", symbol)
 	_ = os.Remove(tradesPath)
 
@@ -172,7 +173,8 @@ func (d *DataSetBuilder) GetSources(symbol string, dateString string) (string, s
 			err = d.DownloadFile(tradesPath, fmt.Sprintf("https://data.binance.vision/data/spot/daily/trades/%s/%s-trades-%s.zip",
 				symbol,
 				symbol,
-				dateString))
+				dateString,
+			))
 
 			if err != nil {
 				log.Printf("[%s] Dataset downloading error [%s]: %s", symbol, tradesPath, err.Error())
@@ -206,19 +208,19 @@ func (d *DataSetBuilder) GetSources(symbol string, dateString string) (string, s
 	}
 
 	if err != nil {
-		return "", "", err
+		return "", "", dateString, err
 	}
 
 	archive, existErr := zip.OpenReader(tradesPath)
 	if existErr != nil {
-		return "", "", existErr
+		return "", "", dateString, existErr
 	}
 	_ = archive.Close()
 
-	unzippedTrades, err := d.Unzip(tradesPath)
+	unzippedTrades, err := d.Unzip(tradesPath, "")
 	defer os.Remove(tradesPath)
 	if err != nil {
-		return "", "", err
+		return "", "", dateString, err
 	}
 
 	kLinesPath := fmt.Sprintf("/go/src/app/datasets/%s-1m.csv.zip", symbol)
@@ -229,20 +231,44 @@ func (d *DataSetBuilder) GetSources(symbol string, dateString string) (string, s
 		symbol,
 		dateString))
 	if err != nil {
-		return "", "", err
+		return "", "", dateString, err
 	}
 
-	unzippedKLines, err := d.Unzip(kLinesPath)
+	unzippedKLines, err := d.Unzip(kLinesPath, "")
 	defer os.Remove(kLinesPath)
 
 	if err != nil {
-		return "", "", err
+		return "", "", dateString, err
 	}
 
-	return unzippedTrades, unzippedKLines, nil
+	return unzippedTrades, unzippedKLines, dateString, nil
 }
 
-func (d *DataSetBuilder) WriteToCsv(symbol string, csvWriter *csv.Writer, unzippedTrades string, unzippedKLines string) {
+func (d *DataSetBuilder) WriteToCsv(symbol string, dateString string, csvWriter *csv.Writer, unzippedTrades string, unzippedKLines string) {
+	btcPriceMap := make(map[string]string)
+
+	if "BTCUSDT" != symbol {
+		btcKLinesPath := fmt.Sprintf("/go/src/app/datasets/%s-1m-%s.csv.zip", "BTCUSDT", symbol)
+		_ = os.Remove(btcKLinesPath)
+
+		err := d.DownloadFile(btcKLinesPath, fmt.Sprintf("https://data.binance.vision/data/spot/daily/klines/%s/1m/%s-1m-%s.zip",
+			"BTCUSDT",
+			"BTCUSDT",
+			dateString,
+		))
+
+		if err == nil {
+			unzippedBtcKLines, err := d.Unzip(btcKLinesPath, fmt.Sprintf(".alt-%s.csv", symbol))
+			defer os.Remove(btcKLinesPath)
+
+			if err == nil {
+				for _, btcKline := range d.ReadCSV(unzippedBtcKLines, true) {
+					btcPriceMap[btcKline[6]] = btcKline[4]
+				}
+			}
+		}
+	}
+
 	kLines := make([]KlineCSV, 0)
 	tradeIndex := 0
 	trades := d.ReadCSV(unzippedTrades, true)
@@ -302,6 +328,11 @@ func (d *DataSetBuilder) WriteToCsv(symbol string, csvWriter *csv.Writer, unzipp
 			fmt.Sprintf("%f", sellVolume),
 			fmt.Sprintf("%f", buyVolume),
 		}
+
+		if "BTCUSDT" != symbol {
+			row = append(row, btcPriceMap[kline.CloseTime])
+		}
+
 		_ = csvWriter.Write(row)
 		csvWriter.Flush()
 
@@ -366,9 +397,9 @@ func (d *DataSetBuilder) GetHistoryDataset(symbol string) (string, error) {
 	csvWriterHistory := csv.NewWriter(csvFileHistory)
 
 	for _, dateString := range importantDates {
-		unzippedTradesHistory, unzippedKLinesHistory, err := d.GetSources(symbol, dateString)
+		unzippedTradesHistory, unzippedKLinesHistory, _, err := d.GetSources(symbol, dateString)
 		if err == nil {
-			d.WriteToCsv(symbol, csvWriterHistory, unzippedTradesHistory, unzippedKLinesHistory)
+			d.WriteToCsv(symbol, dateString, csvWriterHistory, unzippedTradesHistory, unzippedKLinesHistory)
 		} else {
 			log.Printf("[%s] history dataset failed: %s", symbol, err.Error())
 		}
@@ -391,7 +422,7 @@ func (d *DataSetBuilder) PrepareDataset(symbol string) (string, error) {
 
 	csvWriter := csv.NewWriter(csvFile)
 
-	unzippedTrades, unzippedKLines, err := d.GetSources(symbol, "")
+	unzippedTrades, unzippedKLines, dateString, err := d.GetSources(symbol, "")
 
 	if err != nil {
 		return "", err
@@ -406,7 +437,7 @@ func (d *DataSetBuilder) PrepareDataset(symbol string) (string, error) {
 		}
 	}
 
-	d.WriteToCsv(symbol, csvWriter, unzippedTrades, unzippedKLines)
+	d.WriteToCsv(symbol, dateString, csvWriter, unzippedTrades, unzippedKLines)
 
 	csvWriter.Flush()
 

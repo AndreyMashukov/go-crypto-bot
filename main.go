@@ -478,6 +478,20 @@ func main() {
 				exchangeRepository.SetDecision(smaDecision)
 				predicted, err := pythonMLBridge.Predict(tradeEvent.Trade.Symbol)
 				if err == nil {
+					kLine := exchangeRepository.GetLastKLine(tradeEvent.Trade.Symbol)
+					if kLine != nil {
+						percent := formatter.ComparePercentage(kLine.Close, predicted)
+						if percent.Lt(-0.5) || percent.Gt(0.5) {
+							log.Printf(
+								"[%s] (Trade) prediction diff: %.2f%s, %f -> %f",
+								kLine.Symbol,
+								percent,
+								"%",
+								kLine.Close,
+								predicted,
+							)
+						}
+					}
 					exchangeRepository.SavePredict(predicted, tradeEvent.Trade.Symbol)
 				}
 				break
@@ -493,6 +507,17 @@ func main() {
 				exchangeRepository.SetDecision(orderBasedDecision)
 				predicted, err := pythonMLBridge.Predict(kLine.Symbol)
 				if err == nil {
+					percent := formatter.ComparePercentage(kLine.Close, predicted)
+					if percent.Lt(-0.5) || percent.Gt(0.5) {
+						log.Printf(
+							"[%s] (KLine) prediction diff: %.2f%s, %f -> %f",
+							kLine.Symbol,
+							percent,
+							"%",
+							kLine.Close,
+							predicted,
+						)
+					}
 					exchangeRepository.SavePredict(predicted, kLine.Symbol)
 				}
 

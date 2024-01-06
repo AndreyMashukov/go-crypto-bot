@@ -5,7 +5,6 @@ package service
 import "C"
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/redis/go-redis/v9"
@@ -16,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 	"unsafe"
 )
 
@@ -27,6 +25,7 @@ type PythonMLBridge struct {
 	RDB                *redis.Client
 	Ctx                *context.Context
 	CurrentBot         *ExchangeModel.Bot
+	Learning           bool
 }
 
 func (p *PythonMLBridge) getModelFilePath(symbol string) string {
@@ -65,7 +64,14 @@ func (p *PythonMLBridge) Finalize() {
 	C.Py_Finalize()
 }
 
+func (p *PythonMLBridge) setLearning(value bool) {
+	p.Learning = value
+}
+
 func (p *PythonMLBridge) LearnModel(symbol string) error {
+	p.setLearning(true)
+	defer p.setLearning(false)
+
 	datasetPath, err := p.DataSetBuilder.PrepareDataset(symbol)
 	if err != nil {
 		return err
@@ -139,14 +145,8 @@ with open(result_path, 'w') as out:
 }
 
 func (p *PythonMLBridge) Predict(symbol string) (float64, error) {
-	var predictedPrice float64
-
-	predictedPriceCacheKey := fmt.Sprintf("predicted-price-%s-%d", symbol, p.CurrentBot.Id)
-	predictedPriceCached := p.RDB.Get(*p.Ctx, predictedPriceCacheKey).Val()
-
-	if len(predictedPriceCached) > 0 {
-		_ = json.Unmarshal([]byte(predictedPriceCached), &predictedPrice)
-		return predictedPrice, nil
+	if p.Learning {
+		return 0.00, errors.New("learning in the process")
 	}
 
 	modelFilePath := p.getModelFilePath(symbol)
@@ -198,9 +198,6 @@ with open(result_path, 'w') as out:
 
 	text := string(fileContent)
 	result, _ := strconv.ParseFloat(strings.TrimSpace(text), 64)
-
-	encoded, _ := json.Marshal(result)
-	p.RDB.Set(*p.Ctx, predictedPriceCacheKey, string(encoded), time.Second*2)
 
 	return result, nil
 }

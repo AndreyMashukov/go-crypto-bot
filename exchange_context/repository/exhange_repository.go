@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	model "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
@@ -179,8 +180,8 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 	return tradeLimit, nil
 }
 
-func (repo *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64, error) {
-	res, err := repo.DB.Exec(`
+func (e *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64, error) {
+	res, err := e.DB.Exec(`
 		INSERT INTO trade_limit SET
 		    symbol = ?,
 		    usdt_limit = ?,
@@ -212,7 +213,7 @@ func (repo *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64
 		limit.FramePeriod,
 		limit.BuyPriceHistoryCheckInterval,
 		limit.BuyPriceHistoryCheckPeriod,
-		repo.CurrentBot.Id,
+		e.CurrentBot.Id,
 	)
 
 	if err != nil {
@@ -225,8 +226,8 @@ func (repo *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64
 	return &lastId, err
 }
 
-func (repo *ExchangeRepository) CreateSwapPair(swapPair model.SwapPair) (*int64, error) {
-	res, err := repo.DB.Exec(`
+func (e *ExchangeRepository) CreateSwapPair(swapPair model.SwapPair) (*int64, error) {
+	res, err := e.DB.Exec(`
 		INSERT INTO swap_pair SET
 		    source_symbol = ?,
 		    symbol = ?,
@@ -267,8 +268,8 @@ func (repo *ExchangeRepository) CreateSwapPair(swapPair model.SwapPair) (*int64,
 	return &lastId, err
 }
 
-func (repo *ExchangeRepository) UpdateSwapPair(swapPair model.SwapPair) error {
-	_, err := repo.DB.Exec(`
+func (e *ExchangeRepository) UpdateSwapPair(swapPair model.SwapPair) error {
+	_, err := e.DB.Exec(`
 		UPDATE swap_pair sp SET
 		    sp.source_symbol = ?,
 		    sp.symbol = ?,
@@ -526,8 +527,8 @@ func (e *ExchangeRepository) GetSwapPair(symbol string) (model.SwapPair, error) 
 	return swapPair, nil
 }
 
-func (repo *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
-	_, err := repo.DB.Exec(`
+func (e *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
+	_, err := e.DB.Exec(`
 		UPDATE trade_limit tl SET
 		    tl.symbol = ?,
 		    tl.usdt_limit = ?,
@@ -732,4 +733,29 @@ func (e *ExchangeRepository) GetDecision(strategy string) *model.Decision {
 	json.Unmarshal([]byte(res), &dto)
 
 	return &dto
+}
+
+func (e *ExchangeRepository) getPredictedCacheKey(symbol string) string {
+	return fmt.Sprintf("predicted-price-%s-%d", symbol, e.CurrentBot.Id)
+}
+
+func (e *ExchangeRepository) GetPredict(symbol string) (float64, error) {
+	var predictedPrice float64
+
+	predictedPriceCacheKey := e.getPredictedCacheKey(symbol)
+	predictedPriceCached := e.RDB.Get(*e.Ctx, predictedPriceCacheKey).Val()
+
+	if len(predictedPriceCached) > 0 {
+		_ = json.Unmarshal([]byte(predictedPriceCached), &predictedPrice)
+		return predictedPrice, nil
+	}
+
+	return 0.00, errors.New("")
+}
+
+func (e *ExchangeRepository) SavePredict(predicted float64, symbol string) {
+	predictedPriceCacheKey := e.getPredictedCacheKey(symbol)
+
+	encoded, _ := json.Marshal(predicted)
+	e.RDB.Set(*e.Ctx, predictedPriceCacheKey, string(encoded), time.Minute)
 }

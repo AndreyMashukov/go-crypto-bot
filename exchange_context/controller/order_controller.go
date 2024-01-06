@@ -14,7 +14,6 @@ import (
 )
 
 type OrderController struct {
-	PythonMLBridge     *service.PythonMLBridge
 	RDB                *redis.Client
 	Ctx                *context.Context
 	OrderRepository    *ExchangeRepository.OrderRepository
@@ -107,7 +106,10 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			}
 		}
 
-		predictedPrice, err := o.PythonMLBridge.Predict(kLine.Symbol)
+		predictedPrice, err := o.ExchangeRepository.GetPredict(limit.Symbol)
+		if predictedPrice > 0.00 {
+			predictedPrice = o.Formatter.FormatPrice(limit, predictedPrice)
+		}
 
 		positions = append(positions, model.Position{
 			Symbol:         limit.Symbol,
@@ -117,7 +119,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			SellPrice:      sellPrice,
 			Profit:         o.Formatter.ToFixed(openedOrder.GetQuoteProfit(kLine.Close), 2),
 			TargetProfit:   o.Formatter.ToFixed(openedOrder.GetQuoteProfit(sellPrice), 2),
-			PredictedPrice: o.Formatter.FormatPrice(limit, predictedPrice),
+			PredictedPrice: predictedPrice,
 		})
 	}
 

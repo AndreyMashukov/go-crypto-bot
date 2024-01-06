@@ -563,7 +563,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 			}
 
 			if kline != nil && binanceOrder.IsBuy() && binanceOrder.IsNew() && binanceOrder.Price > kline.Close {
-				fallPercent := ExchangeModel.Percent(100 - m.Formatter.ComparePercentage(binanceOrder.Price, kline.Close).Value())
+				fallPercent := ExchangeModel.Percent(100.00 - m.Formatter.ComparePercentage(binanceOrder.Price, kline.Close).Value())
 				minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, 200)
 
 				cancelFallPercent := ExchangeModel.Percent(0.50)
@@ -699,7 +699,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 
 					if kline != nil && binanceOrder.IsBuy() {
 						positionPercentage := m.Formatter.ComparePercentage(binanceOrder.Price, kline.Close)
-						if positionPercentage.Gte(101) {
+						if positionPercentage.Gte(101.00) {
 							log.Printf(
 								"[%s] %s Order [%d] status [%s] ttl reached, current price is [%.8f], order price [%.8f], diff percent: %.2f",
 								binanceOrder.Symbol,

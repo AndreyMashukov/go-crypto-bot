@@ -75,7 +75,7 @@ func (v *SwapValidator) CalculatePercent(entity model.SwapChainEntity) model.Per
 	if entity.SwapThree.IsSell() {
 		balance = (balance * swapThreePrice.BuyPrice) - (balance*swapThreePrice.BuyPrice)*0.002
 	}
-	return v.Formatter.ComparePercentage(initialBalance, balance) - 100
+	return v.Formatter.ComparePercentage(initialBalance, balance) - 100.00
 }
 
 func (v *SwapValidator) validateSwap(chain model.SwapChainEntity, order model.Order, index int64) error {

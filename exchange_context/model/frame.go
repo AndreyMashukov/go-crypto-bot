@@ -36,9 +36,9 @@ func (f *Frame) GetBestFrameSell(marketDepth Depth) ([2]float64, error) {
 }
 
 func (f *Frame) GetMediumVolatilityPercent() float64 {
-	return (f.AvgHigh * 100 / f.AvgLow) - 100
+	return (f.AvgHigh * 100.00 / f.AvgLow) - 100.00
 }
 
 func (f *Frame) GetVolatilityPercent() float64 {
-	return (f.High * 100 / f.Low) - 100
+	return (f.High * 100.00 / f.Low) - 100.00
 }

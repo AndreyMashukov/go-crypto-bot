@@ -52,7 +52,7 @@ func (m *Formatter) FormatQuantity(limit ExchangeModel.TradeLimitInterface, quan
 }
 
 func (m *Formatter) ComparePercentage(first float64, second float64) ExchangeModel.Percent {
-	return ExchangeModel.Percent(second * 100 / first)
+	return ExchangeModel.Percent(second * 100.00 / first)
 }
 
 func (m *Formatter) Round(num float64) int {

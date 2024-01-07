@@ -759,3 +759,24 @@ func (e *ExchangeRepository) SavePredict(predicted float64, symbol string) {
 	encoded, _ := json.Marshal(predicted)
 	e.RDB.Set(*e.Ctx, predictedPriceCacheKey, string(encoded), time.Minute)
 }
+
+func (e *ExchangeRepository) GetKLinePredict(kLine model.KLine) (float64, error) {
+	var predictedPrice float64
+
+	predictedPriceCacheKey := fmt.Sprintf("%s-%d", e.getPredictedCacheKey(kLine.Symbol), kLine.Timestamp)
+	predictedPriceCached := e.RDB.Get(*e.Ctx, predictedPriceCacheKey).Val()
+
+	if len(predictedPriceCached) > 0 {
+		_ = json.Unmarshal([]byte(predictedPriceCached), &predictedPrice)
+		return predictedPrice, nil
+	}
+
+	return 0.00, errors.New("")
+}
+
+func (e *ExchangeRepository) SaveKLinePredict(predicted float64, kLine model.KLine) {
+	predictedPriceCacheKey := fmt.Sprintf("%s-%d", e.getPredictedCacheKey(kLine.Symbol), kLine.Timestamp)
+
+	encoded, _ := json.Marshal(predicted)
+	e.RDB.Set(*e.Ctx, predictedPriceCacheKey, string(encoded), time.Minute*201)
+}

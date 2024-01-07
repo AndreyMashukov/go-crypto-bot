@@ -11,8 +11,11 @@ import (
 func Listen(address string, tradeChannel chan<- []byte, streams []string, connectionId int64) *websocket.Conn {
 	connection, _, err := websocket.DefaultDialer.Dial(address, nil)
 	if err != nil {
-		log.Printf("Binance WS Events [%s]: %s", address, err.Error())
-		log.Fatal("Quit!")
+		log.Printf("Binance WS Events [%s]: %s, wait and reconnect...", address, err.Error())
+		time.Sleep(time.Second * 40)
+		connectionId++
+
+		return Listen(address, tradeChannel, streams, connectionId)
 	}
 
 	go func() {

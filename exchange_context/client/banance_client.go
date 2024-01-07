@@ -48,8 +48,10 @@ type Binance struct {
 func (b *Binance) Connect(address string) {
 	connection, _, err := websocket.DefaultDialer.Dial(address, nil)
 	if err != nil {
-		log.Printf("Binance WS [%s]: %s", address, err.Error())
-		log.Fatal("Quit!")
+		log.Printf("Binance WS [%s]: %s, wait and reconnect...", address, err.Error())
+		time.Sleep(time.Second * 40)
+		b.Connect(address)
+		return
 	}
 
 	// 2023/12/11 05:56:32 [SOLUSDT] QueryOrder: Too much request weight used; current limit is 6000 request weight per 1 MINUTE. Please use WebSocket Streams for live updates to avoid polling the API.

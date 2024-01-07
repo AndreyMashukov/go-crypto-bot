@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-func getStreamBatch(tradeLimits []ExchangeModel.TradeLimitInterface, events []string) [][]string {
+func getStreamBatch(tradeLimits []ExchangeModel.SymbolInterface, events []string) [][]string {
 	streamBatch := make([][]string, 0)
 
 	streams := make([]string, 0)
@@ -124,7 +124,8 @@ func main() {
 		}
 	}
 
-	swapEnabled := currentBot.Id == 1
+	isMasterBot := currentBot.BotUuid == "5b51a35f-76a6-4747-8461-850fff9f7c18"
+	swapEnabled := currentBot.BotUuid == "5b51a35f-76a6-4747-8461-850fff9f7c18"
 
 	log.Printf("Bot [%s] is initialized successfully", currentBot.BotUuid)
 
@@ -190,6 +191,7 @@ func main() {
 	pythonMLBridge := ExchangeService.PythonMLBridge{
 		DataSetBuilder:     &ExchangeService.DataSetBuilder{},
 		ExchangeRepository: &exchangeRepository,
+		SwapRepository:     &swapRepository,
 		CurrentBot:         currentBot,
 		RDB:                rdb,
 		Ctx:                &ctx,
@@ -288,7 +290,7 @@ func main() {
 		}
 	}()
 
-	if swapEnabled {
+	if isMasterBot {
 		makerService.UpdateSwapPairs()
 	}
 
@@ -311,8 +313,7 @@ func main() {
 		Binance:            &binance,
 	}
 
-	// todo: is master bot???
-	if swapEnabled {
+	if isMasterBot {
 		swapManager := ExchangeService.SwapManager{
 			SwapChainBuilder: &ExchangeService.SwapChainBuilder{},
 			SwapRepository:   &swapRepository,
@@ -394,7 +395,7 @@ func main() {
 
 		swapWebsockets := make([]*websocket.Conn, 0)
 
-		swapPairCollection := make([]ExchangeModel.TradeLimitInterface, 0)
+		swapPairCollection := make([]ExchangeModel.SymbolInterface, 0)
 		for _, swapPair := range exchangeRepository.GetSwapPairs() {
 			swapPairCollection = append(swapPairCollection, swapPair)
 		}
@@ -554,7 +555,8 @@ func main() {
 
 	websockets := make([]*websocket.Conn, 0)
 
-	tradeLimitCollection := make([]ExchangeModel.TradeLimitInterface, 0)
+	tradeLimitCollection := make([]ExchangeModel.SymbolInterface, 0)
+	hasBtcUsdt := false
 	for _, limit := range tradeLimits {
 		tradeLimitCollection = append(tradeLimitCollection, limit)
 
@@ -562,6 +564,14 @@ func main() {
 		for _, kline := range history {
 			exchangeRepository.AddKLine(kline.ToKLine(limit.GetSymbol()))
 		}
+
+		if "BTCUSDT" == limit.GetSymbol() {
+			hasBtcUsdt = true
+		}
+	}
+
+	if !hasBtcUsdt {
+		tradeLimitCollection = append(tradeLimitCollection, ExchangeModel.DummySymbol{Symbol: "BTCUSDT"})
 	}
 
 	for index, streamBatchItem := range getStreamBatch(tradeLimitCollection, []string{"@aggTrade", "@kline_1m", "@depth20@100ms"}) {

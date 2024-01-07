@@ -21,6 +21,7 @@ import (
 type PythonMLBridge struct {
 	DataSetBuilder     *DataSetBuilder
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
+	SwapRepository     *ExchangeRepository.SwapRepository
 	Mutex              sync.RWMutex
 	RDB                *redis.Client
 	Ctx                *context.Context
@@ -124,9 +125,12 @@ func (p *PythonMLBridge) getPythonAltCoinCode(symbol string, datasetPath string)
 	return fmt.Sprintf(string([]byte(`
 price_dataset = pd.read_csv(
     filepath_or_buffer='%s',
-    names=["open", "high", "low", "close", "volume", "sell_vol", "buy_vol", "btc_price"]
+    names=["open", "high", "low", "close", "volume", "sell_vol", "buy_vol", "btc_price", "price_in_btc"]
 )
-X = pd.DataFrame(np.c_[price_dataset['volume'], price_dataset['buy_vol'], price_dataset['sell_vol'], price_dataset['open'], price_dataset['low'],price_dataset['high'],price_dataset['btc_price']], columns = ['volume','buy_vol', 'sell_vol', 'open', 'low', 'high', 'btc_price'])
+del price_dataset['open']
+del price_dataset['high']
+del price_dataset['low']
+X = pd.DataFrame(np.c_[price_dataset['volume'],price_dataset['buy_vol'],price_dataset['sell_vol'],price_dataset['btc_price'],price_dataset['price_in_btc']], columns = ['volume', 'buy_vol', 'sell_vol', 'btc_price','price_in_btc'])
 Y = price_dataset['close']
 
 X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = 0.2, random_state=5)
@@ -234,8 +238,19 @@ func (p *PythonMLBridge) GetPythonPredictAltCoinCode(kLine ExchangeModel.KLine, 
 	resultPath := p.getResultFilePath(kLine.Symbol)
 	modelFilePath := p.getModelFilePath(kLine.Symbol)
 
+	priceInBtc := 0.00
+
+	if "SHIBUSDT" != kLine.Symbol {
+		swapPair, err := p.SwapRepository.GetSwapPairBySymbol(fmt.Sprintf("%sBTC", strings.ReplaceAll(kLine.Symbol, "USDT", "")))
+		if err == nil {
+			priceInBtc = swapPair.BuyPrice
+		}
+	}
+
+	log.Printf("[%s] Predict, BTC=%f, IN_BTC=%f", kLine.Symbol, btcPrice, priceInBtc)
+
 	return fmt.Sprintf(string([]byte(`
-test = pd.DataFrame(np.c_[%f, %f, %f, %f, %f, %f, %f], columns = ['volume','buy_vol', 'sell_vol', 'open', 'low', 'high', 'btc_price'])
+test = pd.DataFrame(np.c_[%f, %f, %f, %f, %f], columns = ['volume', 'buy_vol', 'sell_vol', 'btc_price', 'price_in_btc'])
 
 lr2 = joblib.load('%s')
 a = lr2.predict(test)
@@ -246,10 +261,8 @@ with open(result_path, 'w') as out:
 		kLine.Volume,
 		buyVolume,
 		sellVolume,
-		kLine.Open,
-		kLine.Low,
-		kLine.High,
 		btcPrice,
+		priceInBtc,
 		modelFilePath,
 		resultPath,
 	)

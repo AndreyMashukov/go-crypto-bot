@@ -468,6 +468,31 @@ func main() {
 		}(limit.Symbol)
 	}
 
+	predictChannel := make(chan string)
+	go func(channel chan string) {
+		for {
+			symbol := <-channel
+			predicted, err := pythonMLBridge.Predict(symbol)
+			if err == nil && predicted > 0.00 {
+				kLine := exchangeRepository.GetLastKLine(symbol)
+				if kLine != nil {
+					percent := formatter.ComparePercentage(kLine.Close, predicted)
+					if percent.Lt(99.5) || percent.Gt(100.5) {
+						log.Printf(
+							"[%s] Prediction diff: %.2f%s, %.12f -> %.12f",
+							kLine.Symbol,
+							percent,
+							"%",
+							kLine.Close,
+							predicted,
+						)
+					}
+				}
+				exchangeRepository.SavePredict(predicted, symbol)
+			}
+		}
+	}(predictChannel)
+
 	go func() {
 		for {
 			message := <-eventChannel
@@ -478,24 +503,10 @@ func main() {
 				json.Unmarshal(message, &tradeEvent)
 				smaDecision := smaStrategy.Decide(tradeEvent.Trade)
 				exchangeRepository.SetDecision(smaDecision)
-				predicted, err := pythonMLBridge.Predict(tradeEvent.Trade.Symbol)
-				if err == nil {
-					kLine := exchangeRepository.GetLastKLine(tradeEvent.Trade.Symbol)
-					if kLine != nil {
-						percent := formatter.ComparePercentage(kLine.Close, predicted)
-						if percent.Lt(99.5) || percent.Gt(100.5) {
-							log.Printf(
-								"[%s] (Trade) prediction diff: %.2f%s, %.12f -> %.12f",
-								kLine.Symbol,
-								percent,
-								"%",
-								kLine.Close,
-								predicted,
-							)
-						}
-					}
-					exchangeRepository.SavePredict(predicted, tradeEvent.Trade.Symbol)
-				}
+
+				go func(channel chan string, symbol string) {
+					predictChannel <- symbol
+				}(predictChannel, tradeEvent.Trade.Symbol)
 				break
 			case strings.Contains(string(message), "kline"):
 				var event ExchangeModel.KlineEvent
@@ -503,21 +514,9 @@ func main() {
 				kLine := event.KlineData.Kline
 				exchangeRepository.AddKLine(kLine)
 
-				predicted, err := pythonMLBridge.Predict(kLine.Symbol)
-				if err == nil {
-					percent := formatter.ComparePercentage(kLine.Close, predicted)
-					if percent.Lt(99.5) || percent.Gt(100.5) {
-						log.Printf(
-							"[%s] (KLine) prediction diff: %.2f%s, %.12f -> %.12f",
-							kLine.Symbol,
-							percent,
-							"%",
-							kLine.Close,
-							predicted,
-						)
-					}
-					exchangeRepository.SavePredict(predicted, kLine.Symbol)
-				}
+				go func(channel chan string, symbol string) {
+					predictChannel <- symbol
+				}(predictChannel, kLine.Symbol)
 
 				baseKLineDecision := baseKLineStrategy.Decide(kLine)
 				exchangeRepository.SetDecision(baseKLineDecision)

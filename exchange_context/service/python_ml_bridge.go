@@ -247,7 +247,9 @@ func (p *PythonMLBridge) GetPythonPredictAltCoinCode(kLine ExchangeModel.KLine, 
 		}
 	}
 
-	log.Printf("[%s] Predict, BTC=%f, IN_BTC=%f", kLine.Symbol, btcPrice, priceInBtc)
+	if btcPrice == 0.00 || priceInBtc == 0.00 {
+		log.Printf("[%s] Predict, BTC=%f, IN_BTC=%f", kLine.Symbol, btcPrice, priceInBtc)
+	}
 
 	return fmt.Sprintf(string([]byte(`
 test = pd.DataFrame(np.c_[%f, %f, %f, %f, %f], columns = ['volume', 'buy_vol', 'sell_vol', 'btc_price', 'price_in_btc'])

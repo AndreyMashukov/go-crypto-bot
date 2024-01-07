@@ -477,18 +477,6 @@ func main() {
 			if err == nil && predicted > 0.00 {
 				kLine := exchangeRepository.GetLastKLine(symbol)
 				if kLine != nil {
-					percent := formatter.ComparePercentage(kLine.Close, predicted)
-					if percent.Lt(99.5) || percent.Gt(100.5) {
-						log.Printf(
-							"[%s] Prediction diff: %.2f%s, %.12f -> %.12f",
-							kLine.Symbol,
-							percent,
-							"%",
-							kLine.Close,
-							predicted,
-						)
-					}
-
 					exchangeRepository.SaveKLinePredict(predicted, *kLine)
 				}
 				exchangeRepository.SavePredict(predicted, symbol)

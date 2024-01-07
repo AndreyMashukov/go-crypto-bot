@@ -162,7 +162,9 @@ func (d *DataSetBuilder) Unzip(path string, suffix string) (string, error) {
 
 func (d *DataSetBuilder) GetSources(symbol string, dateString string) (string, string, string, error) {
 	tradesPath := fmt.Sprintf("/go/src/app/datasets/%s-trades.csv.zip", symbol)
+	kLinesPath := fmt.Sprintf("/go/src/app/datasets/%s-1m.csv.zip", symbol)
 	_ = os.Remove(tradesPath)
+	_ = os.Remove(kLinesPath)
 
 	var err error = nil
 
@@ -177,7 +179,16 @@ func (d *DataSetBuilder) GetSources(symbol string, dateString string) (string, s
 			))
 
 			if err != nil {
-				log.Printf("[%s] Dataset downloading error [%s]: %s", symbol, tradesPath, err.Error())
+				log.Printf("[%s] Dataset %s downloading error [%s]: %s", symbol, dateString, tradesPath, err.Error())
+				continue
+			}
+
+			err = d.DownloadFile(kLinesPath, fmt.Sprintf("https://data.binance.vision/data/spot/daily/klines/%s/1m/%s-1m-%s.zip",
+				symbol,
+				symbol,
+				dateString))
+			if err != nil {
+				log.Printf("[%s] Klines dataset %s downloading error [%s]: %s", symbol, dateString, kLinesPath, err.Error())
 				continue
 			}
 
@@ -202,8 +213,20 @@ func (d *DataSetBuilder) GetSources(symbol string, dateString string) (string, s
 			symbol,
 			dateString))
 
-		if err == nil {
-			log.Printf("[%s] downloaded: %s", symbol, tradesPath)
+		if err != nil {
+			log.Printf("[%s] Trades dataset %s download error: %s", symbol, dateString, err.Error())
+
+			return "", "", dateString, err
+		}
+
+		err = d.DownloadFile(kLinesPath, fmt.Sprintf("https://data.binance.vision/data/spot/daily/klines/%s/1m/%s-1m-%s.zip",
+			symbol,
+			symbol,
+			dateString))
+		if err != nil {
+			log.Printf("[%s] Klines dataset %s download error: %s", symbol, dateString, err.Error())
+
+			return "", "", dateString, err
 		}
 	}
 
@@ -219,17 +242,6 @@ func (d *DataSetBuilder) GetSources(symbol string, dateString string) (string, s
 
 	unzippedTrades, err := d.Unzip(tradesPath, "")
 	defer os.Remove(tradesPath)
-	if err != nil {
-		return "", "", dateString, err
-	}
-
-	kLinesPath := fmt.Sprintf("/go/src/app/datasets/%s-1m.csv.zip", symbol)
-	_ = os.Remove(kLinesPath)
-
-	err = d.DownloadFile(kLinesPath, fmt.Sprintf("https://data.binance.vision/data/spot/daily/klines/%s/1m/%s-1m-%s.zip",
-		symbol,
-		symbol,
-		dateString))
 	if err != nil {
 		return "", "", dateString, err
 	}

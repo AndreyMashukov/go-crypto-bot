@@ -245,10 +245,10 @@ func (p *PythonMLBridge) GetPythonPredictAltCoinCode(kLine ExchangeModel.KLine, 
 		if err == nil {
 			priceInBtc = swapPair.BuyPrice
 		}
-	}
 
-	if btcPrice == 0.00 || priceInBtc == 0.00 {
-		log.Printf("[%s] Predict, BTC=%f, IN_BTC=%f", kLine.Symbol, btcPrice, priceInBtc)
+		if btcPrice == 0.00 || priceInBtc == 0.00 {
+			log.Printf("[%s] Predict, BTC=%f, IN_BTC=%f", kLine.Symbol, btcPrice, priceInBtc)
+		}
 	}
 
 	return fmt.Sprintf(string([]byte(`

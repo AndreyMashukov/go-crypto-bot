@@ -2,6 +2,18 @@ package model
 
 import "strings"
 
+type SymbolInterface interface {
+	GetSymbol() string
+}
+
+type DummySymbol struct {
+	Symbol string
+}
+
+func (d DummySymbol) GetSymbol() string {
+	return d.Symbol
+}
+
 type TradeLimitInterface interface {
 	GetMinPrice() float64
 	GetBaseAsset() string

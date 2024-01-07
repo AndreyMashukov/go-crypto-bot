@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -258,6 +259,7 @@ func (d *DataSetBuilder) GetSources(symbol string, dateString string) (string, s
 
 func (d *DataSetBuilder) WriteToCsv(symbol string, dateString string, csvWriter *csv.Writer, unzippedTrades string, unzippedKLines string) {
 	btcPriceMap := make(map[string]string)
+	priceInBtc := make(map[string]string)
 
 	if "BTCUSDT" != symbol {
 		btcKLinesPath := fmt.Sprintf("/go/src/app/datasets/%s-1m-%s.csv.zip", "BTCUSDT", symbol)
@@ -276,6 +278,28 @@ func (d *DataSetBuilder) WriteToCsv(symbol string, dateString string, csvWriter 
 			if err == nil {
 				for _, btcKline := range d.ReadCSV(unzippedBtcKLines, true) {
 					btcPriceMap[btcKline[6]] = btcKline[4]
+				}
+			}
+		}
+
+		btcSymbol := fmt.Sprintf("%sBTC", strings.ReplaceAll(symbol, "USDT", ""))
+
+		altBtcKLinesPath := fmt.Sprintf("/go/src/app/datasets/%s-1m-%s.csv.zip", btcSymbol, symbol)
+		_ = os.Remove(altBtcKLinesPath)
+
+		err = d.DownloadFile(altBtcKLinesPath, fmt.Sprintf("https://data.binance.vision/data/spot/daily/klines/%s/1m/%s-1m-%s.zip",
+			btcSymbol,
+			btcSymbol,
+			dateString,
+		))
+
+		if err == nil {
+			unzippedAltBtcKLines, err := d.Unzip(altBtcKLinesPath, fmt.Sprintf(".alt-btc-%s.csv", symbol))
+			defer os.Remove(altBtcKLinesPath)
+
+			if err == nil {
+				for _, altBtcKline := range d.ReadCSV(unzippedAltBtcKLines, true) {
+					priceInBtc[altBtcKline[6]] = altBtcKline[4]
 				}
 			}
 		}
@@ -343,6 +367,17 @@ func (d *DataSetBuilder) WriteToCsv(symbol string, dateString string, csvWriter 
 
 		if "BTCUSDT" != symbol {
 			row = append(row, btcPriceMap[kline.CloseTime])
+
+			value, ok := priceInBtc[kline.CloseTime]
+			if "SHIBUSDT" == symbol {
+				value = "0.00"
+			} else {
+				if !ok {
+					continue
+				}
+			}
+
+			row = append(row, value)
 		}
 
 		_ = csvWriter.Write(row)

@@ -475,14 +475,14 @@ func (d *DataSetBuilder) PrepareDataset(symbol string) (string, error) {
 		return "", err
 	}
 
-	datasetPathHistory, err := d.GetHistoryDataset(symbol)
-	if err == nil {
-		rows := d.ReadCSV(datasetPathHistory, false)
-		for _, row := range rows {
-			_ = csvWriter.Write(row)
-			csvWriter.Flush()
-		}
-	}
+	//datasetPathHistory, err := d.GetHistoryDataset(symbol)
+	//if err == nil {
+	//	rows := d.ReadCSV(datasetPathHistory, false)
+	//	for _, row := range rows {
+	//		_ = csvWriter.Write(row)
+	//		csvWriter.Flush()
+	//	}
+	//}
 
 	d.WriteToCsv(symbol, dateString, csvWriter, unzippedTrades, unzippedKLines)
 

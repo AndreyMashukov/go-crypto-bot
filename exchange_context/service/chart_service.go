@@ -91,6 +91,7 @@ func (e *ChartService) processSymbol(symbol string, orderMap map[string][]model.
 			Open:  kLine.Open,
 			Low:   kLine.Low,
 		}
+		kLinePredict, _ := e.ExchangeRepository.GetKLinePredict(kLine)
 		openedBuyPoint := model.ChartPoint{
 			XAxis: kLine.Timestamp,
 			YAxis: 0,
@@ -147,12 +148,14 @@ func (e *ChartService) processSymbol(symbol string, orderMap map[string][]model.
 		}
 
 		klineKey := fmt.Sprintf("kline-%s", symbol)
+		klinePredictKey := fmt.Sprintf("predict-%s", symbol)
 		orderBuyKey := fmt.Sprintf("order-buy-%s", symbol)
 		orderSellKey := fmt.Sprintf("order-sell-%s", symbol)
 		orderBuyPendingKey := fmt.Sprintf("order-buy-pending-%s", symbol)
 		orderSellPendingKey := fmt.Sprintf("order-sell-pending-%s", symbol)
 		openedOrderBuyKey := fmt.Sprintf("order-buy-opened-%s", symbol)
 		list[klineKey] = append(list[klineKey], klinePoint)
+		list[klinePredictKey] = append(list[klinePredictKey], kLinePredict)
 		list[orderBuyKey] = append(list[orderBuyKey], buyPoint)
 		list[orderSellKey] = append(list[orderSellKey], sellPoint)
 		list[orderBuyPendingKey] = append(list[orderBuyPendingKey], buyPendingPoint)

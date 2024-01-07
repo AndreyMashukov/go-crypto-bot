@@ -487,6 +487,8 @@ func main() {
 							predicted,
 						)
 					}
+
+					exchangeRepository.SaveKLinePredict(predicted, *kLine)
 				}
 				exchangeRepository.SavePredict(predicted, symbol)
 			}

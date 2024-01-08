@@ -171,7 +171,6 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 		if !tradeLimit.IsEnabled {
 			log.Printf("[%s] BUY operation is disabled", symbol)
-			time.Sleep(time.Minute * 15)
 			return
 		}
 

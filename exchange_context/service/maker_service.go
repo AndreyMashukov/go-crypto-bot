@@ -173,6 +173,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 		if balanceErr != nil {
 			log.Printf("[%s] Min balance check: %s", tradeLimit.Symbol, balanceErr.Error())
+			time.Sleep(time.Minute)
 			return
 		}
 

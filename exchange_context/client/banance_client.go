@@ -49,7 +49,7 @@ func (b *Binance) Connect(address string) {
 	connection, _, err := websocket.DefaultDialer.Dial(address, nil)
 	if err != nil {
 		log.Printf("Binance WS [%s]: %s, wait and reconnect...", address, err.Error())
-		time.Sleep(time.Second * 40)
+		time.Sleep(time.Second * 3)
 		b.Connect(address)
 		return
 	}

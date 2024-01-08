@@ -12,7 +12,7 @@ func Listen(address string, tradeChannel chan<- []byte, streams []string, connec
 	connection, _, err := websocket.DefaultDialer.Dial(address, nil)
 	if err != nil {
 		log.Printf("Binance WS Events [%s]: %s, wait and reconnect...", address, err.Error())
-		time.Sleep(time.Second * 40)
+		time.Sleep(time.Second * 3)
 		connectionId++
 
 		return Listen(address, tradeChannel, streams, connectionId)

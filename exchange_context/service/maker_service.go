@@ -169,6 +169,11 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		//log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
+		if !tradeLimit.IsEnabled {
+			log.Printf("[%s] BUY operation is disabled", symbol)
+			return
+		}
+
 		balanceErr := m.OrderExecutor.CheckMinBalance(tradeLimit)
 
 		if balanceErr != nil {

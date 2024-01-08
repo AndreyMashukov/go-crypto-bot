@@ -158,10 +158,6 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 }
 
 func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, price float64, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
-	if !tradeLimit.IsEnabled {
-		return errors.New(fmt.Sprintf("[%s] BUY operation is disabled", symbol))
-	}
-
 	if m.isTradeLocked(symbol) {
 		return errors.New(fmt.Sprintf("Operation Buy is Locked %s", symbol))
 	}

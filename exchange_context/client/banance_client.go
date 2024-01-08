@@ -68,7 +68,7 @@ func (b *Binance) Connect(address string) {
 
 				_ = connection.Close()
 				log.Printf("Binance WS, wait and reconnect...")
-				time.Sleep(time.Second * 20)
+				time.Sleep(time.Second * 3)
 				b.Connect(address)
 				return
 			}

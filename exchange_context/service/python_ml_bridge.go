@@ -241,16 +241,15 @@ func (p *PythonMLBridge) GetPythonPredictAltCoinCode(kLine ExchangeModel.KLine, 
 	modelFilePath := p.getModelFilePath(kLine.Symbol)
 
 	priceInCoin := 0.00
-
-	altSymbol := p.DataSetBuilder.GetDependentOn(kLine.Symbol)
-	swapPair, err := p.SwapRepository.GetSwapPairBySymbol(altSymbol)
-	if err == nil {
-		priceInCoin = swapPair.BuyPrice
-	}
-
 	quotePriceInUsdt := 0.00
 
 	if !slices.Contains(p.DataSetBuilder.ExcludeDependedDataset, kLine.Symbol) {
+		altSymbol := p.DataSetBuilder.GetDependentOn(kLine.Symbol)
+		swapPair, err := p.SwapRepository.GetSwapPairBySymbol(altSymbol)
+		if err == nil {
+			priceInCoin = swapPair.BuyPrice
+		}
+
 		cryptoQuote := p.DataSetBuilder.GetCryptoQuote(kLine.Symbol)
 		if "BTC" == cryptoQuote {
 			quotePriceInUsdt = btcPrice

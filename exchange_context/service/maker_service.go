@@ -169,6 +169,15 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		//log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
 		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
 
+		balanceErr := m.OrderExecutor.CheckMinBalance(tradeLimit)
+
+		if balanceErr != nil {
+			log.Printf("[%s] Min balance check: %s", tradeLimit.Symbol, balanceErr.Error())
+			time.Sleep(time.Minute)
+
+			return
+		}
+
 		marketDepth := m.PriceCalculator.GetDepth(tradeLimit.Symbol)
 
 		if len(marketDepth.Bids) < 3 && manualOrder == nil {

@@ -68,21 +68,10 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 		return errors.New(fmt.Sprintf("[%s] Extra BUY Notional: %.8f < %.8f", order.Symbol, quantity*price, tradeLimit.MinNotional))
 	}
 
-	cached, _ := m.findBinanceOrder(order.Symbol, "BUY")
+	balanceErr := m.CheckBalance(order.Symbol, price, quantity)
 
-	// Check balance for new order
-	if cached == nil {
-		usdtAvailableBalance, err := m.BalanceService.GetAssetBalance("USDT", true)
-
-		if err != nil {
-			return errors.New(fmt.Sprintf("[%s] BUY balance error: %s", order.Symbol, err.Error()))
-		}
-
-		requiredUsdtAmount := price * quantity
-
-		if requiredUsdtAmount > usdtAvailableBalance {
-			return errors.New(fmt.Sprintf("[%s] BUY not enough balance: %f/%f", order.Symbol, usdtAvailableBalance, requiredUsdtAmount))
-		}
+	if balanceErr != nil {
+		return balanceErr
 	}
 
 	var extraOrder = ExchangeModel.Order{
@@ -181,21 +170,10 @@ func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, 
 		return errors.New(fmt.Sprintf("Available quantity is %f", quantity))
 	}
 
-	cached, _ := m.findBinanceOrder(symbol, "BUY")
+	balanceErr := m.CheckBalance(symbol, price, quantity)
 
-	// Check balance for new order
-	if cached == nil {
-		usdtAvailableBalance, err := m.BalanceService.GetAssetBalance("USDT", true)
-
-		if err != nil {
-			return errors.New(fmt.Sprintf("[%s] BUY balance error: %s", symbol, err.Error()))
-		}
-
-		requiredUsdtAmount := price * quantity
-
-		if requiredUsdtAmount > usdtAvailableBalance {
-			return errors.New(fmt.Sprintf("[%s] BUY not enough balance: %f/%f", symbol, usdtAvailableBalance, requiredUsdtAmount))
-		}
+	if balanceErr != nil {
+		return balanceErr
 	}
 
 	// to avoid concurrent map writes
@@ -1137,4 +1115,51 @@ func (m *OrderExecutor) recoverCommission(order ExchangeModel.Order) {
 	if err != nil {
 		log.Printf("[%s] Order Commission Recover: %s", order.Symbol, err.Error())
 	}
+}
+
+func (m *OrderExecutor) CheckBalance(symbol string, priceUsdt float64, quantity float64) error {
+	cached, _ := m.findBinanceOrder(symbol, "BUY")
+
+	// Check balance for new order
+	if cached == nil {
+		usdtAvailableBalance, err := m.BalanceService.GetAssetBalance("USDT", true)
+
+		if err != nil {
+			return errors.New(fmt.Sprintf("[%s] BUY balance error: %s", symbol, err.Error()))
+		}
+
+		requiredUsdtAmount := priceUsdt * quantity
+
+		if requiredUsdtAmount > usdtAvailableBalance {
+			return errors.New(fmt.Sprintf("[%s] BUY not enough balance: %f/%f", symbol, usdtAvailableBalance, requiredUsdtAmount))
+		}
+	}
+
+	return nil
+}
+
+func (m *OrderExecutor) CheckMinBalance(limit ExchangeModel.TradeLimit) error {
+	_, err := m.OrderRepository.GetOpenedOrderCached(limit.Symbol, "BUY")
+	limitUsdt := limit.USDTLimit
+
+	if err == nil {
+		limitUsdt = limit.USDTExtraBudget
+	}
+
+	cached, _ := m.findBinanceOrder(limit.Symbol, "BUY")
+
+	// Check balance for new order
+	if cached == nil {
+		usdtAvailableBalance, err := m.BalanceService.GetAssetBalance("USDT", true)
+
+		if err != nil {
+			return errors.New(fmt.Sprintf("[%s] BUY balance error: %s", limit.Symbol, err.Error()))
+		}
+
+		if limitUsdt > usdtAvailableBalance {
+			return errors.New(fmt.Sprintf("[%s] BUY not enough balance: %f/%f", limit.Symbol, usdtAvailableBalance, limitUsdt))
+		}
+	}
+
+	return nil
 }

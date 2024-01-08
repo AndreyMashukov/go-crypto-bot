@@ -557,9 +557,14 @@ func main() {
 	for _, limit := range tradeLimits {
 		tradeLimitCollection = append(tradeLimitCollection, limit)
 
-		history := binance.GetKLines(limit.GetSymbol(), "1m", 200)
-		for _, kline := range history {
-			exchangeRepository.AddKLine(kline.ToKLine(limit.GetSymbol()))
+		lastKline := exchangeRepository.GetLastKLine(limit.Symbol)
+		// 2 minutes delay - update all history
+		if lastKline == nil || time.Now().UnixMilli()-120000 > lastKline.Timestamp {
+			history := binance.GetKLines(limit.GetSymbol(), "1m", 200)
+
+			for _, kline := range history {
+				exchangeRepository.AddKLine(kline.ToKLine(limit.GetSymbol()))
+			}
 		}
 		if "BTCUSDT" == limit.GetSymbol() {
 			hasBtcUsdt = true

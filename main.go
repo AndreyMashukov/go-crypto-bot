@@ -309,6 +309,7 @@ func main() {
 	orderBasedStrategy := ExchangeService.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderRepository,
+		OrderExecutor:      &orderExecutor,
 	}
 	marketDepthStrategy := ExchangeService.MarketDepthStrategy{}
 	smaStrategy := ExchangeService.SmaTradeStrategy{

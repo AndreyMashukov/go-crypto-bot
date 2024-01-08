@@ -9,6 +9,7 @@ import (
 type OrderBasedStrategy struct {
 	ExchangeRepository ExchangeRepository.ExchangeRepository
 	OrderRepository    ExchangeRepository.OrderRepository
+	OrderExecutor      *OrderExecutor
 }
 
 func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Decision {
@@ -55,13 +56,17 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 
 	// If time to extra buy and price is near Low (Low + 0.5%)
 	if tradeLimit.IsExtraChargeEnabled() && profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) && kLine.Close <= kLine.GetLowPercent(0.5) {
-		return ExchangeModel.Decision{
-			StrategyName: "order_based_strategy",
-			Score:        999.99,
-			Operation:    "BUY",
-			Timestamp:    time.Now().Unix(),
-			Price:        periodMinPrice,
-			Params:       [3]float64{0, 0, 0},
+		balanceErr := o.OrderExecutor.CheckMinBalance(tradeLimit)
+
+		if balanceErr == nil {
+			return ExchangeModel.Decision{
+				StrategyName: "order_based_strategy",
+				Score:        999.99,
+				Operation:    "BUY",
+				Timestamp:    time.Now().Unix(),
+				Price:        periodMinPrice,
+				Params:       [3]float64{0, 0, 0},
+			}
 		}
 	}
 

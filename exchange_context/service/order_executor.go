@@ -1031,13 +1031,17 @@ func (m *OrderExecutor) releaseLock(symbol string) {
 	*m.LockChannel <- ExchangeModel.Lock{IsLocked: false, Symbol: symbol}
 }
 
-func (m *OrderExecutor) findBinanceOrder(symbol string, operation string) (*ExchangeModel.BinanceOrder, error) {
+func (m *OrderExecutor) findBinanceOrder(symbol string, operation string, cachedOnly bool) (*ExchangeModel.BinanceOrder, error) {
 	cached := m.OrderRepository.GetBinanceOrder(symbol, operation)
 
 	if cached != nil {
 		log.Printf("[%s] Found cached %s order %d in binance", symbol, operation, cached.OrderId)
 
 		return cached, nil
+	}
+
+	if cachedOnly {
+		return nil, errors.New(fmt.Sprintf("[%s] Cached binance order is not found", symbol))
 	}
 
 	openedOrders, err := m.Binance.GetOpenedOrders()
@@ -1061,7 +1065,7 @@ func (m *OrderExecutor) findBinanceOrder(symbol string, operation string) (*Exch
 
 func (m *OrderExecutor) findOrCreateOrder(order ExchangeModel.Order, operation string) (ExchangeModel.BinanceOrder, error) {
 	// todo: extra order flag...
-	cached, err := m.findBinanceOrder(order.Symbol, operation)
+	cached, err := m.findBinanceOrder(order.Symbol, operation, false)
 
 	if cached != nil {
 		log.Printf("[%s] Found cached %s order %d in binance", order.Symbol, operation, cached.OrderId)
@@ -1118,7 +1122,7 @@ func (m *OrderExecutor) recoverCommission(order ExchangeModel.Order) {
 }
 
 func (m *OrderExecutor) CheckBalance(symbol string, priceUsdt float64, quantity float64) error {
-	cached, _ := m.findBinanceOrder(symbol, "BUY")
+	cached, _ := m.findBinanceOrder(symbol, "BUY", true)
 
 	// Check balance for new order
 	if cached == nil {
@@ -1146,7 +1150,7 @@ func (m *OrderExecutor) CheckMinBalance(limit ExchangeModel.TradeLimit) error {
 		limitUsdt = limit.USDTExtraBudget
 	}
 
-	cached, _ := m.findBinanceOrder(limit.Symbol, "BUY")
+	cached, _ := m.findBinanceOrder(limit.Symbol, "BUY", true)
 
 	// Check balance for new order
 	if cached == nil {

@@ -126,13 +126,13 @@ func (p *PythonMLBridge) getPythonAltCoinCode(symbol string, datasetPath string)
 	return fmt.Sprintf(string([]byte(`
 price_dataset = pd.read_csv(
     filepath_or_buffer='%s',
-    names=["open", "high", "low", "close", "volume", "sell_vol", "buy_vol", "btc_price", "price_in_btc"]
+    names=["open", "high", "low", "close", "volume", "sell_vol", "buy_vol", "btc_price", "price_in_crypto"]
 )
 del price_dataset['volume']
 del price_dataset['open']
 del price_dataset['high']
 del price_dataset['low']
-X = pd.DataFrame(np.c_[price_dataset['buy_vol'],price_dataset['sell_vol'],price_dataset['btc_price'],price_dataset['price_in_btc']], columns = ['buy_vol', 'sell_vol', 'btc_price','price_in_btc'])
+X = pd.DataFrame(np.c_[price_dataset['buy_vol'],price_dataset['sell_vol'],price_dataset['btc_price'],price_dataset['price_in_crypto']], columns = ['buy_vol', 'sell_vol', 'btc_price','price_in_crypto'])
 Y = price_dataset['close']
 
 X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = 0.2, random_state=5)
@@ -234,26 +234,36 @@ with open(result_path, 'w') as out:
 	)
 }
 
-func (p *PythonMLBridge) GetPythonPredictAltCoinCode(kLine ExchangeModel.KLine, btcPrice float64) string {
+func (p *PythonMLBridge) GetPythonPredictAltCoinCode(kLine ExchangeModel.KLine, btcPrice float64, ethPrice float64) string {
 	buyVolume, sellVolume := p.ExchangeRepository.GetTradeVolumes(kLine)
 	resultPath := p.getResultFilePath(kLine.Symbol)
 	modelFilePath := p.getModelFilePath(kLine.Symbol)
 
-	priceInBtc := 0.00
+	priceInCoin := 0.00
 
-	if "SHIBUSDT" != kLine.Symbol {
-		swapPair, err := p.SwapRepository.GetSwapPairBySymbol(fmt.Sprintf("%sBTC", strings.ReplaceAll(kLine.Symbol, "USDT", "")))
-		if err == nil {
-			priceInBtc = swapPair.BuyPrice
-		}
+	altSymbol := p.DataSetBuilder.GetDependentOn(kLine.Symbol)
+	swapPair, err := p.SwapRepository.GetSwapPairBySymbol(altSymbol)
+	if err == nil {
+		priceInCoin = swapPair.BuyPrice
+	}
 
-		if btcPrice == 0.00 || priceInBtc == 0.00 {
-			log.Printf("[%s] Predict, BTC=%f, IN_BTC=%f", kLine.Symbol, btcPrice, priceInBtc)
-		}
+	quotePriceInUsdt := 0.00
+
+	cryptoQuote := p.DataSetBuilder.GetCryptoQuote(kLine.Symbol)
+	if "BTC" == cryptoQuote {
+		quotePriceInUsdt = btcPrice
+	}
+
+	if "ETH" == cryptoQuote {
+		quotePriceInUsdt = ethPrice
+	}
+
+	if quotePriceInUsdt == 0.00 || priceInCoin == 0.00 {
+		log.Printf("[%s] Predict, %s=%f, %s=%f", kLine.Symbol, cryptoQuote, quotePriceInUsdt, altSymbol, priceInCoin)
 	}
 
 	return fmt.Sprintf(string([]byte(`
-test = pd.DataFrame(np.c_[%f, %f, %f, %f], columns = ['buy_vol', 'sell_vol', 'btc_price', 'price_in_btc'])
+test = pd.DataFrame(np.c_[%f, %f, %f, %f], columns = ['buy_vol', 'sell_vol', 'btc_price', 'price_in_crypto'])
 
 lr2 = joblib.load('%s')
 a = lr2.predict(test)
@@ -263,8 +273,8 @@ with open(result_path, 'w') as out:
 `)),
 		buyVolume,
 		sellVolume,
-		btcPrice,
-		priceInBtc,
+		quotePriceInUsdt,
+		priceInCoin,
 		modelFilePath,
 		resultPath,
 	)
@@ -301,7 +311,12 @@ func (p *PythonMLBridge) Predict(symbol string) (float64, error) {
 			return 0.00, errors.New("BTC price is unknown")
 		}
 
-		pyCode = p.GetPythonPredictAltCoinCode(*kLine, btcKline.Close)
+		ethKline := p.ExchangeRepository.GetLastKLine("ETHUSDT")
+		if ethKline == nil {
+			return 0.00, errors.New("BTC price is unknown")
+		}
+
+		pyCode = p.GetPythonPredictAltCoinCode(*kLine, btcKline.Close, ethKline.Close)
 	}
 
 	pyCodeC := C.CString(pyCode)

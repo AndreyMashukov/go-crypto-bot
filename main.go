@@ -188,8 +188,16 @@ func main() {
 		CurrentBot: currentBot,
 	}
 
+	// own net: ATOM, XMR, XLM, DOT, ADA, XRP
+	btcDependent := []string{"LTC", "ZEC", "ATOM", "XMR", "DOT", "XRP", "BCH", "ADA", "ETH", "DOGE", "PERP"}
+	etcDependent := []string{"SHIB", "LINK", "UNI", "NEAR", "XLM", "ETC", "MATIC", "SOL", "BNB", "AVAX", "TRX", "NEO"}
+
 	pythonMLBridge := ExchangeService.PythonMLBridge{
-		DataSetBuilder:     &ExchangeService.DataSetBuilder{},
+		DataSetBuilder: &ExchangeService.DataSetBuilder{
+			ExcludeDependedDataset: []string{"SHIBUSDT", "BTCUSDT"},
+			BtcDependent:           btcDependent,
+			EthDependent:           etcDependent,
+		},
 		ExchangeRepository: &exchangeRepository,
 		SwapRepository:     &swapRepository,
 		CurrentBot:         currentBot,
@@ -545,6 +553,7 @@ func main() {
 
 	tradeLimitCollection := make([]ExchangeModel.SymbolInterface, 0)
 	hasBtcUsdt := false
+	hasEthUsdt := false
 	for _, limit := range tradeLimits {
 		tradeLimitCollection = append(tradeLimitCollection, limit)
 
@@ -552,14 +561,19 @@ func main() {
 		for _, kline := range history {
 			exchangeRepository.AddKLine(kline.ToKLine(limit.GetSymbol()))
 		}
-
 		if "BTCUSDT" == limit.GetSymbol() {
 			hasBtcUsdt = true
+		}
+		if "ETHUSDT" == limit.GetSymbol() {
+			hasEthUsdt = true
 		}
 	}
 
 	if !hasBtcUsdt {
 		tradeLimitCollection = append(tradeLimitCollection, ExchangeModel.DummySymbol{Symbol: "BTCUSDT"})
+	}
+	if !hasEthUsdt {
+		tradeLimitCollection = append(tradeLimitCollection, ExchangeModel.DummySymbol{Symbol: "ETHUSDT"})
 	}
 
 	for index, streamBatchItem := range getStreamBatch(tradeLimitCollection, []string{"@aggTrade", "@kline_1m", "@depth20@100ms"}) {

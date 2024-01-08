@@ -47,6 +47,14 @@ type Binance struct {
 	WaitMode bool
 }
 
+func (b *Binance) CheckWait() {
+	for {
+		if !b.WaitMode {
+			break
+		}
+	}
+}
+
 func (b *Binance) Connect(address string) {
 	connection, _, err := websocket.DefaultDialer.Dial(address, nil)
 	if err != nil {
@@ -91,11 +99,7 @@ func (b *Binance) Connect(address string) {
 }
 
 func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {
-	for {
-		if !b.WaitMode {
-			break
-		}
-	}
+	b.CheckWait()
 
 	go func(req model.SocketRequest) {
 		for {
@@ -135,6 +139,8 @@ func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {
 }
 
 func (b *Binance) QueryOrder(symbol string, orderId int64) (model.BinanceOrder, error) {
+	b.CheckWait()
+
 	channel := make(chan []byte)
 	defer close(channel)
 
@@ -162,6 +168,8 @@ func (b *Binance) QueryOrder(symbol string, orderId int64) (model.BinanceOrder, 
 }
 
 func (b *Binance) CancelOrder(symbol string, orderId int64) (model.BinanceOrder, error) {
+	b.CheckWait()
+
 	channel := make(chan []byte)
 	defer close(channel)
 
@@ -189,6 +197,8 @@ func (b *Binance) CancelOrder(symbol string, orderId int64) (model.BinanceOrder,
 }
 
 func (b *Binance) UserDataStreamStart() (model.UserDataStreamStart, error) {
+	b.CheckWait()
+
 	channel := make(chan []byte)
 	defer close(channel)
 
@@ -212,6 +222,8 @@ func (b *Binance) UserDataStreamStart() (model.UserDataStreamStart, error) {
 }
 
 func (b *Binance) GetDepth(symbol string) (model.OrderBook, error) {
+	b.CheckWait()
+
 	channel := make(chan []byte)
 	defer close(channel)
 
@@ -236,6 +248,8 @@ func (b *Binance) GetDepth(symbol string) (model.OrderBook, error) {
 }
 
 func (b *Binance) GetOpenedOrders() ([]model.BinanceOrder, error) {
+	b.CheckWait()
+
 	channel := make(chan []byte)
 	defer close(channel)
 
@@ -263,6 +277,8 @@ func (b *Binance) GetOpenedOrders() ([]model.BinanceOrder, error) {
 }
 
 func (b *Binance) GetKLines(symbol string, interval string, limit int64) []model.KLineHistory {
+	b.CheckWait()
+
 	channel := make(chan []byte)
 	defer close(channel)
 
@@ -291,6 +307,8 @@ func (b *Binance) GetKLines(symbol string, interval string, limit int64) []model
 }
 
 func (b *Binance) TradesAggregate(symbol string, limit int64) []model.Trade {
+	b.CheckWait()
+
 	channel := make(chan []byte)
 	defer close(channel)
 
@@ -347,6 +365,8 @@ func (b *Binance) GetKLinesCached(symbol string, interval string, limit int64) [
 }
 
 func (b *Binance) GetExchangeData(symbols []string) (*model.ExchangeInfo, error) {
+	b.CheckWait()
+
 	channel := make(chan []byte)
 	defer close(channel)
 
@@ -373,6 +393,8 @@ func (b *Binance) GetExchangeData(symbols []string) (*model.ExchangeInfo, error)
 }
 
 func (b *Binance) GetAccountStatus() (*model.AccountStatus, error) {
+	b.CheckWait()
+
 	channel := make(chan []byte)
 	defer close(channel)
 
@@ -401,6 +423,8 @@ func (b *Binance) GetAccountStatus() (*model.AccountStatus, error) {
 }
 
 func (b *Binance) GetTrades(order model.Order) ([]model.MyTrade, error) {
+	b.CheckWait()
+
 	channel := make(chan []byte)
 	defer close(channel)
 
@@ -430,6 +454,8 @@ func (b *Binance) GetTrades(order model.Order) ([]model.MyTrade, error) {
 }
 
 func (b *Binance) LimitOrder(symbol string, quantity float64, price float64, operation string, timeInForce string) (model.BinanceOrder, error) {
+	b.CheckWait()
+
 	channel := make(chan []byte)
 	defer close(channel)
 

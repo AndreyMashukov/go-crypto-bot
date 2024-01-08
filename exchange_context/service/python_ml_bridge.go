@@ -262,8 +262,6 @@ func (p *PythonMLBridge) GetPythonPredictAltCoinCode(kLine ExchangeModel.KLine, 
 		if quotePriceInUsdt == 0.00 || priceInCoin == 0.00 {
 			log.Printf("[%s] Predict, %s=%f, %s=%f", kLine.Symbol, cryptoQuote, quotePriceInUsdt, altSymbol, priceInCoin)
 		}
-	} else {
-		quotePriceInUsdt = btcPrice
 	}
 
 	return fmt.Sprintf(string([]byte(`

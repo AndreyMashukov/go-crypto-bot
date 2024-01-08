@@ -11,7 +11,7 @@ import (
 func Listen(address string, tradeChannel chan<- []byte, streams []string, connectionId int64) *websocket.Conn {
 	connection, _, err := websocket.DefaultDialer.Dial(address, nil)
 	if err != nil {
-		log.Printf("Binance WS Events [%s]: %s, wait and reconnect...", address, err.Error())
+		log.Printf("Binance [err_1] WS Events [%s]: %s, wait and reconnect...", address, err.Error())
 		time.Sleep(time.Second * 3)
 		connectionId++
 
@@ -22,11 +22,11 @@ func Listen(address string, tradeChannel chan<- []byte, streams []string, connec
 		for {
 			_, message, err := connection.ReadMessage()
 			if err != nil {
-				log.Printf("Binance WS Events, read [%s]: %s", address, err.Error())
+				log.Printf("Binance [err_2] WS Events, read [%s]: %s", address, err.Error())
 
 				_ = connection.Close()
-				log.Printf("Binance WS Events, wait and reconnect...")
-				time.Sleep(time.Second * 20)
+				log.Printf("Binance [err_2] WS Events, wait and reconnect...")
+				time.Sleep(time.Second * 3)
 				connectionId++
 				Listen(address, tradeChannel, streams, connectionId)
 				return

@@ -648,7 +648,7 @@ func (e *ExchangeRepository) GetPeriodMinPrice(symbol string, period int64) floa
 
 func (e *ExchangeRepository) SetDepth(depth model.Depth) {
 	encoded, _ := json.Marshal(depth)
-	e.RDB.Set(*e.Ctx, fmt.Sprintf("depth-%s", depth.Symbol), string(encoded), time.Second*20)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("depth-%s", depth.Symbol), string(encoded), time.Second*25)
 }
 
 func (e *ExchangeRepository) GetDepth(symbol string) model.Depth {

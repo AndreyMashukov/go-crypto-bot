@@ -83,6 +83,8 @@ func (e *ChartService) processSymbol(symbol string, orderMap map[string][]model.
 	symbolOrders := orderMap[symbol]
 	kLines := e.ExchangeRepository.KLineList(symbol, true, 200)
 
+	previousPredict := 0.00
+
 	for kLineIndex, kLine := range kLines {
 		klinePoint := model.FinancialPoint{
 			XAxis: kLine.Timestamp,
@@ -92,6 +94,13 @@ func (e *ChartService) processSymbol(symbol string, orderMap map[string][]model.
 			Low:   kLine.Low,
 		}
 		kLinePredict, _ := e.ExchangeRepository.GetKLinePredict(kLine)
+
+		if kLinePredict > 0.00 {
+			previousPredict = kLinePredict
+		} else {
+			kLinePredict = previousPredict
+		}
+
 		kLinePredictPoint := model.ChartPoint{
 			XAxis: kLine.Timestamp,
 			YAxis: kLinePredict,

@@ -673,7 +673,7 @@ func (e *ExchangeRepository) GetTradeVolumes(kLine model.KLine) (float64, float6
 	sellVolume := 0.00
 
 	for _, trade := range e.TradeList(kLine.Symbol) {
-		if trade.Timestamp >= (kLine.Timestamp - 60000) {
+		if trade.Timestamp >= (time.Now().UnixMilli() - 60000) {
 			if trade.GetOperation() == "BUY" {
 				buyVolume += trade.Price * trade.Quantity
 			} else {
@@ -778,5 +778,5 @@ func (e *ExchangeRepository) SaveKLinePredict(predicted float64, kLine model.KLi
 	predictedPriceCacheKey := fmt.Sprintf("%s-%d", e.getPredictedCacheKey(kLine.Symbol), kLine.Timestamp)
 
 	encoded, _ := json.Marshal(predicted)
-	e.RDB.Set(*e.Ctx, predictedPriceCacheKey, string(encoded), time.Minute*201)
+	e.RDB.Set(*e.Ctx, predictedPriceCacheKey, string(encoded), time.Minute*400)
 }

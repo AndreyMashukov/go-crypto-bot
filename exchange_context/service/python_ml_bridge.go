@@ -12,6 +12,7 @@ import (
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
 	"log"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -249,17 +250,19 @@ func (p *PythonMLBridge) GetPythonPredictAltCoinCode(kLine ExchangeModel.KLine, 
 
 	quotePriceInUsdt := 0.00
 
-	cryptoQuote := p.DataSetBuilder.GetCryptoQuote(kLine.Symbol)
-	if "BTC" == cryptoQuote {
-		quotePriceInUsdt = btcPrice
-	}
+	if !slices.Contains(p.DataSetBuilder.ExcludeDependedDataset, kLine.Symbol) {
+		cryptoQuote := p.DataSetBuilder.GetCryptoQuote(kLine.Symbol)
+		if "BTC" == cryptoQuote {
+			quotePriceInUsdt = btcPrice
+		}
 
-	if "ETH" == cryptoQuote {
-		quotePriceInUsdt = ethPrice
-	}
+		if "ETH" == cryptoQuote {
+			quotePriceInUsdt = ethPrice
+		}
 
-	if quotePriceInUsdt == 0.00 || priceInCoin == 0.00 {
-		log.Printf("[%s] Predict, %s=%f, %s=%f", kLine.Symbol, cryptoQuote, quotePriceInUsdt, altSymbol, priceInCoin)
+		if quotePriceInUsdt == 0.00 || priceInCoin == 0.00 {
+			log.Printf("[%s] Predict, %s=%f, %s=%f", kLine.Symbol, cryptoQuote, quotePriceInUsdt, altSymbol, priceInCoin)
+		}
 	}
 
 	return fmt.Sprintf(string([]byte(`

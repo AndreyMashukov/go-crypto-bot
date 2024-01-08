@@ -43,13 +43,15 @@ type Binance struct {
 	SocketWriter chan []byte
 	RDB          *redis.Client
 	Ctx          *context.Context
+
+	WaitMode bool
 }
 
 func (b *Binance) Connect(address string) {
 	connection, _, err := websocket.DefaultDialer.Dial(address, nil)
 	if err != nil {
 		log.Printf("Binance WS [%s]: %s, wait and reconnect...", address, err.Error())
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 10)
 		b.Connect(address)
 		return
 	}
@@ -68,7 +70,7 @@ func (b *Binance) Connect(address string) {
 
 				_ = connection.Close()
 				log.Printf("Binance WS, wait and reconnect...")
-				time.Sleep(time.Second * 3)
+				time.Sleep(time.Second * 10)
 				b.Connect(address)
 				return
 			}
@@ -89,13 +91,26 @@ func (b *Binance) Connect(address string) {
 }
 
 func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {
+	for {
+		if !b.WaitMode {
+			break
+		}
+	}
 
 	go func(req model.SocketRequest) {
 		for {
 			msg := <-b.Channel
 
 			if strings.Contains(string(msg), "Too much request weight used; current limit is 6000 request weight per 1 MINUTE") {
-				log.Printf("Socket error [%s]: %s, wait 1 min and retry...", req.Id, string(msg))
+				b.WaitMode = true
+
+				log.Printf(
+					"[%s] Socket error [%s]: %s, wait 1 min and retry...",
+					req.Method,
+					req.Id,
+					string(msg),
+				)
+
 				time.Sleep(time.Minute)
 				serialized, _ := json.Marshal(req)
 				b.SocketWriter <- serialized

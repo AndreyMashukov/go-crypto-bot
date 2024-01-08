@@ -92,6 +92,7 @@ func main() {
 		SocketWriter:   make(chan []byte),
 		RDB:            rdb,
 		Ctx:            &ctx,
+		WaitMode:       false,
 	}
 	binance.Connect(os.Getenv("BINANCE_WS_DSN")) // "wss://testnet.binance.vision/ws-api/v3"
 

@@ -113,6 +113,7 @@ func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {
 
 				time.Sleep(time.Minute)
 				serialized, _ := json.Marshal(req)
+				b.WaitMode = false
 				b.SocketWriter <- serialized
 				log.Printf("[%s] retried...", req.Id)
 

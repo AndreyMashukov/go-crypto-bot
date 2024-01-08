@@ -243,20 +243,20 @@ func (p *PythonMLBridge) GetPythonPredictAltCoinCode(kLine ExchangeModel.KLine, 
 	priceInCoin := 0.00
 	quotePriceInUsdt := 0.00
 
+	cryptoQuote := p.DataSetBuilder.GetCryptoQuote(kLine.Symbol)
+	if "BTC" == cryptoQuote {
+		quotePriceInUsdt = btcPrice
+	}
+
+	if "ETH" == cryptoQuote {
+		quotePriceInUsdt = ethPrice
+	}
+
 	if !slices.Contains(p.DataSetBuilder.ExcludeDependedDataset, kLine.Symbol) {
 		altSymbol := p.DataSetBuilder.GetDependentOn(kLine.Symbol)
 		swapPair, err := p.SwapRepository.GetSwapPairBySymbol(altSymbol)
 		if err == nil {
 			priceInCoin = swapPair.BuyPrice
-		}
-
-		cryptoQuote := p.DataSetBuilder.GetCryptoQuote(kLine.Symbol)
-		if "BTC" == cryptoQuote {
-			quotePriceInUsdt = btcPrice
-		}
-
-		if "ETH" == cryptoQuote {
-			quotePriceInUsdt = ethPrice
 		}
 
 		if quotePriceInUsdt == 0.00 || priceInCoin == 0.00 {

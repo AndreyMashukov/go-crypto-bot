@@ -3,6 +3,7 @@ package service
 import (
 	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
+	"log"
 	"time"
 )
 
@@ -41,17 +42,6 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 
 	profitPercent := order.GetProfitPercent(kLine.Close)
 
-	if profitPercent.Gte(tradeLimit.GetMinProfitPercent()) {
-		return ExchangeModel.Decision{
-			StrategyName: "order_based_strategy",
-			Score:        30.00,
-			Operation:    "SELL",
-			Timestamp:    time.Now().Unix(),
-			Price:        kLine.Close,
-			Params:       [3]float64{0, 0, 0},
-		}
-	}
-
 	if tradeLimit.IsExtraChargeEnabled() && profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) && tradeLimit.IsEnabled {
 		balanceErr := o.OrderExecutor.CheckMinBalance(tradeLimit)
 
@@ -64,6 +54,19 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 				Price:        kLine.Close,
 				Params:       [3]float64{0, 0, 0},
 			}
+		} else {
+			log.Printf("[%s] Min balance check (order_based_strategy): %s", tradeLimit.Symbol, balanceErr.Error())
+		}
+	}
+
+	if profitPercent.Gte(tradeLimit.GetMinProfitPercent()) {
+		return ExchangeModel.Decision{
+			StrategyName: "order_based_strategy",
+			Score:        30.00,
+			Operation:    "SELL",
+			Timestamp:    time.Now().Unix(),
+			Price:        kLine.Close,
+			Params:       [3]float64{0, 0, 0},
 		}
 	}
 

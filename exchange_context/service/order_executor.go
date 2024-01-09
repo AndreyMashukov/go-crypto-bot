@@ -293,6 +293,7 @@ func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchang
 	binanceOrder, err := m.tryLimitOrder(order, "SELL", 480)
 
 	if err != nil {
+		m.BalanceService.InvalidateBalanceCache("USDT")
 		m.BalanceService.InvalidateBalanceCache(order.GetBaseAsset())
 		return err
 	}

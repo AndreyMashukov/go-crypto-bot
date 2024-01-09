@@ -40,6 +40,7 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 
 	buyIndicator := buyVolumeB / sellVolumeB
 
+	// todo: buy operation is disabled
 	if buyIndicator > 150 && buySma < trade.Price {
 		return ExchangeModel.Decision{
 			StrategyName: "sma_trade_strategy",

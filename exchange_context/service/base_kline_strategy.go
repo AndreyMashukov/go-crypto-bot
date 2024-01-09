@@ -12,6 +12,7 @@ type BaseKLineStrategy struct {
 }
 
 func (k *BaseKLineStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Decision {
+	// todo: separate setup in limit for ML trading
 	//predict, _ := k.ExchangeRepository.GetPredict(kLine.Symbol)
 
 	//if kLine.IsPositive() && predict > 0.00 && k.Formatter.ComparePercentage(kLine.Close, predict).Lte(99.5) {
@@ -25,6 +26,7 @@ func (k *BaseKLineStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Deci
 	//	}
 	//}
 
+	// todo: buy operation is disabled
 	if kLine.IsPositive() && kLine.Close < (kLine.High+kLine.Open)/2 {
 		return ExchangeModel.Decision{
 			StrategyName: "base_kline_strategy",

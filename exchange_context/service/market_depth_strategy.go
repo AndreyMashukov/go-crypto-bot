@@ -27,6 +27,7 @@ func (m *MarketDepthStrategy) Decide(depth ExchangeModel.Depth) ExchangeModel.De
 
 	buySellDiff := buyVolume / sellVolume
 
+	// todo: buy operation is disabled
 	if buySellDiff > 10 {
 		return ExchangeModel.Decision{
 			StrategyName: "market_depth_strategy",

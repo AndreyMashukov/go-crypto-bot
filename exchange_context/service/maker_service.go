@@ -103,6 +103,8 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			sellScore = 999
 			buyScore = 0
 		}
+
+		log.Printf("[%s] Manual order %s", tradeLimit.Symbol, manualOrder.Operation)
 	}
 
 	// todo: fallback to existing order...

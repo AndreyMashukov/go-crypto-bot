@@ -82,9 +82,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 	if err == nil && tradeLimit.IsExtraChargeEnabled() {
 		profitPercent := order.GetProfitPercent(lastKline.Close)
-
-		// If time to extra buy and price is near Low (Low + 0.5%)
-		if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) && lastKline.Close <= lastKline.GetLowPercent(0.5) {
+		if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) {
 			log.Printf(
 				"[%s] Time to extra charge, profit %.2f of %.2f, price = %.8f",
 				symbol,

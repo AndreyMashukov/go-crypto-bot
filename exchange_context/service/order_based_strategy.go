@@ -52,10 +52,7 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 		}
 	}
 
-	periodMinPrice := o.ExchangeRepository.GetPeriodMinPrice(kLine.Symbol, 200)
-
-	// If time to extra buy and price is near Low (Low + 0.5%)
-	if tradeLimit.IsExtraChargeEnabled() && profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) && kLine.Close <= kLine.GetLowPercent(0.5) {
+	if tradeLimit.IsExtraChargeEnabled() && profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) && tradeLimit.IsEnabled {
 		balanceErr := o.OrderExecutor.CheckMinBalance(tradeLimit)
 
 		if balanceErr == nil {
@@ -64,7 +61,7 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 				Score:        999.99,
 				Operation:    "BUY",
 				Timestamp:    time.Now().Unix(),
-				Price:        periodMinPrice,
+				Price:        kLine.Close,
 				Params:       [3]float64{0, 0, 0},
 			}
 		}

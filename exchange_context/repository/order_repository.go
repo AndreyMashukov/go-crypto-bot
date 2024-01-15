@@ -313,7 +313,7 @@ func (repo *OrderRepository) GetTrades() []ExchangeModel.OrderTrade {
 			trade.symbol as Symbol,
 			TIMESTAMPDIFF(HOUR, initial.created_at, trade.created_at) as HoursOpened,
 			(initial.price * initial.executed_quantity) as Budget,
-			((trade.price * trade.executed_quantity) - (initial.price * trade.executed_quantity)) * 100 / (initial.price * initial.quantity) as Percent
+			((trade.price * trade.executed_quantity) - (initial.price * trade.executed_quantity)) * 100 / (initial.price * trade.quantity) as Percent
 		FROM orders trade
 		INNER JOIN orders initial ON initial.id = trade.closes_order AND initial.operation = 'buy' AND initial.bot_id = ?
 		WHERE trade.operation = 'sell' and trade.status = 'closed' AND trade.bot_id = ?

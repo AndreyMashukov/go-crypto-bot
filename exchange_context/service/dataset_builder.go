@@ -174,7 +174,7 @@ func (d *DataSetBuilder) GetSources(symbol string, dateString string) (string, s
 	var err error = nil
 
 	if dateString == "" {
-		for i := 12; i <= 60; i = i + 12 {
+		for i := 12; i <= 120; i = i + 12 {
 			dateString = time.Now().UTC().Add(time.Duration(i*-1) * time.Hour).Format("2006-01-02")
 
 			err = d.DownloadFile(tradesPath, fmt.Sprintf("https://data.binance.vision/data/spot/daily/trades/%s/%s-trades-%s.zip",

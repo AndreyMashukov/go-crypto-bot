@@ -1,6 +1,7 @@
 package model
 
 type OrderTrade struct {
+	OrderId      int64   `json:"orderId"`
 	Open         string  `json:"open"`
 	Close        string  `json:"close"`
 	Buy          float64 `json:"buy"`

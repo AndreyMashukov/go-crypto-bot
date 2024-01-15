@@ -300,26 +300,25 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 }
 
 func (repo *OrderRepository) GetTrades() []ExchangeModel.OrderTrade {
-	// todo: refactor with partial...
 	res, err := repo.DB.Query(`
 		SELECT
-			buy.created_at as Open,
-			MAX(sell.created_at) as Close,
-			buy.price as Buy,
-			AVG(sell.price) as Sell,
-			buy.executed_quantity as BuyQuantity,
-			SUM(sell.executed_quantity) as SellQuantity,
-			(SUM(sell.price * sell.executed_quantity)) - (buy.price * buy.executed_quantity) as Profit,
-			buy.symbol as Symbol,
-			TIMESTAMPDIFF(HOUR, buy.created_at, MAX(sell.created_at)) as HoursOpened,
-			(buy.price * buy.quantity) as Budget,
-			(((AVG(sell.price) * AVG(sell.executed_quantity)) - (buy.price * buy.executed_quantity)) * 100 / (buy.price * buy.quantity)) as Percent
-		FROM orders buy
-			 INNER JOIN orders sell ON sell.closes_order = buy.id and sell.operation = 'sell'
-		WHERE buy.bot_id = ? AND buy.operation = 'buy' and buy.status = 'closed' is not null
-		GROUP BY buy.id
-		order by Close DESC
-	`, repo.CurrentBot.Id)
+			trade.id as OrderId,
+			initial.created_at as Open,
+			trade.created_at as Close,
+			initial.price as Buy,
+			trade.price as Sell,
+			initial.executed_quantity as BuyQuantity,
+			trade.executed_quantity as SellQuantity,
+			(trade.price * trade.executed_quantity) - (initial.price * trade.executed_quantity) as Profit,
+			trade.symbol as Symbol,
+			TIMESTAMPDIFF(HOUR, initial.created_at, trade.created_at) as HoursOpened,
+			(initial.price * initial.executed_quantity) as Budget,
+			((trade.price * trade.executed_quantity) - (initial.price * trade.executed_quantity)) * 100 / (initial.price * initial.quantity) as Percent
+		FROM orders trade
+		INNER JOIN orders initial ON initial.id = trade.closes_order AND initial.operation = 'buy' AND initial.bot_id = ?
+		WHERE trade.operation = 'sell' and trade.status = 'closed' AND trade.bot_id = ?
+		ORDER BY Close DESC
+	`, repo.CurrentBot.Id, repo.CurrentBot.Id)
 	defer res.Close()
 
 	if err != nil {
@@ -331,6 +330,7 @@ func (repo *OrderRepository) GetTrades() []ExchangeModel.OrderTrade {
 	for res.Next() {
 		var orderTrade ExchangeModel.OrderTrade
 		err := res.Scan(
+			&orderTrade.OrderId,
 			&orderTrade.Open,
 			&orderTrade.Close,
 			&orderTrade.Buy,

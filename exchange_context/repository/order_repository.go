@@ -307,7 +307,7 @@ func (repo *OrderRepository) GetTrades() []ExchangeModel.OrderTrade {
 			trade.created_at as Close,
 			initial.price as Buy,
 			trade.price as Sell,
-			initial.executed_quantity as BuyQuantity,
+			trade.executed_quantity as BuyQuantity,
 			trade.executed_quantity as SellQuantity,
 			(trade.price * trade.executed_quantity) - (initial.price * trade.executed_quantity) as Profit,
 			trade.symbol as Symbol,

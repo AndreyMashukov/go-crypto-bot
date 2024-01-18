@@ -141,7 +141,7 @@ func main() {
 		log.Printf("Balance check error: %s", err.Error())
 
 		if err.Error() == ExchangeModel.BinanceErrorInvalidAPIKeyOrPermissions {
-			log.Println("Notify SAAS system about error")
+			log.Println("Notify SaaS system about error")
 			callbackManager.Error(
 				*currentBot,
 				ExchangeModel.BinanceErrorInvalidAPIKeyOrPermissions,
@@ -243,15 +243,15 @@ func main() {
 	timeService := ExchangeService.TimeService{}
 
 	orderExecutor := ExchangeService.OrderExecutor{
-		CurrentBot:          currentBot,
-		TimeService:         &timeService,
-		BalanceService:      &balanceService,
-		Binance:             &binance,
-		OrderRepository:     &orderRepository,
-		ExchangeRepository:  &exchangeRepository,
-		PriceCalculator:     &priceCalculator,
-		TelegramNotificator: &callbackManager,
-		SwapRepository:      &swapRepository,
+		CurrentBot:         currentBot,
+		TimeService:        &timeService,
+		BalanceService:     &balanceService,
+		Binance:            &binance,
+		OrderRepository:    &orderRepository,
+		ExchangeRepository: &exchangeRepository,
+		PriceCalculator:    &priceCalculator,
+		CallbackManager:    &callbackManager,
+		SwapRepository:     &swapRepository,
 		SwapExecutor: &ExchangeService.SwapExecutor{
 			BalanceService:  &balanceService,
 			SwapRepository:  &swapRepository,

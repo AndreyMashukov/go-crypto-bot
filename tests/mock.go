@@ -336,6 +336,9 @@ type TelegramNotificatorMock struct {
 	mock.Mock
 }
 
+func (s *TelegramNotificatorMock) Error(bot model.Bot, code string, message string, stop bool) {
+	_ = s.Called(bot, code, message, stop)
+}
 func (s *TelegramNotificatorMock) SellOrder(order model.Order, bot model.Bot, details string) {
 	_ = s.Called(order, bot, details)
 }

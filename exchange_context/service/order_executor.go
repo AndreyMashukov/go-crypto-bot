@@ -22,7 +22,7 @@ type OrderExecutor struct {
 	SwapRepository         ExchangeRepository.SwapBasicRepositoryInterface
 	SwapExecutor           SwapExecutorInterface
 	SwapValidator          SwapValidatorInterface
-	TelegramNotificator    TelegramNotificatorInterface
+	CallbackManager        CallbackManagerInterface
 	Formatter              *Formatter
 	SwapSellOrderDays      int64
 	SwapEnabled            bool
@@ -71,6 +71,13 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 	balanceErr := m.CheckBalance(order.Symbol, price, quantity)
 
 	if balanceErr != nil {
+		m.CallbackManager.Error(
+			*m.CurrentBot,
+			"balance_error",
+			balanceErr.Error(),
+			false,
+		)
+
 		return balanceErr
 	}
 
@@ -147,7 +154,7 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 	m.OrderRepository.DeleteManualOrder(order.Symbol)
 
 	go func(extraOrder ExchangeModel.Order, tradeLimit ExchangeModel.TradeLimit) {
-		m.TelegramNotificator.BuyOrder(
+		m.CallbackManager.BuyOrder(
 			extraOrder,
 			*m.CurrentBot,
 			fmt.Sprintf("Extra Charge! Sell when price will be around: %f USDT", m.PriceCalculator.CalculateSell(tradeLimit, extraOrder)),
@@ -169,6 +176,13 @@ func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, 
 	balanceErr := m.CheckBalance(symbol, price, quantity)
 
 	if balanceErr != nil {
+		m.CallbackManager.Error(
+			*m.CurrentBot,
+			"balance_error",
+			balanceErr.Error(),
+			false,
+		)
+
 		return balanceErr
 	}
 
@@ -229,7 +243,7 @@ func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, 
 	}
 
 	go func(order ExchangeModel.Order, tradeLimit ExchangeModel.TradeLimit) {
-		m.TelegramNotificator.BuyOrder(
+		m.CallbackManager.BuyOrder(
 			order,
 			*m.CurrentBot,
 			fmt.Sprintf("Sell when price will be around: %f USDT", m.PriceCalculator.CalculateSell(tradeLimit, order)),
@@ -348,7 +362,7 @@ func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchang
 	}
 
 	go func(order ExchangeModel.Order, profit float64) {
-		m.TelegramNotificator.SellOrder(
+		m.CallbackManager.SellOrder(
 			order,
 			*m.CurrentBot,
 			fmt.Sprintf("Profit is: %f USDT", m.Formatter.ToFixed(profit, 2)),

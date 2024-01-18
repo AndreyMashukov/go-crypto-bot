@@ -12,7 +12,8 @@ import (
 	"strings"
 )
 
-type TelegramNotificatorInterface interface {
+type CallbackManagerInterface interface {
+	Error(bot model.Bot, code string, message string, stop bool)
 	SellOrder(order model.Order, bot model.Bot, details string)
 	BuyOrder(order model.Order, bot model.Bot, details string)
 }

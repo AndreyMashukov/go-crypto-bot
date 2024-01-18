@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -21,6 +22,29 @@ type SocketStreamsRequest struct {
 type Error struct {
 	Code    int64  `json:"code"`
 	Message string `json:"msg"`
+}
+
+const BinanceErrorInvalidAPIKeyOrPermissions = "binance_error_invalid_api_key_or_permissions"
+const BinanceErrorFilterNotional = "binance_error_filter_notional"
+
+func (e *Error) GetMessage() string {
+	if strings.Contains(e.Message, "Invalid API-key, IP, or permissions for action") {
+		return BinanceErrorInvalidAPIKeyOrPermissions
+	}
+
+	if strings.Contains(e.Message, "Filter failure: NOTIONAL") {
+		return BinanceErrorFilterNotional
+	}
+
+	return e.Message
+}
+
+func (e *Error) IsApiKeyOrPermissions() bool {
+	return BinanceErrorInvalidAPIKeyOrPermissions == e.GetMessage()
+}
+
+func (e *Error) IsNotional() bool {
+	return BinanceErrorFilterNotional == e.GetMessage()
 }
 
 type BinanceOrderResponse struct {

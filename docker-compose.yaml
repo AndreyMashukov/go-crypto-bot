@@ -8,6 +8,7 @@ services:
         BOT_UUID: '5b51a35f-76a6-4747-8461-850fff9f7c18'
         DATABASE_DSN: 'root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot'
         REDIS_DSN: 'redis:6379'
+        REDIS_PASSWORD: ''
         BINANCE_API_KEY: '0XVVs5VRWyjJH1fMReQyVUS614C8FlF1rnmvCZN2iK3UDhwncqpGYzF1jgV8KPLM'
         BINANCE_API_SECRET: 'tg5Ak5LoTFSCIadQLn5LkcnWHEPYSiA6wpY3rEqx89GG2aj9ZWsDyMl17S5TjTHM'
         BINANCE_API_DSN: 'https://testnet.binance.vision'

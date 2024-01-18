@@ -137,18 +137,22 @@ func main() {
 	}
 
 	usdtBalance, err := balanceService.GetAssetBalance("USDT", false)
-	if err != nil && err.Error() == ExchangeModel.BinanceErrorInvalidAPIKeyOrPermissions {
-		go func() {
-			callbackManager.Error(
-				*currentBot,
-				ExchangeModel.BinanceErrorInvalidAPIKeyOrPermissions,
-				"Please check API Key permissions or IP address binding",
-				true,
-			)
-		}()
+	if err != nil {
+		log.Printf("Balance check error: %s", err.Error())
 
-		time.Sleep(5)
-		os.Exit(0)
+		if err.Error() == ExchangeModel.BinanceErrorInvalidAPIKeyOrPermissions {
+			go func() {
+				callbackManager.Error(
+					*currentBot,
+					ExchangeModel.BinanceErrorInvalidAPIKeyOrPermissions,
+					"Please check API Key permissions or IP address binding",
+					true,
+				)
+			}()
+
+			time.Sleep(5)
+			os.Exit(0)
+		}
 	}
 	log.Printf("API Key permission check passed, balance is: %.2f", usdtBalance)
 

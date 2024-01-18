@@ -148,8 +148,6 @@ func main() {
 				"Please check API Key permissions or IP address binding",
 				true,
 			)
-
-			time.Sleep(time.Second * 5)
 			os.Exit(0)
 		}
 	}

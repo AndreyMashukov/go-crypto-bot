@@ -17,11 +17,26 @@ type TelegramNotificatorInterface interface {
 	BuyOrder(order model.Order, bot model.Bot, details string)
 }
 
-type TelegramNotificator struct {
+type CallbackManager struct {
 	AutoTradeHost string
 }
 
-func (t *TelegramNotificator) SellOrder(order model.Order, bot model.Bot, details string) {
+func (t *CallbackManager) Error(bot model.Bot, code string, message string, stop bool) {
+	encoded, _ := json.Marshal(model.ErrorNotification{
+		BotId:        bot.Id,
+		Stop:         stop,
+		ErrorCode:    code,
+		ErrorMessage: message,
+	})
+	err := t.Send("/callback/error", encoded)
+	if err == nil {
+		log.Printf("[%s] Error notification sent", message)
+	} else {
+		log.Printf("[%s] Error notification failed: %s", message, err.Error())
+	}
+}
+
+func (t *CallbackManager) SellOrder(order model.Order, bot model.Bot, details string) {
 	encoded, _ := json.Marshal(model.TgOrderNotification{
 		BotId:     bot.Id,
 		Price:     order.Price,
@@ -31,15 +46,15 @@ func (t *TelegramNotificator) SellOrder(order model.Order, bot model.Bot, detail
 		DateTime:  order.CreatedAt,
 		Details:   details,
 	})
-	err := t.SendMessage(encoded)
+	err := t.Send("/callback/telegram", encoded)
 	if err == nil {
 		log.Printf("[%s] Telegram SELL notification sent", order.Symbol)
 	} else {
-		log.Printf("[%s] Telegram notification error: %s", order.Symbol, err.Error())
+		log.Printf("[%s] Telegram notification failed: %s", order.Symbol, err.Error())
 	}
 }
 
-func (t *TelegramNotificator) BuyOrder(order model.Order, bot model.Bot, details string) {
+func (t *CallbackManager) BuyOrder(order model.Order, bot model.Bot, details string) {
 	encoded, _ := json.Marshal(model.TgOrderNotification{
 		BotId:     bot.Id,
 		Price:     order.Price,
@@ -49,16 +64,16 @@ func (t *TelegramNotificator) BuyOrder(order model.Order, bot model.Bot, details
 		DateTime:  order.CreatedAt,
 		Details:   details,
 	})
-	err := t.SendMessage(encoded)
+	err := t.Send("/callback/telegram", encoded)
 	if err == nil {
 		log.Printf("[%s] Telegram BUY notification sent", order.Symbol)
 	} else {
-		log.Printf("[%s] Telegram notification error: %s", order.Symbol, err.Error())
+		log.Printf("[%s] Telegram notification failed: %s", order.Symbol, err.Error())
 	}
 }
 
-func (t *TelegramNotificator) SendMessage(message []byte) error {
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/public/callback/telegram", t.AutoTradeHost), bytes.NewReader(message))
+func (t *CallbackManager) Send(path string, message []byte) error {
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/public%s", t.AutoTradeHost, path), bytes.NewReader(message))
 	if err != nil {
 		log.Fatal(err)
 	}

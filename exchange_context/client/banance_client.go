@@ -161,7 +161,7 @@ func (b *Binance) QueryOrder(symbol string, orderId int64) (model.BinanceOrder, 
 	json.Unmarshal(message, &response)
 
 	if response.Error != nil {
-		return model.BinanceOrder{}, errors.New(response.Error.Message)
+		return model.BinanceOrder{}, errors.New(response.Error.GetMessage())
 	}
 
 	return response.Result, nil
@@ -190,7 +190,7 @@ func (b *Binance) CancelOrder(symbol string, orderId int64) (model.BinanceOrder,
 	json.Unmarshal(message, &response)
 
 	if response.Error != nil {
-		return model.BinanceOrder{}, errors.New(response.Error.Message)
+		return model.BinanceOrder{}, errors.New(response.Error.GetMessage())
 	}
 
 	return response.Result, nil
@@ -215,7 +215,7 @@ func (b *Binance) UserDataStreamStart() (model.UserDataStreamStart, error) {
 	json.Unmarshal(message, &response)
 
 	if response.Error != nil {
-		return model.UserDataStreamStart{}, errors.New(response.Error.Message)
+		return model.UserDataStreamStart{}, errors.New(response.Error.GetMessage())
 	}
 
 	return response.Result, nil
@@ -241,7 +241,7 @@ func (b *Binance) GetDepth(symbol string) (model.OrderBook, error) {
 	json.Unmarshal(message, &response)
 
 	if response.Error != nil {
-		return model.OrderBook{}, errors.New(response.Error.Message)
+		return model.OrderBook{}, errors.New(response.Error.GetMessage())
 	}
 
 	return response.Result, nil
@@ -270,7 +270,7 @@ func (b *Binance) GetOpenedOrders() ([]model.BinanceOrder, error) {
 	if response.Error != nil {
 		log.Println(socketRequest)
 		list := make([]model.BinanceOrder, 0)
-		return list, errors.New(response.Error.Message)
+		return list, errors.New(response.Error.GetMessage())
 	}
 
 	return response.Result, nil
@@ -386,7 +386,7 @@ func (b *Binance) GetExchangeData(symbols []string) (*model.ExchangeInfo, error)
 
 	if response.Error != nil {
 		log.Println(socketRequest)
-		return &model.ExchangeInfo{}, errors.New(response.Error.Message)
+		return &model.ExchangeInfo{}, errors.New(response.Error.GetMessage())
 	}
 
 	return &response.Result, nil
@@ -416,7 +416,7 @@ func (b *Binance) GetAccountStatus() (*model.AccountStatus, error) {
 	if response.Error != nil {
 		log.Println(socketRequest)
 
-		return nil, errors.New(response.Error.Message)
+		return nil, errors.New(response.Error.GetMessage())
 	}
 
 	return &response.Result, nil
@@ -447,7 +447,7 @@ func (b *Binance) GetTrades(order model.Order) ([]model.MyTrade, error) {
 	if response.Error != nil {
 		log.Println(socketRequest)
 		list := make([]model.MyTrade, 0)
-		return list, errors.New(response.Error.Message)
+		return list, errors.New(response.Error.GetMessage())
 	}
 
 	return response.Result, nil
@@ -494,14 +494,14 @@ func (b *Binance) LimitOrder(symbol string, quantity float64, price float64, ope
 	json.Unmarshal(message, &response)
 
 	if response.Error != nil {
-		log.Printf("[%s] Limit Order: %s -> %s", symbol, response.Error.Message, socketRequest)
+		log.Printf("[%s] Limit Order: %s -> %s", symbol, response.Error.GetMessage(), socketRequest)
 
-		if strings.Contains(response.Error.Message, "Filter failure: NOTIONAL") {
+		if response.Error.IsNotional() {
 			log.Printf("[%s] Sleep 1 minute", symbol)
 			time.Sleep(time.Minute) // wait one minute
 		}
 
-		return model.BinanceOrder{}, errors.New(response.Error.Message)
+		return model.BinanceOrder{}, errors.New(response.Error.GetMessage())
 	}
 
 	return response.Result, nil

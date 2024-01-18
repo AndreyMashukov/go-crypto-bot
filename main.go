@@ -125,6 +125,33 @@ func main() {
 		}
 	}
 
+	balanceService := ExchangeService.BalanceService{
+		Binance:    &binance,
+		RDB:        rdb,
+		Ctx:        &ctx,
+		CurrentBot: currentBot,
+	}
+
+	callbackManager := ExchangeService.CallbackManager{
+		AutoTradeHost: "https://api.autotrade.cloud",
+	}
+
+	usdtBalance, err := balanceService.GetAssetBalance("USDT", false)
+	if err != nil && err.Error() == ExchangeModel.BinanceErrorInvalidAPIKeyOrPermissions {
+		go func() {
+			callbackManager.Error(
+				*currentBot,
+				ExchangeModel.BinanceErrorInvalidAPIKeyOrPermissions,
+				"Please check API Key permissions or IP address binding",
+				true,
+			)
+		}()
+
+		time.Sleep(5)
+		os.Exit(0)
+	}
+	log.Printf("API Key permission check passed, balance is: %.2f", usdtBalance)
+
 	isMasterBot := currentBot.BotUuid == "5b51a35f-76a6-4747-8461-850fff9f7c18"
 	swapEnabled := currentBot.BotUuid == "5b51a35f-76a6-4747-8461-850fff9f7c18"
 
@@ -182,13 +209,6 @@ func main() {
 	lockTradeChannel := make(chan ExchangeModel.Lock)
 	depthChannel := make(chan ExchangeModel.Depth)
 
-	balanceService := ExchangeService.BalanceService{
-		Binance:    &binance,
-		RDB:        rdb,
-		Ctx:        &ctx,
-		CurrentBot: currentBot,
-	}
-
 	// own net: ATOM, XMR, XLM, DOT, ADA, XRP
 	btcDependent := []string{"LTC", "ZEC", "ATOM", "XMR", "DOT", "XRP", "BCH", "ADA", "ETH", "DOGE", "PERP"}
 	etcDependent := []string{"SHIB", "LINK", "UNI", "NEAR", "XLM", "ETC", "MATIC", "SOL", "BNB", "AVAX", "TRX", "NEO"}
@@ -219,10 +239,6 @@ func main() {
 
 	timeService := ExchangeService.TimeService{}
 
-	telegramNotificator := ExchangeService.TelegramNotificator{
-		AutoTradeHost: "https://api.autotrade.cloud",
-	}
-
 	orderExecutor := ExchangeService.OrderExecutor{
 		CurrentBot:          currentBot,
 		TimeService:         &timeService,
@@ -231,7 +247,7 @@ func main() {
 		OrderRepository:     &orderRepository,
 		ExchangeRepository:  &exchangeRepository,
 		PriceCalculator:     &priceCalculator,
-		TelegramNotificator: &telegramNotificator,
+		TelegramNotificator: &callbackManager,
 		SwapRepository:      &swapRepository,
 		SwapExecutor: &ExchangeService.SwapExecutor{
 			BalanceService:  &balanceService,

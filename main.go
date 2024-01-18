@@ -141,16 +141,15 @@ func main() {
 		log.Printf("Balance check error: %s", err.Error())
 
 		if err.Error() == ExchangeModel.BinanceErrorInvalidAPIKeyOrPermissions {
-			go func() {
-				callbackManager.Error(
-					*currentBot,
-					ExchangeModel.BinanceErrorInvalidAPIKeyOrPermissions,
-					"Please check API Key permissions or IP address binding",
-					true,
-				)
-			}()
+			log.Println("Notify SAAS system about error")
+			callbackManager.Error(
+				*currentBot,
+				ExchangeModel.BinanceErrorInvalidAPIKeyOrPermissions,
+				"Please check API Key permissions or IP address binding",
+				true,
+			)
 
-			time.Sleep(5)
+			time.Sleep(time.Second * 5)
 			os.Exit(0)
 		}
 	}

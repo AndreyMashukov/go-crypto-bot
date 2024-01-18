@@ -77,9 +77,9 @@ func main() {
 
 	var ctx = context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     os.Getenv("REDIS_DSN"), //"redis:6379",
-		Password: "",                     // no password set, todo: set password and run in private net!
-		DB:       0,                      // use default DB
+		Addr:     os.Getenv("REDIS_DSN"),      // redis:6379,
+		Password: os.Getenv("REDIS_PASSWORD"), // redis password
+		DB:       0,                           // use default DB
 	})
 
 	httpClient := http.Client{}

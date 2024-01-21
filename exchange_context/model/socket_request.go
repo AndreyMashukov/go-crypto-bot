@@ -253,6 +253,7 @@ func (k *KLineHistory) ToKLine(symbol string) KLine {
 		Interval:  "1m",
 		Timestamp: k.CloseTime,
 		Volume:    volume,
+		UpdatedAt: k.CloseTime / 1000,
 	}
 }
 

@@ -16,6 +16,7 @@ require (
 	github.com/google/uuid v1.4.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rafacas/sysstats v0.0.0-20150414182805-21d5ac1731f7 // indirect
 	github.com/redis/go-redis/v9 v9.1.0 // indirect
 	github.com/stretchr/objx v0.5.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

@@ -13,6 +13,7 @@ import (
 
 type OrderExecutor struct {
 	CurrentBot             *ExchangeModel.Bot
+	MlEnabled              bool
 	TimeService            TimeServiceInterface
 	BalanceService         BalanceServiceInterface
 	Binance                ExchangeClient.ExchangeOrderAPIInterface
@@ -33,7 +34,7 @@ type OrderExecutor struct {
 	LockChannel            *chan ExchangeModel.Lock
 }
 
-func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64, sellVolume float64, buyVolume float64, smaValue float64) error {
+func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64) error {
 	if tradeLimit.GetBuyOnFallPercent().Gte(0.00) {
 		return errors.New(fmt.Sprintf("[%s] Extra buy is disabled", tradeLimit.Symbol))
 	}
@@ -86,9 +87,9 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 		Quantity:    quantity,
 		Price:       price,
 		CreatedAt:   m.TimeService.GetNowDateTimeString(),
-		SellVolume:  sellVolume,
-		BuyVolume:   buyVolume,
-		SmaValue:    smaValue,
+		SellVolume:  0.00,
+		BuyVolume:   0.00,
+		SmaValue:    0.00,
 		Status:      "closed",
 		Operation:   "buy",
 		ExternalId:  nil,
@@ -164,7 +165,7 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 	return nil
 }
 
-func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, price float64, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
+func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, price float64, quantity float64) error {
 	if m.isTradeLocked(symbol) {
 		return errors.New(fmt.Sprintf("Operation Buy is Locked %s", symbol))
 	}
@@ -201,9 +202,9 @@ func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, 
 		Quantity:    quantity,
 		Price:       price,
 		CreatedAt:   m.TimeService.GetNowDateTimeString(),
-		SellVolume:  sellVolume,
-		BuyVolume:   buyVolume,
-		SmaValue:    smaValue,
+		SellVolume:  0.00,
+		BuyVolume:   0.00,
+		SmaValue:    0.00,
 		Status:      "opened",
 		Operation:   "buy",
 		ExternalId:  nil,
@@ -253,7 +254,7 @@ func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, 
 	return nil
 }
 
-func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened ExchangeModel.Order, symbol string, price float64, quantity float64, sellVolume float64, buyVolume float64, smaValue float64) error {
+func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened ExchangeModel.Order, symbol string, price float64, quantity float64) error {
 	if m.isTradeLocked(symbol) {
 		return errors.New(fmt.Sprintf("Operation Sell is Locked %s", symbol))
 	}
@@ -294,9 +295,9 @@ func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchang
 		Quantity:    quantity,
 		Price:       price,
 		CreatedAt:   m.TimeService.GetNowDateTimeString(),
-		SellVolume:  sellVolume,
-		BuyVolume:   buyVolume,
-		SmaValue:    smaValue,
+		SellVolume:  0.00,
+		BuyVolume:   0.00,
+		SmaValue:    0.00,
 		Status:      "closed",
 		Operation:   "sell",
 		ExternalId:  nil,
@@ -546,6 +547,29 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 									}
 								}
 							}
+						}
+					}
+				}
+			}
+
+			if m.MlEnabled && kline != nil && binanceOrder.IsBuy() && binanceOrder.IsNew() {
+				predict, predictErr := m.ExchangeRepository.GetPredict(kline.Symbol)
+				if predictErr == nil && binanceOrder.Price > predict {
+					log.Printf("[%s] (ML) Check status signal sent!", binanceOrder.Symbol)
+					allowedExtraRequest = false
+					orderManageChannel <- "status"
+					action := <-control
+					if action == "stop" {
+						return
+					}
+					log.Printf("[%s] (ML) Order status is [%s]", binanceOrder.Symbol, binanceOrder.Status)
+
+					if binanceOrder.IsNew() {
+						log.Printf("[%s] (ML) Cancel signal sent!", binanceOrder.Symbol)
+						orderManageChannel <- "cancel"
+						action := <-control
+						if action == "stop" {
+							return
 						}
 					}
 				}

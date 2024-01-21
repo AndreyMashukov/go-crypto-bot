@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 type KLine struct {
 	Symbol    string  `json:"s"`
 	Open      float64 `json:"o,string"`
@@ -9,6 +11,7 @@ type KLine struct {
 	Interval  string  `json:"i"`
 	Timestamp int64   `json:"T,int"`
 	Volume    float64 `json:"v,string"`
+	UpdatedAt int64   `json:"updatedAt"`
 	// 		"t": 1694420820000,
 	//      "T": 1694420879999,
 	//      "s": "BTCUSDT",
@@ -38,4 +41,8 @@ func (k *KLine) IsPositive() bool {
 
 func (k *KLine) GetLowPercent(percent float64) float64 {
 	return k.Low + (k.Low * percent / 100)
+}
+
+func (k *KLine) IsPriceExpired() bool {
+	return (time.Now().Unix() - (k.UpdatedAt)) > 20
 }

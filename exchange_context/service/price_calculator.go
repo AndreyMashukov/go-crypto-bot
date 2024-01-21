@@ -21,6 +21,7 @@ type PriceCalculator struct {
 	FrameService       FrameServiceInterface
 	Binance            client.ExchangePriceAPIInterface
 	Formatter          *Formatter
+	MlEnabled          bool
 }
 
 func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, error) {
@@ -57,6 +58,14 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 
 		if extraBuyPrice > lastKline.Close {
 			extraBuyPrice = lastKline.Close
+		}
+
+		if m.MlEnabled {
+			predict, predictErr := m.ExchangeRepository.GetPredict(lastKline.Symbol)
+			if predictErr == nil && extraBuyPrice > predict {
+				log.Printf("[%s] Extra Buy price ML correction %.8f -> %.8f", lastKline.Symbol, extraBuyPrice, predict)
+				extraBuyPrice = predict
+			}
 		}
 
 		return m.Formatter.FormatPrice(tradeLimit, extraBuyPrice), nil
@@ -111,6 +120,14 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 		lastKline.Close,
 		closePrice,
 	)
+
+	if m.MlEnabled {
+		predict, predictErr := m.ExchangeRepository.GetPredict(lastKline.Symbol)
+		if predictErr == nil && buyPrice > predict {
+			log.Printf("[%s] Buy price ML correction %.8f -> %.8f", lastKline.Symbol, buyPrice, predict)
+			buyPrice = predict
+		}
+	}
 
 	return m.Formatter.FormatPrice(tradeLimit, buyPrice), nil
 }

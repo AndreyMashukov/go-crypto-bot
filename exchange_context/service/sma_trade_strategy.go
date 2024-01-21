@@ -22,7 +22,7 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 	if len(list) < maxPeriod {
 		return ExchangeModel.Decision{
 			StrategyName: "sma_trade_strategy",
-			Score:        999.00,
+			Score:        30.00,
 			Operation:    "HOLD",
 			Timestamp:    time.Now().Unix(),
 			Price:        trade.Price,

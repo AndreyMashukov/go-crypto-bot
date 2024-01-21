@@ -26,6 +26,7 @@ type ExchangeTradeInfoInterface interface {
 	GetLastKLine(symbol string) *model.KLine
 	GetTradeLimit(symbol string) (model.TradeLimit, error)
 	GetPeriodMinPrice(symbol string, period int64) float64
+	GetPredict(symbol string) (float64, error)
 }
 
 type ExchangeRepositoryInterface interface {
@@ -58,6 +59,7 @@ type ExchangePriceStorageInterface interface {
 	GetPeriodMinPrice(symbol string, period int64) float64
 	GetDepth(symbol string) model.Depth
 	SetDepth(depth model.Depth)
+	GetPredict(symbol string) (float64, error)
 }
 
 type ExchangeRepository struct {

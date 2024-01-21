@@ -182,6 +182,10 @@ func (e *ExchangePriceStorageMock) GetDepth(symbol string) model.Depth {
 func (e *ExchangePriceStorageMock) SetDepth(depth model.Depth) {
 	_ = e.Called(depth)
 }
+func (e *ExchangePriceStorageMock) GetPredict(symbol string) (float64, error) {
+	args := e.Called(symbol)
+	return args.Get(0).(float64), args.Error(1)
+}
 
 type OrderCachedReaderMock struct {
 	mock.Mock
@@ -292,6 +296,10 @@ func (e *ExchangeTradeInfoMock) GetTradeLimit(symbol string) (model.TradeLimit, 
 func (e *ExchangeTradeInfoMock) GetPeriodMinPrice(symbol string, period int64) float64 {
 	args := e.Called(symbol, period)
 	return args.Get(0).(float64)
+}
+func (e *ExchangeTradeInfoMock) GetPredict(symbol string) (float64, error) {
+	args := e.Called(symbol)
+	return args.Get(0).(float64), args.Error(1)
 }
 
 type PriceCalculatorMock struct {

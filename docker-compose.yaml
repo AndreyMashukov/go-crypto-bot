@@ -13,7 +13,7 @@ services:
         BINANCE_API_SECRET: 'tg5Ak5LoTFSCIadQLn5LkcnWHEPYSiA6wpY3rEqx89GG2aj9ZWsDyMl17S5TjTHM'
         BINANCE_API_DSN: 'https://testnet.binance.vision'
         BINANCE_WS_DSN: 'wss://testnet.binance.vision/ws-api/v3'
-        BINANCE_STREAM_DSN: 'wss://stream.binancefuture.com'
+        BINANCE_STREAM_DSN: 'wss://stream.binance.com' #'wss://stream.binancefuture.com'
     networks:
       - bot-net
     ports:

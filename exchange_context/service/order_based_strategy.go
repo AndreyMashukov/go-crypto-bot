@@ -59,7 +59,18 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 	if profitPercent.Gte(tradeLimit.GetMinProfitPercent()) {
 		return ExchangeModel.Decision{
 			StrategyName: "order_based_strategy",
-			Score:        30.00,
+			Score:        999.99,
+			Operation:    "SELL",
+			Timestamp:    time.Now().Unix(),
+			Price:        kLine.Close,
+			Params:       [3]float64{0, 0, 0},
+		}
+	}
+
+	if profitPercent.Gte(tradeLimit.GetMinProfitPercent() / 2) {
+		return ExchangeModel.Decision{
+			StrategyName: "order_based_strategy",
+			Score:        50.00,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
 			Price:        kLine.Close,

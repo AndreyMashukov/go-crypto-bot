@@ -49,7 +49,7 @@ func (h *HealthService) HealthCheck() model.BotHealth {
 	if h.Binance.WaitMode {
 		binanceStatus = model.BinanceStatusBan
 	}
-	if binanceStatus == model.BinanceStatusOk && !h.Binance.APIKeyCheckCompleted {
+	if !h.Binance.APIKeyCheckCompleted {
 		binanceStatus = model.BinanceStatusApiKeyCheck
 	}
 

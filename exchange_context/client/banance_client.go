@@ -44,7 +44,8 @@ type Binance struct {
 	RDB          *redis.Client
 	Ctx          *context.Context
 
-	WaitMode bool
+	WaitMode  bool
+	Connected bool
 }
 
 func (b *Binance) CheckWait() {
@@ -58,6 +59,7 @@ func (b *Binance) CheckWait() {
 func (b *Binance) Connect(address string) {
 	connection, _, err := websocket.DefaultDialer.Dial(address, nil)
 	if err != nil {
+		b.Connected = false
 		log.Printf("Binance WS [%s]: %s, wait and reconnect...", address, err.Error())
 		time.Sleep(time.Second * 10)
 		b.Connect(address)
@@ -77,6 +79,7 @@ func (b *Binance) Connect(address string) {
 				log.Println("read: ", err)
 
 				_ = connection.Close()
+				b.Connected = false
 				log.Printf("Binance WS, wait and reconnect...")
 				time.Sleep(time.Second * 10)
 				b.Connect(address)
@@ -96,6 +99,7 @@ func (b *Binance) Connect(address string) {
 	}()
 
 	b.connection = connection
+	b.Connected = true
 }
 
 func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {

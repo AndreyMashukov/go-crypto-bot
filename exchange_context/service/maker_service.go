@@ -26,19 +26,10 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 	buyScore := 0.00
 	sellScore := 0.00
 	holdScore := 0.00
-
-	sellVolume := 0.00
-	buyVolume := 0.00
-	smaValue := 0.00
 	amount := 0.00
 	priceSum := 0.00
 
 	for _, decision := range decisions {
-		if decision.StrategyName == "sma_trade_strategy" {
-			buyVolume = decision.Params[0]
-			sellVolume = decision.Params[1]
-			smaValue = decision.Params[2]
-		}
 		amount = amount + 1.00
 		switch decision.Operation {
 		case "BUY":
@@ -74,14 +65,14 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		return
 	}
 
-	order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
+	openedOrder, buyOrderErr := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 
-	if m.OrderExecutor.ProcessSwap(order) {
+	if m.OrderExecutor.ProcessSwap(openedOrder) {
 		return
 	}
 
-	if err == nil && tradeLimit.IsExtraChargeEnabled() {
-		profitPercent := order.GetProfitPercent(lastKline.Close)
+	if buyOrderErr == nil && tradeLimit.IsExtraChargeEnabled() {
+		profitPercent := openedOrder.GetProfitPercent(lastKline.Close)
 		if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) {
 			log.Printf(
 				"[%s] Time to extra charge, profit %.2f of %.2f, price = %.8f",
@@ -108,14 +99,12 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 	}
 
 	// todo: fallback to existing order...
-
+	// log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
 	if holdScore >= m.HoldScore {
 		return
 	}
 
 	if sellScore >= buyScore {
-		//log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
-
 		marketDepth := m.PriceCalculator.GetDepth(tradeLimit.Symbol)
 
 		if len(marketDepth.Asks) < 3 && manualOrder == nil {
@@ -128,37 +117,31 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			return
 		}
 
-		if err == nil {
-			order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
-			if err == nil {
-				price := m.PriceCalculator.CalculateSell(tradeLimit, order)
-				smaFormatted := m.Formatter.FormatPrice(tradeLimit, smaValue)
+		if buyOrderErr == nil {
+			price := m.PriceCalculator.CalculateSell(tradeLimit, openedOrder)
 
-				if manualOrder != nil && strings.ToUpper(manualOrder.Operation) == "SELL" {
-					price = m.Formatter.FormatPrice(tradeLimit, manualOrder.Price)
-				}
+			if manualOrder != nil && strings.ToUpper(manualOrder.Operation) == "SELL" {
+				price = m.Formatter.FormatPrice(tradeLimit, manualOrder.Price)
+			}
 
-				if price > 0 {
-					quantity := m.Formatter.FormatQuantity(tradeLimit, m.OrderExecutor.CalculateSellQuantity(order))
+			if price > 0 {
+				quantity := m.Formatter.FormatQuantity(tradeLimit, m.OrderExecutor.CalculateSellQuantity(openedOrder))
 
-					if quantity >= tradeLimit.MinQuantity {
-						log.Printf("[%s] SELL QTY = %f", order.Symbol, quantity)
-						err = m.OrderExecutor.Sell(tradeLimit, order, symbol, price, quantity, sellVolume, buyVolume, smaFormatted)
-						if err != nil {
-							log.Printf("[%s] SELL error: %s", order.Symbol, err.Error())
-						}
-					} else {
-						log.Printf("[%s] SELL QTY = %f is too small!", order.Symbol, quantity)
-					}
-
+				if quantity >= tradeLimit.MinQuantity {
+					log.Printf("[%s] SELL QTY = %f", openedOrder.Symbol, quantity)
+					err = m.OrderExecutor.Sell(tradeLimit, openedOrder, symbol, price, quantity)
 					if err != nil {
-						log.Printf("[%s] %s", symbol, err)
+						log.Printf("[%s] SELL error: %s", openedOrder.Symbol, err.Error())
 					}
 				} else {
-					log.Printf("[%s] No BIDs on the market", symbol)
+					log.Printf("[%s] SELL QTY = %f is too small!", openedOrder.Symbol, quantity)
+				}
+
+				if err != nil {
+					log.Printf("[%s] %s", symbol, err)
 				}
 			} else {
-				log.Printf("[%s] Nothing to sell\n", symbol)
+				log.Printf("[%s] No BIDs on the market", symbol)
 			}
 		}
 
@@ -166,9 +149,6 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 	}
 
 	if buyScore > sellScore {
-		//log.Printf("[%s] Maker - H:%f, S:%f, B:%f\n", symbol, holdScore, sellScore, buyScore)
-		tradeLimit, err := m.ExchangeRepository.GetTradeLimit(symbol)
-
 		if !tradeLimit.IsEnabled {
 			log.Printf("[%s] BUY operation is disabled", symbol)
 			return
@@ -189,80 +169,74 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			return
 		}
 
-		if err == nil {
-			price, err := m.PriceCalculator.CalculateBuy(tradeLimit)
+		price, err := m.PriceCalculator.CalculateBuy(tradeLimit)
 
-			if err != nil {
-				lastKline := m.ExchangeRepository.GetLastKLine(symbol)
-				if lastKline == nil {
-					log.Printf("[%s] Last price is unknown", symbol)
-					return
-				}
-
-				log.Printf("[%s] %s, current = %f", symbol, err.Error(), lastKline.Close)
+		if err != nil {
+			lastKline := m.ExchangeRepository.GetLastKLine(symbol)
+			if lastKline == nil {
+				log.Printf("[%s] Last price is unknown", symbol)
 				return
 			}
 
-			order, err := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
+			log.Printf("[%s] %s, current = %f", symbol, err.Error(), lastKline.Close)
+			return
+		}
 
-			if manualOrder != nil && strings.ToUpper(manualOrder.Operation) == "BUY" {
-				price = m.Formatter.FormatPrice(tradeLimit, manualOrder.Price)
+		if manualOrder != nil && strings.ToUpper(manualOrder.Operation) == "BUY" {
+			price = m.Formatter.FormatPrice(tradeLimit, manualOrder.Price)
+		}
+
+		if buyOrderErr != nil {
+			if lastKline.IsPriceExpired() {
+				log.Printf("[%s] Price is expired", symbol)
+				return
 			}
 
-			if err != nil {
-				smaFormatted := m.Formatter.FormatPrice(tradeLimit, smaValue)
+			if price > 0 {
+				// todo: get buy quantity, buy to all cutlet! check available balance!
+				quantity := m.Formatter.FormatQuantity(tradeLimit, tradeLimit.USDTLimit/price)
 
-				if price > smaFormatted {
-					log.Printf("[%s] Bad BUY price! SMA: %.6f, Price: %.6f\n", symbol, smaFormatted, price)
+				if (quantity * price) < tradeLimit.MinNotional {
+					log.Printf("[%s] BUY Notional: %.8f < %.8f", symbol, quantity*price, tradeLimit.MinNotional)
 					return
 				}
 
-				if price > 0 {
-					// todo: get buy quantity, buy to all cutlet! check available balance!
-					quantity := m.Formatter.FormatQuantity(tradeLimit, tradeLimit.USDTLimit/price)
+				err = m.OrderExecutor.Buy(tradeLimit, symbol, price, quantity)
+				if err != nil {
+					log.Printf("[%s] %s", symbol, err)
 
-					if (quantity * price) < tradeLimit.MinNotional {
-						log.Printf("[%s] BUY Notional: %.8f < %.8f", symbol, quantity*price, tradeLimit.MinNotional)
-						return
+					if strings.Contains(err.Error(), "not enough balance") {
+						log.Printf("[%s] wait 1 minute...", symbol)
+						time.Sleep(time.Minute * 1)
+					}
+				}
+			} else {
+				log.Printf("[%s] No ASKs on the market", symbol)
+			}
+		} else {
+			lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+			if lastKline != nil {
+				profit := openedOrder.GetProfitPercent(lastKline.Close)
+
+				if err == nil && profit.Lte(tradeLimit.GetBuyOnFallPercent()) {
+					// extra buy on current price
+					if price < lastKline.Close {
+						price = m.Formatter.FormatPrice(tradeLimit, lastKline.Close)
 					}
 
-					err = m.OrderExecutor.Buy(tradeLimit, symbol, price, quantity, sellVolume, buyVolume, smaFormatted)
+					err = m.OrderExecutor.BuyExtra(tradeLimit, openedOrder, price)
 					if err != nil {
 						log.Printf("[%s] %s", symbol, err)
 
-						if strings.Contains(err.Error(), "not enough balance") {
-							log.Printf("[%s] wait 1 minute...", symbol)
-							time.Sleep(time.Minute * 1)
-						}
+						m.OrderExecutor.TrySwap(openedOrder)
 					}
 				} else {
-					log.Printf("[%s] No ASKs on the market", symbol)
-				}
-			} else {
-				lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
-				if lastKline != nil {
-					profit := order.GetProfitPercent(lastKline.Close)
-
-					if err == nil && profit.Lte(tradeLimit.GetBuyOnFallPercent()) {
-						// extra buy on current price
-						if price < lastKline.Close {
-							price = m.Formatter.FormatPrice(tradeLimit, lastKline.Close)
-						}
-
-						err = m.OrderExecutor.BuyExtra(tradeLimit, order, price, sellVolume, buyVolume, smaValue)
-						if err != nil {
-							log.Printf("[%s] %s", symbol, err)
-
-							m.OrderExecutor.TrySwap(order)
-						}
-					} else {
-						log.Printf(
-							"[%s] Extra charge is not allowed: %.2f of %.2f",
-							symbol,
-							profit.Value(),
-							tradeLimit.GetBuyOnFallPercent().Value(),
-						)
-					}
+					log.Printf(
+						"[%s] Extra charge is not allowed: %.2f of %.2f",
+						symbol,
+						profit.Value(),
+						tradeLimit.GetBuyOnFallPercent().Value(),
+					)
 				}
 			}
 		}

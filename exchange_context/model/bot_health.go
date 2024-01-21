@@ -13,6 +13,7 @@ const RedisStatusFail = "fail"
 const BinanceStatusOk = "ok"
 const BinanceStatusBan = "ban"
 const BinanceStatusDisconnected = "disconnected"
+const BinanceStatusApiKeyCheck = "api_key_checking"
 
 type BotHealth struct {
 	Bot           Bot               `json:"bot"`

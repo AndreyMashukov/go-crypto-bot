@@ -43,15 +43,17 @@ func InitServiceContainer() Container {
 
 	httpClient := http.Client{}
 	binance := client.Binance{
-		ApiKey:         os.Getenv("BINANCE_API_KEY"),    // "0XVVs5VRWyjJH1fMReQyVUS614C8FlF1rnmvCZN2iK3UDhwncqpGYzF1jgV8KPLM",
-		ApiSecret:      os.Getenv("BINANCE_API_SECRET"), // "tg5Ak5LoTFSCIadQLn5LkcnWHEPYSiA6wpY3rEqx89GG2aj9ZWsDyMl17S5TjTHM",
-		DestinationURI: os.Getenv("BINANCE_API_DSN"),    // "https://testnet.binance.vision",
-		HttpClient:     &httpClient,
-		Channel:        make(chan []byte),
-		SocketWriter:   make(chan []byte),
-		RDB:            rdb,
-		Ctx:            &ctx,
-		WaitMode:       false,
+		ApiKey:               os.Getenv("BINANCE_API_KEY"),    // "0XVVs5VRWyjJH1fMReQyVUS614C8FlF1rnmvCZN2iK3UDhwncqpGYzF1jgV8KPLM",
+		ApiSecret:            os.Getenv("BINANCE_API_SECRET"), // "tg5Ak5LoTFSCIadQLn5LkcnWHEPYSiA6wpY3rEqx89GG2aj9ZWsDyMl17S5TjTHM",
+		DestinationURI:       os.Getenv("BINANCE_API_DSN"),    // "https://testnet.binance.vision",
+		HttpClient:           &httpClient,
+		Channel:              make(chan []byte),
+		SocketWriter:         make(chan []byte),
+		RDB:                  rdb,
+		Ctx:                  &ctx,
+		WaitMode:             false,
+		APIKeyCheckCompleted: false,
+		Connected:            false,
 	}
 
 	frameService := service.FrameService{

@@ -44,8 +44,9 @@ type Binance struct {
 	RDB          *redis.Client
 	Ctx          *context.Context
 
-	WaitMode  bool
-	Connected bool
+	WaitMode             bool
+	Connected            bool
+	APIKeyCheckCompleted bool
 }
 
 func (b *Binance) CheckWait() {

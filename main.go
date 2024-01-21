@@ -76,6 +76,7 @@ func main() {
 		}
 	}
 	log.Printf("API Key permission check passed, balance is: %.2f", usdtBalance)
+	container.Binance.APIKeyCheckCompleted = true
 
 	// Wait 5 seconds, here API can update some settings...
 	time.Sleep(time.Second * 5)

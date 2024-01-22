@@ -207,6 +207,12 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 
 	opened, err := o.OrderRepository.GetOpenedOrderCached(manual.Symbol, "BUY")
 	if err == nil && manual.Operation == "SELL" {
+		if opened.Swap {
+			http.Error(w, "Can not sell position when SWAP is processing", http.StatusBadRequest)
+
+			return
+		}
+
 		minPrice := o.Formatter.FormatPrice(tradeLimit, opened.GetManualMinClosePrice())
 		if minPrice > manual.Price {
 			http.Error(w, fmt.Sprintf("Price can not be less then %.6f", minPrice), http.StatusBadRequest)

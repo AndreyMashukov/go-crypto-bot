@@ -193,7 +193,7 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 
 	allowedOperations := []string{"BUY", "SELL"}
 	if !slices.Contains(allowedOperations, manual.Operation) {
-		http.Error(w, "Поддерживаются только операции BUY/SELL", http.StatusBadRequest)
+		http.Error(w, "Only BUY/SELL operations are supported", http.StatusBadRequest)
 
 		return
 	}
@@ -207,22 +207,22 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 
 	opened, err := o.OrderRepository.GetOpenedOrderCached(manual.Symbol, "BUY")
 	if err == nil && manual.Operation == "SELL" {
-		minPrice := o.Formatter.FormatPrice(tradeLimit, opened.GetMinClosePrice(tradeLimit))
+		minPrice := o.Formatter.FormatPrice(tradeLimit, opened.GetManualMinClosePrice())
 		if minPrice > manual.Price {
-			http.Error(w, fmt.Sprintf("Цена не может быть ниже %.6f", minPrice), http.StatusBadRequest)
+			http.Error(w, fmt.Sprintf("Price can not be less then %.6f", minPrice), http.StatusBadRequest)
 
 			return
 		}
 	}
 
 	if err != nil && manual.Operation == "SELL" {
-		http.Error(w, "Нет открытых ордеров", http.StatusBadRequest)
+		http.Error(w, "There are no opened orders", http.StatusBadRequest)
 
 		return
 	}
 
 	if err == nil && manual.Operation == "BUY" {
-		http.Error(w, "Докупать вручную временно запрещено", http.StatusBadRequest)
+		http.Error(w, "Manual extra buy is temporary prohibited", http.StatusBadRequest)
 
 		return
 	}
@@ -236,7 +236,7 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 	}
 
 	if err != nil && manual.Operation == "BUY" && minPrice < manual.Price {
-		http.Error(w, fmt.Sprintf("Покупать выше цены %f запрещено", minPrice), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Price can not be greather then %f", minPrice), http.StatusBadRequest)
 
 		return
 	}
@@ -244,7 +244,7 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 	binanceOrder := o.OrderRepository.GetBinanceOrder(manual.Symbol, manual.Operation)
 
 	if binanceOrder != nil && binanceOrder.Status == "PARTIALLY_FILLED" {
-		http.Error(w, "Ордер исполняется, дождитесь завершения операции", http.StatusBadRequest)
+		http.Error(w, "Order is filling now, please wait until has been filled", http.StatusBadRequest)
 
 		return
 	}

@@ -120,8 +120,11 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		if buyOrderErr == nil {
 			price := m.PriceCalculator.CalculateSell(tradeLimit, openedOrder)
 
+			isManual := false
+
 			if manualOrder != nil && strings.ToUpper(manualOrder.Operation) == "SELL" {
 				price = m.Formatter.FormatPrice(tradeLimit, manualOrder.Price)
+				isManual = true
 			}
 
 			if price > 0 {
@@ -129,7 +132,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 				if quantity >= tradeLimit.MinQuantity {
 					log.Printf("[%s] SELL QTY = %f", openedOrder.Symbol, quantity)
-					err = m.OrderExecutor.Sell(tradeLimit, openedOrder, symbol, price, quantity)
+					err = m.OrderExecutor.Sell(tradeLimit, openedOrder, symbol, price, quantity, isManual)
 					if err != nil {
 						log.Printf("[%s] SELL error: %s", openedOrder.Symbol, err.Error())
 					}

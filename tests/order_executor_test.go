@@ -157,7 +157,7 @@ func TestSellAction(t *testing.T) {
 
 	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
 
-	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089)
+	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
 	assertion.Nil(err)
 	assertion.Equal("closed", orderRepository.Updated.Status)
 	assertion.Equal(2212.92, orderRepository.Updated.Price)
@@ -301,7 +301,7 @@ func TestSellFoundFilled(t *testing.T) {
 
 	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
 
-	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089)
+	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
 	assertion.Nil(err)
 	assertion.Equal("closed", orderRepository.Updated.Status)
 	assertion.Equal(2212.92, orderRepository.Updated.Price)
@@ -442,7 +442,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 	balanceService.On("InvalidateBalanceCache", "USDT").Times(1)
 	balanceService.On("InvalidateBalanceCache", "ETH").Times(1)
 
-	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089)
+	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
 	assertion.Error(errors.New("Order is cancelled"), err)
 }
 
@@ -571,7 +571,7 @@ func TestSellQueryFail(t *testing.T) {
 	balanceService.On("InvalidateBalanceCache", "USDT").Times(1)
 	balanceService.On("InvalidateBalanceCache", "ETH").Times(1)
 
-	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089)
+	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
 	assertion.Equal(errors.New("Order was canceled or expired"), err)
 }
 
@@ -720,7 +720,7 @@ func TestSellClosingAction(t *testing.T) {
 
 	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
 
-	err := orderExecutor.Sell(tradeLimit, openedOrder, "BTCUSDT", 43496.99, 0.00046)
+	err := orderExecutor.Sell(tradeLimit, openedOrder, "BTCUSDT", 43496.99, 0.00046, false)
 	assertion.Nil(err)
 	assertion.Equal("closed", orderRepository.Updated.Status)
 	assertion.Equal(42026.08, orderRepository.Updated.Price)
@@ -872,7 +872,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 
 	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
 
-	err := orderExecutor.Sell(tradeLimit, openedOrder, "TRXUSDT", 0.10692, 382.1)
+	err := orderExecutor.Sell(tradeLimit, openedOrder, "TRXUSDT", 0.10692, 382.1, false)
 	assertion.Nil(err)
 	assertion.Equal("closed", orderRepository.Updated.Status)
 	assertion.Equal(0.10457, orderRepository.Updated.Price)

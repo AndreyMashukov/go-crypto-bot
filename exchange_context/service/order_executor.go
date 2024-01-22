@@ -254,7 +254,7 @@ func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, 
 	return nil
 }
 
-func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened ExchangeModel.Order, symbol string, price float64, quantity float64) error {
+func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened ExchangeModel.Order, symbol string, price float64, quantity float64, isManual bool) error {
 	if m.isTradeLocked(symbol) {
 		return errors.New(fmt.Sprintf("Operation Sell is Locked %s", symbol))
 	}

@@ -110,6 +110,10 @@ func (o *Order) GetMinClosePrice(limit TradeLimit) float64 {
 	return o.Price * (100 + limit.GetMinProfitPercent().Value()) / 100
 }
 
+func (o *Order) GetManualMinClosePrice() float64 {
+	return o.Price * (100 + 0.50) / 100
+}
+
 func (o *Order) IsSell() bool {
 	return o.Operation == "SELL"
 }

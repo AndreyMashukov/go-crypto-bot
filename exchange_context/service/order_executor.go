@@ -281,6 +281,10 @@ func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchang
 
 	minPrice := m.Formatter.FormatPrice(tradeLimit, opened.GetMinClosePrice(tradeLimit))
 
+	if isManual {
+		minPrice = m.Formatter.FormatPrice(tradeLimit, opened.GetManualMinClosePrice())
+	}
+
 	if price < minPrice {
 		return errors.New(fmt.Sprintf(
 			"[%s] Minimum profit is not reached, Price %.6f < %.6f",

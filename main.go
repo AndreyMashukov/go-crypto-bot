@@ -233,6 +233,37 @@ func main() {
 				kLine := container.ExchangeRepository.GetLastKLine(symbol)
 				if kLine != nil {
 					container.ExchangeRepository.SaveKLinePredict(predicted, *kLine)
+					// todo: write only master bot???
+					interpolation := container.PriceCalculator.InterpolatePrice(kLine.Symbol)
+					container.ExchangeRepository.SaveInterpolation(interpolation, *kLine)
+
+					//if interpolation.HasBoth() {
+					//	log.Printf(
+					//		"[%s] price interpolation btc -> %f, eth -> %f, current: %f",
+					//		symbol,
+					//		interpolation.BtcInterpolationUsdt,
+					//		interpolation.EthInterpolationUsdt,
+					//		kLine.Close,
+					//	)
+					//} else {
+					//	if interpolation.HasBtc() {
+					//		log.Printf(
+					//			"[%s] price interpolation btc -> %f, current: %f",
+					//			symbol,
+					//			interpolation.BtcInterpolationUsdt,
+					//			kLine.Close,
+					//		)
+					//	}
+					//
+					//	if interpolation.HasEth() {
+					//		log.Printf(
+					//			"[%s] price interpolation eth -> %f, current: %f",
+					//			symbol,
+					//			interpolation.EthInterpolationUsdt,
+					//			kLine.Close,
+					//		)
+					//	}
+					//}
 				}
 				container.ExchangeRepository.SavePredict(predicted, symbol)
 			}

@@ -300,6 +300,7 @@ func InitServiceContainer() Container {
 	}
 
 	return Container{
+		PriceCalculator:     &priceCalculator,
 		BotController:       &botController,
 		HealthService:       &healthService,
 		Db:                  db,
@@ -328,6 +329,7 @@ func InitServiceContainer() Container {
 }
 
 type Container struct {
+	PriceCalculator     *service.PriceCalculator
 	BotController       *controller.BotController
 	HealthService       *service.HealthService
 	Db                  *sql.DB

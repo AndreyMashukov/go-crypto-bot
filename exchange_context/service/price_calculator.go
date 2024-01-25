@@ -7,6 +7,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/repository"
 	"log"
+	"strings"
 )
 
 type PriceCalculatorInterface interface {
@@ -268,4 +269,35 @@ func (m *PriceCalculator) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPric
 	log.Printf("[%s] Price history check completed: %f -> %f", limit.Symbol, priceBefore, buyPrice)
 
 	return buyPrice
+}
+
+func (m *PriceCalculator) InterpolatePrice(symbol string) model.Interpolation {
+	asset := strings.ReplaceAll(symbol, "USDT", "")
+	btcPair, err := m.ExchangeRepository.GetSwapPairsByAssets("BTC", asset)
+
+	interpolation := model.Interpolation{
+		Asset:                asset,
+		BtcInterpolationUsdt: 0.00,
+		EthInterpolationUsdt: 0.00,
+	}
+
+	if err == nil {
+		priceXBtc := btcPair.BuyPrice
+		lastKlineBtc := m.ExchangeRepository.GetLastKLine("BTCUSDT")
+		if lastKlineBtc != nil && !lastKlineBtc.IsPriceExpired() && !btcPair.IsPriceExpired() {
+			interpolation.BtcInterpolationUsdt = priceXBtc * lastKlineBtc.Close
+		}
+	}
+
+	ethPair, err := m.ExchangeRepository.GetSwapPairsByAssets("ETH", asset)
+
+	if err == nil {
+		priceXEth := ethPair.BuyPrice
+		lastKlineEth := m.ExchangeRepository.GetLastKLine("ETHUSDT")
+		if lastKlineEth != nil && !lastKlineEth.IsPriceExpired() && !ethPair.IsPriceExpired() {
+			interpolation.EthInterpolationUsdt = priceXEth * lastKlineEth.Close
+		}
+	}
+
+	return interpolation
 }

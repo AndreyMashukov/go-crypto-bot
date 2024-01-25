@@ -10,6 +10,7 @@ import (
 	model "gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	"log"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -60,6 +61,9 @@ type ExchangePriceStorageInterface interface {
 	GetDepth(symbol string) model.Depth
 	SetDepth(depth model.Depth)
 	GetPredict(symbol string) (float64, error)
+	GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair
+	GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair
+	GetSwapPairsByAssets(quoteAsset string, baseAsset string) (model.SwapPair, error)
 }
 
 type ExchangeRepository struct {
@@ -482,6 +486,52 @@ func (e *ExchangeRepository) GetSwapPairsByQuoteAsset(quoteAsset string) []model
 	return list
 }
 
+func (e *ExchangeRepository) GetSwapPairsByAssets(quoteAsset string, baseAsset string) (model.SwapPair, error) {
+	// todo: cache...
+
+	var swapPair model.SwapPair
+	err := e.DB.QueryRow(`
+		SELECT
+		    sp.id as Id,
+		    sp.source_symbol as SourceSymbol,
+		    sp.symbol as Symbol,
+		    sp.base_asset as BaseAsset,
+		    sp.quote_asset as QuoteAsset,
+		    sp.buy_price as BuyPrice,
+		    sp.sell_price as SellPrice,
+		    sp.price_timestamp as PriceTimestamp,
+		    sp.min_notional as MinNotional,
+		    sp.min_quantity as MinQuantity,
+		    sp.min_price as MinPrice,
+		    sp.sell_volume as SellVolume,
+		    sp.buy_volume as BuyVolume,
+		    sp.daily_percent as DailyPercent
+		FROM swap_pair sp 
+		WHERE sp.quote_asset = ? AND sp.base_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price
+	`, quoteAsset, baseAsset).Scan(
+		&swapPair.Id,
+		&swapPair.SourceSymbol,
+		&swapPair.Symbol,
+		&swapPair.BaseAsset,
+		&swapPair.QuoteAsset,
+		&swapPair.BuyPrice,
+		&swapPair.SellPrice,
+		&swapPair.PriceTimestamp,
+		&swapPair.MinNotional,
+		&swapPair.MinQuantity,
+		&swapPair.MinPrice,
+		&swapPair.SellVolume,
+		&swapPair.BuyVolume,
+		&swapPair.DailyPercent,
+	)
+
+	if err != nil {
+		return swapPair, err
+	}
+
+	return swapPair, nil
+}
+
 func (e *ExchangeRepository) GetSwapPair(symbol string) (model.SwapPair, error) {
 	var swapPair model.SwapPair
 	err := e.DB.QueryRow(`
@@ -752,7 +802,7 @@ func (e *ExchangeRepository) GetPredict(symbol string) (float64, error) {
 		return predictedPrice, nil
 	}
 
-	return 0.00, errors.New("")
+	return 0.00, errors.New("predict is not found")
 }
 
 func (e *ExchangeRepository) SavePredict(predicted float64, symbol string) {
@@ -773,12 +823,40 @@ func (e *ExchangeRepository) GetKLinePredict(kLine model.KLine) (float64, error)
 		return predictedPrice, nil
 	}
 
-	return 0.00, errors.New("")
+	return 0.00, errors.New("predict is not found")
 }
 
 func (e *ExchangeRepository) SaveKLinePredict(predicted float64, kLine model.KLine) {
 	predictedPriceCacheKey := fmt.Sprintf("%s-%d", e.getPredictedCacheKey(kLine.Symbol), kLine.Timestamp)
 
 	encoded, _ := json.Marshal(predicted)
-	e.RDB.Set(*e.Ctx, predictedPriceCacheKey, string(encoded), time.Minute*400)
+	e.RDB.Set(*e.Ctx, predictedPriceCacheKey, string(encoded), time.Minute*600)
+}
+
+func (e *ExchangeRepository) getInterpolationCacheKey(symbol string) string {
+	return fmt.Sprintf("interpolation-price-%s-%d", symbol, e.CurrentBot.Id)
+}
+func (e *ExchangeRepository) GetInterpolation(kLine model.KLine) (model.Interpolation, error) {
+	var interpolation model.Interpolation
+
+	cacheKey := fmt.Sprintf("%s-%d", e.getInterpolationCacheKey(kLine.Symbol), kLine.Timestamp)
+	interpolationCached := e.RDB.Get(*e.Ctx, cacheKey).Val()
+
+	if len(interpolationCached) > 0 {
+		_ = json.Unmarshal([]byte(interpolationCached), &interpolation)
+		return interpolation, nil
+	}
+
+	return model.Interpolation{
+		Asset:                strings.ReplaceAll(kLine.Symbol, "USDT", ""),
+		EthInterpolationUsdt: 0.00,
+		BtcInterpolationUsdt: 0.00,
+	}, errors.New("interpolation is not found")
+}
+
+func (e *ExchangeRepository) SaveInterpolation(interpolation model.Interpolation, kLine model.KLine) {
+	cacheKey := fmt.Sprintf("%s-%d", e.getInterpolationCacheKey(kLine.Symbol), kLine.Timestamp)
+
+	encoded, _ := json.Marshal(interpolation)
+	e.RDB.Set(*e.Ctx, cacheKey, string(encoded), time.Minute*600)
 }

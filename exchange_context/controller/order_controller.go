@@ -111,6 +111,14 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			predictedPrice = o.Formatter.FormatPrice(limit, predictedPrice)
 		}
 
+		interpolation := o.PriceCalculator.InterpolatePrice(limit.Symbol)
+		if interpolation.BtcInterpolationUsdt > 0.00 {
+			interpolation.BtcInterpolationUsdt = o.Formatter.FormatPrice(limit, interpolation.BtcInterpolationUsdt)
+		}
+		if interpolation.EthInterpolationUsdt > 0.00 {
+			interpolation.EthInterpolationUsdt = o.Formatter.FormatPrice(limit, interpolation.EthInterpolationUsdt)
+		}
+
 		positions = append(positions, model.Position{
 			Symbol:         limit.Symbol,
 			Order:          openedOrder,
@@ -120,6 +128,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			Profit:         o.Formatter.ToFixed(openedOrder.GetQuoteProfit(kLine.Close), 2),
 			TargetProfit:   o.Formatter.ToFixed(openedOrder.GetQuoteProfit(sellPrice), 2),
 			PredictedPrice: predictedPrice,
+			Interpolation:  interpolation,
 		})
 	}
 

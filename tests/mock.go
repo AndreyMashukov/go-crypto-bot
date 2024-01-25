@@ -171,6 +171,18 @@ func (e *ExchangePriceStorageMock) GetLastKLine(symbol string) *model.KLine {
 	kLine := args.Get(0).(*model.KLine)
 	return kLine
 }
+func (e *ExchangePriceStorageMock) GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair {
+	args := e.Called(baseAsset)
+	return args.Get(0).([]model.SwapPair)
+}
+func (e *ExchangePriceStorageMock) GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair {
+	args := e.Called(quoteAsset)
+	return args.Get(0).([]model.SwapPair)
+}
+func (e *ExchangePriceStorageMock) GetSwapPairsByAssets(quoteAsset string, baseAsset string) (model.SwapPair, error) {
+	args := e.Called(quoteAsset, baseAsset)
+	return args.Get(0).(model.SwapPair), args.Error(1)
+}
 func (e *ExchangePriceStorageMock) GetPeriodMinPrice(symbol string, period int64) float64 {
 	args := e.Called(symbol, period)
 	return args.Get(0).(float64)

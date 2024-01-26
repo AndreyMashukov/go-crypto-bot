@@ -313,6 +313,10 @@ func (e *ExchangeTradeInfoMock) GetPredict(symbol string) (float64, error) {
 	args := e.Called(symbol)
 	return args.Get(0).(float64), args.Error(1)
 }
+func (e *ExchangeTradeInfoMock) GetInterpolation(kLine model.KLine) (model.Interpolation, error) {
+	args := e.Called(kLine)
+	return args.Get(0).(model.Interpolation), args.Error(1)
+}
 
 type PriceCalculatorMock struct {
 	mock.Mock
@@ -364,4 +368,21 @@ func (s *TelegramNotificatorMock) SellOrder(order model.Order, bot model.Bot, de
 }
 func (s *TelegramNotificatorMock) BuyOrder(order model.Order, bot model.Bot, details string) {
 	_ = s.Called(order, bot, details)
+}
+
+type LossSecurityMock struct {
+	mock.Mock
+}
+
+func (l *LossSecurityMock) IsRiskyBuy(binanceOrder model.BinanceOrder) bool {
+	args := l.Called(binanceOrder)
+	return args.Get(0).(bool)
+}
+func (l *LossSecurityMock) BuyPriceCorrection(price float64, limit model.TradeLimit) float64 {
+	args := l.Called(price, limit)
+	return args.Get(0).(float64)
+}
+func (l *LossSecurityMock) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice float64) float64 {
+	args := l.Called(limit, buyPrice)
+	return args.Get(0).(float64)
 }

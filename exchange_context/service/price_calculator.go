@@ -22,7 +22,7 @@ type PriceCalculator struct {
 	FrameService       FrameServiceInterface
 	Binance            client.ExchangePriceAPIInterface
 	Formatter          *Formatter
-	MlEnabled          bool
+	LossSecurity       LossSecurityInterface
 }
 
 func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, error) {
@@ -61,15 +61,7 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 			extraBuyPrice = lastKline.Close
 		}
 
-		if m.MlEnabled {
-			predict, predictErr := m.ExchangeRepository.GetPredict(lastKline.Symbol)
-			if predictErr == nil && extraBuyPrice > predict {
-				log.Printf("[%s] Extra Buy price ML correction %.8f -> %.8f", lastKline.Symbol, extraBuyPrice, predict)
-				extraBuyPrice = predict
-			}
-		}
-
-		return m.Formatter.FormatPrice(tradeLimit, extraBuyPrice), nil
+		return m.LossSecurity.BuyPriceCorrection(extraBuyPrice, tradeLimit), nil
 	}
 
 	frame := m.FrameService.GetFrame(tradeLimit.Symbol, tradeLimit.FrameInterval, tradeLimit.FramePeriod)
@@ -104,7 +96,7 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 	}
 
 	log.Printf("[%s] buy price history check", tradeLimit.Symbol)
-	buyPrice = m.CheckBuyPriceOnHistory(tradeLimit, buyPrice)
+	buyPrice = m.LossSecurity.CheckBuyPriceOnHistory(tradeLimit, buyPrice)
 	closePrice := tradeLimit.GetClosePrice(buyPrice)
 
 	log.Printf(
@@ -122,15 +114,7 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 		closePrice,
 	)
 
-	if m.MlEnabled {
-		predict, predictErr := m.ExchangeRepository.GetPredict(lastKline.Symbol)
-		if predictErr == nil && buyPrice > predict {
-			log.Printf("[%s] Buy price ML correction %.8f -> %.8f", lastKline.Symbol, buyPrice, predict)
-			buyPrice = predict
-		}
-	}
-
-	return m.Formatter.FormatPrice(tradeLimit, buyPrice), nil
+	return m.LossSecurity.BuyPriceCorrection(buyPrice, tradeLimit), nil
 }
 
 func (m *PriceCalculator) CalculateSell(tradeLimit model.TradeLimit, order model.Order) float64 {
@@ -243,32 +227,6 @@ func (m *PriceCalculator) GetBestFrameBuy(limit model.TradeLimit, marketDepth mo
 	}
 
 	return [2]float64{frame.AvgLow, openPrice}, nil
-}
-
-func (m *PriceCalculator) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice float64) float64 {
-	kLines := m.Binance.GetKLinesCached(limit.Symbol, limit.BuyPriceHistoryCheckInterval, limit.BuyPriceHistoryCheckPeriod)
-
-	priceBefore := buyPrice
-
-	for {
-		closePrice := limit.GetClosePrice(buyPrice)
-		var closePriceMetTimes int64 = 0
-		for _, kline := range kLines {
-			if kline.High >= closePrice {
-				closePriceMetTimes++
-			}
-		}
-
-		if closePriceMetTimes > (limit.BuyPriceHistoryCheckPeriod / 2) {
-			break
-		}
-
-		buyPrice -= limit.MinPrice
-	}
-
-	log.Printf("[%s] Price history check completed: %f -> %f", limit.Symbol, priceBefore, buyPrice)
-
-	return buyPrice
 }
 
 func (m *PriceCalculator) InterpolatePrice(symbol string) model.Interpolation {

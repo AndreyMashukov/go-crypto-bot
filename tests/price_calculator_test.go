@@ -21,8 +21,10 @@ func TestCalculateBuyPriceByFrame1(t *testing.T) {
 	orderRepositoryMock := new(OrderCachedReaderMock)
 	frameServiceMock := new(FrameServiceMock)
 	binanceMock := new(ExchangePriceAPIMock)
+	lossSecurityMock := new(LossSecurityMock)
 
 	priceCalculator := service.PriceCalculator{
+		LossSecurity:       lossSecurityMock,
 		ExchangeRepository: exchangeRepoMock,
 		OrderRepository:    orderRepositoryMock,
 		FrameService:       frameServiceMock,
@@ -54,32 +56,8 @@ func TestCalculateBuyPriceByFrame1(t *testing.T) {
 		AvgHigh: 1400.00,
 		AvgLow:  1300.00,
 	})
-	binanceMock.On("GetKLinesCached", "ETHUSDT", "1d", int64(14)).Return([]model.KLine{
-		{
-			High: 1480.00,
-		},
-		{
-			High: 1480.00,
-		},
-		{
-			High: 1480.00,
-		},
-		{
-			High: 1480.00,
-		},
-		{
-			High: 1480.00,
-		},
-		{
-			High: 1480.00,
-		},
-		{
-			High: 1480.00,
-		},
-		{
-			High: 1480.00,
-		},
-	})
+	lossSecurityMock.On("CheckBuyPriceOnHistory", tradeLimit, 900.00).Return(900.00)
+	lossSecurityMock.On("BuyPriceCorrection", 900.00, tradeLimit).Return(900.00)
 
 	price, err := priceCalculator.CalculateBuy(tradeLimit)
 	assertion.Nil(err)
@@ -97,8 +75,10 @@ func TestCalculateBuyPriceByFrame2(t *testing.T) {
 	orderRepositoryMock := new(OrderCachedReaderMock)
 	frameServiceMock := new(FrameServiceMock)
 	binanceMock := new(ExchangePriceAPIMock)
+	lossSecurityMock := new(LossSecurityMock)
 
 	priceCalculator := service.PriceCalculator{
+		LossSecurity:       lossSecurityMock,
 		ExchangeRepository: exchangeRepoMock,
 		OrderRepository:    orderRepositoryMock,
 		FrameService:       frameServiceMock,
@@ -130,36 +110,12 @@ func TestCalculateBuyPriceByFrame2(t *testing.T) {
 		AvgHigh: 1400.00,
 		AvgLow:  1300.00,
 	})
-	binanceMock.On("GetKLinesCached", "ETHUSDT", "1d", int64(14)).Return([]model.KLine{
-		{
-			High: 1480.00,
-		},
-		{
-			High: 1480.00,
-		},
-		{
-			High: 1480.00,
-		},
-		{
-			High: 1480.00,
-		},
-		{
-			High: 1480.00,
-		},
-		{
-			High: 1480.00,
-		},
-		{
-			High: 1480.00,
-		},
-		{
-			High: 1480.00,
-		},
-	})
+	lossSecurityMock.On("CheckBuyPriceOnHistory", tradeLimit, 1300.00).Return(1300.00)
+	lossSecurityMock.On("BuyPriceCorrection", 1300.00, tradeLimit).Return(1200.00)
 
 	price, err := priceCalculator.CalculateBuy(tradeLimit)
 	assertion.Nil(err)
-	assertion.Equal(1300.00, price)
+	assertion.Equal(1200.00, price)
 }
 
 func TestCalculateBuyPriceByFrame3(t *testing.T) {
@@ -173,8 +129,10 @@ func TestCalculateBuyPriceByFrame3(t *testing.T) {
 	orderRepositoryMock := new(OrderCachedReaderMock)
 	frameServiceMock := new(FrameServiceMock)
 	binanceMock := new(ExchangePriceAPIMock)
+	lossSecurityMock := new(LossSecurityMock)
 
 	priceCalculator := service.PriceCalculator{
+		LossSecurity:       lossSecurityMock,
 		ExchangeRepository: exchangeRepoMock,
 		OrderRepository:    orderRepositoryMock,
 		FrameService:       frameServiceMock,
@@ -206,34 +164,10 @@ func TestCalculateBuyPriceByFrame3(t *testing.T) {
 		AvgHigh: 1400.00,
 		AvgLow:  1300.00,
 	})
-	binanceMock.On("GetKLinesCached", "ETHUSDT", "1d", int64(14)).Return([]model.KLine{
-		{
-			High: 1200.00,
-		},
-		{
-			High: 1220.00,
-		},
-		{
-			High: 1160.00,
-		},
-		{
-			High: 1160.00,
-		},
-		{
-			High: 1210.00,
-		},
-		{
-			High: 1310.00,
-		},
-		{
-			High: 1310.00,
-		},
-		{
-			High: 1310.00,
-		},
-	})
+	lossSecurityMock.On("CheckBuyPriceOnHistory", tradeLimit, 1365.850000000099).Return(1131.7)
+	lossSecurityMock.On("BuyPriceCorrection", 1131.7, tradeLimit).Return(1131.1)
 
 	price, err := priceCalculator.CalculateBuy(tradeLimit)
 	assertion.Nil(err)
-	assertion.Equal(1131.7, price)
+	assertion.Equal(1131.1, price)
 }

@@ -28,6 +28,7 @@ type ExchangeTradeInfoInterface interface {
 	GetTradeLimit(symbol string) (model.TradeLimit, error)
 	GetPeriodMinPrice(symbol string, period int64) float64
 	GetPredict(symbol string) (float64, error)
+	GetInterpolation(kLine model.KLine) (model.Interpolation, error)
 }
 
 type ExchangeRepositoryInterface interface {

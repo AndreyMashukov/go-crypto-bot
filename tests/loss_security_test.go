@@ -49,10 +49,10 @@ func TestBuyPriceCorrection(t *testing.T) {
 			High: 24000.00,
 		},
 		{
-			High: 22000.00,
+			High: 21500.00,
 		},
 		{
-			High: 23000.00,
+			High: 22000.00,
 		},
 		{
 			High: 23000.00,
@@ -70,13 +70,13 @@ func TestBuyPriceCorrection(t *testing.T) {
 	exchangeRepo.On("GetPredict", "BTCUSDT").Return(22450.00, nil)
 	exchangeRepo.On("GetInterpolation", kline).Return(model.Interpolation{
 		Asset:                "BTC",
-		BtcInterpolationUsdt: 22430.00,
-		EthInterpolationUsdt: 22425.00,
+		BtcInterpolationUsdt: 21450.00,
+		EthInterpolationUsdt: 21425.00,
 	}, nil)
 
 	price := lossSecurity.CheckBuyPriceOnHistory(limit, 25000.00)
-	assertion.Equal(22460.936999482725, price)
+	assertion.Equal(21484.374999283773, price)
 
 	price = lossSecurity.BuyPriceCorrection(price, limit)
-	assertion.Equal(22425.00, price)
+	assertion.Equal(21425.00, price)
 }

@@ -107,7 +107,7 @@ func (l *LossSecurity) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice f
 			}
 		}
 
-		if closePriceMetTimes > (limit.BuyPriceHistoryCheckPeriod / 2) {
+		if float64(closePriceMetTimes) > (float64(limit.BuyPriceHistoryCheckPeriod) * 0.8) {
 			break
 		}
 

@@ -30,7 +30,11 @@ func TestSellAction(t *testing.T) {
 
 	lockChannel := make(chan model.Lock)
 
+	lossSecurityMock := new(LossSecurityMock)
+	lossSecurityMock.On("IsRiskyBuy", mock.Anything).Return(false)
+
 	orderExecutor := service.OrderExecutor{
+		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
 			BotUuid: uuid.New().String(),
@@ -181,8 +185,11 @@ func TestSellFoundFilled(t *testing.T) {
 	swapRepository.On("GetSwapChainCache", "ETH").Return(nil)
 
 	lockChannel := make(chan model.Lock)
+	lossSecurityMock := new(LossSecurityMock)
+	lossSecurityMock.On("IsRiskyBuy", mock.Anything).Return(false)
 
 	orderExecutor := service.OrderExecutor{
+		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
 			BotUuid: uuid.New().String(),
@@ -325,8 +332,11 @@ func TestSellCancelledInProcess(t *testing.T) {
 	swapRepository.On("GetSwapChainCache", "ETH").Return(nil)
 
 	lockChannel := make(chan model.Lock)
+	lossSecurityMock := new(LossSecurityMock)
+	lossSecurityMock.On("IsRiskyBuy", mock.Anything).Return(false)
 
 	orderExecutor := service.OrderExecutor{
+		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
 			BotUuid: uuid.New().String(),
@@ -463,8 +473,11 @@ func TestSellQueryFail(t *testing.T) {
 	swapRepository.On("GetSwapChainCache", "ETH").Return(nil)
 
 	lockChannel := make(chan model.Lock)
+	lossSecurityMock := new(LossSecurityMock)
+	lossSecurityMock.On("IsRiskyBuy", mock.Anything).Return(false)
 
 	orderExecutor := service.OrderExecutor{
+		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
 			BotUuid: uuid.New().String(),
@@ -592,8 +605,11 @@ func TestSellClosingAction(t *testing.T) {
 	swapRepository.On("GetSwapChainCache", "BTC").Return(nil)
 
 	lockChannel := make(chan model.Lock)
+	lossSecurityMock := new(LossSecurityMock)
+	lossSecurityMock.On("IsRiskyBuy", mock.Anything).Return(false)
 
 	orderExecutor := service.OrderExecutor{
+		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
 			BotUuid: uuid.New().String(),
@@ -744,8 +760,11 @@ func TestSellClosingTrxAction(t *testing.T) {
 	swapRepository.On("GetSwapChainCache", "TRX").Return(nil)
 
 	lockChannel := make(chan model.Lock)
+	lossSecurityMock := new(LossSecurityMock)
+	lossSecurityMock.On("IsRiskyBuy", mock.Anything).Return(false)
 
 	orderExecutor := service.OrderExecutor{
+		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
 			BotUuid: uuid.New().String(),

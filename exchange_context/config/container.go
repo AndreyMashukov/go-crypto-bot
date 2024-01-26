@@ -98,7 +98,6 @@ func InitServiceContainer() Container {
 
 	isMasterBot := currentBot.BotUuid == "5b51a35f-76a6-4747-8461-850fff9f7c18"
 	swapEnabled := currentBot.BotUuid == "5b51a35f-76a6-4747-8461-850fff9f7c18"
-	mlEnabled := currentBot.BotUuid == "5b51a35f-76a6-4747-8461-850fff9f7c18"
 
 	orderRepository := repository.OrderRepository{
 		DB:         db,
@@ -168,20 +167,28 @@ func InitServiceContainer() Container {
 		Learning:           true,
 	}
 
+	timeService := service.TimeService{}
+
+	lossSecurity := service.LossSecurity{
+		MlEnabled:            true,
+		InterpolationEnabled: true,
+		Formatter:            &formatter,
+		ExchangeRepository:   &exchangeRepository,
+		Binance:              &binance,
+	}
+
 	priceCalculator := service.PriceCalculator{
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,
 		Binance:            &binance,
 		Formatter:          &formatter,
 		FrameService:       &frameService,
-		MlEnabled:          mlEnabled,
+		LossSecurity:       &lossSecurity,
 	}
 
-	timeService := service.TimeService{}
-
 	orderExecutor := service.OrderExecutor{
+		LossSecurity:       &lossSecurity,
 		CurrentBot:         currentBot,
-		MlEnabled:          mlEnabled,
 		TimeService:        &timeService,
 		BalanceService:     &balanceService,
 		Binance:            &binance,
@@ -257,7 +264,7 @@ func InitServiceContainer() Container {
 	baseKLineStrategy := service.BaseKLineStrategy{
 		ExchangeRepository: &exchangeRepository,
 		Formatter:          &formatter,
-		MlEnabled:          mlEnabled,
+		MlEnabled:          true,
 	}
 	orderBasedStrategy := service.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,

@@ -13,12 +13,12 @@ import (
 
 type OrderExecutor struct {
 	CurrentBot             *ExchangeModel.Bot
-	MlEnabled              bool
 	TimeService            TimeServiceInterface
 	BalanceService         BalanceServiceInterface
 	Binance                ExchangeClient.ExchangeOrderAPIInterface
 	OrderRepository        ExchangeRepository.OrderStorageInterface
 	ExchangeRepository     ExchangeRepository.ExchangeTradeInfoInterface
+	LossSecurity           LossSecurityInterface
 	PriceCalculator        PriceCalculatorInterface
 	SwapRepository         ExchangeRepository.SwapBasicRepositoryInterface
 	SwapExecutor           SwapExecutorInterface
@@ -485,7 +485,6 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 		orderManageChannel chan string,
 	) {
 		timer := 0
-		allowedExtraRequest := true
 		start := m.TimeService.GetNowUnix()
 
 		for {
@@ -556,53 +555,21 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 				}
 			}
 
-			if m.MlEnabled && kline != nil && binanceOrder.IsBuy() && binanceOrder.IsNew() {
-				predict, predictErr := m.ExchangeRepository.GetPredict(kline.Symbol)
-				if predictErr == nil && binanceOrder.Price > predict {
-					log.Printf("[%s] (ML) Check status signal sent!", binanceOrder.Symbol)
-					allowedExtraRequest = false
-					orderManageChannel <- "status"
-					action := <-control
-					if action == "stop" {
-						return
-					}
-					log.Printf("[%s] (ML) Order status is [%s]", binanceOrder.Symbol, binanceOrder.Status)
-
-					if binanceOrder.IsNew() {
-						log.Printf("[%s] (ML) Cancel signal sent!", binanceOrder.Symbol)
-						orderManageChannel <- "cancel"
-						action := <-control
-						if action == "stop" {
-							return
-						}
-					}
+			if m.LossSecurity.IsRiskyBuy(*binanceOrder) {
+				log.Printf("[%s] (LossSecurity) Check status signal sent!", binanceOrder.Symbol)
+				orderManageChannel <- "status"
+				action := <-control
+				if action == "stop" {
+					return
 				}
-			}
+				log.Printf("[%s] (LossSecurity) Order status is [%s]", binanceOrder.Symbol, binanceOrder.Status)
 
-			if kline != nil && binanceOrder.IsBuy() && binanceOrder.IsNew() && binanceOrder.Price > kline.Close {
-				fallPercent := ExchangeModel.Percent(100.00 - m.Formatter.ComparePercentage(binanceOrder.Price, kline.Close).Value())
-				minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, 200)
-
-				cancelFallPercent := ExchangeModel.Percent(0.50)
-
-				// If falls more than (min - 0.5%) cancel current
-				if fallPercent.Gte(cancelFallPercent) && minPrice-(minPrice*0.005) > kline.Close && allowedExtraRequest {
-					log.Printf("[%s] Check status signal sent!", binanceOrder.Symbol)
-					allowedExtraRequest = false
-					orderManageChannel <- "status"
+				if binanceOrder.IsNew() {
+					log.Printf("[%s] (LossSecurity) Cancel signal sent!", binanceOrder.Symbol)
+					orderManageChannel <- "cancel"
 					action := <-control
 					if action == "stop" {
 						return
-					}
-					log.Printf("[%s] Order status is [%s]", binanceOrder.Symbol, binanceOrder.Status)
-
-					if binanceOrder.IsNew() {
-						log.Printf("[%s] Cancel signal sent!", binanceOrder.Symbol)
-						orderManageChannel <- "cancel"
-						action := <-control
-						if action == "stop" {
-							return
-						}
 					}
 				}
 			}
@@ -764,7 +731,6 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 				}
 			}
 
-			allowedExtraRequest = true
 			timer = timer + 30
 			m.TimeService.WaitMilliseconds(20)
 		}

@@ -20,6 +20,7 @@ type MakerService struct {
 	HoldScore          float64
 	CurrentBot         *ExchangeModel.Bot
 	PriceCalculator    *PriceCalculator
+	TradeStack         *TradeStack
 }
 
 func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
@@ -154,6 +155,12 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 	if buyScore > sellScore {
 		if !tradeLimit.IsEnabled {
 			log.Printf("[%s] BUY operation is disabled", symbol)
+			return
+		}
+
+		if !m.TradeStack.CanBuy(tradeLimit) {
+			log.Printf("[%s] Trade Stack check is not passed, wait order.", symbol)
+
 			return
 		}
 

@@ -81,7 +81,7 @@ func (o *Order) CanExtraBuy(tradeLimit TradeLimit) bool {
 
 	availableExtraBudget := tradeLimit.USDTExtraBudget - o.UsedExtraBudget
 
-	return availableExtraBudget > 0
+	return availableExtraBudget >= 10.00
 }
 
 func (o *Order) GetAvailableExtraBudget(tradeLimit TradeLimit) float64 {

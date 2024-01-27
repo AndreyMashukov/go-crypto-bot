@@ -216,7 +216,16 @@ func InitServiceContainer() Container {
 		LockChannel:            &lockTradeChannel,
 	}
 
+	tradeStack := service.TradeStack{
+		OrderRepository:    &orderRepository,
+		Binance:            &binance,
+		ExchangeRepository: &exchangeRepository,
+		BalanceService:     &balanceService,
+		Formatter:          &formatter,
+	}
+
 	makerService := service.MakerService{
+		TradeStack:         &tradeStack,
 		OrderExecutor:      &orderExecutor,
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,

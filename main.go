@@ -332,17 +332,17 @@ func main() {
 	for _, limit := range tradeLimits {
 		tradeLimitCollection = append(tradeLimitCollection, limit)
 
-		go func() {
+		go func(tradeLimit model.TradeLimit) {
 			klineAmount := 0
 
-			history := container.Binance.GetKLines(limit.GetSymbol(), "1m", 200)
+			history := container.Binance.GetKLines(tradeLimit.GetSymbol(), "1m", 200)
 
 			for _, kline := range history {
 				klineAmount++
-				container.ExchangeRepository.AddKLine(kline.ToKLine(limit.GetSymbol()))
+				container.ExchangeRepository.AddKLine(kline.ToKLine(tradeLimit.GetSymbol()))
 			}
-			log.Printf("Loaded history %s -> %d klines", limit.Symbol, klineAmount)
-		}()
+			log.Printf("Loaded history %s -> %d klines", tradeLimit.Symbol, klineAmount)
+		}(limit)
 		if "BTCUSDT" == limit.GetSymbol() {
 			hasBtcUsdt = true
 		}

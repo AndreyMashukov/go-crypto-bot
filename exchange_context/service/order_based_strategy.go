@@ -13,7 +13,7 @@ type OrderBasedStrategy struct {
 }
 
 func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Decision {
-	order, err := o.OrderRepository.GetOpenedOrderCached(kLine.Symbol, "BUY")
+	tradeLimit, err := o.ExchangeRepository.GetTradeLimit(kLine.Symbol)
 
 	if err != nil {
 		return ExchangeModel.Decision{
@@ -26,13 +26,24 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 		}
 	}
 
-	tradeLimit, err := o.ExchangeRepository.GetTradeLimit(order.Symbol)
+	order, err := o.OrderRepository.GetOpenedOrderCached(kLine.Symbol, "BUY")
 
 	if err != nil {
+		if !o.TradeStack.CanBuy(tradeLimit) {
+			return ExchangeModel.Decision{
+				StrategyName: "order_based_strategy",
+				Score:        80.00,
+				Operation:    "HOLD",
+				Timestamp:    time.Now().Unix(),
+				Price:        kLine.Close,
+				Params:       [3]float64{0, 0, 0},
+			}
+		}
+
 		return ExchangeModel.Decision{
 			StrategyName: "order_based_strategy",
-			Score:        0.00,
-			Operation:    "HOLD",
+			Score:        15.00,
+			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
 			Price:        kLine.Close,
 			Params:       [3]float64{0, 0, 0},

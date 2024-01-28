@@ -9,7 +9,7 @@ import (
 type OrderBasedStrategy struct {
 	ExchangeRepository ExchangeRepository.ExchangeRepository
 	OrderRepository    ExchangeRepository.OrderRepository
-	OrderExecutor      *OrderExecutor
+	TradeStack         *TradeStack
 }
 
 func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Decision {
@@ -41,7 +41,7 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 
 	profitPercent := order.GetProfitPercent(kLine.Close)
 
-	if tradeLimit.IsExtraChargeEnabled() && profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) && tradeLimit.IsEnabled {
+	if tradeLimit.IsExtraChargeEnabled() && profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) && tradeLimit.IsEnabled && o.TradeStack.CanBuy(tradeLimit) {
 		return ExchangeModel.Decision{
 			StrategyName: "order_based_strategy",
 			Score:        999.99,

@@ -278,7 +278,7 @@ func InitServiceContainer() Container {
 	orderBasedStrategy := service.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderRepository,
-		OrderExecutor:      &orderExecutor,
+		TradeStack:         &tradeStack,
 	}
 	marketDepthStrategy := service.MarketDepthStrategy{}
 	smaStrategy := service.SmaTradeStrategy{

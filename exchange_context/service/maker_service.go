@@ -86,6 +86,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			)
 			holdScore = 0
 			allowManualOrder = false
+			log.Printf("[%s] Maker - H:%f, S:%f, B:%f", symbol, holdScore, sellScore, buyScore)
 		}
 	}
 

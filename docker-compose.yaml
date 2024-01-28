@@ -24,7 +24,8 @@ services:
     #environment:
       # your backend here
     volumes:
-      - .docker/datasets:/go/src/app/datasets
+      - '.docker/datasets:/go/src/app/datasets'
+      - './:/go/src/app/dev'
 
   mysql:
     platform: linux/x86_64

@@ -40,21 +40,26 @@ type OrderRepository struct {
 	CurrentBot *ExchangeModel.Bot
 }
 
-func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation string) (ExchangeModel.Order, error) {
-	res := repo.RDB.Get(*repo.Ctx, fmt.Sprintf(
+func (o *OrderRepository) getOpenedOrderCacheKey(symbol string, operation string) string {
+	return fmt.Sprintf(
 		"opened-order-%s-%s-bot-%d",
 		symbol,
 		strings.ToLower(operation),
-		repo.CurrentBot.Id,
-	)).Val()
+		o.CurrentBot.Id,
+	)
+}
+
+func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation string) (ExchangeModel.Order, error) {
+	res := repo.RDB.Get(*repo.Ctx, repo.getOpenedOrderCacheKey(symbol, operation)).Val()
 	if len(res) > 0 {
 		var dto ExchangeModel.Order
 		json.Unmarshal([]byte(res), &dto)
 
-		cached := repo.GetBinanceOrder(symbol, operation)
-		if cached != nil && cached.OrderId == *dto.ExternalId {
-			repo.DeleteBinanceOrder(*cached)
-		}
+		// todo: fix it later
+		//cached := repo.GetBinanceOrder(symbol, operation)
+		//if cached != nil && cached.OrderId == *dto.ExternalId {
+		//	repo.DeleteBinanceOrder(*cached)
+		//}
 
 		if dto.ExecutedQuantity > 0 {
 			return dto, nil
@@ -68,7 +73,7 @@ func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation strin
 	}
 
 	encoded, _ := json.Marshal(order)
-	repo.RDB.Set(*repo.Ctx, fmt.Sprintf("opened-order-%s-%s", symbol, operation), string(encoded), time.Minute*60)
+	repo.RDB.Set(*repo.Ctx, repo.getOpenedOrderCacheKey(symbol, operation), string(encoded), time.Minute*60)
 
 	cached := repo.GetBinanceOrder(symbol, operation)
 	if cached != nil && cached.OrderId == *order.ExternalId {
@@ -79,12 +84,7 @@ func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation strin
 }
 
 func (repo *OrderRepository) DeleteOpenedOrderCache(order ExchangeModel.Order) {
-	repo.RDB.Del(*repo.Ctx, fmt.Sprintf(
-		"opened-order-%s-%s-bot-%d",
-		order.Symbol,
-		strings.ToLower(order.Operation),
-		repo.CurrentBot.Id,
-	)).Val()
+	repo.RDB.Del(*repo.Ctx, repo.getOpenedOrderCacheKey(order.Symbol, order.Operation)).Val()
 }
 
 func (repo *OrderRepository) getOpenedOrder(symbol string, operation string) (ExchangeModel.Order, error) {

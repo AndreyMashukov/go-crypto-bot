@@ -42,17 +42,13 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 	profitPercent := order.GetProfitPercent(kLine.Close)
 
 	if tradeLimit.IsExtraChargeEnabled() && profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) && tradeLimit.IsEnabled {
-		balanceErr := o.OrderExecutor.CheckMinBalance(tradeLimit)
-
-		if balanceErr == nil {
-			return ExchangeModel.Decision{
-				StrategyName: "order_based_strategy",
-				Score:        999.99,
-				Operation:    "BUY",
-				Timestamp:    time.Now().Unix(),
-				Price:        kLine.Close,
-				Params:       [3]float64{0, 0, 0},
-			}
+		return ExchangeModel.Decision{
+			StrategyName: "order_based_strategy",
+			Score:        999.99,
+			Operation:    "BUY",
+			Timestamp:    time.Now().Unix(),
+			Price:        kLine.Close,
+			Params:       [3]float64{0, 0, 0},
 		}
 	}
 

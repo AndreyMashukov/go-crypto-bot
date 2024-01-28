@@ -72,7 +72,9 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		return
 	}
 
-	if buyOrderErr == nil && tradeLimit.IsExtraChargeEnabled() {
+	allowManualOrder := true
+
+	if buyOrderErr == nil && tradeLimit.IsExtraChargeEnabled() && tradeLimit.IsEnabled {
 		profitPercent := openedOrder.GetProfitPercent(lastKline.Close)
 		if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) {
 			log.Printf(
@@ -83,10 +85,12 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 				lastKline.Close,
 			)
 			holdScore = 0
+			allowManualOrder = false
 		}
 	}
 
-	if manualOrder != nil {
+	// todo: change when manual extra buy will be allowed
+	if manualOrder != nil && allowManualOrder {
 		holdScore = 0
 		if strings.ToUpper(manualOrder.Operation) == "BUY" {
 			sellScore = 0

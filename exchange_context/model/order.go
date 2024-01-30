@@ -148,4 +148,15 @@ type Position struct {
 	Profit         float64       `json:"profit"`
 	TargetProfit   float64       `json:"targetProfit"`
 	Interpolation  Interpolation `json:"interpolation"`
+	OrigQty        float64       `json:"origQty"`
+	ExecutedQty    float64       `json:"executedQty"`
+}
+
+type PendingOrder struct {
+	Symbol         string        `json:"symbol"`
+	KLine          KLine         `json:"kLine"`
+	BinanceOrder   BinanceOrder  `json:"binanceOrder"`
+	PredictedPrice float64       `json:"predictedPrice"`
+	Interpolation  Interpolation `json:"interpolation"`
+	IsRisky        bool          `json:"isRisky"`
 }

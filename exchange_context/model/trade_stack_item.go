@@ -1,7 +1,7 @@
 package model
 
 type TradeStackItem struct {
-	Percent    Percent
-	Symbol     string
-	BudgetUsdt float64
+	Percent    Percent `json:"percent"`
+	Symbol     string  `json:"symbol"`
+	BudgetUsdt float64 `json:"budgetUsdt"`
 }

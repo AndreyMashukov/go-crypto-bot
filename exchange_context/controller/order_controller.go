@@ -21,6 +21,7 @@ type OrderController struct {
 	Formatter          *service.Formatter
 	PriceCalculator    *service.PriceCalculator
 	CurrentBot         *model.Bot
+	LossSecurity       *service.LossSecurity
 }
 
 func (o *OrderController) GetOrderTradeListAction(w http.ResponseWriter, req *http.Request) {
@@ -92,8 +93,13 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 		var sellPrice float64
 
 		binanceOrder := o.OrderRepository.GetBinanceOrder(openedOrder.Symbol, "SELL")
+		executedQty := 0.00
+		origQty := openedOrder.ExecutedQuantity
+
 		if binanceOrder != nil {
 			sellPrice = binanceOrder.Price
+			origQty = binanceOrder.OrigQty
+			executedQty = binanceOrder.ExecutedQty
 		} else {
 			sellPriceCacheKey := fmt.Sprintf("sell-price-%d", openedOrder.Id)
 			sellPriceCached := o.RDB.Get(*o.Ctx, sellPriceCacheKey).Val()
@@ -129,10 +135,76 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			TargetProfit:   o.Formatter.ToFixed(openedOrder.GetQuoteProfit(sellPrice), 2),
 			PredictedPrice: predictedPrice,
 			Interpolation:  interpolation,
+			ExecutedQty:    executedQty,
+			OrigQty:        origQty,
 		})
 	}
 
 	encoded, _ := json.Marshal(positions)
+	fmt.Fprintf(w, string(encoded))
+}
+
+func (o *OrderController) GetPendingOrderListAction(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if req.Method == "OPTIONS" {
+		fmt.Fprintf(w, "OK")
+		return
+	}
+
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != o.CurrentBot.BotUuid {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
+
+	if req.Method != "GET" {
+		http.Error(w, "Only GET method is allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	pending := make([]model.PendingOrder, 0)
+
+	for _, limit := range o.ExchangeRepository.GetTradeLimits() {
+		binanceOrder := o.OrderRepository.GetBinanceOrder(limit.Symbol, "BUY")
+		if binanceOrder == nil {
+			continue
+		}
+
+		kLine := o.ExchangeRepository.GetLastKLine(limit.Symbol)
+		if kLine == nil {
+			continue
+		}
+
+		predictedPrice, _ := o.ExchangeRepository.GetPredict(limit.Symbol)
+		if predictedPrice > 0.00 {
+			predictedPrice = o.Formatter.FormatPrice(limit, predictedPrice)
+		}
+
+		interpolation := o.PriceCalculator.InterpolatePrice(limit.Symbol)
+		if interpolation.BtcInterpolationUsdt > 0.00 {
+			interpolation.BtcInterpolationUsdt = o.Formatter.FormatPrice(limit, interpolation.BtcInterpolationUsdt)
+		}
+		if interpolation.EthInterpolationUsdt > 0.00 {
+			interpolation.EthInterpolationUsdt = o.Formatter.FormatPrice(limit, interpolation.EthInterpolationUsdt)
+		}
+
+		pending = append(pending, model.PendingOrder{
+			Symbol:         limit.Symbol,
+			BinanceOrder:   *binanceOrder,
+			KLine:          *kLine,
+			PredictedPrice: predictedPrice,
+			Interpolation:  interpolation,
+			IsRisky:        o.LossSecurity.IsRiskyBuy(*binanceOrder),
+		})
+	}
+
+	encoded, _ := json.Marshal(pending)
 	fmt.Fprintf(w, string(encoded))
 }
 

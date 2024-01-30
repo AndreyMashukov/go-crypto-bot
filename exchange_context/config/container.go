@@ -245,11 +245,13 @@ func InitServiceContainer() Container {
 		Formatter:          &formatter,
 		PriceCalculator:    &priceCalculator,
 		CurrentBot:         currentBot,
+		LossSecurity:       &lossSecurity,
 	}
 
 	tradeController := controller.TradeController{
 		CurrentBot:         currentBot,
 		ExchangeRepository: &exchangeRepository,
+		TradeStack:         &tradeStack,
 	}
 
 	swapManager := service.SwapManager{
@@ -380,10 +382,12 @@ func (c *Container) StartHttpServer() {
 	http.HandleFunc("/swap/list", c.ExchangeController.GetSwapListAction)
 	http.HandleFunc("/chart/list", c.ExchangeController.GetChartListAction)
 	http.HandleFunc("/order/list", c.OrderController.GetOrderListAction)
+	http.HandleFunc("/order/pending/list", c.OrderController.GetPendingOrderListAction)
 	http.HandleFunc("/order/position/list", c.OrderController.GetPositionListAction)
 	http.HandleFunc("/order", c.OrderController.PostManualOrderAction)
 	http.HandleFunc("/order/trade/list", c.OrderController.GetOrderTradeListAction)
 	http.HandleFunc("/trade/limit/list", c.TradeController.GetTradeLimitsAction)
+	http.HandleFunc("/trade/stack", c.TradeController.GetTradeStackAction)
 	http.HandleFunc("/trade/limit/create", c.TradeController.CreateTradeLimitAction)
 	http.HandleFunc("/trade/limit/update", c.TradeController.UpdateTradeLimitAction)
 	http.HandleFunc("/health/check", c.BotController.GetHealthCheck)

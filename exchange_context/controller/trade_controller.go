@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"github.com/AndreyMashukov/go-crypto-bot/server/exchange_context/model"
 	ExchangeRepository "github.com/AndreyMashukov/go-crypto-bot/server/exchange_context/repository"
+	"github.com/AndreyMashukov/go-crypto-bot/server/exchange_context/service"
 	"net/http"
 )
 
 type TradeController struct {
 	CurrentBot         *model.Bot
 	ExchangeRepository *ExchangeRepository.ExchangeRepository
+	TradeStack         *service.TradeStack
 }
 
 func (t *TradeController) UpdateTradeLimitAction(w http.ResponseWriter, req *http.Request) {
@@ -163,5 +165,35 @@ func (t *TradeController) GetTradeLimitsAction(w http.ResponseWriter, req *http.
 	limits := t.ExchangeRepository.GetTradeLimits()
 
 	encodedRes, _ := json.Marshal(limits)
+	fmt.Fprintf(w, string(encodedRes))
+}
+
+func (t *TradeController) GetTradeStackAction(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if req.Method == "OPTIONS" {
+		fmt.Fprintf(w, "OK")
+		return
+	}
+
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != t.CurrentBot.BotUuid {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
+
+	if req.Method != "GET" {
+		http.Error(w, "Only GET method are allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	stack := t.TradeStack.GetTradeStack()
+
+	encodedRes, _ := json.Marshal(stack)
 	fmt.Fprintf(w, string(encodedRes))
 }

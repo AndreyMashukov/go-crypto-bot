@@ -17,19 +17,35 @@ type TradeStack struct {
 }
 
 func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
-	balanceUsdt, err := t.BalanceService.GetAssetBalance("USDT", true)
-
-	if err != nil {
-		return false
-	}
-
 	// Allow to process existing order
 	binanceOrder := t.OrderRepository.GetBinanceOrder(limit.Symbol, "BUY")
 	if binanceOrder != nil {
 		return true
 	}
 
+	result := t.GetTradeStack()
+
+	if len(result) == 0 {
+		return false
+	}
+
+	for index, stackItem := range result {
+		log.Printf("Stack [%d] %s = %.2f", index, stackItem.Symbol, stackItem.Percent)
+		if index >= 1 {
+			break
+		}
+	}
+
+	return limit.Symbol == result[0].Symbol
+}
+
+func (t *TradeStack) GetTradeStack() []model.TradeStackItem {
+	balanceUsdt, err := t.BalanceService.GetAssetBalance("USDT", true)
 	stack := make([]model.TradeStackItem, 0)
+
+	if err != nil {
+		return stack
+	}
 
 	for _, tradeLimit := range t.ExchangeRepository.GetTradeLimits() {
 		if !tradeLimit.IsEnabled {
@@ -37,7 +53,7 @@ func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
 		}
 
 		// Skip if order has already opened
-		binanceOrder = t.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
+		binanceOrder := t.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
 		if binanceOrder != nil {
 			continue
 		}
@@ -68,10 +84,6 @@ func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
 		}
 	}
 
-	if len(stack) == 0 {
-		return false
-	}
-
 	sort.SliceStable(stack, func(i int, j int) bool {
 		return stack[i].Percent < stack[j].Percent
 	})
@@ -89,16 +101,5 @@ func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
 		}
 	}
 
-	if len(result) == 0 {
-		return false
-	}
-
-	for index, stackItem := range result {
-		log.Printf("Stack [%d] %s = %.2f", index, stackItem.Symbol, stackItem.Percent)
-		if index >= 1 {
-			break
-		}
-	}
-
-	return limit.Symbol == result[0].Symbol
+	return result
 }

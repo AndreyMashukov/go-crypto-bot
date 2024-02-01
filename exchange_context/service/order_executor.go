@@ -776,6 +776,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 		}
 
 		binanceOrder = queryOrder
+		m.OrderRepository.SetBinanceOrder(binanceOrder)
 
 		if binanceOrder.IsPartiallyFilled() {
 			// Add 5 minutes more if ExecutedQty moves up!

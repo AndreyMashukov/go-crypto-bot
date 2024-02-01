@@ -352,7 +352,7 @@ func (b *Binance) GetKLinesCached(symbol string, interval string, limit int64) [
 
 		encoded, err := json.Marshal(kLines)
 		if err == nil {
-			b.RDB.Set(*b.Ctx, cacheKey, string(encoded), time.Minute*5)
+			b.RDB.Set(*b.Ctx, cacheKey, string(encoded), time.Minute*1)
 		}
 
 		return kLines

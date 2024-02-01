@@ -122,45 +122,44 @@ func (t *TradeStack) GetTradeStack(balanceFilter bool, skipPending bool, withVal
 	})
 
 	result := make([]model.TradeStackItem, 0)
+	impossible := make([]model.TradeStackItem, 0)
 
 	for _, stackItem := range stack {
-		if balanceFilter {
-			if balanceUsdt <= 0.00 {
-				break
-			}
-		} else {
-			if balanceUsdt < stackItem.BudgetUsdt {
-				if stackItem.BinanceOrder == nil {
-					balanceUsdt -= stackItem.BudgetUsdt
-				}
-
-				result = append(result, model.TradeStackItem{
-					Symbol:            stackItem.Symbol,
-					Percent:           stackItem.Percent,
-					BudgetUsdt:        stackItem.BudgetUsdt,
-					HasEnoughBalance:  false,
-					BalanceAfter:      balanceUsdt,
-					BinanceOrder:      stackItem.BinanceOrder,
-					IsExtraCharge:     stackItem.IsExtraCharge,
-					IsPriceValid:      stackItem.IsPriceValid,
-					Price:             stackItem.Price,
-					StrategyDecisions: stackItem.StrategyDecisions,
-				})
-
-				continue
-			}
+		if stackItem.BinanceOrder != nil {
+			balanceUsdt += stackItem.BinanceOrder.OrigQty * stackItem.BinanceOrder.Price
 		}
+	}
 
+	for _, stackItem := range stack {
 		if balanceUsdt >= stackItem.BudgetUsdt {
-			if stackItem.BinanceOrder == nil {
-				balanceUsdt -= stackItem.BudgetUsdt
-			}
+			balanceUsdt -= stackItem.BudgetUsdt
 
 			result = append(result, model.TradeStackItem{
 				Symbol:            stackItem.Symbol,
 				Percent:           stackItem.Percent,
 				BudgetUsdt:        stackItem.BudgetUsdt,
 				HasEnoughBalance:  true,
+				BalanceAfter:      balanceUsdt,
+				BinanceOrder:      stackItem.BinanceOrder,
+				IsExtraCharge:     stackItem.IsExtraCharge,
+				IsPriceValid:      stackItem.IsPriceValid,
+				Price:             stackItem.Price,
+				StrategyDecisions: stackItem.StrategyDecisions,
+			})
+		} else {
+			impossible = append(impossible, stackItem)
+		}
+	}
+
+	if !balanceFilter {
+		for _, stackItem := range impossible {
+			balanceUsdt -= stackItem.BudgetUsdt
+
+			result = append(result, model.TradeStackItem{
+				Symbol:            stackItem.Symbol,
+				Percent:           stackItem.Percent,
+				BudgetUsdt:        stackItem.BudgetUsdt,
+				HasEnoughBalance:  false,
 				BalanceAfter:      balanceUsdt,
 				BinanceOrder:      stackItem.BinanceOrder,
 				IsExtraCharge:     stackItem.IsExtraCharge,

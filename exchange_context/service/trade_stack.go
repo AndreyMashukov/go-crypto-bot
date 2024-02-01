@@ -47,7 +47,7 @@ func (t *TradeStack) GetTradeStack(balanceFilter bool, skipPending bool, withVal
 		return stack
 	}
 
-	for _, tradeLimit := range t.ExchangeRepository.GetTradeLimits() {
+	for index, tradeLimit := range t.ExchangeRepository.GetTradeLimits() {
 		if !tradeLimit.IsEnabled {
 			continue
 		}
@@ -86,6 +86,7 @@ func (t *TradeStack) GetTradeStack(balanceFilter bool, skipPending bool, withVal
 				profitPercent := openedOrder.GetProfitPercent(kline.Close)
 				if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) {
 					stack = append(stack, model.TradeStackItem{
+						Index:             int64(index),
 						Symbol:            tradeLimit.Symbol,
 						Percent:           profitPercent,
 						BudgetUsdt:        tradeLimit.USDTExtraBudget - openedOrder.UsedExtraBudget,
@@ -103,6 +104,7 @@ func (t *TradeStack) GetTradeStack(balanceFilter bool, skipPending bool, withVal
 			if len(kLines) > 0 {
 				kLine := kLines[0]
 				stack = append(stack, model.TradeStackItem{
+					Index:             int64(index),
 					Symbol:            tradeLimit.Symbol,
 					Percent:           model.Percent(t.Formatter.ToFixed((t.Formatter.ComparePercentage(kLine.Open, kLine.Close) - 100.00).Value(), 2)),
 					BudgetUsdt:        tradeLimit.USDTLimit,
@@ -124,10 +126,12 @@ func (t *TradeStack) GetTradeStack(balanceFilter bool, skipPending bool, withVal
 	result := make([]model.TradeStackItem, 0)
 	impossible := make([]model.TradeStackItem, 0)
 
-	for _, stackItem := range stack {
+	for index, stackItem := range stack {
 		if stackItem.BinanceOrder != nil {
 			balanceUsdt += stackItem.BinanceOrder.OrigQty * stackItem.BinanceOrder.Price
 		}
+
+		stack[index].Index = int64(index)
 	}
 
 	for _, stackItem := range stack {
@@ -135,6 +139,7 @@ func (t *TradeStack) GetTradeStack(balanceFilter bool, skipPending bool, withVal
 			balanceUsdt -= stackItem.BudgetUsdt
 
 			result = append(result, model.TradeStackItem{
+				Index:             stackItem.Index,
 				Symbol:            stackItem.Symbol,
 				Percent:           stackItem.Percent,
 				BudgetUsdt:        stackItem.BudgetUsdt,
@@ -156,6 +161,7 @@ func (t *TradeStack) GetTradeStack(balanceFilter bool, skipPending bool, withVal
 			balanceUsdt -= stackItem.BudgetUsdt
 
 			result = append(result, model.TradeStackItem{
+				Index:             stackItem.Index,
 				Symbol:            stackItem.Symbol,
 				Percent:           stackItem.Percent,
 				BudgetUsdt:        stackItem.BudgetUsdt,

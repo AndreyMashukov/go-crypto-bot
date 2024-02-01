@@ -1,6 +1,7 @@
 package model
 
 type TradeStackItem struct {
+	Index             int64         `json:"index"`
 	Price             float64       `json:"price"`
 	IsPriceValid      bool          `json:"isPriceValid"`
 	Percent           Percent       `json:"percent"`

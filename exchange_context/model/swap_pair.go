@@ -28,7 +28,7 @@ func (s SwapPair) IsLooser() bool {
 }
 
 func (s SwapPair) IsPriceExpired() bool {
-	return (time.Now().Unix() - (s.PriceTimestamp)) > 60
+	return (time.Now().Unix() - (s.PriceTimestamp)) > PriceValidSeconds
 }
 
 func (s SwapPair) IsBullMarket() bool {

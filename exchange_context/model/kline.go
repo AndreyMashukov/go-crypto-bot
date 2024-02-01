@@ -43,6 +43,8 @@ func (k *KLine) GetLowPercent(percent float64) float64 {
 	return k.Low + (k.Low * percent / 100)
 }
 
+const PriceValidSeconds = 30
+
 func (k *KLine) IsPriceExpired() bool {
-	return (time.Now().Unix() - (k.UpdatedAt)) > 20
+	return (time.Now().Unix() - (k.UpdatedAt)) > PriceValidSeconds
 }

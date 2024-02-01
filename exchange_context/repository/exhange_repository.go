@@ -774,7 +774,7 @@ func (e *ExchangeRepository) TradeList(symbol string) []model.Trade {
 
 func (e *ExchangeRepository) SetDecision(decision model.Decision, symbol string) {
 	encoded, _ := json.Marshal(decision)
-	e.RDB.Set(*e.Ctx, fmt.Sprintf("decision-%s-%s-bot-%d", decision.StrategyName, symbol, e.CurrentBot.Id), string(encoded), time.Second*5)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("decision-%s-%s-bot-%d", decision.StrategyName, symbol, e.CurrentBot.Id), string(encoded), time.Second*model.PriceValidSeconds)
 }
 
 func (e *ExchangeRepository) GetDecision(strategy string, symbol string) *model.Decision {

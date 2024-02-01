@@ -197,7 +197,7 @@ func main() {
 
 		go func(symbol string, container *config.Container) {
 			for {
-				currentDecisions := container.ExchangeRepository.GetDecisions()
+				currentDecisions := container.ExchangeRepository.GetDecisions(symbol)
 
 				if len(currentDecisions) > 0 {
 					container.MakerService.Make(symbol, currentDecisions)
@@ -262,7 +262,7 @@ func main() {
 				var tradeEvent model.TradeEvent
 				json.Unmarshal(message, &tradeEvent)
 				smaDecision := container.SmaTradeStrategy.Decide(tradeEvent.Trade)
-				container.ExchangeRepository.SetDecision(smaDecision)
+				container.ExchangeRepository.SetDecision(smaDecision, tradeEvent.Trade.Symbol)
 
 				go func(channel chan string, symbol string) {
 					predictChannel <- symbol
@@ -280,9 +280,9 @@ func main() {
 				}(predictChannel, kLine.Symbol)
 
 				baseKLineDecision := container.BaseKLineStrategy.Decide(kLine)
-				container.ExchangeRepository.SetDecision(baseKLineDecision)
+				container.ExchangeRepository.SetDecision(baseKLineDecision, kLine.Symbol)
 				orderBasedDecision := container.OrderBasedStrategy.Decide(kLine)
-				container.ExchangeRepository.SetDecision(orderBasedDecision)
+				container.ExchangeRepository.SetDecision(orderBasedDecision, kLine.Symbol)
 
 				break
 			case strings.Contains(string(message), "depth20"):
@@ -291,7 +291,7 @@ func main() {
 
 				depth := event.Depth.ToDepth(strings.ToUpper(strings.ReplaceAll(event.Stream, "@depth20@100ms", "")))
 				depthDecision := container.MarketDepthStrategy.Decide(depth)
-				container.ExchangeRepository.SetDecision(depthDecision)
+				container.ExchangeRepository.SetDecision(depthDecision, depth.Symbol)
 				go func() {
 					depthChannel <- depth
 				}()

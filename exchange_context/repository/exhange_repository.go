@@ -52,9 +52,9 @@ type ExchangeRepositoryInterface interface {
 	GetDepth(symbol string) model.Depth
 	AddTrade(trade model.Trade)
 	TradeList(symbol string) []model.Trade
-	SetDecision(decision model.Decision)
-	GetDecision(strategy string) *model.Decision
-	GetDecisions() []model.Decision
+	SetDecision(decision model.Decision, symbol string)
+	GetDecision(strategy string, symbol string) *model.Decision
+	GetDecisions(symbol string) []model.Decision
 }
 
 type ExchangePriceStorageInterface interface {
@@ -772,13 +772,13 @@ func (e *ExchangeRepository) TradeList(symbol string) []model.Trade {
 	return list
 }
 
-func (e *ExchangeRepository) SetDecision(decision model.Decision) {
+func (e *ExchangeRepository) SetDecision(decision model.Decision, symbol string) {
 	encoded, _ := json.Marshal(decision)
-	e.RDB.Set(*e.Ctx, fmt.Sprintf("decision-%s-bot-%d", decision.StrategyName, e.CurrentBot.Id), string(encoded), time.Second*5)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("decision-%s-%s-bot-%d", decision.StrategyName, symbol, e.CurrentBot.Id), string(encoded), time.Second*5)
 }
 
-func (e *ExchangeRepository) GetDecision(strategy string) *model.Decision {
-	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("decision-%s-bot-%d", strategy, e.CurrentBot.Id)).Val()
+func (e *ExchangeRepository) GetDecision(strategy string, symbol string) *model.Decision {
+	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("decision-%s-%s-bot-%d", strategy, symbol, e.CurrentBot.Id)).Val()
 	if len(res) == 0 {
 		return nil
 	}
@@ -863,12 +863,12 @@ func (e *ExchangeRepository) SaveInterpolation(interpolation model.Interpolation
 	e.RDB.Set(*e.Ctx, cacheKey, string(encoded), time.Minute*600)
 }
 
-func (e *ExchangeRepository) GetDecisions() []model.Decision {
+func (e *ExchangeRepository) GetDecisions(symbol string) []model.Decision {
 	currentDecisions := make([]model.Decision, 0)
-	smaDecision := e.GetDecision("sma_trade_strategy")
-	kLineDecision := e.GetDecision("base_kline_strategy")
-	marketDepthDecision := e.GetDecision("market_depth_strategy")
-	orderBasedDecision := e.GetDecision("order_based_strategy")
+	smaDecision := e.GetDecision("sma_trade_strategy", symbol)
+	kLineDecision := e.GetDecision("base_kline_strategy", symbol)
+	marketDepthDecision := e.GetDecision("market_depth_strategy", symbol)
+	orderBasedDecision := e.GetDecision("order_based_strategy", symbol)
 
 	if smaDecision != nil {
 		currentDecisions = append(currentDecisions, *smaDecision)

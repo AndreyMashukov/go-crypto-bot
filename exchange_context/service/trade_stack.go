@@ -76,7 +76,7 @@ func (t *TradeStack) GetTradeStack(balanceFilter bool, skipPending bool, withVal
 
 		decisions := make([]model.Decision, 0)
 		if attachDecisions {
-			decisions = t.ExchangeRepository.GetDecisions()
+			decisions = t.ExchangeRepository.GetDecisions(tradeLimit.Symbol)
 		}
 
 		openedOrder, err := t.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")

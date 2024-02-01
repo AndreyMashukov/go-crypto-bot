@@ -81,7 +81,7 @@ func TestSellAction(t *testing.T) {
 	binance.On("GetOpenedOrders").Return([]model.BinanceOrder{
 		initialBinanceOrder,
 	}, nil)
-	orderRepository.On("SetBinanceOrder", mock.Anything).Times(1)
+	orderRepository.On("SetBinanceOrder", mock.Anything).Times(2)
 	priceCalculator.On("GetDepth", "ETHUSDT").Return(model.Depth{
 		Symbol: "ETHUSDT",
 		Asks: [][2]model.Number{
@@ -237,7 +237,7 @@ func TestSellFoundFilled(t *testing.T) {
 	binance.On("GetOpenedOrders").Return([]model.BinanceOrder{
 		initialBinanceOrder,
 	}, nil)
-	orderRepository.On("SetBinanceOrder", mock.Anything).Times(1)
+	orderRepository.On("SetBinanceOrder", mock.Anything).Times(2)
 	priceCalculator.On("GetDepth", "ETHUSDT").Return(model.Depth{
 		Symbol: "ETHUSDT",
 		Asks: [][2]model.Number{
@@ -383,7 +383,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 	binance.On("GetOpenedOrders").Return([]model.BinanceOrder{
 		initialBinanceOrder,
 	}, nil)
-	orderRepository.On("SetBinanceOrder", mock.Anything).Times(1)
+	orderRepository.On("SetBinanceOrder", mock.Anything).Times(2)
 	priceCalculator.On("GetDepth", "ETHUSDT").Return(model.Depth{
 		Symbol: "ETHUSDT",
 		Asks: [][2]model.Number{
@@ -524,7 +524,7 @@ func TestSellQueryFail(t *testing.T) {
 	binance.On("GetOpenedOrders").Return([]model.BinanceOrder{
 		initialBinanceOrder,
 	}, nil)
-	orderRepository.On("SetBinanceOrder", mock.Anything).Times(1)
+	orderRepository.On("SetBinanceOrder", mock.Anything).Times(2)
 	priceCalculator.On("GetDepth", "ETHUSDT").Return(model.Depth{
 		Symbol: "ETHUSDT",
 		Asks: [][2]model.Number{
@@ -656,7 +656,7 @@ func TestSellClosingAction(t *testing.T) {
 	binance.On("GetOpenedOrders").Return([]model.BinanceOrder{
 		initialBinanceOrder,
 	}, nil)
-	orderRepository.On("SetBinanceOrder", mock.Anything).Times(1)
+	orderRepository.On("SetBinanceOrder", mock.Anything).Times(2)
 	priceCalculator.On("GetDepth", "BTCUSDT").Return(model.Depth{
 		Symbol: "BTCUSDT",
 		Asks: [][2]model.Number{
@@ -811,7 +811,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 	binance.On("GetOpenedOrders").Return([]model.BinanceOrder{
 		initialBinanceOrder,
 	}, nil)
-	orderRepository.On("SetBinanceOrder", mock.Anything).Times(1)
+	orderRepository.On("SetBinanceOrder", mock.Anything).Times(2)
 	priceCalculator.On("GetDepth", "TRXUSDT").Return(model.Depth{
 		Symbol: "TRXUSDT",
 		Asks: [][2]model.Number{

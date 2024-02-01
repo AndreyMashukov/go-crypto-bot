@@ -129,7 +129,7 @@ func (t *TradeStack) GetTradeStack(balanceFilter bool, skipPending bool, withVal
 				break
 			}
 		} else {
-			if balanceUsdt <= 0.00 {
+			if balanceUsdt < stackItem.BudgetUsdt {
 				if stackItem.BinanceOrder == nil {
 					balanceUsdt -= stackItem.BudgetUsdt
 				}

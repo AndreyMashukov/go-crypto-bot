@@ -54,6 +54,7 @@ type ExchangeRepositoryInterface interface {
 	TradeList(symbol string) []model.Trade
 	SetDecision(decision model.Decision)
 	GetDecision(strategy string) *model.Decision
+	GetDecisions() []model.Decision
 }
 
 type ExchangePriceStorageInterface interface {
@@ -860,4 +861,27 @@ func (e *ExchangeRepository) SaveInterpolation(interpolation model.Interpolation
 
 	encoded, _ := json.Marshal(interpolation)
 	e.RDB.Set(*e.Ctx, cacheKey, string(encoded), time.Minute*600)
+}
+
+func (e *ExchangeRepository) GetDecisions() []model.Decision {
+	currentDecisions := make([]model.Decision, 0)
+	smaDecision := e.GetDecision("sma_trade_strategy")
+	kLineDecision := e.GetDecision("base_kline_strategy")
+	marketDepthDecision := e.GetDecision("market_depth_strategy")
+	orderBasedDecision := e.GetDecision("order_based_strategy")
+
+	if smaDecision != nil {
+		currentDecisions = append(currentDecisions, *smaDecision)
+	}
+	if kLineDecision != nil {
+		currentDecisions = append(currentDecisions, *kLineDecision)
+	}
+	if marketDepthDecision != nil {
+		currentDecisions = append(currentDecisions, *marketDepthDecision)
+	}
+	if orderBasedDecision != nil {
+		currentDecisions = append(currentDecisions, *orderBasedDecision)
+	}
+
+	return currentDecisions
 }

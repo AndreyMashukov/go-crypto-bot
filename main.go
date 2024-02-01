@@ -197,24 +197,7 @@ func main() {
 
 		go func(symbol string, container *config.Container) {
 			for {
-				currentDecisions := make([]model.Decision, 0)
-				smaDecision := container.ExchangeRepository.GetDecision("sma_trade_strategy")
-				kLineDecision := container.ExchangeRepository.GetDecision("base_kline_strategy")
-				marketDepthDecision := container.ExchangeRepository.GetDecision("market_depth_strategy")
-				orderBasedDecision := container.ExchangeRepository.GetDecision("order_based_strategy")
-
-				if smaDecision != nil {
-					currentDecisions = append(currentDecisions, *smaDecision)
-				}
-				if kLineDecision != nil {
-					currentDecisions = append(currentDecisions, *kLineDecision)
-				}
-				if marketDepthDecision != nil {
-					currentDecisions = append(currentDecisions, *marketDepthDecision)
-				}
-				if orderBasedDecision != nil {
-					currentDecisions = append(currentDecisions, *orderBasedDecision)
-				}
+				currentDecisions := container.ExchangeRepository.GetDecisions()
 
 				if len(currentDecisions) > 0 {
 					container.MakerService.Make(symbol, currentDecisions)

@@ -3,7 +3,6 @@ package model
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"log"
 	"math"
 	"sort"
 	"strings"
@@ -198,7 +197,5 @@ func (e *ExtraChargeOptions) Scan(src interface{}) error {
 
 func (e ExtraChargeOptions) Value() (driver.Value, error) {
 	jsonV, err := json.Marshal(e)
-	log.Println(string(jsonV))
-
 	return string(jsonV), err
 }

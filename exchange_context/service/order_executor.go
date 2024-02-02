@@ -119,6 +119,11 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 
 	_, err = m.OrderRepository.Create(extraOrder)
 	if err != nil {
+		// remove binance order from cache if we have already had saved in database
+		if strings.Contains(err.Error(), "Duplicate entry") && strings.Contains(err.Error(), "order_external_id_symbol") {
+			m.OrderRepository.DeleteBinanceOrder(binanceOrder)
+		}
+
 		return err
 	}
 
@@ -234,6 +239,11 @@ func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, 
 	m.BalanceService.InvalidateBalanceCache(order.GetBaseAsset())
 
 	if err != nil {
+		// remove binance order from cache if we have already had saved in database
+		if strings.Contains(err.Error(), "Duplicate entry") && strings.Contains(err.Error(), "order_external_id_symbol") {
+			m.OrderRepository.DeleteBinanceOrder(binanceOrder)
+		}
+
 		log.Printf("Can't create order: %s", order.Symbol)
 
 		return err
@@ -328,6 +338,12 @@ func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchang
 	lastId, err := m.OrderRepository.Create(order)
 
 	if err != nil {
+		// todo: test 2024/02/02 08:24:29 [XLMUSDT] Error 1062 (23000): Duplicate entry '207993-XLMUSDT' for key 'order_external_id_symbol'
+		// remove binance order from cache if we have already had saved in database
+		if strings.Contains(err.Error(), "Duplicate entry") && strings.Contains(err.Error(), "order_external_id_symbol") {
+			m.OrderRepository.DeleteBinanceOrder(binanceOrder)
+		}
+
 		log.Printf("Can't create order: %s", order.Symbol)
 
 		return err
@@ -431,6 +447,10 @@ func (m *OrderExecutor) tryLimitOrder(order ExchangeModel.Order, operation strin
 
 	if err != nil {
 		return binanceOrder, err
+	}
+
+	if !binanceOrder.IsNew() && !binanceOrder.IsPartiallyFilled() {
+		return binanceOrder, nil
 	}
 
 	// todo: save sell order in buy order to make sure it is saved after processing...

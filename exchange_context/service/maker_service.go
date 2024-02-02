@@ -76,12 +76,12 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 	if buyOrderErr == nil && tradeLimit.IsExtraChargeEnabled() && tradeLimit.IsEnabled {
 		profitPercent := openedOrder.GetProfitPercent(lastKline.Close)
-		if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) {
+		if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline)) {
 			log.Printf(
 				"[%s] Time to extra charge, profit %.2f of %.2f, price = %.8f",
 				symbol,
 				profitPercent,
-				tradeLimit.GetBuyOnFallPercent().Value(),
+				tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline).Value(),
 				lastKline.Close,
 			)
 			holdScore = 0
@@ -169,7 +169,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 			return
 		}
 
-		balanceErr := m.OrderExecutor.CheckMinBalance(tradeLimit)
+		balanceErr := m.OrderExecutor.CheckMinBalance(tradeLimit, *lastKline)
 
 		if balanceErr != nil {
 			log.Printf("[%s] Min balance check: %s", tradeLimit.Symbol, balanceErr.Error())
@@ -229,11 +229,12 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 				log.Printf("[%s] No ASKs on the market", symbol)
 			}
 		} else {
-			lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+			lastKline = m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+
 			if lastKline != nil {
 				profit := openedOrder.GetProfitPercent(lastKline.Close)
 
-				if err == nil && profit.Lte(tradeLimit.GetBuyOnFallPercent()) {
+				if err == nil && profit.Lte(tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline)) {
 					// extra buy on current price
 					if price < lastKline.Close {
 						price = m.Formatter.FormatPrice(tradeLimit, lastKline.Close)
@@ -250,7 +251,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 						"[%s] Extra charge is not allowed: %.2f of %.2f",
 						symbol,
 						profit.Value(),
-						tradeLimit.GetBuyOnFallPercent().Value(),
+						tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline).Value(),
 					)
 				}
 			}

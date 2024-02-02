@@ -15,7 +15,7 @@ type BaseKLineStrategy struct {
 func (k *BaseKLineStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Decision {
 	//if kLine.IsPositive() && predict > 0.00 && k.Formatter.ComparePercentage(kLine.Close, predict).Lte(99.5) {
 	//	return ExchangeModel.Decision{
-	//		StrategyName: "base_kline_strategy",
+	//		StrategyName: ExchangeModel.BaseKlineStrategyName,
 	//		Score:        50.00,
 	//		Operation:    "SELL",
 	//		Timestamp:    time.Now().Unix(),
@@ -27,7 +27,7 @@ func (k *BaseKLineStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Deci
 	// todo: buy operation is disabled
 	if kLine.IsPositive() && kLine.Close < (kLine.High+kLine.Open)/2 {
 		return ExchangeModel.Decision{
-			StrategyName: "base_kline_strategy",
+			StrategyName: ExchangeModel.BaseKlineStrategyName,
 			Score:        25.00,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
@@ -41,7 +41,7 @@ func (k *BaseKLineStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Deci
 
 		if predictErr == nil && predict > kLine.Close {
 			return ExchangeModel.Decision{
-				StrategyName: "base_kline_strategy",
+				StrategyName: ExchangeModel.BaseKlineStrategyName,
 				Score:        50.00,
 				Operation:    "BUY",
 				Timestamp:    time.Now().Unix(),
@@ -53,7 +53,7 @@ func (k *BaseKLineStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Deci
 
 	if kLine.IsNegative() {
 		return ExchangeModel.Decision{
-			StrategyName: "base_kline_strategy",
+			StrategyName: ExchangeModel.BaseKlineStrategyName,
 			Score:        25.00,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
@@ -63,7 +63,7 @@ func (k *BaseKLineStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Deci
 	}
 
 	return ExchangeModel.Decision{
-		StrategyName: "base_kline_strategy",
+		StrategyName: ExchangeModel.BaseKlineStrategyName,
 		Score:        25.00,
 		Operation:    "HOLD",
 		Timestamp:    time.Now().Unix(),

@@ -192,7 +192,7 @@ func (t *TradeController) GetTradeStackAction(w http.ResponseWriter, req *http.R
 		return
 	}
 
-	stack := t.TradeStack.GetTradeStack(false, false, false, true)
+	stack := t.TradeStack.GetTradeStack(false, false, false, false, true)
 
 	encodedRes, _ := json.Marshal(stack)
 	fmt.Fprintf(w, string(encodedRes))

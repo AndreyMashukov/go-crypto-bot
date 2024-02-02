@@ -16,7 +16,7 @@ func (m *MarketDepthStrategy) Decide(depth ExchangeModel.Depth) ExchangeModel.De
 
 	if sellBuyDiff > 10 {
 		return ExchangeModel.Decision{
-			StrategyName: "market_depth_strategy",
+			StrategyName: ExchangeModel.MarketDepthStrategyName,
 			Score:        30.00,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
@@ -30,7 +30,7 @@ func (m *MarketDepthStrategy) Decide(depth ExchangeModel.Depth) ExchangeModel.De
 	// todo: buy operation is disabled
 	if buySellDiff > 10 {
 		return ExchangeModel.Decision{
-			StrategyName: "market_depth_strategy",
+			StrategyName: ExchangeModel.MarketDepthStrategyName,
 			Score:        30.00,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
@@ -40,7 +40,7 @@ func (m *MarketDepthStrategy) Decide(depth ExchangeModel.Depth) ExchangeModel.De
 	}
 
 	return ExchangeModel.Decision{
-		StrategyName: "market_depth_strategy",
+		StrategyName: ExchangeModel.MarketDepthStrategyName,
 		Score:        30.00,
 		Operation:    "HOLD",
 		Timestamp:    time.Now().Unix(),

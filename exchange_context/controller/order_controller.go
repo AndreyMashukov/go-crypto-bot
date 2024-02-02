@@ -22,6 +22,7 @@ type OrderController struct {
 	PriceCalculator    *service.PriceCalculator
 	CurrentBot         *model.Bot
 	LossSecurity       *service.LossSecurity
+	OrderExecutor      *service.OrderExecutor
 }
 
 func (o *OrderController) GetOrderTradeListAction(w http.ResponseWriter, req *http.Request) {
@@ -144,6 +145,82 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 	fmt.Fprintf(w, string(encoded))
 }
 
+func (o *OrderController) UpdateExtraChargeAction(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if req.Method == "OPTIONS" {
+		fmt.Fprintf(w, "OK")
+		return
+	}
+
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != o.CurrentBot.BotUuid {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
+
+	if req.Method != "PUT" {
+		http.Error(w, "Only PUT method is allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	var options model.UpdateOrderExtraChargeOptions
+
+	// Try to decode the request body into the struct. If there is an error,
+	// respond to the client with the error message and a 400 status code.
+	err := json.NewDecoder(req.Body).Decode(&options)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	entity, err := o.OrderRepository.Find(options.OrderId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+
+		return
+	}
+
+	if entity.IsSell() {
+		http.Error(w, "Can not update SELL order", http.StatusBadRequest)
+
+		return
+	}
+
+	if entity.IsClosed() {
+		http.Error(w, "Can not update closed order", http.StatusBadRequest)
+
+		return
+	}
+
+	entity.ExtraChargeOptions = options.ExtraChargeOptions
+	err = o.OrderRepository.Update(entity)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	entity, err = o.OrderRepository.Find(entity.Id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+
+		return
+	}
+
+	o.OrderExecutor.SetCancelRequest(entity.Symbol)
+	o.ExchangeRepository.DeleteDecision(model.OrderBasedStrategyName, entity.Symbol)
+	encodedRes, _ := json.Marshal(entity)
+	fmt.Fprintf(w, string(encodedRes))
+}
+
 func (o *OrderController) GetPendingOrderListAction(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -200,7 +277,7 @@ func (o *OrderController) GetPendingOrderListAction(w http.ResponseWriter, req *
 			KLine:          *kLine,
 			PredictedPrice: predictedPrice,
 			Interpolation:  interpolation,
-			IsRisky:        o.LossSecurity.IsRiskyBuy(*binanceOrder),
+			IsRisky:        o.LossSecurity.IsRiskyBuy(*binanceOrder, limit),
 		})
 	}
 

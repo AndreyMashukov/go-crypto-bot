@@ -23,7 +23,7 @@ func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
 		return true
 	}
 
-	result := t.GetTradeStack(true, true, true, false)
+	result := t.GetTradeStack(true, true, true, true, false)
 
 	if len(result) == 0 {
 		return false
@@ -39,7 +39,7 @@ func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
 	return limit.Symbol == result[0].Symbol
 }
 
-func (t *TradeStack) GetTradeStack(balanceFilter bool, skipPending bool, withValidPrice bool, attachDecisions bool) []model.TradeStackItem {
+func (t *TradeStack) GetTradeStack(skipLocked bool, balanceFilter bool, skipPending bool, withValidPrice bool, attachDecisions bool) []model.TradeStackItem {
 	balanceUsdt, err := t.BalanceService.GetAssetBalance("USDT", true)
 	stack := make([]model.TradeStackItem, 0)
 
@@ -49,6 +49,12 @@ func (t *TradeStack) GetTradeStack(balanceFilter bool, skipPending bool, withVal
 
 	for index, tradeLimit := range t.ExchangeRepository.GetTradeLimits() {
 		if !tradeLimit.IsEnabled {
+			continue
+		}
+
+		isBuyLocked := t.OrderRepository.HasBuyLock(tradeLimit.Symbol)
+
+		if skipLocked && isBuyLocked {
 			continue
 		}
 
@@ -82,20 +88,21 @@ func (t *TradeStack) GetTradeStack(balanceFilter bool, skipPending bool, withVal
 		openedOrder, err := t.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
 		if err == nil {
 			kline := t.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
-			if kline != nil && tradeLimit.IsExtraChargeEnabled() && openedOrder.CanExtraBuy(tradeLimit) {
+			if kline != nil && tradeLimit.IsExtraChargeEnabled() && openedOrder.CanExtraBuy(tradeLimit, *kline) {
 				profitPercent := openedOrder.GetProfitPercent(kline.Close)
-				if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent()) {
+				if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(openedOrder, *kline)) {
 					stack = append(stack, model.TradeStackItem{
 						Index:             int64(index),
 						Symbol:            tradeLimit.Symbol,
 						Percent:           profitPercent,
-						BudgetUsdt:        tradeLimit.USDTExtraBudget - openedOrder.UsedExtraBudget,
+						BudgetUsdt:        openedOrder.GetAvailableExtraBudget(tradeLimit, *kline),
 						HasEnoughBalance:  false,
 						BinanceOrder:      binanceOrder,
 						IsExtraCharge:     true,
 						Price:             lastPrice,
 						IsPriceValid:      isPriceValid,
 						StrategyDecisions: decisions,
+						IsBuyLocked:       isBuyLocked,
 					})
 				}
 			}
@@ -114,6 +121,7 @@ func (t *TradeStack) GetTradeStack(balanceFilter bool, skipPending bool, withVal
 					Price:             lastPrice,
 					IsPriceValid:      isPriceValid,
 					StrategyDecisions: decisions,
+					IsBuyLocked:       isBuyLocked,
 				})
 			}
 		}
@@ -150,6 +158,7 @@ func (t *TradeStack) GetTradeStack(balanceFilter bool, skipPending bool, withVal
 				IsPriceValid:      stackItem.IsPriceValid,
 				Price:             stackItem.Price,
 				StrategyDecisions: stackItem.StrategyDecisions,
+				IsBuyLocked:       stackItem.IsBuyLocked,
 			})
 		} else {
 			impossible = append(impossible, stackItem)
@@ -172,6 +181,7 @@ func (t *TradeStack) GetTradeStack(balanceFilter bool, skipPending bool, withVal
 				IsPriceValid:      stackItem.IsPriceValid,
 				Price:             stackItem.Price,
 				StrategyDecisions: stackItem.StrategyDecisions,
+				IsBuyLocked:       stackItem.IsBuyLocked,
 			})
 		}
 	}

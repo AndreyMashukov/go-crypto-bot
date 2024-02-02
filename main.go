@@ -78,9 +78,21 @@ func main() {
 	log.Printf("API Key permission check passed, balance is: %.2f", usdtBalance)
 	container.Binance.APIKeyCheckCompleted = true
 
+	tradeLimits := container.ExchangeRepository.GetTradeLimits()
+	symbols := make([]string, 0)
+	for _, limit := range tradeLimits {
+		symbols = append(symbols, limit.Symbol)
+	}
+
 	binanceOrders, err := container.Binance.GetOpenedOrders()
 	if err == nil {
 		for _, binanceOrder := range binanceOrders {
+			if !slices.Contains(symbols, binanceOrder.Symbol) {
+				log.Printf("[%s] binance order %d skipped", binanceOrder.Symbol, binanceOrder.OrderId)
+
+				continue
+			}
+
 			log.Printf("[%s] loaded binance order %d", binanceOrder.Symbol, binanceOrder.OrderId)
 			container.OrderRepository.SetBinanceOrder(binanceOrder)
 		}
@@ -184,8 +196,6 @@ func main() {
 			defer swapWebsockets[index].Close()
 		}
 	}
-
-	tradeLimits := container.ExchangeRepository.GetTradeLimits()
 
 	for _, limit := range tradeLimits {
 		go func(limit model.TradeLimit, container *config.Container) {

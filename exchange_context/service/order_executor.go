@@ -452,7 +452,7 @@ func (m *OrderExecutor) tryLimitOrder(order ExchangeModel.Order, operation strin
 	if (binanceOrder.IsCanceled() || binanceOrder.IsExpired()) && binanceOrder.ExecutedQty == 0 {
 		m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 
-		return binanceOrder, errors.New("order is cancelled or expired.")
+		return binanceOrder, errors.New(fmt.Sprintf("binance order [%d] is cancelled or expired", binanceOrder.OrderId))
 	}
 
 	if binanceOrder.IsFilled() {

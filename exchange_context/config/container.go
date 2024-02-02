@@ -333,6 +333,7 @@ func InitServiceContainer() Container {
 		PythonMLBridge:      &pythonMLBridge,
 		SwapRepository:      &swapRepository,
 		ExchangeRepository:  &exchangeRepository,
+		OrderRepository:     &orderRepository,
 		ExchangeController:  &exchangeController,
 		TradeController:     &tradeController,
 		OrderController:     &orderController,
@@ -362,6 +363,7 @@ type Container struct {
 	PythonMLBridge      *service.PythonMLBridge
 	SwapRepository      *repository.SwapRepository
 	ExchangeRepository  *repository.ExchangeRepository
+	OrderRepository     *repository.OrderRepository
 	ExchangeController  *controller.ExchangeController
 	TradeController     *controller.TradeController
 	OrderController     *controller.OrderController

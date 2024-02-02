@@ -78,6 +78,14 @@ func main() {
 	log.Printf("API Key permission check passed, balance is: %.2f", usdtBalance)
 	container.Binance.APIKeyCheckCompleted = true
 
+	binanceOrders, err := container.Binance.GetOpenedOrders()
+	if err == nil {
+		for _, binanceOrder := range binanceOrders {
+			log.Printf("[%s] loaded binance order %d", binanceOrder.Symbol, binanceOrder.OrderId)
+			container.OrderRepository.SetBinanceOrder(binanceOrder)
+		}
+	}
+
 	// Wait 5 seconds, here API can update some settings...
 	time.Sleep(time.Second * 5)
 	eventChannel := make(chan []byte)

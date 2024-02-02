@@ -26,6 +26,18 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 		}
 	}
 
+	binanceBuyOrder := o.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
+	if binanceBuyOrder != nil {
+		return ExchangeModel.Decision{
+			StrategyName: ExchangeModel.OrderBasedStrategyName,
+			Score:        999.99,
+			Operation:    "BUY",
+			Timestamp:    time.Now().Unix(),
+			Price:        kLine.Close,
+			Params:       [3]float64{0, 0, 0},
+		}
+	}
+
 	order, err := o.OrderRepository.GetOpenedOrderCached(kLine.Symbol, "BUY")
 
 	if err != nil {
@@ -44,6 +56,18 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 			StrategyName: ExchangeModel.OrderBasedStrategyName,
 			Score:        15.00,
 			Operation:    "BUY",
+			Timestamp:    time.Now().Unix(),
+			Price:        kLine.Close,
+			Params:       [3]float64{0, 0, 0},
+		}
+	}
+
+	binanceSellOrder := o.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "SELL")
+	if binanceSellOrder != nil {
+		return ExchangeModel.Decision{
+			StrategyName: ExchangeModel.OrderBasedStrategyName,
+			Score:        999.99,
+			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
 			Price:        kLine.Close,
 			Params:       [3]float64{0, 0, 0},

@@ -166,6 +166,23 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 		if !m.TradeStack.CanBuy(tradeLimit) {
 			log.Printf("[%s] Trade Stack check is not passed, wait order.", symbol)
 
+			// has opened BUY order (extra charge time)
+			if buyOrderErr == nil {
+				lastKline = m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+
+				if lastKline != nil {
+					profit := openedOrder.GetProfitPercent(lastKline.Close)
+
+					if profit.Lte(tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline)) {
+						binanceOrder := m.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "SELL")
+						if binanceOrder != nil {
+							log.Printf("[%s] Cancel request for SELL order sent, time to extra charge now!", symbol)
+							m.OrderExecutor.SetCancelRequest(tradeLimit.Symbol)
+						}
+					}
+				}
+			}
+
 			return
 		}
 

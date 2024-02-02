@@ -214,6 +214,7 @@ func InitServiceContainer() Container {
 		Lock:                   make(map[string]bool),
 		TradeLockMutex:         sync.RWMutex{},
 		LockChannel:            &lockTradeChannel,
+		CancelRequestMap:       make(map[string]bool),
 	}
 
 	tradeStack := service.TradeStack{
@@ -246,6 +247,7 @@ func InitServiceContainer() Container {
 		PriceCalculator:    &priceCalculator,
 		CurrentBot:         currentBot,
 		LossSecurity:       &lossSecurity,
+		OrderExecutor:      &orderExecutor,
 	}
 
 	tradeController := controller.TradeController{
@@ -382,6 +384,7 @@ func (c *Container) StartHttpServer() {
 	http.HandleFunc("/swap/list", c.ExchangeController.GetSwapListAction)
 	http.HandleFunc("/chart/list", c.ExchangeController.GetChartListAction)
 	http.HandleFunc("/order/list", c.OrderController.GetOrderListAction)
+	http.HandleFunc("/order/extra/charge/update", c.OrderController.UpdateExtraChargeAction)
 	http.HandleFunc("/order/pending/list", c.OrderController.GetPendingOrderListAction)
 	http.HandleFunc("/order/position/list", c.OrderController.GetPositionListAction)
 	http.HandleFunc("/order", c.OrderController.PostManualOrderAction)

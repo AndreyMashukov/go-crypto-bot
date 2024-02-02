@@ -292,6 +292,13 @@ func (e *OrderStorageMock) GetBinanceOrder(symbol string, operation string) *mod
 
 	return order.(*model.BinanceOrder)
 }
+func (e *OrderStorageMock) LockBuy(symbol string, seconds int64) {
+	_ = e.Called(symbol, seconds)
+}
+func (e *OrderStorageMock) HasBuyLock(symbol string) bool {
+	args := e.Called(symbol)
+	return args.Get(0).(bool)
+}
 
 type ExchangeTradeInfoMock struct {
 	mock.Mock
@@ -374,8 +381,8 @@ type LossSecurityMock struct {
 	mock.Mock
 }
 
-func (l *LossSecurityMock) IsRiskyBuy(binanceOrder model.BinanceOrder) bool {
-	args := l.Called(binanceOrder)
+func (l *LossSecurityMock) IsRiskyBuy(binanceOrder model.BinanceOrder, limit model.TradeLimit) bool {
+	args := l.Called(binanceOrder, limit)
 	return args.Get(0).(bool)
 }
 func (l *LossSecurityMock) BuyPriceCorrection(price float64, limit model.TradeLimit) float64 {

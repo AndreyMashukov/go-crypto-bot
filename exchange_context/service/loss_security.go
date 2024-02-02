@@ -8,7 +8,7 @@ import (
 )
 
 type LossSecurityInterface interface {
-	IsRiskyBuy(binanceOrder model.BinanceOrder) bool
+	IsRiskyBuy(binanceOrder model.BinanceOrder, limit model.TradeLimit) bool
 	BuyPriceCorrection(price float64, limit model.TradeLimit) float64
 	CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice float64) float64
 }
@@ -21,18 +21,25 @@ type LossSecurity struct {
 	Binance              client.ExchangePriceAPIInterface
 }
 
-func (l *LossSecurity) IsRiskyBuy(binanceOrder model.BinanceOrder) bool {
+func (l *LossSecurity) IsRiskyBuy(binanceOrder model.BinanceOrder, limit model.TradeLimit) bool {
 	kline := l.ExchangeRepository.GetLastKLine(binanceOrder.Symbol)
 
 	if kline != nil && binanceOrder.IsBuy() && binanceOrder.IsNew() {
 		if l.MlEnabled {
 			predict, predictErr := l.ExchangeRepository.GetPredict(kline.Symbol)
-			if predictErr == nil && binanceOrder.Price > predict {
+			if predictErr == nil && binanceOrder.Price > l.Formatter.FormatPrice(limit, predict) {
+				log.Printf(
+					"[%s] ML RISK detected: %f > %f",
+					binanceOrder.Symbol,
+					binanceOrder.Price,
+					l.Formatter.FormatPrice(limit, predict),
+				)
+
 				return true
 			}
 		}
 
-		if binanceOrder.Price > kline.Close {
+		if binanceOrder.Price > l.Formatter.FormatPrice(limit, kline.Close) {
 			fallPercent := model.Percent(100.00 - l.Formatter.ComparePercentage(binanceOrder.Price, kline.Close).Value())
 			minPrice := l.ExchangeRepository.GetPeriodMinPrice(binanceOrder.Symbol, 200)
 
@@ -40,17 +47,38 @@ func (l *LossSecurity) IsRiskyBuy(binanceOrder model.BinanceOrder) bool {
 
 			// If falls more than (min - 0.5%) cancel current
 			if fallPercent.Gte(cancelFallPercent) && minPrice-(minPrice*0.005) > kline.Close {
+				log.Printf(
+					"[%s] Close price RISK detected: %f > %f",
+					binanceOrder.Symbol,
+					binanceOrder.Price,
+					l.Formatter.FormatPrice(limit, kline.Close),
+				)
+
 				return true
 			}
 		}
 
 		if l.InterpolationEnabled {
 			interpolation, err := l.ExchangeRepository.GetInterpolation(*kline)
-			if err == nil && interpolation.HasBtc() && binanceOrder.Price > interpolation.BtcInterpolationUsdt {
+			if err == nil && interpolation.HasBtc() && binanceOrder.Price > l.Formatter.FormatPrice(limit, interpolation.BtcInterpolationUsdt) {
+				log.Printf(
+					"[%s] BTC Interpolation RISK detected: %f > %f",
+					binanceOrder.Symbol,
+					binanceOrder.Price,
+					l.Formatter.FormatPrice(limit, interpolation.BtcInterpolationUsdt),
+				)
+
 				return true
 			}
 
-			if err == nil && interpolation.HasEth() && binanceOrder.Price > interpolation.EthInterpolationUsdt {
+			if err == nil && interpolation.HasEth() && binanceOrder.Price > l.Formatter.FormatPrice(limit, interpolation.EthInterpolationUsdt) {
+				log.Printf(
+					"[%s] ETH Interpolation RISK detected: %f > %f",
+					binanceOrder.Symbol,
+					binanceOrder.Price,
+					l.Formatter.FormatPrice(limit, interpolation.EthInterpolationUsdt),
+				)
+
 				return true
 			}
 		}

@@ -6,3 +6,8 @@ type ManualOrder struct {
 	Symbol    string  `json:"symbol"`
 	BotUuid   string  `json:"botUuid"`
 }
+
+type UpdateOrderExtraChargeOptions struct {
+	OrderId            int64              `json:"orderId"`
+	ExtraChargeOptions ExtraChargeOptions `json:"extraChargeOptions"`
+}

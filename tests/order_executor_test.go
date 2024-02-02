@@ -31,7 +31,13 @@ func TestSellAction(t *testing.T) {
 	lockChannel := make(chan model.Lock)
 
 	lossSecurityMock := new(LossSecurityMock)
-	lossSecurityMock.On("IsRiskyBuy", mock.Anything).Return(false)
+	tradeLimit := model.TradeLimit{
+		Symbol:           "ETHUSDT",
+		MinProfitPercent: 3.1,
+		MinPrice:         0.01,
+		MinQuantity:      0.0001,
+	}
+	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	orderExecutor := service.OrderExecutor{
 		LossSecurity: lossSecurityMock,
@@ -105,12 +111,6 @@ func TestSellAction(t *testing.T) {
 			},
 		},
 	})
-	tradeLimit := model.TradeLimit{
-		Symbol:           "ETHUSDT",
-		MinProfitPercent: 3.1,
-		MinPrice:         0.01,
-		MinQuantity:      0.0001,
-	}
 	exchangeRepository.On("GetTradeLimit", "ETHUSDT").Return(tradeLimit, nil)
 	timeService.On("GetNowUnix").Times(1).Return(0)
 	for i := 2; i < 1002; i++ {
@@ -186,7 +186,13 @@ func TestSellFoundFilled(t *testing.T) {
 
 	lockChannel := make(chan model.Lock)
 	lossSecurityMock := new(LossSecurityMock)
-	lossSecurityMock.On("IsRiskyBuy", mock.Anything).Return(false)
+	tradeLimit := model.TradeLimit{
+		Symbol:           "ETHUSDT",
+		MinProfitPercent: 3.1,
+		MinPrice:         0.01,
+		MinQuantity:      0.0001,
+	}
+	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	orderExecutor := service.OrderExecutor{
 		LossSecurity: lossSecurityMock,
@@ -261,12 +267,6 @@ func TestSellFoundFilled(t *testing.T) {
 			},
 		},
 	})
-	tradeLimit := model.TradeLimit{
-		Symbol:           "ETHUSDT",
-		MinProfitPercent: 3.1,
-		MinPrice:         0.01,
-		MinQuantity:      0.0001,
-	}
 	exchangeRepository.On("GetTradeLimit", "ETHUSDT").Return(tradeLimit, nil)
 	timeService.On("GetNowUnix").Times(1).Return(0)
 	for i := 2; i < 1002; i++ {
@@ -333,7 +333,13 @@ func TestSellCancelledInProcess(t *testing.T) {
 
 	lockChannel := make(chan model.Lock)
 	lossSecurityMock := new(LossSecurityMock)
-	lossSecurityMock.On("IsRiskyBuy", mock.Anything).Return(false)
+	tradeLimit := model.TradeLimit{
+		Symbol:           "ETHUSDT",
+		MinProfitPercent: 3.1,
+		MinPrice:         0.01,
+		MinQuantity:      0.0001,
+	}
+	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	orderExecutor := service.OrderExecutor{
 		LossSecurity: lossSecurityMock,
@@ -407,12 +413,6 @@ func TestSellCancelledInProcess(t *testing.T) {
 			},
 		},
 	})
-	tradeLimit := model.TradeLimit{
-		Symbol:           "ETHUSDT",
-		MinProfitPercent: 3.1,
-		MinPrice:         0.01,
-		MinQuantity:      0.0001,
-	}
 	exchangeRepository.On("GetTradeLimit", "ETHUSDT").Return(tradeLimit, nil)
 	timeService.On("GetNowUnix").Times(1).Return(0)
 	for i := 2; i < 1002; i++ {
@@ -474,7 +474,13 @@ func TestSellQueryFail(t *testing.T) {
 
 	lockChannel := make(chan model.Lock)
 	lossSecurityMock := new(LossSecurityMock)
-	lossSecurityMock.On("IsRiskyBuy", mock.Anything).Return(false)
+	tradeLimit := model.TradeLimit{
+		Symbol:           "ETHUSDT",
+		MinProfitPercent: 3.1,
+		MinPrice:         0.01,
+		MinQuantity:      0.0001,
+	}
+	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	orderExecutor := service.OrderExecutor{
 		LossSecurity: lossSecurityMock,
@@ -548,12 +554,6 @@ func TestSellQueryFail(t *testing.T) {
 			},
 		},
 	})
-	tradeLimit := model.TradeLimit{
-		Symbol:           "ETHUSDT",
-		MinProfitPercent: 3.1,
-		MinPrice:         0.01,
-		MinQuantity:      0.0001,
-	}
 	exchangeRepository.On("GetTradeLimit", "ETHUSDT").Return(tradeLimit, nil)
 	timeService.On("GetNowUnix").Times(1).Return(0)
 	for i := 2; i < 1002; i++ {
@@ -606,7 +606,13 @@ func TestSellClosingAction(t *testing.T) {
 
 	lockChannel := make(chan model.Lock)
 	lossSecurityMock := new(LossSecurityMock)
-	lossSecurityMock.On("IsRiskyBuy", mock.Anything).Return(false)
+	tradeLimit := model.TradeLimit{
+		Symbol:           "BTCUSDT",
+		MinProfitPercent: 3.1,
+		MinPrice:         0.01,
+		MinQuantity:      0.00001,
+	}
+	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	orderExecutor := service.OrderExecutor{
 		LossSecurity: lossSecurityMock,
@@ -680,12 +686,6 @@ func TestSellClosingAction(t *testing.T) {
 			},
 		},
 	})
-	tradeLimit := model.TradeLimit{
-		Symbol:           "BTCUSDT",
-		MinProfitPercent: 3.1,
-		MinPrice:         0.01,
-		MinQuantity:      0.00001,
-	}
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	timeService.On("GetNowUnix").Times(1).Return(0)
 	for i := 2; i < 1002; i++ {
@@ -761,7 +761,13 @@ func TestSellClosingTrxAction(t *testing.T) {
 
 	lockChannel := make(chan model.Lock)
 	lossSecurityMock := new(LossSecurityMock)
-	lossSecurityMock.On("IsRiskyBuy", mock.Anything).Return(false)
+	tradeLimit := model.TradeLimit{
+		Symbol:           "TRXUSDT",
+		MinProfitPercent: 2.25,
+		MinPrice:         0.00001,
+		MinQuantity:      0.1,
+	}
+	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	orderExecutor := service.OrderExecutor{
 		LossSecurity: lossSecurityMock,
@@ -835,12 +841,6 @@ func TestSellClosingTrxAction(t *testing.T) {
 			},
 		},
 	})
-	tradeLimit := model.TradeLimit{
-		Symbol:           "TRXUSDT",
-		MinProfitPercent: 2.25,
-		MinPrice:         0.00001,
-		MinQuantity:      0.1,
-	}
 	exchangeRepository.On("GetTradeLimit", "TRXUSDT").Return(tradeLimit, nil)
 	timeService.On("GetNowUnix").Times(1).Return(0)
 	for i := 2; i < 1002; i++ {

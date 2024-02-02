@@ -12,4 +12,5 @@ type TradeStackItem struct {
 	BinanceOrder      *BinanceOrder `json:"binanceOrder"`
 	IsExtraCharge     bool          `json:"isExtraCharge"`
 	StrategyDecisions []Decision    `json:"strategyDecisions"`
+	IsBuyLocked       bool          `json:"isBuyLocked"`
 }

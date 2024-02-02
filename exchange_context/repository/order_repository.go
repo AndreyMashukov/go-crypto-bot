@@ -31,6 +31,8 @@ type OrderStorageInterface interface {
 	GetManualOrder(symbol string) *ExchangeModel.ManualOrder
 	SetBinanceOrder(order ExchangeModel.BinanceOrder)
 	GetBinanceOrder(symbol string, operation string) *ExchangeModel.BinanceOrder
+	LockBuy(symbol string, seconds int64)
+	HasBuyLock(symbol string) bool
 }
 
 type OrderRepository struct {
@@ -65,7 +67,7 @@ func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation strin
 		}
 	}
 
-	order, err := repo.getOpenedOrder(symbol, operation)
+	order, err := repo.GetOpenedOrder(symbol, operation)
 
 	if err != nil {
 		return order, err
@@ -86,7 +88,7 @@ func (repo *OrderRepository) DeleteOpenedOrderCache(order ExchangeModel.Order) {
 	repo.RDB.Del(*repo.Ctx, repo.getOpenedOrderCacheKey(order.Symbol, order.Operation)).Val()
 }
 
-func (repo *OrderRepository) getOpenedOrder(symbol string, operation string) (ExchangeModel.Order, error) {
+func (repo *OrderRepository) GetOpenedOrder(symbol string, operation string) (ExchangeModel.Order, error) {
 	var order ExchangeModel.Order
 
 	err := repo.DB.QueryRow(`
@@ -108,7 +110,8 @@ func (repo *OrderRepository) getOpenedOrder(symbol string, operation string) (Ex
 			o.commission as Commission,
 			o.commission_asset as CommissionAsset,
 			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
-			o.swap as Swap
+			o.swap as Swap,
+			o.extra_charge_options as ExtraChargeOptions
 		FROM orders o
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
 		WHERE o.status = ? AND o.symbol = ? AND o.operation = ? AND o.bot_id = ?
@@ -136,6 +139,7 @@ func (repo *OrderRepository) getOpenedOrder(symbol string, operation string) (Ex
 		&order.CommissionAsset,
 		&order.SoldQuantity,
 		&order.Swap,
+		&order.ExtraChargeOptions,
 	)
 
 	if err != nil {
@@ -163,6 +167,7 @@ func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
 			used_extra_budget = ?,
 			commission = ?,
 			commission_asset = ?,
+			extra_charge_options = ?,
 			bot_id = ?
 	`,
 		order.Symbol,
@@ -180,6 +185,7 @@ func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
 		order.UsedExtraBudget,
 		order.Commission,
 		order.CommissionAsset,
+		order.ExtraChargeOptions,
 		repo.CurrentBot.Id,
 	)
 
@@ -213,8 +219,9 @@ func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
 			o.used_extra_budget = ?,
 			o.commission = ?,
 			o.commission_asset = ?,
-			o.swap = ?
-		WHERE o.id = ?
+			o.swap = ?,
+			o.extra_charge_options = ?
+		WHERE o.id = ? AND o.bot_id = ?
 	`,
 		order.Symbol,
 		order.Quantity,
@@ -232,7 +239,9 @@ func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
 		order.Commission,
 		order.CommissionAsset,
 		order.Swap,
+		order.ExtraChargeOptions,
 		order.Id,
+		repo.CurrentBot.Id,
 	)
 
 	if err != nil {
@@ -265,11 +274,12 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 			o.commission as Commission,
 			o.commission_asset as CommissionAsset,
 			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
-			o.swap as Swap
+			o.swap as Swap,
+			o.extra_charge_options as ExtraChargeOptions
 		FROM orders o
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
-		WHERE o.id = ? 
-		GROUP BY o.id`, id,
+		WHERE o.id = ? AND o.bot_id = ?
+		GROUP BY o.id`, id, repo.CurrentBot.Id,
 	).Scan(
 		&order.Id,
 		&order.Symbol,
@@ -289,6 +299,7 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 		&order.CommissionAsset,
 		&order.SoldQuantity,
 		&order.Swap,
+		&order.ExtraChargeOptions,
 	)
 
 	if err != nil {
@@ -373,7 +384,8 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 			o.commission as Commission,
 			o.commission_asset as CommissionAsset,
 			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
-			o.swap as Swap
+			o.swap as Swap,
+			o.extra_charge_options as ExtraChargeOptions
 		FROM orders o 
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
 		WHERE o.bot_id = ?
@@ -408,6 +420,7 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 			&order.CommissionAsset,
 			&order.SoldQuantity,
 			&order.Swap,
+			&order.ExtraChargeOptions,
 		)
 
 		if err != nil {
@@ -440,7 +453,8 @@ func (repo *OrderRepository) GetClosesOrderList(buyOrder ExchangeModel.Order) []
 			o.commission as Commission,
 			o.commission_asset as CommissionAsset,
 			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
-			o.swap as Swap
+			o.swap as Swap,
+			o.extra_charge_options as ExtraChargeOptions
 		FROM orders o 
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
 		WHERE o.bot_id = ? AND o.closes_order = ? AND o.operation = ?
@@ -475,6 +489,7 @@ func (repo *OrderRepository) GetClosesOrderList(buyOrder ExchangeModel.Order) []
 			&order.CommissionAsset,
 			&order.SoldQuantity,
 			&order.Swap,
+			&order.ExtraChargeOptions,
 		)
 
 		if err != nil {
@@ -554,4 +569,22 @@ func (repo *OrderRepository) DeleteManualOrder(symbol string) {
 		strings.ToLower(symbol),
 		repo.CurrentBot.Id,
 	)).Val()
+}
+
+func (repo *OrderRepository) HasBuyLock(symbol string) bool {
+	value := repo.RDB.Get(*repo.Ctx, fmt.Sprintf(
+		"buy-lock-%s-bot-%d",
+		strings.ToLower(symbol),
+		repo.CurrentBot.Id,
+	)).Val()
+
+	return len(value) > 0
+}
+
+func (repo *OrderRepository) LockBuy(symbol string, seconds int64) {
+	repo.RDB.Set(*repo.Ctx, fmt.Sprintf(
+		"buy-lock-%s-bot-%d",
+		strings.ToLower(symbol),
+		repo.CurrentBot.Id,
+	), "lock", time.Second*time.Duration(seconds))
 }

@@ -1,7 +1,11 @@
 package model
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"log"
 	"math"
+	"sort"
 	"strings"
 	"time"
 )
@@ -54,38 +58,57 @@ type TgOrderNotification struct {
 }
 
 type Order struct {
-	Id               int64    `json:"id"`
-	Symbol           string   `json:"symbol"`
-	Price            float64  `json:"price"`
-	Quantity         float64  `json:"quantity"`
-	ExecutedQuantity float64  `json:"executedQuantity"`
-	CreatedAt        string   `json:"createdAt"`
-	SellVolume       float64  `json:"sellVolume"`
-	BuyVolume        float64  `json:"buyVolume"`
-	SmaValue         float64  `json:"smaValue"`
-	Operation        string   `json:"operation"`
-	Status           string   `json:"status"`
-	ExternalId       *int64   `json:"externalId"`
-	ClosesOrder      *int64   `json:"closesOrder"` // sell order here
-	UsedExtraBudget  float64  `json:"usedExtraBudget"`
-	Commission       *float64 `json:"commission"`
-	CommissionAsset  *string  `json:"commissionAsset"`
-	SoldQuantity     *float64 `json:"soldQuantity"`
-	Swap             bool     `json:"swap"`
+	Id                 int64              `json:"id"`
+	Symbol             string             `json:"symbol"`
+	Price              float64            `json:"price"`
+	Quantity           float64            `json:"quantity"`
+	ExecutedQuantity   float64            `json:"executedQuantity"`
+	CreatedAt          string             `json:"createdAt"`
+	SellVolume         float64            `json:"sellVolume"`
+	BuyVolume          float64            `json:"buyVolume"`
+	SmaValue           float64            `json:"smaValue"`
+	Operation          string             `json:"operation"`
+	Status             string             `json:"status"`
+	ExternalId         *int64             `json:"externalId"`
+	ClosesOrder        *int64             `json:"closesOrder"` // sell order here
+	UsedExtraBudget    float64            `json:"usedExtraBudget"`
+	Commission         *float64           `json:"commission"`
+	CommissionAsset    *string            `json:"commissionAsset"`
+	SoldQuantity       *float64           `json:"soldQuantity"`
+	Swap               bool               `json:"swap"`
+	ExtraChargeOptions ExtraChargeOptions `json:"extraChargeOptions"`
 }
 
-func (o *Order) CanExtraBuy(tradeLimit TradeLimit) bool {
-	if tradeLimit.USDTExtraBudget <= 0 {
+func (o *Order) CanExtraBuy(tradeLimit TradeLimit, kLine KLine) bool {
+	if !tradeLimit.IsExtraChargeEnabled() && len(o.ExtraChargeOptions) == 0 {
 		return false
 	}
 
-	availableExtraBudget := tradeLimit.USDTExtraBudget - o.UsedExtraBudget
-
-	return availableExtraBudget >= 10.00
+	return o.GetAvailableExtraBudget(tradeLimit, kLine) >= 10.00
 }
 
-func (o *Order) GetAvailableExtraBudget(tradeLimit TradeLimit) float64 {
-	return tradeLimit.USDTExtraBudget - o.UsedExtraBudget
+func (o *Order) GetAvailableExtraBudget(tradeLimit TradeLimit, kLine KLine) float64 {
+	availableExtraBudget := tradeLimit.USDTExtraBudget
+
+	if len(o.ExtraChargeOptions) > 0 {
+		availableExtraBudget = 0.00
+		// sort DESC
+		sort.SliceStable(o.ExtraChargeOptions, func(i int, j int) bool {
+			return o.ExtraChargeOptions[i].Percent > o.ExtraChargeOptions[j].Percent
+		})
+
+		profit := o.GetProfitPercent(kLine.Close)
+
+		for _, option := range o.ExtraChargeOptions {
+			if profit.Lte(option.Percent) {
+				availableExtraBudget += option.AmountUsdt
+			}
+		}
+	}
+
+	availableExtraBudget -= o.UsedExtraBudget
+
+	return availableExtraBudget
 }
 
 func (o *Order) GetBaseAsset() string {
@@ -159,4 +182,23 @@ type PendingOrder struct {
 	PredictedPrice float64       `json:"predictedPrice"`
 	Interpolation  Interpolation `json:"interpolation"`
 	IsRisky        bool          `json:"isRisky"`
+}
+
+type ExtraChargeOptions []ExtraChargeOption
+
+type ExtraChargeOption struct {
+	Index      int64   `json:"index"`
+	Percent    Percent `json:"percent"`
+	AmountUsdt float64 `json:"amountUsdt"`
+}
+
+func (e *ExtraChargeOptions) Scan(src interface{}) error {
+	return json.Unmarshal(src.([]byte), &e)
+}
+
+func (e ExtraChargeOptions) Value() (driver.Value, error) {
+	jsonV, err := json.Marshal(e)
+	log.Println(string(jsonV))
+
+	return string(jsonV), err
 }

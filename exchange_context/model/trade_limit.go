@@ -1,6 +1,9 @@
 package model
 
-import "strings"
+import (
+	"sort"
+	"strings"
+)
 
 type SymbolInterface interface {
 	GetSymbol() string
@@ -41,6 +44,8 @@ type TradeLimit struct {
 	FramePeriod                  int64  `json:"framePeriod"`                  //20,
 	BuyPriceHistoryCheckInterval string `json:"buyPriceHistoryCheckInterval"` //"1d",
 	BuyPriceHistoryCheckPeriod   int64  `json:"buyPriceHistoryCheckPeriod"`   //14,
+
+	ExtraChargeOptions ExtraChargeOptions `json:"extraChargeOptions"`
 }
 
 func (t TradeLimit) GetMinPrice() float64 {
@@ -71,16 +76,35 @@ func (t *TradeLimit) GetMinProfitPercent() Percent {
 	}
 }
 
-func (t *TradeLimit) GetBuyOnFallPercent() Percent {
-	if t.BuyOnFallPercent > 0 {
-		return Percent(t.BuyOnFallPercent * -1)
+func (t *TradeLimit) GetBuyOnFallPercent(order Order, kLine KLine) Percent {
+	buyOnFallPercent := Percent(t.BuyOnFallPercent)
+
+	if len(order.ExtraChargeOptions) > 0 {
+		// sort DESC
+		sort.SliceStable(order.ExtraChargeOptions, func(i int, j int) bool {
+			return order.ExtraChargeOptions[i].Percent > order.ExtraChargeOptions[j].Percent
+		})
+
+		profit := order.GetProfitPercent(kLine.Close)
+		// set first step as default
+		buyOnFallPercent = order.ExtraChargeOptions[0].Percent
+
+		for _, option := range order.ExtraChargeOptions {
+			if profit.Lte(option.Percent) {
+				buyOnFallPercent = option.Percent
+			}
+		}
+	}
+
+	if buyOnFallPercent > 0 {
+		return buyOnFallPercent * -1
 	} else {
-		return Percent(t.BuyOnFallPercent)
+		return buyOnFallPercent
 	}
 }
 
 func (t *TradeLimit) IsExtraChargeEnabled() bool {
-	return t.BuyOnFallPercent != 0.00
+	return t.BuyOnFallPercent != 0.00 || len(t.ExtraChargeOptions) > 0
 }
 
 func (t *TradeLimit) GetClosePrice(buyPrice float64) float64 {

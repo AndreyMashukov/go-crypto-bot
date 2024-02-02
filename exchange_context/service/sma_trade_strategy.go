@@ -21,7 +21,7 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 
 	if len(list) < maxPeriod {
 		return ExchangeModel.Decision{
-			StrategyName: "sma_trade_strategy",
+			StrategyName: ExchangeModel.SmaTradeStrategyName,
 			Score:        30.00,
 			Operation:    "HOLD",
 			Timestamp:    time.Now().Unix(),
@@ -43,7 +43,7 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 	// todo: buy operation is disabled
 	if buyIndicator > 150 && buySma < trade.Price {
 		return ExchangeModel.Decision{
-			StrategyName: "sma_trade_strategy",
+			StrategyName: ExchangeModel.SmaTradeStrategyName,
 			Score:        50.00,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
@@ -56,7 +56,7 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 
 	if sellIndicator > 50 && sellSma > trade.Price {
 		return ExchangeModel.Decision{
-			StrategyName: "sma_trade_strategy",
+			StrategyName: ExchangeModel.SmaTradeStrategyName,
 			Score:        50.00,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
@@ -66,7 +66,7 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 	}
 
 	return ExchangeModel.Decision{
-		StrategyName: "sma_trade_strategy",
+		StrategyName: ExchangeModel.SmaTradeStrategyName,
 		Score:        50.00,
 		Operation:    "HOLD",
 		Timestamp:    time.Now().Unix(),

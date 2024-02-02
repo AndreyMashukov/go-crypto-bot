@@ -99,7 +99,8 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 		    tl.frame_interval as FrameInterval,
 		    tl.frame_period as FramePeriod,
 		    tl.buy_price_history_check_interval as BuyPriceHistoryCheckInterval,
-		    tl.buy_price_history_check_period as BuyPriceHistoryCheckPeriod
+		    tl.buy_price_history_check_period as BuyPriceHistoryCheckPeriod,
+		    tl.extra_charge_options as ExtraChargeOptions
 		FROM trade_limit tl WHERE tl.bot_id = ?
 	`, e.CurrentBot.Id)
 	defer res.Close()
@@ -128,6 +129,7 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 			&tradeLimit.FramePeriod,
 			&tradeLimit.BuyPriceHistoryCheckInterval,
 			&tradeLimit.BuyPriceHistoryCheckPeriod,
+			&tradeLimit.ExtraChargeOptions,
 		)
 
 		if err != nil {
@@ -158,7 +160,8 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		    tl.frame_interval as FrameInterval,
 		    tl.frame_period as FramePeriod,
 		    tl.buy_price_history_check_interval as BuyPriceHistoryCheckInterval,
-		    tl.buy_price_history_check_period as BuyPriceHistoryCheckPeriod
+		    tl.buy_price_history_check_period as BuyPriceHistoryCheckPeriod,
+		    tl.extra_charge_options as ExtraChargeOptions
 		FROM trade_limit tl
 		WHERE tl.symbol = ? AND tl.bot_id = ?
 	`,
@@ -180,6 +183,7 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		&tradeLimit.FramePeriod,
 		&tradeLimit.BuyPriceHistoryCheckInterval,
 		&tradeLimit.BuyPriceHistoryCheckPeriod,
+		&tradeLimit.ExtraChargeOptions,
 	)
 	if err != nil {
 		return tradeLimit, err
@@ -205,6 +209,7 @@ func (e *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64, e
 		    frame_period = ?,
 		    buy_price_history_check_interval = ?,
 		    buy_price_history_check_period = ?,
+		    extra_charge_options = ?,
 		    bot_id = ?
 	`,
 		limit.Symbol,
@@ -221,6 +226,7 @@ func (e *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64, e
 		limit.FramePeriod,
 		limit.BuyPriceHistoryCheckInterval,
 		limit.BuyPriceHistoryCheckPeriod,
+		limit.ExtraChargeOptions,
 		e.CurrentBot.Id,
 	)
 
@@ -597,7 +603,8 @@ func (e *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 		    tl.frame_interval = ?,
 		    tl.frame_period = ?,
 		    tl.buy_price_history_check_interval = ?,
-		    tl.buy_price_history_check_period = ?
+		    tl.buy_price_history_check_period = ?,
+		    tl.extra_charge_options = ?
 		WHERE tl.id = ?
 	`,
 		limit.Symbol,
@@ -614,6 +621,7 @@ func (e *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 		limit.FramePeriod,
 		limit.BuyPriceHistoryCheckInterval,
 		limit.BuyPriceHistoryCheckPeriod,
+		limit.ExtraChargeOptions,
 		limit.Id,
 	)
 
@@ -777,6 +785,10 @@ func (e *ExchangeRepository) SetDecision(decision model.Decision, symbol string)
 	e.RDB.Set(*e.Ctx, fmt.Sprintf("decision-%s-%s-bot-%d", decision.StrategyName, symbol, e.CurrentBot.Id), string(encoded), time.Second*model.PriceValidSeconds)
 }
 
+func (e *ExchangeRepository) DeleteDecision(strategy string, symbol string) {
+	e.RDB.Del(*e.Ctx, fmt.Sprintf("decision-%s-%s-bot-%d", strategy, symbol, e.CurrentBot.Id))
+}
+
 func (e *ExchangeRepository) GetDecision(strategy string, symbol string) *model.Decision {
 	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("decision-%s-%s-bot-%d", strategy, symbol, e.CurrentBot.Id)).Val()
 	if len(res) == 0 {
@@ -865,10 +877,10 @@ func (e *ExchangeRepository) SaveInterpolation(interpolation model.Interpolation
 
 func (e *ExchangeRepository) GetDecisions(symbol string) []model.Decision {
 	currentDecisions := make([]model.Decision, 0)
-	smaDecision := e.GetDecision("sma_trade_strategy", symbol)
-	kLineDecision := e.GetDecision("base_kline_strategy", symbol)
-	marketDepthDecision := e.GetDecision("market_depth_strategy", symbol)
-	orderBasedDecision := e.GetDecision("order_based_strategy", symbol)
+	smaDecision := e.GetDecision(model.SmaTradeStrategyName, symbol)
+	kLineDecision := e.GetDecision(model.BaseKlineStrategyName, symbol)
+	marketDepthDecision := e.GetDecision(model.MarketDepthStrategyName, symbol)
+	orderBasedDecision := e.GetDecision(model.OrderBasedStrategyName, symbol)
 
 	if smaDecision != nil {
 		currentDecisions = append(currentDecisions, *smaDecision)

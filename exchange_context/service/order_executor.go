@@ -127,6 +127,8 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 		return err
 	}
 
+	m.OrderRepository.DeleteManualOrder(order.Symbol)
+
 	if balanceErr == nil {
 		m.UpdateCommission(balanceBefore, extraOrder)
 	}
@@ -150,15 +152,12 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 	order.Commission = &commissionSum
 
 	err = m.OrderRepository.Update(order)
-	_, err = m.OrderRepository.Create(order)
 	m.BalanceService.InvalidateBalanceCache("USDT")
 	m.BalanceService.InvalidateBalanceCache(order.GetBaseAsset())
 
 	if err != nil {
 		return err
 	}
-
-	m.OrderRepository.DeleteManualOrder(order.Symbol)
 
 	go func(extraOrder ExchangeModel.Order, tradeLimit ExchangeModel.TradeLimit) {
 		m.CallbackManager.BuyOrder(

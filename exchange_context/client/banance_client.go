@@ -10,14 +10,72 @@ import (
 	uuid2 "github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
+	"gitlab.com/open-soft/go-crypto-bot/exchange_context/config"
 	"gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
 	"log"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 )
+
+func getStreamBatch(tradeLimits []model.SymbolInterface, events []string) [][]string {
+	streamBatch := make([][]string, 0)
+
+	streams := make([]string, 0)
+
+	for _, tradeLimit := range tradeLimits {
+		for i := 0; i < len(events); i++ {
+			event := events[i]
+			streams = append(streams, fmt.Sprintf("%s%s", strings.ToLower(tradeLimit.GetSymbol()), event))
+		}
+
+		if len(streams) >= 24 {
+			streamBatch = append(streamBatch, streams)
+			streams = make([]string, 0)
+		}
+	}
+
+	if len(streams) > 0 {
+		streamBatch = append(streamBatch, streams)
+	}
+
+	return streamBatch
+}
+
+type ExchangeAdapterInterface interface {
+	Connect(address string)
+	ListenAll(
+		tradeLimits []model.TradeLimit,
+		container config.Container,
+		swapKlineChannel chan []byte,
+		swapUpdateChannel chan string,
+		predictChannel chan string,
+		depthChannel chan model.Depth,
+	)
+}
+
+type ExchangeInterface interface {
+	ListenAll(
+		tradeLimits []model.TradeLimit,
+		container config.Container,
+		swapKlineChannel chan []byte,
+		swapUpdateChannel chan string,
+		predictChannel chan string,
+		depthChannel chan model.Depth,
+	)
+	QueryOrder(symbol string, orderId int64) (model.BinanceOrder, error)
+	CancelOrder(symbol string, orderId int64) (model.BinanceOrder, error)
+	GetDepth(symbol string) (model.OrderBook, error)
+	GetOpenedOrders() ([]model.BinanceOrder, error)
+	GetKLines(symbol string, interval string, limit int64) []model.KLineHistory
+	GetKLinesCached(symbol string, interval string, limit int64) []model.KLine
+	GetExchangeData(symbols []string) (*model.ExchangeInfo, error)
+	GetAccountStatus() (*model.AccountStatus, error)
+	LimitOrder(symbol string, quantity float64, price float64, operation string, timeInForce string) (model.BinanceOrder, error)
+}
 
 type ExchangeOrderAPIInterface interface {
 	LimitOrder(symbol string, quantity float64, price float64, operation string, timeInForce string) (model.BinanceOrder, error)
@@ -47,6 +105,7 @@ type Binance struct {
 	WaitMode             bool
 	Connected            bool
 	APIKeyCheckCompleted bool
+	IsMasterBot          bool
 }
 
 func (b *Binance) CheckWait() {
@@ -539,4 +598,151 @@ func (b *Binance) sign(url string) string {
 	signingKey := fmt.Sprintf("%x", mac.Sum(nil))
 
 	return signingKey
+}
+
+func (b *Binance) ListenAll(
+	tradeLimits []model.TradeLimit,
+	container config.Container,
+	swapKlineChannel chan []byte,
+	swapUpdateChannel chan string,
+	predictChannel chan string,
+	depthChannel chan model.Depth,
+) {
+	if b.IsMasterBot {
+		// todo: move to binance listen adapter
+		// existing swaps real time monitoring
+		go func(container *config.Container) {
+			for {
+				swapMsg := <-swapKlineChannel
+				swapSymbol := ""
+
+				if strings.Contains(string(swapMsg), "kline") {
+					var event model.KlineEvent
+					json.Unmarshal(swapMsg, &event)
+					kLine := event.KlineData.Kline
+					container.ExchangeRepository.AddKLine(kLine)
+					swapSymbol = kLine.Symbol
+				}
+
+				if strings.Contains(string(swapMsg), "@depth20") {
+					var event model.OrderBookEvent
+					json.Unmarshal(swapMsg, &event)
+
+					depth := event.Depth.ToDepth(strings.ToUpper(strings.ReplaceAll(event.Stream, "@depth20@1000ms", "")))
+					container.ExchangeRepository.SetDepth(depth)
+					swapSymbol = depth.Symbol
+				}
+
+				if swapSymbol == "" {
+					continue
+				}
+
+				swapUpdateChannel <- swapSymbol
+			}
+		}(&container)
+
+		swapWebsockets := make([]*websocket.Conn, 0)
+
+		swapPairCollection := make([]model.SymbolInterface, 0)
+		for _, swapPair := range container.ExchangeRepository.GetSwapPairs() {
+			swapPairCollection = append(swapPairCollection, swapPair)
+		}
+
+		for index, streamBatchItem := range getStreamBatch(swapPairCollection, []string{"@kline_1m", "@depth20@1000ms"}) {
+			swapWebsockets = append(swapWebsockets, Listen(fmt.Sprintf(
+				"%s/stream?streams=%s",
+				"wss://stream.binance.com:9443",
+				strings.Join(streamBatchItem, "/"),
+			), swapKlineChannel, []string{}, 10000+int64(index)))
+
+			log.Printf("Swap batch %d websocket: %s", index, strings.Join(streamBatchItem, ", "))
+
+			defer swapWebsockets[index].Close()
+		}
+	}
+
+	eventChannel := make(chan []byte)
+
+	go func(container *config.Container) {
+		for {
+			message := <-eventChannel
+
+			switch true {
+			case strings.Contains(string(message), "aggTrade"):
+				var tradeEvent model.TradeEvent
+				json.Unmarshal(message, &tradeEvent)
+				smaDecision := container.SmaTradeStrategy.Decide(tradeEvent.Trade)
+				container.ExchangeRepository.SetDecision(smaDecision, tradeEvent.Trade.Symbol)
+
+				go func(channel chan string, symbol string) {
+					predictChannel <- symbol
+				}(predictChannel, tradeEvent.Trade.Symbol)
+				break
+			case strings.Contains(string(message), "kline"):
+				var event model.KlineEvent
+				json.Unmarshal(message, &event)
+				kLine := event.KlineData.Kline
+				kLine.UpdatedAt = time.Now().Unix()
+				container.ExchangeRepository.AddKLine(kLine)
+
+				go func(channel chan string, symbol string) {
+					predictChannel <- symbol
+				}(predictChannel, kLine.Symbol)
+
+				baseKLineDecision := container.BaseKLineStrategy.Decide(kLine)
+				container.ExchangeRepository.SetDecision(baseKLineDecision, kLine.Symbol)
+				orderBasedDecision := container.OrderBasedStrategy.Decide(kLine)
+				container.ExchangeRepository.SetDecision(orderBasedDecision, kLine.Symbol)
+
+				break
+			case strings.Contains(string(message), "depth20"):
+				var event model.OrderBookEvent
+				json.Unmarshal(message, &event)
+
+				depth := event.Depth.ToDepth(strings.ToUpper(strings.ReplaceAll(event.Stream, "@depth20@100ms", "")))
+				depthDecision := container.MarketDepthStrategy.Decide(depth)
+				container.ExchangeRepository.SetDecision(depthDecision, depth.Symbol)
+				go func() {
+					depthChannel <- depth
+				}()
+				break
+			}
+		}
+	}(&container)
+
+	// todo: move to binance listen adapter
+	websockets := make([]*websocket.Conn, 0)
+
+	tradeLimitCollection := make([]model.SymbolInterface, 0)
+	hasBtcUsdt := false
+	hasEthUsdt := false
+	for _, limit := range tradeLimits {
+		tradeLimitCollection = append(tradeLimitCollection, limit)
+
+		if "BTCUSDT" == limit.GetSymbol() {
+			hasBtcUsdt = true
+		}
+		if "ETHUSDT" == limit.GetSymbol() {
+			hasEthUsdt = true
+		}
+	}
+
+	if !hasBtcUsdt {
+		tradeLimitCollection = append(tradeLimitCollection, model.DummySymbol{Symbol: "BTCUSDT"})
+	}
+	if !hasEthUsdt {
+		tradeLimitCollection = append(tradeLimitCollection, model.DummySymbol{Symbol: "ETHUSDT"})
+	}
+
+	for index, streamBatchItem := range getStreamBatch(tradeLimitCollection, []string{"@aggTrade", "@kline_1m@2000ms", "@depth20@100ms"}) {
+		websockets = append(websockets, Listen(fmt.Sprintf(
+			"%s/stream?streams=%s",
+			os.Getenv("BINANCE_STREAM_DSN"),
+			strings.Join(streamBatchItem, "/"),
+		), eventChannel, []string{}, int64(index)))
+
+		log.Printf("Batch %d websocket: %s", index, strings.Join(streamBatchItem, ", "))
+
+		defer websockets[index].Close()
+	}
 }

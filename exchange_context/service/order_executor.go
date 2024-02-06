@@ -84,17 +84,18 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 	}
 
 	var extraOrder = ExchangeModel.Order{
-		Symbol:      order.Symbol,
-		Quantity:    quantity,
-		Price:       price,
-		CreatedAt:   m.TimeService.GetNowDateTimeString(),
-		SellVolume:  0.00,
-		BuyVolume:   0.00,
-		SmaValue:    0.00,
-		Status:      "closed",
-		Operation:   "buy",
-		ExternalId:  nil,
-		ClosesOrder: &order.Id,
+		Symbol:             order.Symbol,
+		Quantity:           quantity,
+		Price:              price,
+		CreatedAt:          m.TimeService.GetNowDateTimeString(),
+		SellVolume:         0.00,
+		BuyVolume:          0.00,
+		SmaValue:           0.00,
+		Status:             "closed",
+		Operation:          "buy",
+		ExternalId:         nil,
+		ClosesOrder:        &order.Id,
+		ExtraChargeOptions: make(ExchangeModel.ExtraChargeOptions, 0),
 		// todo: add commission???
 	}
 
@@ -306,17 +307,18 @@ func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchang
 	}
 
 	var order = ExchangeModel.Order{
-		Symbol:      symbol,
-		Quantity:    quantity,
-		Price:       price,
-		CreatedAt:   m.TimeService.GetNowDateTimeString(),
-		SellVolume:  0.00,
-		BuyVolume:   0.00,
-		SmaValue:    0.00,
-		Status:      "closed",
-		Operation:   "sell",
-		ExternalId:  nil,
-		ClosesOrder: &opened.Id,
+		Symbol:             symbol,
+		Quantity:           quantity,
+		Price:              price,
+		CreatedAt:          m.TimeService.GetNowDateTimeString(),
+		SellVolume:         0.00,
+		BuyVolume:          0.00,
+		SmaValue:           0.00,
+		Status:             "closed",
+		Operation:          "sell",
+		ExternalId:         nil,
+		ClosesOrder:        &opened.Id,
+		ExtraChargeOptions: make(ExchangeModel.ExtraChargeOptions, 0),
 		// todo: add commission???
 	}
 

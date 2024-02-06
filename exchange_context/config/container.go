@@ -150,8 +150,8 @@ func InitServiceContainer() Container {
 	lockTradeChannel := make(chan model.Lock)
 
 	// own net: ATOM, XMR, XLM, DOT, ADA, XRP
-	btcDependent := []string{"LTC", "ZEC", "ATOM", "XMR", "DOT", "XRP", "BCH", "ADA", "ETH", "DOGE", "PERP"}
-	etcDependent := []string{"SHIB", "LINK", "UNI", "NEAR", "XLM", "ETC", "MATIC", "SOL", "BNB", "AVAX", "TRX", "NEO"}
+	btcDependent := []string{"LTC", "ZEC", "ATOM", "XMR", "DOT", "XRP", "BCH", "ADA", "ETH", "DOGE", "PERP", "NEO"}
+	etcDependent := []string{"SHIB", "LINK", "UNI", "NEAR", "XLM", "ETC", "MATIC", "SOL", "BNB", "AVAX", "TRX"}
 
 	pythonMLBridge := service.PythonMLBridge{
 		DataSetBuilder: &service.DataSetBuilder{

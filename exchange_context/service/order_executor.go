@@ -12,6 +12,7 @@ import (
 )
 
 type OrderExecutor struct {
+	TradeStack             BuyOrderStackInterface
 	CurrentBot             *ExchangeModel.Bot
 	TimeService            TimeServiceInterface
 	BalanceService         BalanceServiceInterface
@@ -644,7 +645,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 			// Check is time to extra buy, but we have sell partial...
 			if kline != nil && binanceOrder.IsSell() && (binanceOrder.IsNew() || binanceOrder.IsPartiallyFilled()) {
 				openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
-				if err == nil && openedBuyPosition.GetProfitPercent(kline.Close).Lte(tradeLimit.GetBuyOnFallPercent(openedBuyPosition, *kline)) {
+				if err == nil && openedBuyPosition.CanExtraBuy(tradeLimit, *kline) && m.TradeStack.CanBuy(tradeLimit) && openedBuyPosition.GetProfitPercent(kline.Close).Lte(tradeLimit.GetBuyOnFallPercent(openedBuyPosition, *kline)) {
 					log.Printf(
 						"[%s] Extra Charge percent reached, current profit is: %.2f, SELL order is cancelled",
 						binanceOrder.Symbol,

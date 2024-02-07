@@ -186,7 +186,16 @@ func InitServiceContainer() Container {
 		LossSecurity:       &lossSecurity,
 	}
 
+	tradeStack := service.TradeStack{
+		OrderRepository:    &orderRepository,
+		Binance:            &binance,
+		ExchangeRepository: &exchangeRepository,
+		BalanceService:     &balanceService,
+		Formatter:          &formatter,
+	}
+
 	orderExecutor := service.OrderExecutor{
+		TradeStack:         &tradeStack,
 		LossSecurity:       &lossSecurity,
 		CurrentBot:         currentBot,
 		TimeService:        &timeService,
@@ -215,14 +224,6 @@ func InitServiceContainer() Container {
 		TradeLockMutex:         sync.RWMutex{},
 		LockChannel:            &lockTradeChannel,
 		CancelRequestMap:       make(map[string]bool),
-	}
-
-	tradeStack := service.TradeStack{
-		OrderRepository:    &orderRepository,
-		Binance:            &binance,
-		ExchangeRepository: &exchangeRepository,
-		BalanceService:     &balanceService,
-		Formatter:          &formatter,
 	}
 
 	makerService := service.MakerService{

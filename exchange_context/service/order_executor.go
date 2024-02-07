@@ -69,7 +69,7 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 	// todo: get buy quantity, buy to all cutlet! check available balance!
 	quantity := m.Formatter.FormatQuantity(tradeLimit, order.GetAvailableExtraBudget(tradeLimit, *lastKline)/price)
 
-	if (quantity * price) < tradeLimit.MinNotional {
+	if ((quantity * price) < tradeLimit.MinNotional) && binanceBuyOrder == nil {
 		return errors.New(fmt.Sprintf("[%s] Extra BUY Notional: %.8f < %.8f", order.Symbol, quantity*price, tradeLimit.MinNotional))
 	}
 

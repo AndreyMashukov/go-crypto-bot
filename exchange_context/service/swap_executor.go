@@ -711,7 +711,7 @@ func (s *SwapExecutor) TryForceSwapThree(
 		return errors.New("Swap chain type is not supported")
 	}
 
-	minSwapRollbackPercent := ExchangeModel.Percent(0.25)
+	minSwapRollbackPercent := ExchangeModel.Percent(0.75)
 
 	// pre-validate rollback...
 	swapPair, err := s.SwapRepository.GetSwapPairBySymbol(swapAction.SwapThreeSymbol)

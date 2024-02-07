@@ -638,7 +638,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 			}
 
 			// Check is time to extra buy, but we have sell partial...
-			if kline != nil && binanceOrder.IsSell() && binanceOrder.IsPartiallyFilled() {
+			if kline != nil && binanceOrder.IsSell() && (binanceOrder.IsNew() || binanceOrder.IsPartiallyFilled()) {
 				openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
 				if err == nil && openedBuyPosition.GetProfitPercent(kline.Close).Lte(tradeLimit.GetBuyOnFallPercent(openedBuyPosition, *kline)) {
 					log.Printf(

@@ -27,10 +27,6 @@ func (e *ChartService) GetCharts(symbolFilter []string) []map[string][]any {
 	tradeLimits := e.ExchangeRepository.GetTradeLimits()
 
 	for _, tradeLimit := range tradeLimits {
-		if !tradeLimit.IsEnabled {
-			continue
-		}
-
 		if len(symbolFilter) > 0 && !slices.Contains(symbolFilter, tradeLimit.Symbol) {
 			continue
 		}

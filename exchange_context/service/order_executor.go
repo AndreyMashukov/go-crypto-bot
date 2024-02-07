@@ -46,7 +46,9 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 		return errors.New(fmt.Sprintf("[%s] Extra buy is disabled", tradeLimit.Symbol))
 	}
 
-	if !order.CanExtraBuy(tradeLimit, *lastKline) {
+	binanceBuyOrder := m.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
+
+	if !order.CanExtraBuy(tradeLimit, *lastKline) && binanceBuyOrder == nil {
 		return errors.New(fmt.Sprintf("[%s] Not enough budget to buy more", tradeLimit.Symbol))
 	}
 

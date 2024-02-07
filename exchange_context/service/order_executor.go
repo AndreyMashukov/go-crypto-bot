@@ -169,6 +169,7 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 			fmt.Sprintf("Extra Charge! Sell when price will be around: %f USDT", m.PriceCalculator.CalculateSell(tradeLimit, extraOrder)),
 		)
 	}(extraOrder, tradeLimit)
+	m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 
 	return nil
 }
@@ -264,6 +265,7 @@ func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, 
 			fmt.Sprintf("Sell when price will be around: %f USDT", m.PriceCalculator.CalculateSell(tradeLimit, order)),
 		)
 	}(order, tradeLimit)
+	m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 
 	return nil
 }
@@ -394,6 +396,7 @@ func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchang
 			fmt.Sprintf("Profit is: %f USDT", m.Formatter.ToFixed(profit, 2)),
 		)
 	}(order, profit)
+	m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 
 	return nil
 }

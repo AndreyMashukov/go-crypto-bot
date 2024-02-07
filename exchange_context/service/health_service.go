@@ -26,10 +26,6 @@ func (h *HealthService) HealthCheck() model.BotHealth {
 	updateMap := make(map[string]string)
 
 	for _, limit := range h.ExchangeRepository.GetTradeLimits() {
-		if !limit.IsEnabled {
-			continue
-		}
-
 		kLine := h.ExchangeRepository.GetLastKLine(limit.Symbol)
 		dateString := ""
 		if kLine != nil {

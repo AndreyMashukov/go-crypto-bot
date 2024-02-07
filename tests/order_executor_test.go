@@ -40,6 +40,7 @@ func TestSellAction(t *testing.T) {
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	orderExecutor := service.OrderExecutor{
+		TradeStack:   &service.TradeStack{},
 		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
@@ -195,6 +196,7 @@ func TestSellFoundFilled(t *testing.T) {
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	orderExecutor := service.OrderExecutor{
+		TradeStack:   &service.TradeStack{},
 		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
@@ -342,6 +344,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	orderExecutor := service.OrderExecutor{
+		TradeStack:   &service.TradeStack{},
 		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
@@ -483,6 +486,7 @@ func TestSellQueryFail(t *testing.T) {
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	orderExecutor := service.OrderExecutor{
+		TradeStack:   &service.TradeStack{},
 		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
@@ -615,6 +619,7 @@ func TestSellClosingAction(t *testing.T) {
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	orderExecutor := service.OrderExecutor{
+		TradeStack:   &service.TradeStack{},
 		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
@@ -770,6 +775,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	orderExecutor := service.OrderExecutor{
+		TradeStack:   &service.TradeStack{},
 		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,

@@ -8,6 +8,10 @@ import (
 	"sort"
 )
 
+type BuyOrderStackInterface interface {
+	CanBuy(limit model.TradeLimit) bool
+}
+
 type TradeStack struct {
 	OrderRepository    repository.OrderStorageInterface
 	Binance            client.ExchangePriceAPIInterface

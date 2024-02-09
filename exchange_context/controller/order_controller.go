@@ -138,6 +138,10 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			Interpolation:  interpolation,
 			ExecutedQty:    executedQty,
 			OrigQty:        origQty,
+			ManualOrderConfig: model.ManualOrderConfig{
+				PriceStep:     limit.MinPrice,
+				MinClosePrice: openedOrder.GetManualMinClosePrice(),
+			},
 		})
 	}
 

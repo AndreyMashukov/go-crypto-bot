@@ -161,17 +161,23 @@ func (o *Order) IsSwap() bool {
 }
 
 type Position struct {
-	Symbol         string        `json:"symbol"`
-	KLine          KLine         `json:"kLine"`
-	Order          Order         `json:"order"`
-	Percent        Percent       `json:"percent"`
-	SellPrice      float64       `json:"sellPrice"`
-	PredictedPrice float64       `json:"predictedPrice"`
-	Profit         float64       `json:"profit"`
-	TargetProfit   float64       `json:"targetProfit"`
-	Interpolation  Interpolation `json:"interpolation"`
-	OrigQty        float64       `json:"origQty"`
-	ExecutedQty    float64       `json:"executedQty"`
+	Symbol            string            `json:"symbol"`
+	KLine             KLine             `json:"kLine"`
+	Order             Order             `json:"order"`
+	Percent           Percent           `json:"percent"`
+	SellPrice         float64           `json:"sellPrice"`
+	PredictedPrice    float64           `json:"predictedPrice"`
+	Profit            float64           `json:"profit"`
+	TargetProfit      float64           `json:"targetProfit"`
+	Interpolation     Interpolation     `json:"interpolation"`
+	OrigQty           float64           `json:"origQty"`
+	ExecutedQty       float64           `json:"executedQty"`
+	ManualOrderConfig ManualOrderConfig `json:"manualOrderConfig"`
+}
+
+type ManualOrderConfig struct {
+	PriceStep     float64 `json:"priceStep"`
+	MinClosePrice float64 `json:"minSellPrice"`
 }
 
 type PendingOrder struct {

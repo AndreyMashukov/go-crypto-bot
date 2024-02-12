@@ -49,7 +49,7 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 
 	binanceBuyOrder := m.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
 
-	if !order.CanExtraBuy(tradeLimit, *lastKline) && binanceBuyOrder == nil {
+	if !order.CanExtraBuy(*lastKline) && binanceBuyOrder == nil {
 		return errors.New(fmt.Sprintf("[%s] Not enough budget to buy more", tradeLimit.Symbol))
 	}
 
@@ -67,7 +67,7 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 	m.acquireLock(order.Symbol)
 	defer m.releaseLock(order.Symbol)
 	// todo: get buy quantity, buy to all cutlet! check available balance!
-	quantity := m.Formatter.FormatQuantity(tradeLimit, order.GetAvailableExtraBudget(tradeLimit, *lastKline)/price)
+	quantity := m.Formatter.FormatQuantity(tradeLimit, order.GetAvailableExtraBudget(*lastKline)/price)
 
 	if ((quantity * price) < tradeLimit.MinNotional) && binanceBuyOrder == nil {
 		return errors.New(fmt.Sprintf("[%s] Extra BUY Notional: %.8f < %.8f", order.Symbol, quantity*price, tradeLimit.MinNotional))
@@ -645,7 +645,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 			// Check is time to extra buy, but we have sell partial...
 			if kline != nil && binanceOrder.IsSell() && (binanceOrder.IsNew() || binanceOrder.IsPartiallyFilled()) {
 				openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
-				if err == nil && openedBuyPosition.CanExtraBuy(tradeLimit, *kline) && m.TradeStack.CanBuy(tradeLimit) && openedBuyPosition.GetProfitPercent(kline.Close).Lte(tradeLimit.GetBuyOnFallPercent(openedBuyPosition, *kline)) {
+				if err == nil && openedBuyPosition.CanExtraBuy(*kline) && m.TradeStack.CanBuy(tradeLimit) && openedBuyPosition.GetProfitPercent(kline.Close).Lte(tradeLimit.GetBuyOnFallPercent(openedBuyPosition, *kline)) {
 					log.Printf(
 						"[%s] Extra Charge percent reached, current profit is: %.2f, SELL order is cancelled",
 						binanceOrder.Symbol,
@@ -1205,7 +1205,7 @@ func (m *OrderExecutor) CheckMinBalance(limit ExchangeModel.TradeLimit, kLine Ex
 	limitUsdt := limit.USDTLimit
 
 	if err == nil {
-		limitUsdt = opened.GetAvailableExtraBudget(limit, kLine)
+		limitUsdt = opened.GetAvailableExtraBudget(kLine)
 	}
 
 	cached, _ := m.findBinanceOrder(limit.Symbol, "BUY", true)

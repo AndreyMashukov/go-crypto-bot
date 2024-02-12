@@ -78,16 +78,16 @@ type Order struct {
 	ExtraChargeOptions ExtraChargeOptions `json:"extraChargeOptions"`
 }
 
-func (o *Order) CanExtraBuy(tradeLimit TradeLimit, kLine KLine) bool {
-	if !tradeLimit.IsExtraChargeEnabled() && len(o.ExtraChargeOptions) == 0 {
+func (o *Order) CanExtraBuy(kLine KLine) bool {
+	if len(o.ExtraChargeOptions) == 0 {
 		return false
 	}
 
-	return o.GetAvailableExtraBudget(tradeLimit, kLine) >= 10.00
+	return o.GetAvailableExtraBudget(kLine) >= 10.00
 }
 
-func (o *Order) GetAvailableExtraBudget(tradeLimit TradeLimit, kLine KLine) float64 {
-	availableExtraBudget := tradeLimit.USDTExtraBudget
+func (o *Order) GetAvailableExtraBudget(kLine KLine) float64 {
+	availableExtraBudget := 0.00
 
 	if len(o.ExtraChargeOptions) > 0 {
 		availableExtraBudget = 0.00

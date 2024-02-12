@@ -74,7 +74,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 
 	allowManualOrder := true
 
-	if buyOrderErr == nil && tradeLimit.IsExtraChargeEnabled() && tradeLimit.IsEnabled {
+	if buyOrderErr == nil && tradeLimit.IsEnabled {
 		profitPercent := openedOrder.GetProfitPercent(lastKline.Close)
 		if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline)) {
 			log.Printf(

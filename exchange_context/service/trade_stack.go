@@ -92,14 +92,14 @@ func (t *TradeStack) GetTradeStack(skipLocked bool, balanceFilter bool, skipPend
 		openedOrder, err := t.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
 		if err == nil {
 			kline := t.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
-			if kline != nil && tradeLimit.IsExtraChargeEnabled() && openedOrder.CanExtraBuy(tradeLimit, *kline) {
+			if kline != nil && openedOrder.CanExtraBuy(*kline) {
 				profitPercent := openedOrder.GetProfitPercent(kline.Close)
 				if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(openedOrder, *kline)) {
 					stack = append(stack, model.TradeStackItem{
 						Index:             int64(index),
 						Symbol:            tradeLimit.Symbol,
 						Percent:           profitPercent,
-						BudgetUsdt:        openedOrder.GetAvailableExtraBudget(tradeLimit, *kline),
+						BudgetUsdt:        openedOrder.GetAvailableExtraBudget(*kline),
 						HasEnoughBalance:  false,
 						BinanceOrder:      binanceOrder,
 						IsExtraCharge:     true,

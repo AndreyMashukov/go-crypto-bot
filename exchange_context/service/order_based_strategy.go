@@ -76,7 +76,7 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 
 	profitPercent := order.GetProfitPercent(kLine.Close)
 
-	if tradeLimit.IsExtraChargeEnabled() && profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(order, kLine)) && tradeLimit.IsEnabled && o.TradeStack.CanBuy(tradeLimit) {
+	if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(order, kLine)) && tradeLimit.IsEnabled && o.TradeStack.CanBuy(tradeLimit) {
 		return ExchangeModel.Decision{
 			StrategyName: ExchangeModel.OrderBasedStrategyName,
 			Score:        999.99,

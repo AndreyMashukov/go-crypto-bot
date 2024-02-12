@@ -26,26 +26,20 @@ type TradeLimitInterface interface {
 }
 
 type TradeLimit struct {
-	Id               int64   `json:"id"`
-	Symbol           string  `json:"symbol"`
-	USDTLimit        float64 `json:"USDTLimit"`
-	MinPrice         float64 `json:"minPrice"`
-	MinQuantity      float64 `json:"minQuantity"`
-	MinNotional      float64 `json:"minNotional"`
-	MinProfitPercent float64 `json:"minProfitPercent"`
-	IsEnabled        bool    `json:"isEnabled"`
-
-	// Extra budget for market fall
-	USDTExtraBudget  float64 `json:"USDTExtraBudget"`
-	BuyOnFallPercent float64 `json:"buyOnFallPercent"`
-
-	MinPriceMinutesPeriod        int64  `json:"minPriceMinutesPeriod"`        //200,
-	FrameInterval                string `json:"frameInterval"`                //"2h",
-	FramePeriod                  int64  `json:"framePeriod"`                  //20,
-	BuyPriceHistoryCheckInterval string `json:"buyPriceHistoryCheckInterval"` //"1d",
-	BuyPriceHistoryCheckPeriod   int64  `json:"buyPriceHistoryCheckPeriod"`   //14,
-
-	ExtraChargeOptions ExtraChargeOptions `json:"extraChargeOptions"`
+	Id                           int64              `json:"id"`
+	Symbol                       string             `json:"symbol"`
+	USDTLimit                    float64            `json:"USDTLimit"`
+	MinPrice                     float64            `json:"minPrice"`
+	MinQuantity                  float64            `json:"minQuantity"`
+	MinNotional                  float64            `json:"minNotional"`
+	MinProfitPercent             float64            `json:"minProfitPercent"`
+	IsEnabled                    bool               `json:"isEnabled"`
+	MinPriceMinutesPeriod        int64              `json:"minPriceMinutesPeriod"`        //200,
+	FrameInterval                string             `json:"frameInterval"`                //"2h",
+	FramePeriod                  int64              `json:"framePeriod"`                  //20,
+	BuyPriceHistoryCheckInterval string             `json:"buyPriceHistoryCheckInterval"` //"1d",
+	BuyPriceHistoryCheckPeriod   int64              `json:"buyPriceHistoryCheckPeriod"`   //14,
+	ExtraChargeOptions           ExtraChargeOptions `json:"extraChargeOptions"`
 }
 
 func (t TradeLimit) GetMinPrice() float64 {
@@ -77,7 +71,7 @@ func (t *TradeLimit) GetMinProfitPercent() Percent {
 }
 
 func (t *TradeLimit) GetBuyOnFallPercent(order Order, kLine KLine) Percent {
-	buyOnFallPercent := Percent(t.BuyOnFallPercent)
+	buyOnFallPercent := Percent(0.00)
 
 	if len(order.ExtraChargeOptions) > 0 {
 		// sort DESC
@@ -101,10 +95,6 @@ func (t *TradeLimit) GetBuyOnFallPercent(order Order, kLine KLine) Percent {
 	} else {
 		return buyOnFallPercent
 	}
-}
-
-func (t *TradeLimit) IsExtraChargeEnabled() bool {
-	return t.BuyOnFallPercent != 0.00 || len(t.ExtraChargeOptions) > 0
 }
 
 func (t *TradeLimit) GetClosePrice(buyPrice float64) float64 {

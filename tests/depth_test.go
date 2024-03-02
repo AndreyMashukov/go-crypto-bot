@@ -3,7 +3,7 @@ package tests
 import (
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
-	ExchangeModel "github.com/AndreyMashukov/go-crypto-bot/server/exchange_context/model"
+	ExchangeModel "github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"io/ioutil"
 	"testing"
 )

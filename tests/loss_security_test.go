@@ -2,8 +2,8 @@ package tests
 
 import (
 	"github.com/stretchr/testify/assert"
-	"github.com/AndreyMashukov/go-crypto-bot/server/exchange_context/model"
-	"github.com/AndreyMashukov/go-crypto-bot/server/exchange_context/service"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/service"
 	"testing"
 )
 

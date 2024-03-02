@@ -34,6 +34,7 @@ docker-compose up mysql
 make init-db-dev
 ```
 Connect to database and verify all migrations is executed, you will see one row in database table `bot` with UUID = `6c26e421-06fd-4c61-84d9-caf36b8966af` (you can change it)
+> Setup `BOT_UUID` variable in `docker-compose.yaml` and start the Bot
 ```bash
 docker-compose up -d 
 docker ps # find your container ID

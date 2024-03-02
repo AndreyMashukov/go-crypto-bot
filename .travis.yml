@@ -1,0 +1,6 @@
+language: bash
+services:
+  - docker
+script:
+  - docker build -t ghcr.io/andreymashukov/go-crypto-bot:latest .
+  - docker push ghcr.io/andreymashukov/go-crypto-bot:latest

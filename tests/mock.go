@@ -2,7 +2,7 @@ package tests
 
 import (
 	"github.com/stretchr/testify/mock"
-	"gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
+	"gitlab.com/open-soft/go-crypto-bot/src/model"
 )
 
 type ExchangeRepositoryMock struct {

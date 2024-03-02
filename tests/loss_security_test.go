@@ -2,8 +2,8 @@ package tests
 
 import (
 	"github.com/stretchr/testify/assert"
-	"gitlab.com/open-soft/go-crypto-bot/exchange_context/model"
-	"gitlab.com/open-soft/go-crypto-bot/exchange_context/service"
+	"gitlab.com/open-soft/go-crypto-bot/src/model"
+	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"testing"
 )
 

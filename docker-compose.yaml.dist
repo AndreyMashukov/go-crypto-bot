@@ -1,0 +1,63 @@
+version: '3.5'
+
+services:
+  writer:
+    build: '.'
+    container_name: go_crypto_bot
+    environment:
+        BOT_UUID: '{BOT_UUID_4_HERE}'
+        DATABASE_DSN: 'root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot'
+        REDIS_DSN: 'redis:6379'
+        REDIS_PASSWORD: ''
+        BINANCE_API_KEY: '{BINANCE_API_KEY}'
+        BINANCE_API_SECRET: '{BINANCE_API_SECRET}'
+        BINANCE_API_DSN: 'https://testnet.binance.vision'
+        BINANCE_WS_DSN: 'wss://testnet.binance.vision/ws-api/v3'
+        BINANCE_STREAM_DSN: 'wss://stream.binance.com' #'wss://stream.binancefuture.com'
+    networks:
+      - bot-net
+    ports:
+      - "8090:8080"
+    restart: always
+    depends_on:
+      - mysql
+    volumes:
+      - '.docker/datasets:/go/src/app/datasets'
+      - './:/go/src/app/dev'
+
+  mysql:
+    platform: linux/x86_64
+    image: mysql:5.7
+    restart: unless-stopped
+    ports:
+      - "3367:3306"
+    networks:
+      - bot-net
+    environment:
+      MYSQL_ROOT_PASSWORD: go_crypto_bot
+      MYSQL_DATABASE: go_crypto_bot
+      MYSQL_USER: go_crypto_bot
+      MYSQL_PASSWORD: go_crypto_bot
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+    # Redis
+  redis:
+    image: redis:5.0.5-alpine
+    networks:
+      - bot-net
+    volumes:
+      - ./.docker/data/redis:/data:delegated
+#    ports:
+#      - 6379:6379
+    cap_add:
+      - SYS_TIME
+    restart: always
+
+networks:
+  bot-net:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    name: go_crypto_bot_mysql_data

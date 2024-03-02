@@ -154,5 +154,11 @@ curl --location --request GET 'http://localhost:8090/health/check?botUuid={BOT_U
 ```
 #### 
 
+### Docker image
+For production you can use docker image [amashukov/go-crypto-bot:latest](https://hub.docker.com/r/amashukov/go-crypto-bot/tags)
+```bash
+docker pull amashukov/go-crypto-bot:latest
+```
+Do not forget to set [env variables](https://github.com/AndreyMashukov/go-crypto-bot?tab=readme-ov-file#setup) for started container
 ### Donation:
 USDT (TRC-20) address `TTdHsHxfPUxdcn3wJ3o9hGAKF2Te7epM46`

@@ -14,5 +14,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Log in to Docker Hub
+      uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
+      with:
+        username: amashukov
+        password: ${{ secrets.DOCKER_REGISTRY_TOKEN }}
+
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag go-crypto-bot:latest
+      run: docker build . --file Dockerfile --tag amashukov/go-crypto-bot:latest
+    - name: Publish the Docker image
+      run: docker push amashukov/go-crypto-bot:latest

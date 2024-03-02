@@ -1,3 +1,4 @@
+[![Docker Image CI](https://github.com/AndreyMashukov/go-crypto-bot/actions/workflows/docker-image.yml/badge.svg)](https://github.com/AndreyMashukov/go-crypto-bot/actions/workflows/docker-image.yml)
 ### Go Multithreading Crypto Trading Bot
 
 This is production ready crypto trading bot, supports:

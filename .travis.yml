@@ -1,7 +1,0 @@
-language: bash
-services:
-  - docker
-script:
-  - echo $GITHUB_TOKEN | docker login ghcr.io -u andreymashukov --password-stdin
-  - docker build -t ghcr.io/andreymashukov/go-crypto-bot:latest .
-  - docker push ghcr.io/andreymashukov/go-crypto-bot:latest

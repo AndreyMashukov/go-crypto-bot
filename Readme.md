@@ -14,7 +14,7 @@ Supported crypto exchange:
 ### Setup 
 | Variable  | Description                                                  | Example                                                                                                                                                    |
 |-----------|--------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| BOT_UUID  | Uniq bot UUID (from database table `bot`)                    | 1h2j3k4l-78fd-4747-8461-850fff9f9f4j                                                                                                                       |
+| BOT_UUID  | Uniq bot UUID (from database table `bot`)                    | 6c26e421-06fd-4c61-84d9-caf36b8966af                                                                                                                       |
 | DATABASE_DSN  | MySQL connection string                                      | root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot                                                                                                           |
 | REDIS_DSN  | Redis connection string                                      | redis:6379                                                                                                                                                 |
 | REDIS_PASSWORD  | Redis password (can be empt, depends on your infrastructure) | -                                                                                                                                                          |

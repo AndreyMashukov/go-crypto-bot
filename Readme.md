@@ -12,16 +12,16 @@ Supported crypto exchange:
 - ByBit (under development) branch [bybit-api](https://github.com/AndreyMashukov/go-crypto-bot/tree/bybit-api)
 
 ### Setup 
-| Variable  | Description                                                  | Example                                                                                                                                                    |
-|-----------|--------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| BOT_UUID  | Uniq bot UUID (from database table `bot`)                    | 6c26e421-06fd-4c61-84d9-caf36b8966af                                                                                                                       |
-| DATABASE_DSN  | MySQL connection string                                      | root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot                                                                                                           |
-| REDIS_DSN  | Redis connection string                                      | redis:6379                                                                                                                                                 |
-| REDIS_PASSWORD  | Redis password (can be empt, depends on your infrastructure) | -                                                                                                                                                          |
-| BINANCE_API_KEY  | Personal binance API Key                                     | See binance doc: [testnet](https://testnet.binance.vision/), [prod](https://www.binance.com/en/support/faq/how-to-create-api-keys-on-binance-360002502072) |
-| BINANCE_API_SECRET  | Personal binance API Secret                                  | See binance doc: [testnet](https://testnet.binance.vision/), [prod](https://www.binance.com/en/support/faq/how-to-create-api-keys-on-binance-360002502072) |
-| BINANCE_WS_DSN  | Websocket API Destination URL                                | testnet `wss://testnet.binance.vision/ws-api/v3` prod `wss://ws-api.binance.com:443/ws-api/v3`                                                             |
-| BINANCE_STREAM_DSN  | Websocket Stream (price updates) Destination URL             | testnet `wss://stream.binance.com` prod `wss://stream.binance.com`                                                                                         |
+| Variable  | Description                                                   | Example                                                                                                                                                    |
+|-----------|---------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| BOT_UUID  | Uniq bot UUID (from database table `bot`)                     | 6c26e421-06fd-4c61-84d9-caf36b8966af                                                                                                                       |
+| DATABASE_DSN  | MySQL connection string                                       | root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot                                                                                                           |
+| REDIS_DSN  | Redis connection string                                       | redis:6379                                                                                                                                                 |
+| REDIS_PASSWORD  | Redis password (can be empty, depends on your infrastructure) | -                                                                                                                                                          |
+| BINANCE_API_KEY  | Personal binance API Key                                      | See binance doc: [testnet](https://testnet.binance.vision/), [prod](https://www.binance.com/en/support/faq/how-to-create-api-keys-on-binance-360002502072) |
+| BINANCE_API_SECRET  | Personal binance API Secret                                   | See binance doc: [testnet](https://testnet.binance.vision/), [prod](https://www.binance.com/en/support/faq/how-to-create-api-keys-on-binance-360002502072) |
+| BINANCE_WS_DSN  | Websocket API Destination URL                                 | testnet `wss://testnet.binance.vision/ws-api/v3` prod `wss://ws-api.binance.com:443/ws-api/v3`                                                             |
+| BINANCE_STREAM_DSN  | Websocket Stream (price updates) Destination URL              | testnet `wss://stream.binance.com` prod `wss://stream.binance.com`                                                                                         |
 
 #### For development or testing mode
 ```bash

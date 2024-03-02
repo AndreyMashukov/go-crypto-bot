@@ -112,7 +112,7 @@ curl --location --request GET 'http://localhost:8090/order/position/list?botUuid
 ```
 GETTING PENDING POSITION LIST (Current limit orders for BUY)
 ```bash
-curl --location --request GET 'http://103.253.146.87:8001/order/pending/list?botUuid={BOT_UUID}'
+curl --location --request GET 'http://localhost:8090/order/pending/list?botUuid={BOT_UUID}'
 ```
 UPDATING EXTRA CHARGE CONFIGURATION FOR OPENED POSITION (Order)
 ```bash

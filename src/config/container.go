@@ -10,6 +10,11 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
 	"gitlab.com/open-soft/go-crypto-bot/src/service"
+	"gitlab.com/open-soft/go-crypto-bot/src/service/exchange"
+	"gitlab.com/open-soft/go-crypto-bot/src/service/ml"
+	"gitlab.com/open-soft/go-crypto-bot/src/service/strategy"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
+	"gitlab.com/open-soft/go-crypto-bot/src/validator"
 	"log"
 	"net/http"
 	"os"
@@ -55,7 +60,7 @@ func InitServiceContainer() Container {
 		Connected:            false,
 	}
 
-	frameService := service.FrameService{
+	frameService := exchange.FrameService{
 		RDB:     rdb,
 		Ctx:     &ctx,
 		Binance: &binance,
@@ -84,7 +89,7 @@ func InitServiceContainer() Container {
 		}
 	}
 
-	balanceService := service.BalanceService{
+	balanceService := exchange.BalanceService{
 		Binance:    &binance,
 		RDB:        rdb,
 		Ctx:        &ctx,
@@ -117,7 +122,7 @@ func InitServiceContainer() Container {
 		CurrentBot: currentBot,
 	}
 
-	formatter := service.Formatter{}
+	formatter := utils.Formatter{}
 	chartService := service.ChartService{
 		ExchangeRepository: &exchangeRepository,
 		OrderRepository:    &orderRepository,
@@ -132,6 +137,7 @@ func InitServiceContainer() Container {
 	}
 
 	// Swap Settings
+	// todo: move to `bot` entity (database table `bot`)
 	swapMinPercentValid := 1.15
 	swapOrderOnProfitPercent := -1.00
 	var swapOpenedSellOrderFromHoursOpened int64 = 2
@@ -139,7 +145,7 @@ func InitServiceContainer() Container {
 	//swapOrderOnProfitPercent := 10.00
 	//var swapOpenedSellOrderFromHoursOpened int64 = 0
 
-	swapValidator := service.SwapValidator{
+	swapValidator := validator.SwapValidator{
 		Binance:        &binance,
 		SwapRepository: &swapRepository,
 		Formatter:      &formatter,
@@ -152,8 +158,8 @@ func InitServiceContainer() Container {
 	btcDependent := []string{"LTC", "ZEC", "ATOM", "XMR", "DOT", "XRP", "BCH", "ADA", "ETH", "DOGE", "PERP", "NEO"}
 	etcDependent := []string{"SHIB", "LINK", "UNI", "NEAR", "XLM", "ETC", "MATIC", "SOL", "BNB", "AVAX", "TRX"}
 
-	pythonMLBridge := service.PythonMLBridge{
-		DataSetBuilder: &service.DataSetBuilder{
+	pythonMLBridge := ml.PythonMLBridge{
+		DataSetBuilder: &ml.DataSetBuilder{
 			ExcludeDependedDataset: []string{"SHIBUSDT", "BTCUSDT"},
 			BtcDependent:           btcDependent,
 			EthDependent:           etcDependent,
@@ -166,26 +172,31 @@ func InitServiceContainer() Container {
 		Learning:           true,
 	}
 
-	timeService := service.TimeService{}
+	timeService := utils.TimeHelper{}
 
-	lossSecurity := service.LossSecurity{
+	profitService := exchange.ProfitService{
+		Binance: &binance,
+	}
+
+	lossSecurity := exchange.LossSecurity{
 		MlEnabled:            true,
 		InterpolationEnabled: true,
 		Formatter:            &formatter,
 		ExchangeRepository:   &exchangeRepository,
-		Binance:              &binance,
+		ProfitService:        &profitService,
 	}
 
-	priceCalculator := service.PriceCalculator{
+	priceCalculator := exchange.PriceCalculator{
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,
 		Binance:            &binance,
 		Formatter:          &formatter,
 		FrameService:       &frameService,
 		LossSecurity:       &lossSecurity,
+		ProfitService:      &profitService,
 	}
 
-	tradeStack := service.TradeStack{
+	tradeStack := exchange.TradeStack{
 		OrderRepository:    &orderRepository,
 		Binance:            &binance,
 		ExchangeRepository: &exchangeRepository,
@@ -193,7 +204,7 @@ func InitServiceContainer() Container {
 		Formatter:          &formatter,
 	}
 
-	orderExecutor := service.OrderExecutor{
+	orderExecutor := exchange.OrderExecutor{
 		TradeStack:         &tradeStack,
 		LossSecurity:       &lossSecurity,
 		CurrentBot:         currentBot,
@@ -203,9 +214,10 @@ func InitServiceContainer() Container {
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,
 		PriceCalculator:    &priceCalculator,
+		ProfitService:      &profitService,
 		CallbackManager:    &callbackManager,
 		SwapRepository:     &swapRepository,
-		SwapExecutor: &service.SwapExecutor{
+		SwapExecutor: &exchange.SwapExecutor{
 			BalanceService:  &balanceService,
 			SwapRepository:  &swapRepository,
 			OrderRepository: &orderRepository,
@@ -225,7 +237,7 @@ func InitServiceContainer() Container {
 		CancelRequestMap:       make(map[string]bool),
 	}
 
-	makerService := service.MakerService{
+	makerService := exchange.MakerService{
 		TradeStack:         &tradeStack,
 		OrderExecutor:      &orderExecutor,
 		OrderRepository:    &orderRepository,
@@ -238,58 +250,66 @@ func InitServiceContainer() Container {
 		PriceCalculator:    &priceCalculator,
 	}
 
+	profitOptionsValidator := validator.ProfitOptionsValidator{}
+	tradeLimitValidator := validator.TradeLimitValidator{
+		ProfitOptionsValidator: &profitOptionsValidator,
+	}
+
 	orderController := controller.OrderController{
-		RDB:                rdb,
-		Ctx:                &ctx,
-		OrderRepository:    &orderRepository,
-		ExchangeRepository: &exchangeRepository,
-		Formatter:          &formatter,
-		PriceCalculator:    &priceCalculator,
-		CurrentBot:         currentBot,
-		LossSecurity:       &lossSecurity,
-		OrderExecutor:      &orderExecutor,
+		RDB:                    rdb,
+		Ctx:                    &ctx,
+		OrderRepository:        &orderRepository,
+		ExchangeRepository:     &exchangeRepository,
+		Formatter:              &formatter,
+		PriceCalculator:        &priceCalculator,
+		CurrentBot:             currentBot,
+		LossSecurity:           &lossSecurity,
+		OrderExecutor:          &orderExecutor,
+		ProfitOptionsValidator: &profitOptionsValidator,
 	}
 
 	tradeController := controller.TradeController{
-		CurrentBot:         currentBot,
-		ExchangeRepository: &exchangeRepository,
-		TradeStack:         &tradeStack,
+		CurrentBot:          currentBot,
+		ExchangeRepository:  &exchangeRepository,
+		TradeStack:          &tradeStack,
+		TradeLimitValidator: &tradeLimitValidator,
 	}
 
-	swapManager := service.SwapManager{
-		SwapChainBuilder: &service.SwapChainBuilder{},
+	swapManager := exchange.SwapManager{
+		SwapChainBuilder: &exchange.SwapChainBuilder{},
 		SwapRepository:   &swapRepository,
 		Formatter:        &formatter,
-		SBSSwapFinder: &service.SBSSwapFinder{
+		SBSSwapFinder: &exchange.SBSSwapFinder{
 			ExchangeRepository: &exchangeRepository,
 			Formatter:          &formatter,
 		},
-		SSBSwapFinder: &service.SSBSwapFinder{
+		SSBSwapFinder: &exchange.SSBSwapFinder{
 			ExchangeRepository: &exchangeRepository,
 			Formatter:          &formatter,
 		},
-		SBBSwapFinder: &service.SBBSwapFinder{
+		SBBSwapFinder: &exchange.SBBSwapFinder{
 			ExchangeRepository: &exchangeRepository,
 			Formatter:          &formatter,
 		},
 	}
 
-	baseKLineStrategy := service.BaseKLineStrategy{
+	baseKLineStrategy := strategy.BaseKLineStrategy{
 		ExchangeRepository: &exchangeRepository,
 		Formatter:          &formatter,
 		MlEnabled:          true,
 	}
-	orderBasedStrategy := service.OrderBasedStrategy{
+	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderRepository,
 		TradeStack:         &tradeStack,
+		ProfitService:      &profitService,
 	}
-	marketDepthStrategy := service.MarketDepthStrategy{}
-	smaStrategy := service.SmaTradeStrategy{
+	marketDepthStrategy := strategy.MarketDepthStrategy{}
+	smaStrategy := strategy.SmaTradeStrategy{
 		ExchangeRepository: exchangeRepository,
 	}
 
-	swapUpdater := service.SwapUpdater{
+	swapUpdater := exchange.SwapUpdater{
 		ExchangeRepository: &exchangeRepository,
 		Formatter:          &formatter,
 		Binance:            &binance,
@@ -350,35 +370,36 @@ func InitServiceContainer() Container {
 }
 
 type Container struct {
-	PriceCalculator     *service.PriceCalculator
+	PriceCalculator     *exchange.PriceCalculator
 	BotController       *controller.BotController
 	HealthService       *service.HealthService
 	Db                  *sql.DB
 	DbSwap              *sql.DB
 	CurrentBot          *model.Bot
 	CallbackManager     *service.CallbackManager
-	BalanceService      *service.BalanceService
-	TimeService         *service.TimeService
+	BalanceService      *exchange.BalanceService
+	TimeService         *utils.TimeHelper
 	Binance             *client.Binance
-	PythonMLBridge      *service.PythonMLBridge
+	PythonMLBridge      *ml.PythonMLBridge
 	SwapRepository      *repository.SwapRepository
 	ExchangeRepository  *repository.ExchangeRepository
 	OrderRepository     *repository.OrderRepository
 	ExchangeController  *controller.ExchangeController
 	TradeController     *controller.TradeController
 	OrderController     *controller.OrderController
-	MakerService        *service.MakerService
-	OrderExecutor       *service.OrderExecutor
-	SwapManager         *service.SwapManager
-	SwapUpdater         *service.SwapUpdater
-	SmaTradeStrategy    *service.SmaTradeStrategy
-	MarketDepthStrategy *service.MarketDepthStrategy
-	BaseKLineStrategy   *service.BaseKLineStrategy
-	OrderBasedStrategy  *service.OrderBasedStrategy
+	MakerService        *exchange.MakerService
+	OrderExecutor       *exchange.OrderExecutor
+	SwapManager         *exchange.SwapManager
+	SwapUpdater         *exchange.SwapUpdater
+	SmaTradeStrategy    *strategy.SmaTradeStrategy
+	MarketDepthStrategy *strategy.MarketDepthStrategy
+	BaseKLineStrategy   *strategy.BaseKLineStrategy
+	OrderBasedStrategy  *strategy.OrderBasedStrategy
 	IsMasterBot         bool
 }
 
 func (c *Container) StartHttpServer() {
+	// todo: use GIN http server
 	// configure controllers
 	http.HandleFunc("/kline/list/", c.ExchangeController.GetKlineListAction)
 	http.HandleFunc("/depth/", c.ExchangeController.GetDepthAction)

@@ -1,11 +1,14 @@
-package service
+package exchange
 
 import (
 	"errors"
 	"fmt"
-	ExchangeClient "gitlab.com/open-soft/go-crypto-bot/src/client"
-	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/src/model"
-	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/client"
+	"gitlab.com/open-soft/go-crypto-bot/src/model"
+	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/service"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
+	"gitlab.com/open-soft/go-crypto-bot/src/validator"
 	"log"
 	"strings"
 	"sync"
@@ -13,30 +16,31 @@ import (
 
 type OrderExecutor struct {
 	TradeStack             BuyOrderStackInterface
-	CurrentBot             *ExchangeModel.Bot
-	TimeService            TimeServiceInterface
+	CurrentBot             *model.Bot
+	TimeService            utils.TimeServiceInterface
 	BalanceService         BalanceServiceInterface
-	Binance                ExchangeClient.ExchangeOrderAPIInterface
-	OrderRepository        ExchangeRepository.OrderStorageInterface
-	ExchangeRepository     ExchangeRepository.ExchangeTradeInfoInterface
+	Binance                client.ExchangeOrderAPIInterface
+	OrderRepository        repository.OrderStorageInterface
+	ExchangeRepository     repository.ExchangeTradeInfoInterface
 	LossSecurity           LossSecurityInterface
 	PriceCalculator        PriceCalculatorInterface
-	SwapRepository         ExchangeRepository.SwapBasicRepositoryInterface
+	ProfitService          ProfitServiceInterface
+	SwapRepository         repository.SwapBasicRepositoryInterface
 	SwapExecutor           SwapExecutorInterface
-	SwapValidator          SwapValidatorInterface
-	CallbackManager        CallbackManagerInterface
-	Formatter              *Formatter
+	SwapValidator          validator.SwapValidatorInterface
+	CallbackManager        service.CallbackManagerInterface
+	Formatter              *utils.Formatter
 	SwapSellOrderDays      int64
 	SwapEnabled            bool
 	SwapProfitPercent      float64
 	TurboSwapProfitPercent float64
 	Lock                   map[string]bool
 	TradeLockMutex         sync.RWMutex
-	LockChannel            *chan ExchangeModel.Lock
+	LockChannel            *chan model.Lock
 	CancelRequestMap       map[string]bool
 }
 
-func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order ExchangeModel.Order, price float64) error {
+func (m *OrderExecutor) BuyExtra(tradeLimit model.TradeLimit, order model.Order, price float64) error {
 	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
 	if lastKline == nil {
@@ -86,7 +90,7 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 		return balanceErr
 	}
 
-	var extraOrder = ExchangeModel.Order{
+	var extraOrder = model.Order{
 		Symbol:             order.Symbol,
 		Quantity:           quantity,
 		Price:              price,
@@ -98,7 +102,8 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 		Operation:          "buy",
 		ExternalId:         nil,
 		ClosesOrder:        &order.Id,
-		ExtraChargeOptions: make(ExchangeModel.ExtraChargeOptions, 0),
+		ExtraChargeOptions: make(model.ExtraChargeOptions, 0),
+		ProfitOptions:      make(model.ProfitOptions, 0),
 		// todo: add commission???
 	}
 
@@ -163,7 +168,7 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 		return err
 	}
 
-	go func(extraOrder ExchangeModel.Order, tradeLimit ExchangeModel.TradeLimit) {
+	go func(extraOrder model.Order, tradeLimit model.TradeLimit) {
 		m.CallbackManager.BuyOrder(
 			extraOrder,
 			*m.CurrentBot,
@@ -175,7 +180,7 @@ func (m *OrderExecutor) BuyExtra(tradeLimit ExchangeModel.TradeLimit, order Exch
 	return nil
 }
 
-func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, price float64, quantity float64) error {
+func (m *OrderExecutor) Buy(tradeLimit model.TradeLimit, symbol string, price float64, quantity float64) error {
 	if m.isTradeLocked(symbol) {
 		return errors.New(fmt.Sprintf("Operation Buy is Locked %s", symbol))
 	}
@@ -207,7 +212,7 @@ func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, 
 
 	// todo: check min quantity
 
-	var order = ExchangeModel.Order{
+	var order = model.Order{
 		Symbol:             symbol,
 		Quantity:           quantity,
 		Price:              price,
@@ -220,6 +225,7 @@ func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, 
 		ExternalId:         nil,
 		ClosesOrder:        nil,
 		ExtraChargeOptions: tradeLimit.ExtraChargeOptions,
+		ProfitOptions:      tradeLimit.ProfitOptions,
 		// todo: add commission???
 	}
 
@@ -259,7 +265,7 @@ func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, 
 		m.UpdateCommission(balanceBefore, order)
 	}
 
-	go func(order ExchangeModel.Order, tradeLimit ExchangeModel.TradeLimit) {
+	go func(order model.Order, tradeLimit model.TradeLimit) {
 		m.CallbackManager.BuyOrder(
 			order,
 			*m.CurrentBot,
@@ -271,7 +277,7 @@ func (m *OrderExecutor) Buy(tradeLimit ExchangeModel.TradeLimit, symbol string, 
 	return nil
 }
 
-func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened ExchangeModel.Order, symbol string, price float64, quantity float64, isManual bool) error {
+func (m *OrderExecutor) Sell(tradeLimit model.TradeLimit, opened model.Order, symbol string, price float64, quantity float64, isManual bool) error {
 	if m.isTradeLocked(symbol) {
 		return errors.New(fmt.Sprintf("Operation Sell is Locked %s", symbol))
 	}
@@ -296,7 +302,7 @@ func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchang
 		))
 	}
 
-	minPrice := m.Formatter.FormatPrice(tradeLimit, opened.GetMinClosePrice(tradeLimit))
+	minPrice := m.Formatter.FormatPrice(tradeLimit, m.ProfitService.GetMinClosePrice(opened, opened.Price))
 
 	if isManual {
 		minPrice = m.Formatter.FormatPrice(tradeLimit, opened.GetManualMinClosePrice())
@@ -311,7 +317,7 @@ func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchang
 		))
 	}
 
-	var order = ExchangeModel.Order{
+	var order = model.Order{
 		Symbol:             symbol,
 		Quantity:           quantity,
 		Price:              price,
@@ -323,7 +329,8 @@ func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchang
 		Operation:          "sell",
 		ExternalId:         nil,
 		ClosesOrder:        &opened.Id,
-		ExtraChargeOptions: make(ExchangeModel.ExtraChargeOptions, 0),
+		ExtraChargeOptions: make(model.ExtraChargeOptions, 0),
+		ProfitOptions:      make(model.ProfitOptions, 0),
 		// todo: add commission???
 	}
 
@@ -390,7 +397,7 @@ func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchang
 		return err
 	}
 
-	go func(order ExchangeModel.Order, profit float64) {
+	go func(order model.Order, profit float64) {
 		m.CallbackManager.SellOrder(
 			order,
 			*m.CurrentBot,
@@ -401,7 +408,7 @@ func (m *OrderExecutor) Sell(tradeLimit ExchangeModel.TradeLimit, opened Exchang
 	return nil
 }
 
-func (m *OrderExecutor) ProcessSwap(order ExchangeModel.Order) bool {
+func (m *OrderExecutor) ProcessSwap(order model.Order) bool {
 	if m.SwapEnabled && order.IsSwap() {
 		log.Printf("[%s] Swap Order [%d] Mode: processing...", order.Symbol, order.Id)
 		m.SwapExecutor.Execute(order)
@@ -418,7 +425,7 @@ func (m *OrderExecutor) ProcessSwap(order ExchangeModel.Order) bool {
 	return false
 }
 
-func (m *OrderExecutor) TrySwap(order ExchangeModel.Order) {
+func (m *OrderExecutor) TrySwap(order model.Order) {
 	swapChain := m.SwapRepository.GetSwapChainCache(order.GetBaseAsset())
 	if swapChain != nil && m.SwapEnabled {
 		possibleSwaps := m.SwapRepository.GetSwapChains(order.GetBaseAsset())
@@ -447,7 +454,7 @@ func (m *OrderExecutor) TrySwap(order ExchangeModel.Order) {
 }
 
 // todo: order has to be Interface
-func (m *OrderExecutor) tryLimitOrder(order ExchangeModel.Order, operation string, ttl int64) (ExchangeModel.BinanceOrder, error) {
+func (m *OrderExecutor) tryLimitOrder(order model.Order, operation string, ttl int64) (model.BinanceOrder, error) {
 	// todo: extra order flag...
 	binanceOrder, err := m.findOrCreateOrder(order, operation)
 
@@ -479,7 +486,7 @@ func (m *OrderExecutor) tryLimitOrder(order ExchangeModel.Order, operation strin
 	return binanceOrder, nil
 }
 
-func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, seconds int64) (ExchangeModel.BinanceOrder, error) {
+func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds int64) (model.BinanceOrder, error) {
 	defer m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 
 	if binanceOrder.IsFilled() {
@@ -489,7 +496,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 	depth := m.PriceCalculator.GetDepth(binanceOrder.Symbol)
 
 	var currentPosition int
-	var book [2]ExchangeModel.Number
+	var book [2]model.Number
 	if "BUY" == binanceOrder.Side {
 		currentPosition, book = depth.GetBidPosition(binanceOrder.Price)
 	} else {
@@ -516,8 +523,8 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 	}
 
 	go func(
-		tradeLimit ExchangeModel.TradeLimit,
-		binanceOrder *ExchangeModel.BinanceOrder,
+		tradeLimit model.TradeLimit,
+		binanceOrder *model.BinanceOrder,
 		ttl *int64,
 		control chan string,
 		orderManageChannel chan string,
@@ -540,10 +547,11 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 			end := m.TimeService.GetNowUnix()
 			kline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
+			openedBuyPosition, openedBuyPositionErr := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
+
 			if kline != nil && binanceOrder.IsSell() && binanceOrder.IsNew() && m.SwapEnabled {
-				openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
 				// Try arbitrage for long orders >= 4 hours and with profit < -1.00%
-				if err == nil {
+				if openedBuyPositionErr == nil {
 					swapChain := m.SwapRepository.GetSwapChainCache(openedBuyPosition.GetBaseAsset())
 					if swapChain != nil {
 						possibleSwaps := m.SwapRepository.GetSwapChains(openedBuyPosition.GetBaseAsset())
@@ -553,8 +561,8 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 						}
 
 						for _, possibleSwap := range possibleSwaps {
-							turboSwap := possibleSwap.Percent.Gte(ExchangeModel.Percent(m.TurboSwapProfitPercent))
-							isTimeToSwap := openedBuyPosition.GetHoursOpened() >= m.SwapSellOrderDays && openedBuyPosition.GetProfitPercent(kline.Close).Lte(ExchangeModel.Percent(m.SwapProfitPercent)) && !openedBuyPosition.IsSwap()
+							turboSwap := possibleSwap.Percent.Gte(model.Percent(m.TurboSwapProfitPercent))
+							isTimeToSwap := openedBuyPosition.GetPositionTime().GetHours() >= float64(m.SwapSellOrderDays) && openedBuyPosition.GetProfitPercent(kline.Close).Lte(model.Percent(m.SwapProfitPercent)) && !openedBuyPosition.IsSwap()
 
 							if !turboSwap && !isTimeToSwap {
 								break
@@ -627,7 +635,8 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 			}
 
 			// [BUY] Check is it time to sell (maybe we have already partially filled)
-			if kline != nil && binanceOrder.IsBuy() && binanceOrder.IsPartiallyFilled() && binanceOrder.GetProfitPercent(kline.Close).Gte(tradeLimit.GetMinProfitPercent()) {
+
+			if kline != nil && openedBuyPositionErr == nil && binanceOrder.IsBuy() && binanceOrder.IsPartiallyFilled() && binanceOrder.GetProfitPercent(kline.Close).Gte(m.ProfitService.GetMinProfitPercent(openedBuyPosition)) {
 				log.Printf(
 					"[%s] Max profit percent reached, current profit is: %.2f, %s [%d] order is cancelled",
 					binanceOrder.Symbol,
@@ -972,7 +981,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder ExchangeModel.BinanceOrder, s
 	return binanceOrder, errors.New(fmt.Sprintf("Order %d was CANCELED", binanceOrder.OrderId))
 }
 
-func (m *OrderExecutor) CalculateSellQuantity(order ExchangeModel.Order) float64 {
+func (m *OrderExecutor) CalculateSellQuantity(order model.Order) float64 {
 	binanceOrder := m.OrderRepository.GetBinanceOrder(order.Symbol, "SELL")
 
 	if binanceOrder != nil {
@@ -995,7 +1004,7 @@ func (m *OrderExecutor) CalculateSellQuantity(order ExchangeModel.Order) float64
 	return balance
 }
 
-func (m *OrderExecutor) MakeSwap(order ExchangeModel.Order, swapChain ExchangeModel.SwapChainEntity) {
+func (m *OrderExecutor) MakeSwap(order model.Order, swapChain model.SwapChainEntity) {
 	assetBalance, err := m.BalanceService.GetAssetBalance(swapChain.SwapOne.BaseAsset, false)
 
 	if err != nil {
@@ -1012,13 +1021,13 @@ func (m *OrderExecutor) MakeSwap(order ExchangeModel.Order, swapChain ExchangeMo
 
 	// todo: transaction
 	// create swap
-	_, err = m.SwapRepository.CreateSwapAction(ExchangeModel.SwapAction{
+	_, err = m.SwapRepository.CreateSwapAction(model.SwapAction{
 		Id:              0,
 		OrderId:         order.Id,
 		BotId:           m.CurrentBot.Id,
 		SwapChainId:     swapChain.Id,
 		Asset:           swapChain.SwapOne.BaseAsset,
-		Status:          ExchangeModel.SwapActionStatusPending,
+		Status:          model.SwapActionStatusPending,
 		StartTimestamp:  m.TimeService.GetNowUnix(),
 		StartQuantity:   assetBalance,
 		SwapOneSymbol:   swapChain.SwapOne.GetSymbol(),
@@ -1047,7 +1056,7 @@ func (m *OrderExecutor) MakeSwap(order ExchangeModel.Order, swapChain ExchangeMo
 	}
 }
 
-func (m *OrderExecutor) UpdateCommission(balanceBefore float64, order ExchangeModel.Order) {
+func (m *OrderExecutor) UpdateCommission(balanceBefore float64, order model.Order) {
 	assetSymbol := order.GetBaseAsset()
 	balanceAfter, err := m.BalanceService.GetAssetBalance(assetSymbol, true)
 
@@ -1082,14 +1091,14 @@ func (m *OrderExecutor) isTradeLocked(symbol string) bool {
 }
 
 func (m *OrderExecutor) acquireLock(symbol string) {
-	*m.LockChannel <- ExchangeModel.Lock{IsLocked: true, Symbol: symbol}
+	*m.LockChannel <- model.Lock{IsLocked: true, Symbol: symbol}
 }
 
 func (m *OrderExecutor) releaseLock(symbol string) {
-	*m.LockChannel <- ExchangeModel.Lock{IsLocked: false, Symbol: symbol}
+	*m.LockChannel <- model.Lock{IsLocked: false, Symbol: symbol}
 }
 
-func (m *OrderExecutor) findBinanceOrder(symbol string, operation string, cachedOnly bool) (*ExchangeModel.BinanceOrder, error) {
+func (m *OrderExecutor) findBinanceOrder(symbol string, operation string, cachedOnly bool) (*model.BinanceOrder, error) {
 	cached := m.OrderRepository.GetBinanceOrder(symbol, operation)
 
 	if cached != nil {
@@ -1121,7 +1130,7 @@ func (m *OrderExecutor) findBinanceOrder(symbol string, operation string, cached
 	return nil, errors.New(fmt.Sprintf("[%s] Binance order is not found", symbol))
 }
 
-func (m *OrderExecutor) findOrCreateOrder(order ExchangeModel.Order, operation string) (ExchangeModel.BinanceOrder, error) {
+func (m *OrderExecutor) findOrCreateOrder(order model.Order, operation string) (model.BinanceOrder, error) {
 	// todo: extra order flag...
 	cached, err := m.findBinanceOrder(order.Symbol, operation, false)
 
@@ -1149,11 +1158,11 @@ func (m *OrderExecutor) findOrCreateOrder(order ExchangeModel.Order, operation s
 	return binanceOrder, nil
 }
 
-func (m *OrderExecutor) getAvgPrice(opened ExchangeModel.Order, extra ExchangeModel.Order) float64 {
+func (m *OrderExecutor) getAvgPrice(opened model.Order, extra model.Order) float64 {
 	return ((opened.ExecutedQuantity * opened.Price) + (extra.ExecutedQuantity * extra.Price)) / (opened.ExecutedQuantity + extra.ExecutedQuantity)
 }
 
-func (m *OrderExecutor) recoverCommission(order ExchangeModel.Order) {
+func (m *OrderExecutor) recoverCommission(order model.Order) {
 	if order.Commission != nil {
 		return
 	}
@@ -1200,7 +1209,7 @@ func (m *OrderExecutor) CheckBalance(symbol string, priceUsdt float64, quantity 
 	return nil
 }
 
-func (m *OrderExecutor) CheckMinBalance(limit ExchangeModel.TradeLimit, kLine ExchangeModel.KLine) error {
+func (m *OrderExecutor) CheckMinBalance(limit model.TradeLimit, kLine model.KLine) error {
 	opened, err := m.OrderRepository.GetOpenedOrderCached(limit.Symbol, "BUY")
 	limitUsdt := limit.USDTLimit
 

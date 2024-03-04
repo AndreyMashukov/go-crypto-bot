@@ -53,7 +53,6 @@ curl --location --request POST 'http://localhost:8090/trade/limit/create?botUuid
         "minPrice": 0.00001,
         "minQuantity": 0.01,
         "minNotional": 5,
-        "minProfitPercent": 2.75,
         "isEnabled": true,
         "USDTExtraBudget": 80,
         "buyOnFallPercent": -3.5,
@@ -62,6 +61,15 @@ curl --location --request POST 'http://localhost:8090/trade/limit/create?botUuid
         "framePeriod": 20,
         "buyPriceHistoryCheckInterval": "1d",
         "buyPriceHistoryCheckPeriod": 14,
+        "profitOptions": [
+            {
+                "index": 0,
+                "optionValue": 1,
+                "optionUnit": "h",
+                "optionPercent": 2.40,
+                "isTriggerOption": true
+            }
+        ],
         "extraChargeOptions": [
             {
                 "index": 0,
@@ -81,7 +89,6 @@ curl --location --request PUT 'http://localhost:8090/trade/limit/update?botUuid=
         "minPrice": 0.00001,
         "minQuantity": 0.01,
         "minNotional": 5,
-        "minProfitPercent": 2.75,
         "isEnabled": true,
         "USDTExtraBudget": 80,
         "buyOnFallPercent": -3.5,
@@ -90,6 +97,15 @@ curl --location --request PUT 'http://localhost:8090/trade/limit/update?botUuid=
         "framePeriod": 20,
         "buyPriceHistoryCheckInterval": "1d",
         "buyPriceHistoryCheckPeriod": 14,
+        "profitOptions": [
+            {
+                "index": 0,
+                "optionValue": 1,
+                "optionUnit": "h",
+                "optionPercent": 2.40,
+                "isTriggerOption": true
+            }
+        ],
         "extraChargeOptions": [
             {
                 "index": 0,

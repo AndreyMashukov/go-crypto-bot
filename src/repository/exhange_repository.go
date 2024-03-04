@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/redis/go-redis/v9"
-	model "gitlab.com/open-soft/go-crypto-bot/src/model"
+	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"log"
 	"slices"
 	"strings"
@@ -91,14 +91,14 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 		    tl.min_price as MinPrice,
 		    tl.min_quantity as MinQuantity,
 		    tl.min_notional as MinNotional,
-		    tl.min_profit_percent as MinProfitPercent,
 		    tl.is_enabled as IsEnabled,
 		    tl.min_price_minutes_period as MinPriceMinutesPeriod,
 		    tl.frame_interval as FrameInterval,
 		    tl.frame_period as FramePeriod,
 		    tl.buy_price_history_check_interval as BuyPriceHistoryCheckInterval,
 		    tl.buy_price_history_check_period as BuyPriceHistoryCheckPeriod,
-		    tl.extra_charge_options as ExtraChargeOptions
+		    tl.extra_charge_options as ExtraChargeOptions,
+		    tl.profit_options as ProfitOptions
 		FROM trade_limit tl WHERE tl.bot_id = ?
 	`, e.CurrentBot.Id)
 	defer res.Close()
@@ -118,7 +118,6 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 			&tradeLimit.MinPrice,
 			&tradeLimit.MinQuantity,
 			&tradeLimit.MinNotional,
-			&tradeLimit.MinProfitPercent,
 			&tradeLimit.IsEnabled,
 			&tradeLimit.MinPriceMinutesPeriod,
 			&tradeLimit.FrameInterval,
@@ -126,6 +125,7 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 			&tradeLimit.BuyPriceHistoryCheckInterval,
 			&tradeLimit.BuyPriceHistoryCheckPeriod,
 			&tradeLimit.ExtraChargeOptions,
+			&tradeLimit.ProfitOptions,
 		)
 
 		if err != nil {
@@ -148,14 +148,14 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		    tl.min_price as MinPrice,
 		    tl.min_quantity as MinQuantity,
 		    tl.min_notional as MinNotional,
-		    tl.min_profit_percent as MinProfitPercent,
 		    tl.is_enabled as IsEnabled,
 		    tl.min_price_minutes_period as MinPriceMinutesPeriod,
 		    tl.frame_interval as FrameInterval,
 		    tl.frame_period as FramePeriod,
 		    tl.buy_price_history_check_interval as BuyPriceHistoryCheckInterval,
 		    tl.buy_price_history_check_period as BuyPriceHistoryCheckPeriod,
-		    tl.extra_charge_options as ExtraChargeOptions
+		    tl.extra_charge_options as ExtraChargeOptions,
+		    tl.profit_options as ProfitOptions
 		FROM trade_limit tl
 		WHERE tl.symbol = ? AND tl.bot_id = ?
 	`,
@@ -168,7 +168,6 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		&tradeLimit.MinPrice,
 		&tradeLimit.MinQuantity,
 		&tradeLimit.MinNotional,
-		&tradeLimit.MinProfitPercent,
 		&tradeLimit.IsEnabled,
 		&tradeLimit.MinPriceMinutesPeriod,
 		&tradeLimit.FrameInterval,
@@ -176,6 +175,7 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		&tradeLimit.BuyPriceHistoryCheckInterval,
 		&tradeLimit.BuyPriceHistoryCheckPeriod,
 		&tradeLimit.ExtraChargeOptions,
+		&tradeLimit.ProfitOptions,
 	)
 	if err != nil {
 		return tradeLimit, err
@@ -192,7 +192,6 @@ func (e *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64, e
 		    min_price = ?,
 		    min_quantity = ?,
 		    min_notional = ?,
-		    min_profit_percent = ?,
 		    is_enabled = ?,
 		    min_price_minutes_period = ?,
 		    frame_interval = ?,
@@ -200,6 +199,7 @@ func (e *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64, e
 		    buy_price_history_check_interval = ?,
 		    buy_price_history_check_period = ?,
 		    extra_charge_options = ?,
+		    profit_options = ?,
 		    bot_id = ?
 	`,
 		limit.Symbol,
@@ -207,7 +207,6 @@ func (e *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64, e
 		limit.MinPrice,
 		limit.MinQuantity,
 		limit.MinNotional,
-		limit.MinProfitPercent,
 		limit.IsEnabled,
 		limit.MinPriceMinutesPeriod,
 		limit.FrameInterval,
@@ -215,6 +214,7 @@ func (e *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64, e
 		limit.BuyPriceHistoryCheckInterval,
 		limit.BuyPriceHistoryCheckPeriod,
 		limit.ExtraChargeOptions,
+		limit.ProfitOptions,
 		e.CurrentBot.Id,
 	)
 
@@ -583,14 +583,14 @@ func (e *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 		    tl.min_price = ?,
 		    tl.min_quantity = ?,
 		    tl.min_notional = ?,
-		    tl.min_profit_percent = ?,
 		    tl.is_enabled = ?,
 		    tl.min_price_minutes_period = ?,
 		    tl.frame_interval = ?,
 		    tl.frame_period = ?,
 		    tl.buy_price_history_check_interval = ?,
 		    tl.buy_price_history_check_period = ?,
-		    tl.extra_charge_options = ?
+		    tl.extra_charge_options = ?,
+		    tl.profit_options = ?
 		WHERE tl.id = ?
 	`,
 		limit.Symbol,
@@ -598,7 +598,6 @@ func (e *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 		limit.MinPrice,
 		limit.MinQuantity,
 		limit.MinNotional,
-		limit.MinProfitPercent,
 		limit.IsEnabled,
 		limit.MinPriceMinutesPeriod,
 		limit.FrameInterval,
@@ -606,6 +605,7 @@ func (e *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 		limit.BuyPriceHistoryCheckInterval,
 		limit.BuyPriceHistoryCheckPeriod,
 		limit.ExtraChargeOptions,
+		limit.ProfitOptions,
 		limit.Id,
 	)
 

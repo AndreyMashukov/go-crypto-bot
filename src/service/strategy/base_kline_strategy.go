@@ -1,21 +1,22 @@
-package service
+package strategy
 
 import (
-	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/src/model"
-	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/model"
+	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"time"
 )
 
 type BaseKLineStrategy struct {
-	ExchangeRepository *ExchangeRepository.ExchangeRepository
-	Formatter          *Formatter
+	ExchangeRepository *repository.ExchangeRepository
+	Formatter          *utils.Formatter
 	MlEnabled          bool
 }
 
-func (k *BaseKLineStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Decision {
+func (k *BaseKLineStrategy) Decide(kLine model.KLine) model.Decision {
 	//if kLine.IsPositive() && predict > 0.00 && k.Formatter.ComparePercentage(kLine.Close, predict).Lte(99.5) {
-	//	return ExchangeModel.Decision{
-	//		StrategyName: ExchangeModel.BaseKlineStrategyName,
+	//	return model.Decision{
+	//		StrategyName: model.BaseKlineStrategyName,
 	//		Score:        50.00,
 	//		Operation:    "SELL",
 	//		Timestamp:    time.Now().Unix(),
@@ -26,8 +27,8 @@ func (k *BaseKLineStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Deci
 
 	// todo: buy operation is disabled
 	if kLine.IsPositive() && kLine.Close < (kLine.High+kLine.Open)/2 {
-		return ExchangeModel.Decision{
-			StrategyName: ExchangeModel.BaseKlineStrategyName,
+		return model.Decision{
+			StrategyName: model.BaseKlineStrategyName,
 			Score:        25.00,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
@@ -40,8 +41,8 @@ func (k *BaseKLineStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Deci
 		predict, predictErr := k.ExchangeRepository.GetPredict(kLine.Symbol)
 
 		if predictErr == nil && predict > kLine.Close {
-			return ExchangeModel.Decision{
-				StrategyName: ExchangeModel.BaseKlineStrategyName,
+			return model.Decision{
+				StrategyName: model.BaseKlineStrategyName,
 				Score:        50.00,
 				Operation:    "BUY",
 				Timestamp:    time.Now().Unix(),
@@ -52,8 +53,8 @@ func (k *BaseKLineStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Deci
 	}
 
 	if kLine.IsNegative() {
-		return ExchangeModel.Decision{
-			StrategyName: ExchangeModel.BaseKlineStrategyName,
+		return model.Decision{
+			StrategyName: model.BaseKlineStrategyName,
 			Score:        25.00,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
@@ -62,8 +63,8 @@ func (k *BaseKLineStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Deci
 		}
 	}
 
-	return ExchangeModel.Decision{
-		StrategyName: ExchangeModel.BaseKlineStrategyName,
+	return model.Decision{
+		StrategyName: model.BaseKlineStrategyName,
 		Score:        25.00,
 		Operation:    "HOLD",
 		Timestamp:    time.Now().Unix(),

@@ -1,9 +1,10 @@
-package service
+package exchange
 
 import (
-	ExchangeClient "gitlab.com/open-soft/go-crypto-bot/src/client"
-	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/src/model"
-	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/client"
+	"gitlab.com/open-soft/go-crypto-bot/src/model"
+	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"log"
 	"slices"
 	"strings"
@@ -12,18 +13,18 @@ import (
 
 type MakerService struct {
 	OrderExecutor      *OrderExecutor
-	OrderRepository    *ExchangeRepository.OrderRepository
-	ExchangeRepository *ExchangeRepository.ExchangeRepository
-	Binance            *ExchangeClient.Binance
-	Formatter          *Formatter
+	OrderRepository    *repository.OrderRepository
+	ExchangeRepository *repository.ExchangeRepository
+	Binance            *client.Binance
+	Formatter          *utils.Formatter
 	MinDecisions       float64
 	HoldScore          float64
-	CurrentBot         *ExchangeModel.Bot
+	CurrentBot         *model.Bot
 	PriceCalculator    *PriceCalculator
 	TradeStack         *TradeStack
 }
 
-func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
+func (m *MakerService) Make(symbol string, decisions []model.Decision) {
 	buyScore := 0.00
 	sellScore := 0.00
 	holdScore := 0.00
@@ -276,7 +277,7 @@ func (m *MakerService) Make(symbol string, decisions []ExchangeModel.Decision) {
 	}
 }
 
-func (m *MakerService) tradeLimit(symbol string) *ExchangeModel.TradeLimit {
+func (m *MakerService) tradeLimit(symbol string) *model.TradeLimit {
 	tradeLimits := m.ExchangeRepository.GetTradeLimits()
 	for _, tradeLimit := range tradeLimits {
 		if tradeLimit.Symbol == symbol {
@@ -288,7 +289,7 @@ func (m *MakerService) tradeLimit(symbol string) *ExchangeModel.TradeLimit {
 }
 
 func (m *MakerService) UpdateSwapPairs() {
-	swapMap := make(map[string][]ExchangeModel.ExchangeSymbol)
+	swapMap := make(map[string][]model.ExchangeSymbol)
 	exchangeInfo, _ := m.Binance.GetExchangeData(make([]string, 0))
 	tradeLimits := m.ExchangeRepository.GetTradeLimits()
 
@@ -299,7 +300,7 @@ func (m *MakerService) UpdateSwapPairs() {
 			continue
 		}
 
-		swapMap[tradeLimit.Symbol] = make([]ExchangeModel.ExchangeSymbol, 0)
+		swapMap[tradeLimit.Symbol] = make([]model.ExchangeSymbol, 0)
 
 		for _, exchangeSymbol := range exchangeInfo.Symbols {
 			if !exchangeSymbol.IsTrading() {
@@ -329,7 +330,7 @@ func (m *MakerService) UpdateSwapPairs() {
 		for _, exchangeItem := range swapMap[tradeLimit.Symbol] {
 			swapPair, err := m.ExchangeRepository.GetSwapPair(exchangeItem.Symbol)
 			if err != nil {
-				swapPair := ExchangeModel.SwapPair{
+				swapPair := model.SwapPair{
 					SourceSymbol:   tradeLimit.Symbol,
 					Symbol:         exchangeItem.Symbol,
 					BaseAsset:      exchangeItem.BaseAsset,
@@ -375,7 +376,7 @@ func (m *MakerService) UpdateLimits() {
 	symbols := make([]string, 0)
 
 	tradeLimits := m.ExchangeRepository.GetTradeLimits()
-	limitMap := make(map[string]ExchangeModel.TradeLimit)
+	limitMap := make(map[string]model.TradeLimit)
 	for _, tradeLimit := range tradeLimits {
 		if !tradeLimit.IsEnabled {
 			continue

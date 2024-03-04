@@ -1,15 +1,16 @@
-package service
+package exchange
 
 import (
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
-	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"math"
 	"time"
 )
 
 type SwapManager struct {
-	SwapRepository   ExchangeRepository.SwapBasicRepositoryInterface
-	Formatter        *Formatter
+	SwapRepository   repository.SwapBasicRepositoryInterface
+	Formatter        *utils.Formatter
 	SBBSwapFinder    *SBBSwapFinder
 	SSBSwapFinder    *SSBSwapFinder
 	SBSSwapFinder    *SBSSwapFinder

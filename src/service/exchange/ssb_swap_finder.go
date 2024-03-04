@@ -1,17 +1,18 @@
-package service
+package exchange
 
 import (
 	"crypto/md5"
 	"fmt"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
-	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"io"
 	"time"
 )
 
 type SSBSwapFinder struct {
-	ExchangeRepository ExchangeRepository.SwapPairRepositoryInterface
-	Formatter          *Formatter
+	ExchangeRepository repository.SwapPairRepositoryInterface
+	Formatter          *utils.Formatter
 }
 
 func (s *SSBSwapFinder) Find(asset string) model.BBSArbitrageChain {

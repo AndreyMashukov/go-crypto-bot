@@ -1,23 +1,25 @@
-package service
+package strategy
 
 import (
-	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/src/model"
-	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/model"
+	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/service/exchange"
 	"time"
 )
 
 type OrderBasedStrategy struct {
-	ExchangeRepository ExchangeRepository.ExchangeRepository
-	OrderRepository    ExchangeRepository.OrderRepository
-	TradeStack         *TradeStack
+	ExchangeRepository repository.ExchangeRepository
+	OrderRepository    repository.OrderRepository
+	ProfitService      exchange.ProfitServiceInterface
+	TradeStack         *exchange.TradeStack
 }
 
-func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Decision {
+func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 	tradeLimit, err := o.ExchangeRepository.GetTradeLimit(kLine.Symbol)
 
 	if err != nil {
-		return ExchangeModel.Decision{
-			StrategyName: ExchangeModel.OrderBasedStrategyName,
+		return model.Decision{
+			StrategyName: model.OrderBasedStrategyName,
 			Score:        0.00,
 			Operation:    "HOLD",
 			Timestamp:    time.Now().Unix(),
@@ -28,8 +30,8 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 
 	binanceBuyOrder := o.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
 	if binanceBuyOrder != nil {
-		return ExchangeModel.Decision{
-			StrategyName: ExchangeModel.OrderBasedStrategyName,
+		return model.Decision{
+			StrategyName: model.OrderBasedStrategyName,
 			Score:        999.99,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
@@ -42,8 +44,8 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 
 	if err != nil {
 		if !o.TradeStack.CanBuy(tradeLimit) {
-			return ExchangeModel.Decision{
-				StrategyName: ExchangeModel.OrderBasedStrategyName,
+			return model.Decision{
+				StrategyName: model.OrderBasedStrategyName,
 				Score:        80.00,
 				Operation:    "HOLD",
 				Timestamp:    time.Now().Unix(),
@@ -52,8 +54,8 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 			}
 		}
 
-		return ExchangeModel.Decision{
-			StrategyName: ExchangeModel.OrderBasedStrategyName,
+		return model.Decision{
+			StrategyName: model.OrderBasedStrategyName,
 			Score:        15.00,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
@@ -64,8 +66,8 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 
 	binanceSellOrder := o.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "SELL")
 	if binanceSellOrder != nil {
-		return ExchangeModel.Decision{
-			StrategyName: ExchangeModel.OrderBasedStrategyName,
+		return model.Decision{
+			StrategyName: model.OrderBasedStrategyName,
 			Score:        999.99,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
@@ -77,8 +79,8 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 	profitPercent := order.GetProfitPercent(kLine.Close)
 
 	if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(order, kLine)) && tradeLimit.IsEnabled && o.TradeStack.CanBuy(tradeLimit) {
-		return ExchangeModel.Decision{
-			StrategyName: ExchangeModel.OrderBasedStrategyName,
+		return model.Decision{
+			StrategyName: model.OrderBasedStrategyName,
 			Score:        999.99,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
@@ -87,9 +89,9 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 		}
 	}
 
-	if profitPercent.Gte(tradeLimit.GetMinProfitPercent()) {
-		return ExchangeModel.Decision{
-			StrategyName: ExchangeModel.OrderBasedStrategyName,
+	if profitPercent.Gte(o.ProfitService.GetMinProfitPercent(order)) {
+		return model.Decision{
+			StrategyName: model.OrderBasedStrategyName,
 			Score:        999.99,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
@@ -98,9 +100,9 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 		}
 	}
 
-	if profitPercent.Gte(tradeLimit.GetMinProfitPercent() / 2) {
-		return ExchangeModel.Decision{
-			StrategyName: ExchangeModel.OrderBasedStrategyName,
+	if profitPercent.Gte(o.ProfitService.GetMinProfitPercent(order) / 2) {
+		return model.Decision{
+			StrategyName: model.OrderBasedStrategyName,
 			Score:        50.00,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
@@ -110,10 +112,10 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 	}
 
 	if kLine.Close > order.Price {
-		sellPrice := order.GetMinClosePrice(tradeLimit)
+		sellPrice := o.ProfitService.GetMinClosePrice(order, order.Price)
 
-		return ExchangeModel.Decision{
-			StrategyName: ExchangeModel.OrderBasedStrategyName,
+		return model.Decision{
+			StrategyName: model.OrderBasedStrategyName,
 			Score:        30.00,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
@@ -122,8 +124,8 @@ func (o *OrderBasedStrategy) Decide(kLine ExchangeModel.KLine) ExchangeModel.Dec
 		}
 	}
 
-	return ExchangeModel.Decision{
-		StrategyName: ExchangeModel.OrderBasedStrategyName,
+	return model.Decision{
+		StrategyName: model.OrderBasedStrategyName,
 		Score:        99.00,
 		Operation:    "HOLD",
 		Timestamp:    time.Now().Unix(),

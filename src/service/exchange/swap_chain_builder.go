@@ -1,4 +1,4 @@
-package service
+package exchange
 
 import "gitlab.com/open-soft/go-crypto-bot/src/model"
 

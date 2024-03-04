@@ -1,4 +1,4 @@
-package service
+package exchange
 
 import (
 	"errors"
@@ -6,6 +6,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"log"
 	"strings"
 )
@@ -21,8 +22,9 @@ type PriceCalculator struct {
 	OrderRepository    repository.OrderCachedReaderInterface
 	FrameService       FrameServiceInterface
 	Binance            client.ExchangePriceAPIInterface
-	Formatter          *Formatter
+	Formatter          *utils.Formatter
 	LossSecurity       LossSecurityInterface
+	ProfitService      ProfitServiceInterface
 }
 
 func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, error) {
@@ -39,7 +41,7 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 	// Extra charge by current price
 	if err == nil && order.GetProfitPercent(lastKline.Close).Lte(tradeLimit.GetBuyOnFallPercent(order, *lastKline)) {
 		extraBuyPrice := minPrice
-		if order.GetHoursOpened() >= 24 {
+		if order.GetPositionTime().GetHours() >= 24 {
 			extraBuyPrice = lastKline.Close
 			log.Printf(
 				"[%s] Extra buy price is %f (more than 24 hours), profit: %.2f",
@@ -76,7 +78,7 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 		log.Printf("[%s] Buy Frame Error: %s, current = %f", tradeLimit.Symbol, err.Error(), lastKline.Close)
 		potentialOpenPrice := lastKline.Close
 		for {
-			closePrice := tradeLimit.GetClosePrice(potentialOpenPrice)
+			closePrice := m.ProfitService.GetMinClosePrice(tradeLimit, potentialOpenPrice)
 
 			if closePrice <= frame.AvgHigh {
 				break
@@ -97,7 +99,7 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 
 	log.Printf("[%s] buy price history check", tradeLimit.Symbol)
 	buyPrice = m.LossSecurity.CheckBuyPriceOnHistory(tradeLimit, buyPrice)
-	closePrice := tradeLimit.GetClosePrice(buyPrice)
+	closePrice := m.ProfitService.GetMinClosePrice(tradeLimit, buyPrice)
 
 	log.Printf(
 		"[%s] Trade Frame [low:%f - high:%f](%.2f%s/%.2f%s): BUY Price = %f [min(200) = %f, current = %f, close = %f]",
@@ -125,7 +127,7 @@ func (m *PriceCalculator) CalculateSell(tradeLimit model.TradeLimit, order model
 		return m.Formatter.FormatPrice(tradeLimit, avgPrice)
 	}
 
-	minPrice := m.Formatter.FormatPrice(tradeLimit, order.GetMinClosePrice(tradeLimit))
+	minPrice := m.Formatter.FormatPrice(tradeLimit, m.ProfitService.GetMinClosePrice(order, order.Price))
 	openedOrder, err := m.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
 
 	if err != nil {
@@ -145,8 +147,9 @@ func (m *PriceCalculator) CalculateSell(tradeLimit model.TradeLimit, order model
 	}
 
 	var frame model.Frame
-	orderHours := openedOrder.GetHoursOpened()
+	orderHours := openedOrder.GetPositionTime().GetHours()
 
+	// todo: avoid using hardcode
 	if orderHours >= 48.00 {
 		log.Printf("[%s] Order is opened for %d hours, will be used 8-hours frame", tradeLimit.Symbol, orderHours)
 		frame = m.FrameService.GetFrame(tradeLimit.Symbol, "2h", 4)
@@ -204,7 +207,7 @@ func (m *PriceCalculator) GetBestFrameBuy(limit model.TradeLimit, marketDepth mo
 
 	for _, bid := range marketDepth.GetBids() {
 		potentialOpenPrice = bid[0].Value
-		closePrice = limit.GetClosePrice(potentialOpenPrice)
+		closePrice = m.ProfitService.GetMinClosePrice(limit, potentialOpenPrice)
 
 		if potentialOpenPrice <= frame.Low {
 			break

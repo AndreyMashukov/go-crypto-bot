@@ -1,18 +1,19 @@
-package service
+package exchange
 
 import (
 	"errors"
 	"fmt"
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
-	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/src/model"
+	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"log"
 	"strings"
 	"time"
 )
 
 type SwapExecutorInterface interface {
-	Execute(order ExchangeModel.Order)
+	Execute(order model.Order)
 }
 
 type SwapExecutor struct {
@@ -20,11 +21,11 @@ type SwapExecutor struct {
 	OrderRepository repository.OrderUpdaterInterface
 	BalanceService  BalanceServiceInterface
 	Binance         client.ExchangeOrderAPIInterface
-	TimeService     TimeServiceInterface
-	Formatter       *Formatter
+	TimeService     utils.TimeServiceInterface
+	Formatter       *utils.Formatter
 }
 
-func (s *SwapExecutor) Execute(order ExchangeModel.Order) {
+func (s *SwapExecutor) Execute(order model.Order) {
 	swapAction, err := s.SwapRepository.GetActiveSwapAction(order)
 
 	if err != nil {
@@ -41,7 +42,7 @@ func (s *SwapExecutor) Execute(order ExchangeModel.Order) {
 	balanceBefore, _ := s.BalanceService.GetAssetBalance(swapAction.Asset, false)
 
 	if swapAction.IsPending() {
-		swapAction.Status = ExchangeModel.SwapActionStatusProcess
+		swapAction.Status = model.SwapActionStatusProcess
 		_ = s.SwapRepository.UpdateSwapAction(swapAction)
 	}
 
@@ -79,7 +80,7 @@ func (s *SwapExecutor) Execute(order ExchangeModel.Order) {
 	}
 
 	order.Swap = false
-	swapAction.Status = ExchangeModel.SwapActionStatusSuccess
+	swapAction.Status = model.SwapActionStatusSuccess
 	nowTimestamp := time.Now().Unix()
 	swapAction.EndTimestamp = &nowTimestamp
 	swapAction.SwapThreeTimestamp = &nowTimestamp
@@ -99,8 +100,8 @@ func (s *SwapExecutor) Execute(order ExchangeModel.Order) {
 	)
 }
 
-func (s *SwapExecutor) ExecuteSwapOne(swapAction *ExchangeModel.SwapAction, order ExchangeModel.Order) *ExchangeModel.BinanceOrder {
-	var swapOneOrder *ExchangeModel.BinanceOrder = nil
+func (s *SwapExecutor) ExecuteSwapOne(swapAction *model.SwapAction, order model.Order) *model.BinanceOrder {
+	var swapOneOrder *model.BinanceOrder = nil
 
 	if swapAction.SwapOneExternalId == nil {
 		swapPair, err := s.SwapRepository.GetSwapPairBySymbol(swapAction.SwapOneSymbol)
@@ -122,7 +123,7 @@ func (s *SwapExecutor) ExecuteSwapOne(swapAction *ExchangeModel.SwapAction, orde
 
 			orderStatus := "ERROR"
 			swapAction.SwapOneExternalStatus = &orderStatus
-			swapAction.Status = ExchangeModel.SwapActionStatusCanceled
+			swapAction.Status = model.SwapActionStatusCanceled
 			nowTimestamp := time.Now().Unix()
 			swapAction.EndTimestamp = &nowTimestamp
 			swapAction.EndQuantity = &swapAction.StartQuantity
@@ -206,7 +207,7 @@ func (s *SwapExecutor) ExecuteSwapOne(swapAction *ExchangeModel.SwapAction, orde
 
 			if binanceOrder.IsCanceled() || binanceOrder.IsExpired() {
 				swapAction.SwapOneExternalStatus = &binanceOrder.Status
-				swapAction.Status = ExchangeModel.SwapActionStatusCanceled
+				swapAction.Status = model.SwapActionStatusCanceled
 				nowTimestamp := time.Now().Unix()
 				swapAction.EndTimestamp = &nowTimestamp
 				swapAction.EndQuantity = &swapAction.StartQuantity
@@ -225,7 +226,7 @@ func (s *SwapExecutor) ExecuteSwapOne(swapAction *ExchangeModel.SwapAction, orde
 				cancelOrder, err := s.Binance.CancelOrder(binanceOrder.Symbol, binanceOrder.OrderId)
 				if err == nil {
 					swapAction.SwapOneExternalStatus = &cancelOrder.Status
-					swapAction.Status = ExchangeModel.SwapActionStatusCanceled
+					swapAction.Status = model.SwapActionStatusCanceled
 					nowTimestamp := time.Now().Unix()
 					swapAction.EndTimestamp = &nowTimestamp
 					swapAction.EndQuantity = &swapAction.StartQuantity
@@ -252,13 +253,13 @@ func (s *SwapExecutor) ExecuteSwapOne(swapAction *ExchangeModel.SwapAction, orde
 }
 
 func (s *SwapExecutor) ExecuteSwapTwo(
-	swapAction *ExchangeModel.SwapAction,
-	swapChain ExchangeModel.SwapChainEntity,
-	swapOneOrder ExchangeModel.BinanceOrder,
-) *ExchangeModel.BinanceOrder {
+	swapAction *model.SwapAction,
+	swapChain model.SwapChainEntity,
+	swapOneOrder model.BinanceOrder,
+) *model.BinanceOrder {
 	assetTwo := strings.ReplaceAll(swapOneOrder.Symbol, swapAction.Asset, "")
 
-	var swapTwoOrder *ExchangeModel.BinanceOrder = nil
+	var swapTwoOrder *model.BinanceOrder = nil
 
 	if swapAction.SwapTwoExternalId == nil {
 		balance, _ := s.BalanceService.GetAssetBalance(assetTwo, false)
@@ -279,7 +280,7 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 		)
 
 		swapPair, err := s.SwapRepository.GetSwapPairBySymbol(swapAction.SwapTwoSymbol)
-		var binanceOrder ExchangeModel.BinanceOrder
+		var binanceOrder model.BinanceOrder
 
 		if swapChain.IsSSB() {
 			binanceOrder, err = s.Binance.LimitOrder(
@@ -409,13 +410,13 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 }
 
 func (s *SwapExecutor) ExecuteSwapThree(
-	swapAction *ExchangeModel.SwapAction,
-	swapChain ExchangeModel.SwapChainEntity,
-	swapTwoOrder ExchangeModel.BinanceOrder,
+	swapAction *model.SwapAction,
+	swapChain model.SwapChainEntity,
+	swapTwoOrder model.BinanceOrder,
 	assetTwo string,
-) *ExchangeModel.BinanceOrder {
+) *model.BinanceOrder {
 	assetThree := strings.ReplaceAll(swapTwoOrder.Symbol, assetTwo, "")
-	var swapThreeOrder *ExchangeModel.BinanceOrder = nil
+	var swapThreeOrder *model.BinanceOrder = nil
 
 	if swapAction.SwapThreeExternalId == nil {
 		balance, _ := s.BalanceService.GetAssetBalance(assetThree, false)
@@ -439,7 +440,7 @@ func (s *SwapExecutor) ExecuteSwapThree(
 		)
 
 		swapPair, err := s.SwapRepository.GetSwapPairBySymbol(swapAction.SwapThreeSymbol)
-		var binanceOrder ExchangeModel.BinanceOrder
+		var binanceOrder model.BinanceOrder
 
 		if swapChain.IsSSB() || swapChain.IsSBB() {
 			binanceOrder, err = s.Binance.LimitOrder(
@@ -592,16 +593,16 @@ func (s *SwapExecutor) ExecuteSwapThree(
 }
 
 func (s *SwapExecutor) TryRollbackSwapTwo(
-	action *ExchangeModel.SwapAction,
-	swapChain ExchangeModel.SwapChainEntity,
-	swapOneOrder ExchangeModel.BinanceOrder,
+	action *model.SwapAction,
+	swapChain model.SwapChainEntity,
+	swapOneOrder model.BinanceOrder,
 	asset string,
 ) error {
 	if !swapChain.IsSSB() && !swapChain.IsSBS() && !swapChain.IsSBB() {
 		return errors.New("Swap chain type is not supported")
 	}
 
-	minSwapRollbackPercent := ExchangeModel.Percent(0.75)
+	minSwapRollbackPercent := model.Percent(0.75)
 
 	// pre-validate rollback...
 	swapPair, err := s.SwapRepository.GetSwapPairBySymbol(action.SwapOneSymbol)
@@ -687,7 +688,7 @@ func (s *SwapExecutor) TryRollbackSwapTwo(
 			action.SwapTwoPrice = binanceOrder.Price
 			action.SwapTwoSymbol = binanceOrder.Symbol
 			action.SwapTwoExternalId = &binanceOrder.OrderId
-			action.Status = ExchangeModel.SwapActionStatusSuccess
+			action.Status = model.SwapActionStatusSuccess
 			err = s.SwapRepository.UpdateSwapAction(*action)
 			if err != nil {
 				panic(err)
@@ -702,16 +703,16 @@ func (s *SwapExecutor) TryRollbackSwapTwo(
 }
 
 func (s *SwapExecutor) TryForceSwapThree(
-	swapAction *ExchangeModel.SwapAction,
-	swapChain ExchangeModel.SwapChainEntity,
-	swapTwoOrder ExchangeModel.BinanceOrder,
+	swapAction *model.SwapAction,
+	swapChain model.SwapChainEntity,
+	swapTwoOrder model.BinanceOrder,
 	asset string,
 ) error {
 	if !swapChain.IsSSB() && !swapChain.IsSBS() && !swapChain.IsSBB() {
 		return errors.New("Swap chain type is not supported")
 	}
 
-	minSwapRollbackPercent := ExchangeModel.Percent(0.75)
+	minSwapRollbackPercent := model.Percent(0.75)
 
 	// pre-validate rollback...
 	swapPair, err := s.SwapRepository.GetSwapPairBySymbol(swapAction.SwapThreeSymbol)
@@ -786,7 +787,7 @@ func (s *SwapExecutor) TryForceSwapThree(
 		percent = s.Formatter.ComparePercentage(swapAction.StartQuantity, predictedEndQty) - 100.00
 
 		if percent.Gte(minSwapRollbackPercent) {
-			var binanceOrder ExchangeModel.BinanceOrder
+			var binanceOrder model.BinanceOrder
 
 			// todo: find required quantity in order book
 
@@ -838,7 +839,7 @@ func (s *SwapExecutor) TryForceSwapThree(
 			swapAction.SwapThreePrice = binanceOrder.Price
 			swapAction.SwapThreeSymbol = binanceOrder.Symbol
 			swapAction.SwapThreeExternalId = &binanceOrder.OrderId
-			swapAction.Status = ExchangeModel.SwapActionStatusSuccess
+			swapAction.Status = model.SwapActionStatusSuccess
 			err = s.SwapRepository.UpdateSwapAction(*swapAction)
 			if err != nil {
 				panic(err)

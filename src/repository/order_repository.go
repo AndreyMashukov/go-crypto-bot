@@ -6,31 +6,31 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/redis/go-redis/v9"
-	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/src/model"
+	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"log"
 	"strings"
 	"time"
 )
 
 type OrderUpdaterInterface interface {
-	Update(order ExchangeModel.Order) error
+	Update(order model.Order) error
 }
 
 type OrderCachedReaderInterface interface {
-	GetOpenedOrderCached(symbol string, operation string) (ExchangeModel.Order, error)
+	GetOpenedOrderCached(symbol string, operation string) (model.Order, error)
 }
 
 type OrderStorageInterface interface {
-	Create(order ExchangeModel.Order) (*int64, error)
-	Update(order ExchangeModel.Order) error
+	Create(order model.Order) (*int64, error)
+	Update(order model.Order) error
 	DeleteManualOrder(symbol string)
-	Find(id int64) (ExchangeModel.Order, error)
-	GetClosesOrderList(buyOrder ExchangeModel.Order) []ExchangeModel.Order
-	DeleteBinanceOrder(order ExchangeModel.BinanceOrder)
-	GetOpenedOrderCached(symbol string, operation string) (ExchangeModel.Order, error)
-	GetManualOrder(symbol string) *ExchangeModel.ManualOrder
-	SetBinanceOrder(order ExchangeModel.BinanceOrder)
-	GetBinanceOrder(symbol string, operation string) *ExchangeModel.BinanceOrder
+	Find(id int64) (model.Order, error)
+	GetClosesOrderList(buyOrder model.Order) []model.Order
+	DeleteBinanceOrder(order model.BinanceOrder)
+	GetOpenedOrderCached(symbol string, operation string) (model.Order, error)
+	GetManualOrder(symbol string) *model.ManualOrder
+	SetBinanceOrder(order model.BinanceOrder)
+	GetBinanceOrder(symbol string, operation string) *model.BinanceOrder
 	LockBuy(symbol string, seconds int64)
 	HasBuyLock(symbol string) bool
 }
@@ -39,25 +39,25 @@ type OrderRepository struct {
 	DB         *sql.DB
 	RDB        *redis.Client
 	Ctx        *context.Context
-	CurrentBot *ExchangeModel.Bot
+	CurrentBot *model.Bot
 }
 
-func (o *OrderRepository) getOpenedOrderCacheKey(symbol string, operation string) string {
+func (repo *OrderRepository) getOpenedOrderCacheKey(symbol string, operation string) string {
 	return fmt.Sprintf(
 		"opened-order-%s-%s-bot-%d",
 		symbol,
 		strings.ToLower(operation),
-		o.CurrentBot.Id,
+		repo.CurrentBot.Id,
 	)
 }
 
-func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation string) (ExchangeModel.Order, error) {
+func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation string) (model.Order, error) {
 	res := repo.RDB.Get(*repo.Ctx, repo.getOpenedOrderCacheKey(symbol, operation)).Val()
 	if len(res) > 0 {
-		var dto ExchangeModel.Order
-		json.Unmarshal([]byte(res), &dto)
+		var dto model.Order
+		err := json.Unmarshal([]byte(res), &dto)
 
-		if dto.ExecutedQuantity > 0 {
+		if err == nil && dto.ExecutedQuantity > 0 {
 			return dto, nil
 		}
 	}
@@ -74,12 +74,12 @@ func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation strin
 	return order, nil
 }
 
-func (repo *OrderRepository) DeleteOpenedOrderCache(order ExchangeModel.Order) {
+func (repo *OrderRepository) DeleteOpenedOrderCache(order model.Order) {
 	repo.RDB.Del(*repo.Ctx, repo.getOpenedOrderCacheKey(order.Symbol, order.Operation)).Val()
 }
 
-func (repo *OrderRepository) GetOpenedOrder(symbol string, operation string) (ExchangeModel.Order, error) {
-	var order ExchangeModel.Order
+func (repo *OrderRepository) GetOpenedOrder(symbol string, operation string) (model.Order, error) {
+	var order model.Order
 
 	err := repo.DB.QueryRow(`
 		SELECT 
@@ -101,7 +101,8 @@ func (repo *OrderRepository) GetOpenedOrder(symbol string, operation string) (Ex
 			o.commission_asset as CommissionAsset,
 			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
 			o.swap as Swap,
-			o.extra_charge_options as ExtraChargeOptions
+			o.extra_charge_options as ExtraChargeOptions,
+			o.profit_options as ProfitOptions
 		FROM orders o
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
 		WHERE o.status = ? AND o.symbol = ? AND o.operation = ? AND o.bot_id = ?
@@ -130,6 +131,7 @@ func (repo *OrderRepository) GetOpenedOrder(symbol string, operation string) (Ex
 		&order.SoldQuantity,
 		&order.Swap,
 		&order.ExtraChargeOptions,
+		&order.ProfitOptions,
 	)
 
 	if err != nil {
@@ -139,7 +141,7 @@ func (repo *OrderRepository) GetOpenedOrder(symbol string, operation string) (Ex
 	return order, nil
 }
 
-func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
+func (repo *OrderRepository) Create(order model.Order) (*int64, error) {
 	res, err := repo.DB.Exec(`
 		INSERT INTO orders SET
 	  		symbol = ?,
@@ -158,6 +160,7 @@ func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
 			commission = ?,
 			commission_asset = ?,
 			extra_charge_options = ?,
+			profit_options = ?,
 			bot_id = ?
 	`,
 		order.Symbol,
@@ -176,6 +179,7 @@ func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
 		order.Commission,
 		order.CommissionAsset,
 		order.ExtraChargeOptions,
+		order.ProfitOptions,
 		repo.CurrentBot.Id,
 	)
 
@@ -190,7 +194,7 @@ func (repo *OrderRepository) Create(order ExchangeModel.Order) (*int64, error) {
 	return &lastId, err
 }
 
-func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
+func (repo *OrderRepository) Update(order model.Order) error {
 	repo.DeleteOpenedOrderCache(order)
 	_, err := repo.DB.Exec(`
 		UPDATE orders o SET
@@ -210,7 +214,8 @@ func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
 			o.commission = ?,
 			o.commission_asset = ?,
 			o.swap = ?,
-			o.extra_charge_options = ?
+			o.extra_charge_options = ?,
+			o.profit_options = ?
 		WHERE o.id = ? AND o.bot_id = ?
 	`,
 		order.Symbol,
@@ -230,6 +235,7 @@ func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
 		order.CommissionAsset,
 		order.Swap,
 		order.ExtraChargeOptions,
+		order.ProfitOptions,
 		order.Id,
 		repo.CurrentBot.Id,
 	)
@@ -242,8 +248,8 @@ func (repo *OrderRepository) Update(order ExchangeModel.Order) error {
 	return nil
 }
 
-func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
-	var order ExchangeModel.Order
+func (repo *OrderRepository) Find(id int64) (model.Order, error) {
+	var order model.Order
 
 	err := repo.DB.QueryRow(`
 		SELECT 
@@ -265,7 +271,8 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 			o.commission_asset as CommissionAsset,
 			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
 			o.swap as Swap,
-			o.extra_charge_options as ExtraChargeOptions
+			o.extra_charge_options as ExtraChargeOptions,
+			o.profit_options as ProfitOptions
 		FROM orders o
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
 		WHERE o.id = ? AND o.bot_id = ?
@@ -290,6 +297,7 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 		&order.SoldQuantity,
 		&order.Swap,
 		&order.ExtraChargeOptions,
+		&order.ProfitOptions,
 	)
 
 	if err != nil {
@@ -299,7 +307,7 @@ func (repo *OrderRepository) Find(id int64) (ExchangeModel.Order, error) {
 	return order, nil
 }
 
-func (repo *OrderRepository) GetTrades() []ExchangeModel.OrderTrade {
+func (repo *OrderRepository) GetTrades() []model.OrderTrade {
 	res, err := repo.DB.Query(`
 		SELECT
 			trade.id as OrderId,
@@ -325,10 +333,10 @@ func (repo *OrderRepository) GetTrades() []ExchangeModel.OrderTrade {
 		log.Fatal(err)
 	}
 
-	list := make([]ExchangeModel.OrderTrade, 0)
+	list := make([]model.OrderTrade, 0)
 
 	for res.Next() {
-		var orderTrade ExchangeModel.OrderTrade
+		var orderTrade model.OrderTrade
 		err := res.Scan(
 			&orderTrade.OrderId,
 			&orderTrade.Open,
@@ -354,7 +362,7 @@ func (repo *OrderRepository) GetTrades() []ExchangeModel.OrderTrade {
 	return list
 }
 
-func (repo *OrderRepository) GetList() []ExchangeModel.Order {
+func (repo *OrderRepository) GetList() []model.Order {
 	res, err := repo.DB.Query(`
 		SELECT
 		    o.id as Id, 
@@ -375,7 +383,8 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 			o.commission_asset as CommissionAsset,
 			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
 			o.swap as Swap,
-			o.extra_charge_options as ExtraChargeOptions
+			o.extra_charge_options as ExtraChargeOptions,
+			o.profit_options as ProfitOptions
 		FROM orders o 
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
 		WHERE o.bot_id = ?
@@ -387,10 +396,10 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 		log.Fatal(err)
 	}
 
-	list := make([]ExchangeModel.Order, 0)
+	list := make([]model.Order, 0)
 
 	for res.Next() {
-		var order ExchangeModel.Order
+		var order model.Order
 		err := res.Scan(
 			&order.Id,
 			&order.Symbol,
@@ -411,6 +420,7 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 			&order.SoldQuantity,
 			&order.Swap,
 			&order.ExtraChargeOptions,
+			&order.ProfitOptions,
 		)
 
 		if err != nil {
@@ -423,7 +433,7 @@ func (repo *OrderRepository) GetList() []ExchangeModel.Order {
 	return list
 }
 
-func (repo *OrderRepository) GetClosesOrderList(buyOrder ExchangeModel.Order) []ExchangeModel.Order {
+func (repo *OrderRepository) GetClosesOrderList(buyOrder model.Order) []model.Order {
 	res, err := repo.DB.Query(`
 		SELECT
 		    o.id as Id, 
@@ -444,7 +454,8 @@ func (repo *OrderRepository) GetClosesOrderList(buyOrder ExchangeModel.Order) []
 			o.commission_asset as CommissionAsset,
 			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
 			o.swap as Swap,
-			o.extra_charge_options as ExtraChargeOptions
+			o.extra_charge_options as ExtraChargeOptions,
+			o.profit_options as ProfitOptions
 		FROM orders o 
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
 		WHERE o.bot_id = ? AND o.closes_order = ? AND o.operation = ?
@@ -456,10 +467,10 @@ func (repo *OrderRepository) GetClosesOrderList(buyOrder ExchangeModel.Order) []
 		log.Fatal(err)
 	}
 
-	list := make([]ExchangeModel.Order, 0)
+	list := make([]model.Order, 0)
 
 	for res.Next() {
-		var order ExchangeModel.Order
+		var order model.Order
 		err := res.Scan(
 			&order.Id,
 			&order.Symbol,
@@ -480,6 +491,7 @@ func (repo *OrderRepository) GetClosesOrderList(buyOrder ExchangeModel.Order) []
 			&order.SoldQuantity,
 			&order.Swap,
 			&order.ExtraChargeOptions,
+			&order.ProfitOptions,
 		)
 
 		if err != nil {
@@ -492,7 +504,7 @@ func (repo *OrderRepository) GetClosesOrderList(buyOrder ExchangeModel.Order) []
 	return list
 }
 
-func (repo *OrderRepository) SetBinanceOrder(order ExchangeModel.BinanceOrder) {
+func (repo *OrderRepository) SetBinanceOrder(order model.BinanceOrder) {
 	encoded, _ := json.Marshal(order)
 	repo.RDB.Set(*repo.Ctx, fmt.Sprintf(
 		"binance-order-%s-%s-bot-%d",
@@ -502,7 +514,7 @@ func (repo *OrderRepository) SetBinanceOrder(order ExchangeModel.BinanceOrder) {
 	), string(encoded), time.Hour*24*90)
 }
 
-func (repo *OrderRepository) GetBinanceOrder(symbol string, operation string) *ExchangeModel.BinanceOrder {
+func (repo *OrderRepository) GetBinanceOrder(symbol string, operation string) *model.BinanceOrder {
 	res := repo.RDB.Get(*repo.Ctx, fmt.Sprintf(
 		"binance-order-%s-%s-bot-%d",
 		symbol,
@@ -513,13 +525,17 @@ func (repo *OrderRepository) GetBinanceOrder(symbol string, operation string) *E
 		return nil
 	}
 
-	var dto ExchangeModel.BinanceOrder
-	json.Unmarshal([]byte(res), &dto)
+	var dto model.BinanceOrder
+	err := json.Unmarshal([]byte(res), &dto)
+
+	if err != nil {
+		return nil
+	}
 
 	return &dto
 }
 
-func (repo *OrderRepository) DeleteBinanceOrder(order ExchangeModel.BinanceOrder) {
+func (repo *OrderRepository) DeleteBinanceOrder(order model.BinanceOrder) {
 	repo.RDB.Del(*repo.Ctx, fmt.Sprintf(
 		"binance-order-%s-%s-bot-%d",
 		order.Symbol,
@@ -528,7 +544,7 @@ func (repo *OrderRepository) DeleteBinanceOrder(order ExchangeModel.BinanceOrder
 	)).Val()
 }
 
-func (repo *OrderRepository) GetManualOrder(symbol string) *ExchangeModel.ManualOrder {
+func (repo *OrderRepository) GetManualOrder(symbol string) *model.ManualOrder {
 	res := repo.RDB.Get(*repo.Ctx, fmt.Sprintf(
 		"manual-order-%s-bot-%d",
 		strings.ToLower(symbol),
@@ -538,13 +554,17 @@ func (repo *OrderRepository) GetManualOrder(symbol string) *ExchangeModel.Manual
 		return nil
 	}
 
-	var dto ExchangeModel.ManualOrder
-	json.Unmarshal([]byte(res), &dto)
+	var dto model.ManualOrder
+	err := json.Unmarshal([]byte(res), &dto)
+
+	if err != nil {
+		return nil
+	}
 
 	return &dto
 }
 
-func (repo *OrderRepository) SetManualOrder(order ExchangeModel.ManualOrder) {
+func (repo *OrderRepository) SetManualOrder(order model.ManualOrder) {
 	encoded, _ := json.Marshal(order)
 	repo.RDB.Set(*repo.Ctx, fmt.Sprintf(
 		"manual-order-%s-bot-%d",

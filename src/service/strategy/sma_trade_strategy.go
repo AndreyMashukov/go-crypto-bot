@@ -1,17 +1,17 @@
-package service
+package strategy
 
 import (
-	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/src/model"
-	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/model"
+	"gitlab.com/open-soft/go-crypto-bot/src/repository"
 	"math"
 	"time"
 )
 
 type SmaTradeStrategy struct {
-	ExchangeRepository ExchangeRepository.ExchangeRepository
+	ExchangeRepository repository.ExchangeRepository
 }
 
-func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decision {
+func (s *SmaTradeStrategy) Decide(trade model.Trade) model.Decision {
 	sellPeriod := 15
 	buyPeriod := 60
 	maxPeriod := int(math.Max(float64(sellPeriod), float64(buyPeriod)))
@@ -20,8 +20,8 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 	list := s.ExchangeRepository.TradeList(trade.Symbol)
 
 	if len(list) < maxPeriod {
-		return ExchangeModel.Decision{
-			StrategyName: ExchangeModel.SmaTradeStrategyName,
+		return model.Decision{
+			StrategyName: model.SmaTradeStrategyName,
 			Score:        30.00,
 			Operation:    "HOLD",
 			Timestamp:    time.Now().Unix(),
@@ -42,8 +42,8 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 
 	// todo: buy operation is disabled
 	if buyIndicator > 150 && buySma < trade.Price {
-		return ExchangeModel.Decision{
-			StrategyName: ExchangeModel.SmaTradeStrategyName,
+		return model.Decision{
+			StrategyName: model.SmaTradeStrategyName,
 			Score:        50.00,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
@@ -55,8 +55,8 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 	sellIndicator := sellVolumeS / buyVolumeS
 
 	if sellIndicator > 50 && sellSma > trade.Price {
-		return ExchangeModel.Decision{
-			StrategyName: ExchangeModel.SmaTradeStrategyName,
+		return model.Decision{
+			StrategyName: model.SmaTradeStrategyName,
 			Score:        50.00,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
@@ -65,8 +65,8 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 		}
 	}
 
-	return ExchangeModel.Decision{
-		StrategyName: ExchangeModel.SmaTradeStrategyName,
+	return model.Decision{
+		StrategyName: model.SmaTradeStrategyName,
 		Score:        50.00,
 		Operation:    "HOLD",
 		Timestamp:    time.Now().Unix(),
@@ -75,7 +75,7 @@ func (s *SmaTradeStrategy) Decide(trade ExchangeModel.Trade) ExchangeModel.Decis
 	}
 }
 
-func (s *SmaTradeStrategy) calculateSMA(trades []ExchangeModel.Trade) float64 {
+func (s *SmaTradeStrategy) calculateSMA(trades []model.Trade) float64 {
 	var sum float64
 
 	slice := trades
@@ -87,7 +87,7 @@ func (s *SmaTradeStrategy) calculateSMA(trades []ExchangeModel.Trade) float64 {
 	return sum / float64(len(slice))
 }
 
-func (s *SmaTradeStrategy) getByAndSellVolume(trades []ExchangeModel.Trade) (float64, float64) {
+func (s *SmaTradeStrategy) getByAndSellVolume(trades []model.Trade) (float64, float64) {
 	var buyVolume float64
 	var sellVolume float64
 

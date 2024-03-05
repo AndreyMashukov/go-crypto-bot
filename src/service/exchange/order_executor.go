@@ -31,7 +31,7 @@ type OrderExecutor struct {
 	CallbackManager        service.CallbackManagerInterface
 	Formatter              *utils.Formatter
 	SwapSellOrderDays      int64
-	SwapEnabled            bool
+	BotService             service.BotServiceInterface
 	SwapProfitPercent      float64
 	TurboSwapProfitPercent float64
 	Lock                   map[string]bool
@@ -409,11 +409,11 @@ func (m *OrderExecutor) Sell(tradeLimit model.TradeLimit, opened model.Order, sy
 }
 
 func (m *OrderExecutor) ProcessSwap(order model.Order) bool {
-	if m.SwapEnabled && order.IsSwap() {
+	if m.BotService.IsSwapEnabled() && order.IsSwap() {
 		log.Printf("[%s] Swap Order [%d] Mode: processing...", order.Symbol, order.Id)
 		m.SwapExecutor.Execute(order)
 		return true
-	} else if m.SwapEnabled {
+	} else if m.BotService.IsSwapEnabled() {
 		swapAction, err := m.SwapRepository.GetActiveSwapAction(order)
 		if err == nil && swapAction.OrderId == order.Id {
 			log.Printf("[%s] Swap Recovered for Order [%d] Mode: processing...", order.Symbol, order.Id)
@@ -427,7 +427,7 @@ func (m *OrderExecutor) ProcessSwap(order model.Order) bool {
 
 func (m *OrderExecutor) TrySwap(order model.Order) {
 	swapChain := m.SwapRepository.GetSwapChainCache(order.GetBaseAsset())
-	if swapChain != nil && m.SwapEnabled {
+	if swapChain != nil && m.BotService.IsSwapEnabled() {
 		possibleSwaps := m.SwapRepository.GetSwapChains(order.GetBaseAsset())
 
 		if len(possibleSwaps) == 0 {
@@ -549,7 +549,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 
 			openedBuyPosition, openedBuyPositionErr := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
 
-			if kline != nil && binanceOrder.IsSell() && binanceOrder.IsNew() && m.SwapEnabled {
+			if kline != nil && binanceOrder.IsSell() && binanceOrder.IsNew() && m.BotService.IsSwapEnabled() {
 				// Try arbitrage for long orders >= 4 hours and with profit < -1.00%
 				if openedBuyPositionErr == nil {
 					swapChain := m.SwapRepository.GetSwapChainCache(openedBuyPosition.GetBaseAsset())

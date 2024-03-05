@@ -43,6 +43,21 @@ docker logs -f {container_id} # see logs
 ```
 
 #### Using Bot API for setting up trading symbols (trade limits) 
+UPDATE BOT CONFIG
+```bash
+curl --location --request PUT 'http://localhost:8090/bot/update?botUuid={BOT_UUID}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "isMasterBot": true,
+    "isSwapEnabled": true
+}'
+```
+**What is Master bot?**
+> If you use multiple bots on one machine, you can set one of them as `master bot` - master bot is able to update some extra data which is static and can be used by others bots
+
+**What is swap?**
+> We call `SWAP` is triangular arbitrage, if `SWAP` is enabled, bot will try to do triangular arbitrage with negative profit positions (to gain coin amount)
+ 
 CREATE YOUR FIRST TRADE LIMIT (Symbol) `PERPUSDT`
 ```bash
 curl --location --request POST 'http://localhost:8090/trade/limit/create?botUuid={BOT_UUID}' \

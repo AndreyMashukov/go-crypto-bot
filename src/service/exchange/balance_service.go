@@ -1,11 +1,11 @@
-package service
+package exchange
 
 import (
 	"context"
 	"fmt"
 	"github.com/redis/go-redis/v9"
-	ExchangeClient "github.com/AndreyMashukov/go-crypto-bot/server/src/client"
-	ExchangeModel "github.com/AndreyMashukov/go-crypto-bot/server/src/model"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"log"
 	"strconv"
 	"time"
@@ -19,8 +19,8 @@ type BalanceServiceInterface interface {
 type BalanceService struct {
 	RDB        *redis.Client
 	Ctx        *context.Context
-	CurrentBot *ExchangeModel.Bot
-	Binance    *ExchangeClient.Binance
+	CurrentBot *model.Bot
+	Binance    *client.Binance
 }
 
 func (b *BalanceService) InvalidateBalanceCache(asset string) {

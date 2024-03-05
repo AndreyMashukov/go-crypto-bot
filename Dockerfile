@@ -1,7 +1,7 @@
 FROM amashukov/golang:1.21.1-ml
 
 ENV CGO_ENABLED=1
-ENV PKG_CONFIG_PATH=/go/src/app/pkg-config
+ENV PKG_CONFIG_PATH=/go/src/app/src/service/ml/pkg-config
 
 WORKDIR /go/src/app
 

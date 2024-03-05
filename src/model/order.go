@@ -3,11 +3,14 @@ package model
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
 	"math"
 	"sort"
 	"strings"
 	"time"
 )
+
+const MinProfitPercent = 0.50
 
 type Percent float64
 
@@ -56,6 +59,12 @@ type TgOrderNotification struct {
 	Details   string  `json:"details"`
 }
 
+type ProfitPositionInterface interface {
+	GetPositionTime() PositionTime
+	GetProfitOptions() ProfitOptions
+	GetSymbol() string
+}
+
 type Order struct {
 	Id                 int64              `json:"id"`
 	Symbol             string             `json:"symbol"`
@@ -75,6 +84,7 @@ type Order struct {
 	CommissionAsset    *string            `json:"commissionAsset"`
 	SoldQuantity       *float64           `json:"soldQuantity"`
 	Swap               bool               `json:"swap"`
+	ProfitOptions      ProfitOptions      `json:"profitOptions"`
 	ExtraChargeOptions ExtraChargeOptions `json:"extraChargeOptions"`
 }
 
@@ -114,10 +124,10 @@ func (o *Order) GetBaseAsset() string {
 	return strings.ReplaceAll(o.Symbol, "USDT", "")
 }
 
-func (o *Order) GetHoursOpened() int64 {
+func (o Order) GetPositionTime() PositionTime {
 	date, _ := time.Parse("2006-01-02 15:04:05", o.CreatedAt)
 
-	return (time.Now().Unix() - date.Unix()) / 3600
+	return PositionTime(time.Now().Unix() - date.Unix())
 }
 
 func (o *Order) GetProfitPercent(currentPrice float64) Percent {
@@ -128,12 +138,12 @@ func (o *Order) GetQuoteProfit(sellPrice float64) float64 {
 	return (sellPrice - o.Price) * o.GetRemainingToSellQuantity()
 }
 
-func (o *Order) GetMinClosePrice(limit TradeLimit) float64 {
-	return o.Price * (100 + limit.GetMinProfitPercent().Value()) / 100
+func (o Order) GetProfitOptions() ProfitOptions {
+	return o.ProfitOptions
 }
 
 func (o *Order) GetManualMinClosePrice() float64 {
-	return o.Price * (100 + 0.50) / 100
+	return o.Price * (100 + MinProfitPercent) / 100
 }
 
 func (o *Order) IsSell() bool {
@@ -158,6 +168,9 @@ func (o *Order) GetRemainingToSellQuantity() float64 {
 
 func (o *Order) IsSwap() bool {
 	return o.Swap
+}
+func (o Order) GetSymbol() string {
+	return o.Symbol
 }
 
 type Position struct {
@@ -204,4 +217,68 @@ func (e *ExtraChargeOptions) Scan(src interface{}) error {
 func (e ExtraChargeOptions) Value() (driver.Value, error) {
 	jsonV, err := json.Marshal(e)
 	return string(jsonV), err
+}
+
+type ProfitOptions []ProfitOption
+
+const ProfitOptionUnitMinute = "i"
+const ProfitOptionUnitHour = "h"
+const ProfitOptionUnitDay = "d"
+const ProfitOptionUnitMonth = "m"
+
+type ProfitOption struct {
+	Index           int64   `json:"index"`
+	IsTriggerOption bool    `json:"isTriggerOption"`
+	OptionValue     float64 `json:"optionValue"`
+	OptionUnit      string  `json:"optionUnit"`
+	OptionPercent   Percent `json:"optionPercent"`
+}
+
+func (p *ProfitOptions) Scan(src interface{}) error {
+	return json.Unmarshal(src.([]byte), &p)
+}
+func (p ProfitOptions) Value() (driver.Value, error) {
+	jsonV, err := json.Marshal(p)
+	return string(jsonV), err
+}
+func (p ProfitOption) IsMinutely() bool {
+	return p.OptionUnit == ProfitOptionUnitMinute
+}
+func (p ProfitOption) IsHourly() bool {
+	return p.OptionUnit == ProfitOptionUnitHour
+}
+func (p ProfitOption) IsDaily() bool {
+	return p.OptionUnit == ProfitOptionUnitDay
+}
+func (p ProfitOption) IsMonthly() bool {
+	return p.OptionUnit == ProfitOptionUnitMonth
+}
+func (p ProfitOption) GetPositionTime() (PositionTime, error) {
+	switch p.OptionUnit {
+	case ProfitOptionUnitMinute:
+		return PositionTime(p.OptionValue * 60), nil
+	case ProfitOptionUnitHour:
+		return PositionTime(p.OptionValue * 3600), nil
+	case ProfitOptionUnitDay:
+		return PositionTime(p.OptionValue * 3600 * 24), nil
+	case ProfitOptionUnitMonth:
+		return PositionTime(p.OptionValue * 3600 * 24 * 30), nil
+	}
+
+	return PositionTime(0.00), errors.New("position time is invalid")
+}
+
+type PositionTime int64
+
+func (p PositionTime) GetMinutes() float64 {
+	return float64(p) / float64(60)
+}
+func (p PositionTime) GetHours() float64 {
+	return float64(p) / float64(3600)
+}
+func (p PositionTime) GetDays() float64 {
+	return float64(p) / float64(3600*24)
+}
+func (p PositionTime) GetMonths() float64 {
+	return float64(p) / float64(3600*24*30)
 }

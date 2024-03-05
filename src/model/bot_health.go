@@ -1,8 +1,6 @@
 package model
 
-import (
-	"github.com/rafacas/sysstats"
-)
+import "github.com/rafacas/sysstats"
 
 const MlStatusLearning = "learning"
 const MlStatusReady = "ready"

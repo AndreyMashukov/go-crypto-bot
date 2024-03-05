@@ -11,3 +11,8 @@ type UpdateOrderExtraChargeOptions struct {
 	OrderId            int64              `json:"orderId"`
 	ExtraChargeOptions ExtraChargeOptions `json:"extraChargeOptions"`
 }
+
+type UpdateOrderProfitOptions struct {
+	OrderId       int64         `json:"orderId"`
+	ProfitOptions ProfitOptions `json:"profitOptions"`
+}

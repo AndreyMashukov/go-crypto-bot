@@ -3,15 +3,15 @@ package service
 import (
 	"fmt"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
-	ExchangeRepository "github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
 	"slices"
 	"strings"
 	"time"
 )
 
 type ChartService struct {
-	ExchangeRepository *ExchangeRepository.ExchangeRepository
-	OrderRepository    *ExchangeRepository.OrderRepository
+	ExchangeRepository *repository.ExchangeRepository
+	OrderRepository    *repository.OrderRepository
 }
 
 type ChartResult struct {

@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/redis/go-redis/v9"
-	model "github.com/AndreyMashukov/go-crypto-bot/server/src/model"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"log"
 	"time"
 )

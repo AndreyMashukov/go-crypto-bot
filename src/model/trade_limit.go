@@ -1,6 +1,7 @@
 package model
 
 import (
+	"log"
 	"sort"
 	"strings"
 )
@@ -32,13 +33,13 @@ type TradeLimit struct {
 	MinPrice                     float64            `json:"minPrice"`
 	MinQuantity                  float64            `json:"minQuantity"`
 	MinNotional                  float64            `json:"minNotional"`
-	MinProfitPercent             float64            `json:"minProfitPercent"`
 	IsEnabled                    bool               `json:"isEnabled"`
 	MinPriceMinutesPeriod        int64              `json:"minPriceMinutesPeriod"`        //200,
 	FrameInterval                string             `json:"frameInterval"`                //"2h",
 	FramePeriod                  int64              `json:"framePeriod"`                  //20,
 	BuyPriceHistoryCheckInterval string             `json:"buyPriceHistoryCheckInterval"` //"1d",
 	BuyPriceHistoryCheckPeriod   int64              `json:"buyPriceHistoryCheckPeriod"`   //14,
+	ProfitOptions                ProfitOptions      `json:"profitOptions"`
 	ExtraChargeOptions           ExtraChargeOptions `json:"extraChargeOptions"`
 }
 
@@ -62,12 +63,22 @@ func (t TradeLimit) GetBaseAsset() string {
 	return strings.ReplaceAll(t.Symbol, "USDT", "")
 }
 
-func (t *TradeLimit) GetMinProfitPercent() Percent {
-	if t.MinProfitPercent < 0 {
-		return Percent(t.MinProfitPercent * -1)
-	} else {
-		return Percent(t.MinProfitPercent)
+func (t TradeLimit) GetPositionTime() PositionTime {
+	for index, option := range t.ProfitOptions {
+		if option.IsTriggerOption {
+			positionTime, err := option.GetPositionTime()
+			if err == nil {
+				return positionTime
+			} else {
+				log.Printf("[%s] Trade Limit: profit position [%d] time is invalid", t.Symbol, index)
+			}
+		}
 	}
+
+	return PositionTime(3600)
+}
+func (t TradeLimit) GetProfitOptions() ProfitOptions {
+	return t.ProfitOptions
 }
 
 func (t *TradeLimit) GetBuyOnFallPercent(order Order, kLine KLine) Percent {
@@ -95,8 +106,4 @@ func (t *TradeLimit) GetBuyOnFallPercent(order Order, kLine KLine) Percent {
 	} else {
 		return buyOnFallPercent
 	}
-}
-
-func (t *TradeLimit) GetClosePrice(buyPrice float64) float64 {
-	return buyPrice * (100 + t.GetMinProfitPercent().Value()) / 100
 }

@@ -8,13 +8,14 @@ import (
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/ml"
 	"runtime"
 	"time"
 )
 
 type HealthService struct {
 	ExchangeRepository *repository.ExchangeRepository
-	PythonMLBridge     *PythonMLBridge
+	PythonMLBridge     *ml.PythonMLBridge
 	DB                 *sql.DB
 	RDB                *redis.Client
 	Ctx                *context.Context

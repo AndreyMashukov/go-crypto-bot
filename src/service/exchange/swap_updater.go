@@ -1,16 +1,17 @@
-package service
+package exchange
 
 import (
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
 	"time"
 )
 
 type SwapUpdater struct {
 	Binance            *client.Binance
 	ExchangeRepository *repository.ExchangeRepository
-	Formatter          *Formatter
+	Formatter          *utils.Formatter
 }
 
 func (s SwapUpdater) UpdateSwapPair(swapPair model.SwapPair) {

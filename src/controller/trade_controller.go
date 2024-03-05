@@ -4,15 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
-	ExchangeRepository "github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
-	"github.com/AndreyMashukov/go-crypto-bot/server/src/service"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/exchange"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/validator"
 	"net/http"
 )
 
 type TradeController struct {
-	CurrentBot         *model.Bot
-	ExchangeRepository *ExchangeRepository.ExchangeRepository
-	TradeStack         *service.TradeStack
+	CurrentBot          *model.Bot
+	ExchangeRepository  *repository.ExchangeRepository
+	TradeStack          *exchange.TradeStack
+	TradeLimitValidator *validator.TradeLimitValidator
 }
 
 func (t *TradeController) UpdateTradeLimitAction(w http.ResponseWriter, req *http.Request) {
@@ -46,6 +48,14 @@ func (t *TradeController) UpdateTradeLimitAction(w http.ResponseWriter, req *htt
 	err := json.NewDecoder(req.Body).Decode(&tradeLimit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	violation := t.TradeLimitValidator.Validate(tradeLimit)
+
+	if violation != nil {
+		http.Error(w, violation.Error(), http.StatusBadRequest)
 
 		return
 	}
@@ -108,6 +118,14 @@ func (t *TradeController) CreateTradeLimitAction(w http.ResponseWriter, req *htt
 	err := json.NewDecoder(req.Body).Decode(&tradeLimit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	violation := t.TradeLimitValidator.Validate(tradeLimit)
+
+	if violation != nil {
+		http.Error(w, violation.Error(), http.StatusBadRequest)
 
 		return
 	}

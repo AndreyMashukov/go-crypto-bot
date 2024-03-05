@@ -393,3 +393,20 @@ func (l *LossSecurityMock) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPri
 	args := l.Called(limit, buyPrice)
 	return args.Get(0).(float64)
 }
+
+type ProfitServiceMock struct {
+	mock.Mock
+}
+
+func (p *ProfitServiceMock) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice float64) float64 {
+	args := p.Called(limit, buyPrice)
+	return args.Get(0).(float64)
+}
+func (p *ProfitServiceMock) GetMinClosePrice(order model.ProfitPositionInterface, currentPrice float64) float64 {
+	args := p.Called(order, currentPrice)
+	return args.Get(0).(float64)
+}
+func (p *ProfitServiceMock) GetMinProfitPercent(order model.ProfitPositionInterface) model.Percent {
+	args := p.Called(order)
+	return args.Get(0).(model.Percent)
+}

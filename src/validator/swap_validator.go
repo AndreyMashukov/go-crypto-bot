@@ -1,11 +1,12 @@
-package service
+package validator
 
 import (
 	"errors"
 	"fmt"
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
-	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"strings"
 	"time"
 )
@@ -17,8 +18,8 @@ type SwapValidatorInterface interface {
 
 type SwapValidator struct {
 	Binance        client.ExchangePriceAPIInterface
-	SwapRepository ExchangeRepository.SwapBasicRepositoryInterface
-	Formatter      *Formatter
+	SwapRepository repository.SwapBasicRepositoryInterface
+	Formatter      *utils.Formatter
 	SwapMinPercent float64
 }
 

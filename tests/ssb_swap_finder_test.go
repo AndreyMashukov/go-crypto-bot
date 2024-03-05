@@ -6,7 +6,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
-	"gitlab.com/open-soft/go-crypto-bot/src/service"
+	"gitlab.com/open-soft/go-crypto-bot/src/service/exchange"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
+	"gitlab.com/open-soft/go-crypto-bot/src/validator"
 	"os"
 	"testing"
 	"time"
@@ -50,8 +52,8 @@ func TestSwapSellSellBuy(t *testing.T) {
 	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "ETH").Return(options1)
 	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "GBP").Return(options4)
 
-	swapManager := &service.SSBSwapFinder{
-		Formatter:          &service.Formatter{},
+	swapManager := &exchange.SSBSwapFinder{
+		Formatter:          &utils.Formatter{},
 		ExchangeRepository: exchangeRepoMock,
 	}
 
@@ -157,11 +159,11 @@ func TestSwapSellSellBuy(t *testing.T) {
 		},
 	})
 
-	swapChainBuilder := service.SwapChainBuilder{}
-	validator := service.SwapValidator{
+	swapChainBuilder := exchange.SwapChainBuilder{}
+	validator := validator.SwapValidator{
 		Binance:        binance,
 		SwapRepository: swapRepoMock,
-		Formatter:      &service.Formatter{},
+		Formatter:      &utils.Formatter{},
 		SwapMinPercent: 0.1,
 	}
 
@@ -310,13 +312,13 @@ func TestSwapSellSellBuy(t *testing.T) {
 	timeServiceMock.On("WaitSeconds", int64(7)).Times(3)
 	timeServiceMock.On("GetNowDiffMinutes", mock.Anything).Return(0.50)
 
-	executor := service.SwapExecutor{
+	executor := exchange.SwapExecutor{
 		SwapRepository:  swapRepoMock,
 		OrderRepository: orderRepositoryMock,
 		BalanceService:  balanceServiceMock,
 		Binance:         binanceMock,
 		TimeService:     timeServiceMock,
-		Formatter:       &service.Formatter{},
+		Formatter:       &utils.Formatter{},
 	}
 
 	executor.Execute(order)

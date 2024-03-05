@@ -1,9 +1,9 @@
-package service
+package exchange
 
 import (
-	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"log"
 )
 
@@ -16,9 +16,9 @@ type LossSecurityInterface interface {
 type LossSecurity struct {
 	MlEnabled            bool
 	InterpolationEnabled bool
-	Formatter            *Formatter
+	Formatter            *utils.Formatter
 	ExchangeRepository   repository.ExchangeTradeInfoInterface
-	Binance              client.ExchangePriceAPIInterface
+	ProfitService        ProfitServiceInterface
 }
 
 func (l *LossSecurity) IsRiskyBuy(binanceOrder model.BinanceOrder, limit model.TradeLimit) bool {
@@ -43,7 +43,7 @@ func (l *LossSecurity) IsRiskyBuy(binanceOrder model.BinanceOrder, limit model.T
 			fallPercent := model.Percent(100.00 - l.Formatter.ComparePercentage(binanceOrder.Price, kline.Close).Value())
 			minPrice := l.ExchangeRepository.GetPeriodMinPrice(binanceOrder.Symbol, 200)
 
-			cancelFallPercent := model.Percent(0.50)
+			cancelFallPercent := model.Percent(model.MinProfitPercent)
 
 			// If falls more than (min - 0.5%) cancel current
 			if fallPercent.Gte(cancelFallPercent) && minPrice-(minPrice*0.005) > kline.Close {
@@ -122,27 +122,5 @@ func (l *LossSecurity) BuyPriceCorrection(price float64, limit model.TradeLimit)
 }
 
 func (l *LossSecurity) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice float64) float64 {
-	kLines := l.Binance.GetKLinesCached(limit.Symbol, limit.BuyPriceHistoryCheckInterval, limit.BuyPriceHistoryCheckPeriod)
-
-	priceBefore := buyPrice
-
-	for {
-		closePrice := limit.GetClosePrice(buyPrice)
-		var closePriceMetTimes int64 = 0
-		for _, kline := range kLines {
-			if kline.High >= closePrice {
-				closePriceMetTimes++
-			}
-		}
-
-		if float64(closePriceMetTimes) > (float64(limit.BuyPriceHistoryCheckPeriod) * 0.8) {
-			break
-		}
-
-		buyPrice -= limit.MinPrice
-	}
-
-	log.Printf("[%s] Price history check completed: %f -> %f", limit.Symbol, priceBefore, buyPrice)
-
-	return buyPrice
+	return l.ProfitService.CheckBuyPriceOnHistory(limit, buyPrice)
 }

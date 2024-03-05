@@ -6,7 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
-	"gitlab.com/open-soft/go-crypto-bot/src/service"
+	"gitlab.com/open-soft/go-crypto-bot/src/service/exchange"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"sync"
 	"testing"
 	"time"
@@ -26,21 +27,36 @@ func TestSellAction(t *testing.T) {
 	timeService := new(TimeServiceMock)
 	telegramNotificatorMock := new(TelegramNotificatorMock)
 
+	profitServiceMock := new(ProfitServiceMock)
+
 	swapRepository.On("GetSwapChainCache", "ETH").Return(nil)
 
 	lockChannel := make(chan model.Lock)
 
 	lossSecurityMock := new(LossSecurityMock)
 	tradeLimit := model.TradeLimit{
-		Symbol:           "ETHUSDT",
-		MinProfitPercent: 3.1,
-		MinPrice:         0.01,
-		MinQuantity:      0.0001,
+		Symbol: "ETHUSDT",
+		ProfitOptions: model.ProfitOptions{
+			model.ProfitOption{
+				Index:         0,
+				OptionValue:   1,
+				OptionUnit:    model.ProfitOptionUnitMinute,
+				OptionPercent: 3.10,
+			},
+			model.ProfitOption{
+				Index:         1,
+				OptionValue:   2,
+				OptionUnit:    model.ProfitOptionUnitHour,
+				OptionPercent: 2.40,
+			},
+		},
+		MinPrice:    0.01,
+		MinQuantity: 0.0001,
 	}
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
-	orderExecutor := service.OrderExecutor{
-		TradeStack:   &service.TradeStack{},
+	orderExecutor := exchange.OrderExecutor{
+		TradeStack:   &exchange.TradeStack{},
 		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
@@ -53,9 +69,10 @@ func TestSellAction(t *testing.T) {
 		ExchangeRepository: exchangeRepository,
 		SwapRepository:     swapRepository,
 		PriceCalculator:    priceCalculator,
+		ProfitService:      profitServiceMock,
 		SwapExecutor:       swapExecutor,
 		SwapValidator:      swapValidator,
-		Formatter:          &service.Formatter{},
+		Formatter:          &utils.Formatter{},
 		SwapSellOrderDays:  10,
 		SwapEnabled:        true,
 		SwapProfitPercent:  1.50,
@@ -65,7 +82,7 @@ func TestSellAction(t *testing.T) {
 		CallbackManager:    telegramNotificatorMock,
 	}
 
-	go func(orderExecutor *service.OrderExecutor) {
+	go func(orderExecutor *exchange.OrderExecutor) {
 		for {
 			lock := <-lockChannel
 			orderExecutor.TradeLockMutex.Lock()
@@ -162,6 +179,8 @@ func TestSellAction(t *testing.T) {
 
 	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
 
+	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
+
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
 	assertion.Nil(err)
 	assertion.Equal("closed", orderRepository.Updated.Status)
@@ -172,6 +191,7 @@ func TestSellAction(t *testing.T) {
 func TestSellFoundFilled(t *testing.T) {
 	assertion := assert.New(t)
 
+	profitServiceMock := new(ProfitServiceMock)
 	balanceService := new(BalanceServiceMock)
 	binance := new(ExchangeOrderAPIMock)
 	orderRepository := new(OrderStorageMock)
@@ -188,15 +208,28 @@ func TestSellFoundFilled(t *testing.T) {
 	lockChannel := make(chan model.Lock)
 	lossSecurityMock := new(LossSecurityMock)
 	tradeLimit := model.TradeLimit{
-		Symbol:           "ETHUSDT",
-		MinProfitPercent: 3.1,
-		MinPrice:         0.01,
-		MinQuantity:      0.0001,
+		Symbol: "ETHUSDT",
+		ProfitOptions: model.ProfitOptions{
+			model.ProfitOption{
+				Index:         0,
+				OptionValue:   1,
+				OptionUnit:    model.ProfitOptionUnitMinute,
+				OptionPercent: 3.10,
+			},
+			model.ProfitOption{
+				Index:         1,
+				OptionValue:   2,
+				OptionUnit:    model.ProfitOptionUnitHour,
+				OptionPercent: 2.40,
+			},
+		},
+		MinPrice:    0.01,
+		MinQuantity: 0.0001,
 	}
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
-	orderExecutor := service.OrderExecutor{
-		TradeStack:   &service.TradeStack{},
+	orderExecutor := exchange.OrderExecutor{
+		TradeStack:   &exchange.TradeStack{},
 		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
@@ -209,9 +242,10 @@ func TestSellFoundFilled(t *testing.T) {
 		ExchangeRepository: exchangeRepository,
 		SwapRepository:     swapRepository,
 		PriceCalculator:    priceCalculator,
+		ProfitService:      profitServiceMock,
 		SwapExecutor:       swapExecutor,
 		SwapValidator:      swapValidator,
-		Formatter:          &service.Formatter{},
+		Formatter:          &utils.Formatter{},
 		SwapSellOrderDays:  10,
 		SwapEnabled:        true,
 		SwapProfitPercent:  1.50,
@@ -221,7 +255,7 @@ func TestSellFoundFilled(t *testing.T) {
 		CallbackManager:    telegramNotificatorMock,
 	}
 
-	go func(orderExecutor *service.OrderExecutor) {
+	go func(orderExecutor *exchange.OrderExecutor) {
 		for {
 			lock := <-lockChannel
 			orderExecutor.TradeLockMutex.Lock()
@@ -310,6 +344,8 @@ func TestSellFoundFilled(t *testing.T) {
 
 	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
 
+	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
+
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
 	assertion.Nil(err)
 	assertion.Equal("closed", orderRepository.Updated.Status)
@@ -320,6 +356,7 @@ func TestSellFoundFilled(t *testing.T) {
 func TestSellCancelledInProcess(t *testing.T) {
 	assertion := assert.New(t)
 
+	profitServiceMock := new(ProfitServiceMock)
 	balanceService := new(BalanceServiceMock)
 	binance := new(ExchangeOrderAPIMock)
 	orderRepository := new(OrderStorageMock)
@@ -336,15 +373,28 @@ func TestSellCancelledInProcess(t *testing.T) {
 	lockChannel := make(chan model.Lock)
 	lossSecurityMock := new(LossSecurityMock)
 	tradeLimit := model.TradeLimit{
-		Symbol:           "ETHUSDT",
-		MinProfitPercent: 3.1,
-		MinPrice:         0.01,
-		MinQuantity:      0.0001,
+		Symbol: "ETHUSDT",
+		ProfitOptions: model.ProfitOptions{
+			model.ProfitOption{
+				Index:         0,
+				OptionValue:   1,
+				OptionUnit:    model.ProfitOptionUnitMinute,
+				OptionPercent: 3.10,
+			},
+			model.ProfitOption{
+				Index:         1,
+				OptionValue:   2,
+				OptionUnit:    model.ProfitOptionUnitHour,
+				OptionPercent: 2.40,
+			},
+		},
+		MinPrice:    0.01,
+		MinQuantity: 0.0001,
 	}
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
-	orderExecutor := service.OrderExecutor{
-		TradeStack:   &service.TradeStack{},
+	orderExecutor := exchange.OrderExecutor{
+		TradeStack:   &exchange.TradeStack{},
 		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
@@ -357,9 +407,10 @@ func TestSellCancelledInProcess(t *testing.T) {
 		ExchangeRepository: exchangeRepository,
 		SwapRepository:     swapRepository,
 		PriceCalculator:    priceCalculator,
+		ProfitService:      profitServiceMock,
 		SwapExecutor:       swapExecutor,
 		SwapValidator:      swapValidator,
-		Formatter:          &service.Formatter{},
+		Formatter:          &utils.Formatter{},
 		SwapSellOrderDays:  10,
 		SwapEnabled:        true,
 		SwapProfitPercent:  1.50,
@@ -369,7 +420,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 		CallbackManager:    telegramNotificatorMock,
 	}
 
-	go func(orderExecutor *service.OrderExecutor) {
+	go func(orderExecutor *exchange.OrderExecutor) {
 		for {
 			lock := <-lockChannel
 			orderExecutor.TradeLockMutex.Lock()
@@ -455,6 +506,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 	balanceService.On("InvalidateBalanceCache", "USDT").Times(1)
 	balanceService.On("InvalidateBalanceCache", "ETH").Times(1)
 
+	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
 	assertion.Error(errors.New("Order is cancelled"), err)
 }
@@ -462,6 +514,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 func TestSellQueryFail(t *testing.T) {
 	assertion := assert.New(t)
 
+	profitServiceMock := new(ProfitServiceMock)
 	balanceService := new(BalanceServiceMock)
 	binance := new(ExchangeOrderAPIMock)
 	orderRepository := new(OrderStorageMock)
@@ -478,15 +531,28 @@ func TestSellQueryFail(t *testing.T) {
 	lockChannel := make(chan model.Lock)
 	lossSecurityMock := new(LossSecurityMock)
 	tradeLimit := model.TradeLimit{
-		Symbol:           "ETHUSDT",
-		MinProfitPercent: 3.1,
-		MinPrice:         0.01,
-		MinQuantity:      0.0001,
+		Symbol: "ETHUSDT",
+		ProfitOptions: model.ProfitOptions{
+			model.ProfitOption{
+				Index:         0,
+				OptionValue:   1,
+				OptionUnit:    model.ProfitOptionUnitMinute,
+				OptionPercent: 3.10,
+			},
+			model.ProfitOption{
+				Index:         1,
+				OptionValue:   2,
+				OptionUnit:    model.ProfitOptionUnitHour,
+				OptionPercent: 2.40,
+			},
+		},
+		MinPrice:    0.01,
+		MinQuantity: 0.0001,
 	}
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
-	orderExecutor := service.OrderExecutor{
-		TradeStack:   &service.TradeStack{},
+	orderExecutor := exchange.OrderExecutor{
+		TradeStack:   &exchange.TradeStack{},
 		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
@@ -499,9 +565,10 @@ func TestSellQueryFail(t *testing.T) {
 		ExchangeRepository: exchangeRepository,
 		SwapRepository:     swapRepository,
 		PriceCalculator:    priceCalculator,
+		ProfitService:      profitServiceMock,
 		SwapExecutor:       swapExecutor,
 		SwapValidator:      swapValidator,
-		Formatter:          &service.Formatter{},
+		Formatter:          &utils.Formatter{},
 		SwapSellOrderDays:  10,
 		SwapEnabled:        true,
 		SwapProfitPercent:  1.50,
@@ -511,7 +578,7 @@ func TestSellQueryFail(t *testing.T) {
 		CallbackManager:    telegramNotificatorMock,
 	}
 
-	go func(orderExecutor *service.OrderExecutor) {
+	go func(orderExecutor *exchange.OrderExecutor) {
 		for {
 			lock := <-lockChannel
 			orderExecutor.TradeLockMutex.Lock()
@@ -588,6 +655,7 @@ func TestSellQueryFail(t *testing.T) {
 	balanceService.On("InvalidateBalanceCache", "USDT").Times(1)
 	balanceService.On("InvalidateBalanceCache", "ETH").Times(1)
 
+	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
 	assertion.Equal(errors.New("Order was canceled or expired"), err)
 }
@@ -595,6 +663,7 @@ func TestSellQueryFail(t *testing.T) {
 func TestSellClosingAction(t *testing.T) {
 	assertion := assert.New(t)
 
+	profitServiceMock := new(ProfitServiceMock)
 	balanceService := new(BalanceServiceMock)
 	binance := new(ExchangeOrderAPIMock)
 	orderRepository := new(OrderStorageMock)
@@ -611,15 +680,28 @@ func TestSellClosingAction(t *testing.T) {
 	lockChannel := make(chan model.Lock)
 	lossSecurityMock := new(LossSecurityMock)
 	tradeLimit := model.TradeLimit{
-		Symbol:           "BTCUSDT",
-		MinProfitPercent: 3.1,
-		MinPrice:         0.01,
-		MinQuantity:      0.00001,
+		Symbol: "BTCUSDT",
+		ProfitOptions: model.ProfitOptions{
+			model.ProfitOption{
+				Index:         0,
+				OptionValue:   1,
+				OptionUnit:    model.ProfitOptionUnitMinute,
+				OptionPercent: 3.10,
+			},
+			model.ProfitOption{
+				Index:         1,
+				OptionValue:   2,
+				OptionUnit:    model.ProfitOptionUnitHour,
+				OptionPercent: 2.40,
+			},
+		},
+		MinPrice:    0.01,
+		MinQuantity: 0.00001,
 	}
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
-	orderExecutor := service.OrderExecutor{
-		TradeStack:   &service.TradeStack{},
+	orderExecutor := exchange.OrderExecutor{
+		TradeStack:   &exchange.TradeStack{},
 		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
@@ -632,9 +714,10 @@ func TestSellClosingAction(t *testing.T) {
 		ExchangeRepository: exchangeRepository,
 		SwapRepository:     swapRepository,
 		PriceCalculator:    priceCalculator,
+		ProfitService:      profitServiceMock,
 		SwapExecutor:       swapExecutor,
 		SwapValidator:      swapValidator,
-		Formatter:          &service.Formatter{},
+		Formatter:          &utils.Formatter{},
 		SwapSellOrderDays:  10,
 		SwapEnabled:        true,
 		SwapProfitPercent:  1.50,
@@ -644,7 +727,7 @@ func TestSellClosingAction(t *testing.T) {
 		CallbackManager:    telegramNotificatorMock,
 	}
 
-	go func(orderExecutor *service.OrderExecutor) {
+	go func(orderExecutor *exchange.OrderExecutor) {
 		for {
 			lock := <-lockChannel
 			orderExecutor.TradeLockMutex.Lock()
@@ -741,6 +824,7 @@ func TestSellClosingAction(t *testing.T) {
 
 	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
 
+	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "BTCUSDT", 43496.99, 0.00046, false)
 	assertion.Nil(err)
 	assertion.Equal("closed", orderRepository.Updated.Status)
@@ -751,6 +835,7 @@ func TestSellClosingAction(t *testing.T) {
 func TestSellClosingTrxAction(t *testing.T) {
 	assertion := assert.New(t)
 
+	profitServiceMock := new(ProfitServiceMock)
 	balanceService := new(BalanceServiceMock)
 	binance := new(ExchangeOrderAPIMock)
 	orderRepository := new(OrderStorageMock)
@@ -767,15 +852,28 @@ func TestSellClosingTrxAction(t *testing.T) {
 	lockChannel := make(chan model.Lock)
 	lossSecurityMock := new(LossSecurityMock)
 	tradeLimit := model.TradeLimit{
-		Symbol:           "TRXUSDT",
-		MinProfitPercent: 2.25,
-		MinPrice:         0.00001,
-		MinQuantity:      0.1,
+		Symbol: "TRXUSDT",
+		ProfitOptions: model.ProfitOptions{
+			model.ProfitOption{
+				Index:         0,
+				OptionValue:   1,
+				OptionUnit:    model.ProfitOptionUnitMinute,
+				OptionPercent: 2.25,
+			},
+			model.ProfitOption{
+				Index:         1,
+				OptionValue:   2,
+				OptionUnit:    model.ProfitOptionUnitHour,
+				OptionPercent: 2.40,
+			},
+		},
+		MinPrice:    0.00001,
+		MinQuantity: 0.1,
 	}
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
-	orderExecutor := service.OrderExecutor{
-		TradeStack:   &service.TradeStack{},
+	orderExecutor := exchange.OrderExecutor{
+		TradeStack:   &exchange.TradeStack{},
 		LossSecurity: lossSecurityMock,
 		CurrentBot: &model.Bot{
 			Id:      999,
@@ -788,9 +886,10 @@ func TestSellClosingTrxAction(t *testing.T) {
 		ExchangeRepository: exchangeRepository,
 		SwapRepository:     swapRepository,
 		PriceCalculator:    priceCalculator,
+		ProfitService:      profitServiceMock,
 		SwapExecutor:       swapExecutor,
 		SwapValidator:      swapValidator,
-		Formatter:          &service.Formatter{},
+		Formatter:          &utils.Formatter{},
 		SwapSellOrderDays:  10,
 		SwapEnabled:        true,
 		SwapProfitPercent:  1.50,
@@ -800,7 +899,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 		CallbackManager:    telegramNotificatorMock,
 	}
 
-	go func(orderExecutor *service.OrderExecutor) {
+	go func(orderExecutor *exchange.OrderExecutor) {
 		for {
 			lock := <-lockChannel
 			orderExecutor.TradeLockMutex.Lock()
@@ -897,6 +996,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 
 	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
 
+	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 2.25) / 100)
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "TRXUSDT", 0.10692, 382.1, false)
 	assertion.Nil(err)
 	assertion.Equal("closed", orderRepository.Updated.Status)

@@ -1,4 +1,4 @@
-package service
+package ml
 
 // #cgo pkg-config: python-3.11.6
 // #include <Python.h>
@@ -8,8 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/redis/go-redis/v9"
-	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/src/model"
-	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/model"
+	"gitlab.com/open-soft/go-crypto-bot/src/repository"
 	"log"
 	"os"
 	"slices"
@@ -21,12 +21,12 @@ import (
 
 type PythonMLBridge struct {
 	DataSetBuilder     *DataSetBuilder
-	ExchangeRepository *ExchangeRepository.ExchangeRepository
-	SwapRepository     *ExchangeRepository.SwapRepository
+	ExchangeRepository *repository.ExchangeRepository
+	SwapRepository     *repository.SwapRepository
 	Mutex              sync.RWMutex
 	RDB                *redis.Client
 	Ctx                *context.Context
-	CurrentBot         *ExchangeModel.Bot
+	CurrentBot         *model.Bot
 	Learning           bool
 }
 
@@ -211,7 +211,7 @@ func (p *PythonMLBridge) LearnModel(symbol string) error {
 	return nil
 }
 
-func (p *PythonMLBridge) GetPythonPredictCode(kLine ExchangeModel.KLine) string {
+func (p *PythonMLBridge) GetPythonPredictCode(kLine model.KLine) string {
 	buyVolume, sellVolume := p.ExchangeRepository.GetTradeVolumes(kLine)
 	resultPath := p.getResultFilePath(kLine.Symbol)
 	modelFilePath := p.getModelFilePath(kLine.Symbol)
@@ -235,7 +235,7 @@ with open(result_path, 'w') as out:
 	)
 }
 
-func (p *PythonMLBridge) GetPythonPredictAltCoinCode(kLine ExchangeModel.KLine, btcPrice float64, ethPrice float64) string {
+func (p *PythonMLBridge) GetPythonPredictAltCoinCode(kLine model.KLine, btcPrice float64, ethPrice float64) string {
 	buyVolume, sellVolume := p.ExchangeRepository.GetTradeVolumes(kLine)
 	resultPath := p.getResultFilePath(kLine.Symbol)
 	modelFilePath := p.getModelFilePath(kLine.Symbol)

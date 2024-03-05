@@ -1,8 +1,8 @@
-package service
+package utils
 
 import (
 	"fmt"
-	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/src/model"
+	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"math"
 	"strconv"
 	"strings"
@@ -11,7 +11,7 @@ import (
 type Formatter struct {
 }
 
-func (m *Formatter) FormatPrice(limit ExchangeModel.TradeLimitInterface, price float64) float64 {
+func (m *Formatter) FormatPrice(limit model.TradeLimitInterface, price float64) float64 {
 	if price < limit.GetMinPrice() {
 		return limit.GetMinPrice()
 	}
@@ -25,7 +25,7 @@ func (m *Formatter) FormatPrice(limit ExchangeModel.TradeLimitInterface, price f
 	return math.Round(price*ratio) / ratio
 }
 
-func (m *Formatter) FormatQuantity(limit ExchangeModel.TradeLimitInterface, quantity float64) float64 {
+func (m *Formatter) FormatQuantity(limit model.TradeLimitInterface, quantity float64) float64 {
 	if quantity < limit.GetMinQuantity() {
 		return limit.GetMinQuantity()
 	}
@@ -51,8 +51,8 @@ func (m *Formatter) FormatQuantity(limit ExchangeModel.TradeLimitInterface, quan
 	return quantity
 }
 
-func (m *Formatter) ComparePercentage(first float64, second float64) ExchangeModel.Percent {
-	return ExchangeModel.Percent(second * 100.00 / first)
+func (m *Formatter) ComparePercentage(first float64, second float64) model.Percent {
+	return model.Percent(second * 100.00 / first)
 }
 
 func (m *Formatter) Round(num float64) int {

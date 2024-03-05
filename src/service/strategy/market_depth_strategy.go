@@ -1,22 +1,22 @@
-package service
+package strategy
 
 import (
-	ExchangeModel "gitlab.com/open-soft/go-crypto-bot/src/model"
+	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"time"
 )
 
 type MarketDepthStrategy struct {
 }
 
-func (m *MarketDepthStrategy) Decide(depth ExchangeModel.Depth) ExchangeModel.Decision {
+func (m *MarketDepthStrategy) Decide(depth model.Depth) model.Decision {
 	sellVolume := depth.GetAskVolume()
 	buyVolume := depth.GetBidVolume()
 
 	sellBuyDiff := sellVolume / buyVolume
 
 	if sellBuyDiff > 10 {
-		return ExchangeModel.Decision{
-			StrategyName: ExchangeModel.MarketDepthStrategyName,
+		return model.Decision{
+			StrategyName: model.MarketDepthStrategyName,
 			Score:        30.00,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
@@ -29,8 +29,8 @@ func (m *MarketDepthStrategy) Decide(depth ExchangeModel.Depth) ExchangeModel.De
 
 	// todo: buy operation is disabled
 	if buySellDiff > 10 {
-		return ExchangeModel.Decision{
-			StrategyName: ExchangeModel.MarketDepthStrategyName,
+		return model.Decision{
+			StrategyName: model.MarketDepthStrategyName,
 			Score:        30.00,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
@@ -39,8 +39,8 @@ func (m *MarketDepthStrategy) Decide(depth ExchangeModel.Depth) ExchangeModel.De
 		}
 	}
 
-	return ExchangeModel.Decision{
-		StrategyName: ExchangeModel.MarketDepthStrategyName,
+	return model.Decision{
+		StrategyName: model.MarketDepthStrategyName,
 		Score:        30.00,
 		Operation:    "HOLD",
 		Timestamp:    time.Now().Unix(),

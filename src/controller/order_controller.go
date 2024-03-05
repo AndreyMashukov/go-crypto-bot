@@ -6,23 +6,26 @@ import (
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
-	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/src/repository"
-	"gitlab.com/open-soft/go-crypto-bot/src/service"
+	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/service/exchange"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
+	"gitlab.com/open-soft/go-crypto-bot/src/validator"
 	"net/http"
 	"slices"
 	"time"
 )
 
 type OrderController struct {
-	RDB                *redis.Client
-	Ctx                *context.Context
-	OrderRepository    *ExchangeRepository.OrderRepository
-	ExchangeRepository *ExchangeRepository.ExchangeRepository
-	Formatter          *service.Formatter
-	PriceCalculator    *service.PriceCalculator
-	CurrentBot         *model.Bot
-	LossSecurity       *service.LossSecurity
-	OrderExecutor      *service.OrderExecutor
+	RDB                    *redis.Client
+	Ctx                    *context.Context
+	OrderRepository        *repository.OrderRepository
+	ExchangeRepository     *repository.ExchangeRepository
+	Formatter              *utils.Formatter
+	PriceCalculator        *exchange.PriceCalculator
+	CurrentBot             *model.Bot
+	LossSecurity           *exchange.LossSecurity
+	OrderExecutor          *exchange.OrderExecutor
+	ProfitOptionsValidator *validator.ProfitOptionsValidator
 }
 
 func (o *OrderController) GetOrderTradeListAction(w http.ResponseWriter, req *http.Request) {
@@ -93,6 +96,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 
 		var sellPrice float64
 
+		// todo: Decomposition is required here, move it to separate service
 		binanceOrder := o.OrderRepository.GetBinanceOrder(openedOrder.Symbol, "SELL")
 		executedQty := 0.00
 		origQty := openedOrder.ExecutedQuantity
@@ -219,6 +223,98 @@ func (o *OrderController) UpdateExtraChargeAction(w http.ResponseWriter, req *ht
 		return
 	}
 
+	// todo: use context with cancel: https://go.dev/doc/database/cancel-operations
+	o.OrderExecutor.SetCancelRequest(entity.Symbol)
+	o.ExchangeRepository.DeleteDecision(model.OrderBasedStrategyName, entity.Symbol)
+	encodedRes, _ := json.Marshal(entity)
+	fmt.Fprintf(w, string(encodedRes))
+}
+
+func (o *OrderController) UpdateProfitOptionsAction(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if req.Method == "OPTIONS" {
+		fmt.Fprintf(w, "OK")
+		return
+	}
+
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != o.CurrentBot.BotUuid {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
+
+	if req.Method != "PUT" {
+		http.Error(w, "Only PUT method is allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	var options model.UpdateOrderProfitOptions
+
+	// Try to decode the request body into the struct. If there is an error,
+	// respond to the client with the error message and a 400 status code.
+	err := json.NewDecoder(req.Body).Decode(&options)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	if len(options.ProfitOptions) == 0 {
+		http.Error(w, "ProfitOptions length has to be greater than 0", http.StatusBadRequest)
+
+		return
+	}
+
+	violation := o.ProfitOptionsValidator.Validate(options.ProfitOptions)
+
+	if violation != nil {
+		http.Error(w, violation.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	entity, err := o.OrderRepository.Find(options.OrderId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+
+		return
+	}
+
+	if entity.IsSell() {
+		http.Error(w, "Can not update SELL order", http.StatusBadRequest)
+
+		return
+	}
+
+	if entity.IsClosed() {
+		http.Error(w, "Can not update closed order", http.StatusBadRequest)
+
+		return
+	}
+
+	entity.ProfitOptions = options.ProfitOptions
+	err = o.OrderRepository.Update(entity)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	entity, err = o.OrderRepository.Find(entity.Id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+
+		return
+	}
+
+	// todo: use context with cancel: https://go.dev/doc/database/cancel-operations
 	o.OrderExecutor.SetCancelRequest(entity.Symbol)
 	o.ExchangeRepository.DeleteDecision(model.OrderBasedStrategyName, entity.Symbol)
 	encodedRes, _ := json.Marshal(entity)

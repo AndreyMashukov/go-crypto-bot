@@ -3,7 +3,8 @@ package tests
 import (
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
-	"gitlab.com/open-soft/go-crypto-bot/src/service"
+	"gitlab.com/open-soft/go-crypto-bot/src/service/exchange"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"testing"
 )
 
@@ -11,12 +12,14 @@ func TestBuyPriceCorrection(t *testing.T) {
 	exchangeRepo := new(ExchangeTradeInfoMock)
 	binance := new(ExchangePriceAPIMock)
 
-	lossSecurity := service.LossSecurity{
+	profitServiceMock := new(ProfitServiceMock)
+
+	lossSecurity := exchange.LossSecurity{
 		MlEnabled:            true,
 		InterpolationEnabled: true,
-		Formatter:            &service.Formatter{},
+		Formatter:            &utils.Formatter{},
 		ExchangeRepository:   exchangeRepo,
-		Binance:              binance,
+		ProfitService:        profitServiceMock,
 	}
 
 	assertion := assert.New(t)
@@ -25,8 +28,23 @@ func TestBuyPriceCorrection(t *testing.T) {
 		Symbol:                       "BTCUSDT",
 		BuyPriceHistoryCheckInterval: "1h",
 		BuyPriceHistoryCheckPeriod:   10,
-		MinProfitPercent:             2.40,
-		MinPrice:                     0.001,
+		ProfitOptions: model.ProfitOptions{
+			model.ProfitOption{
+				Index:           0,
+				OptionValue:     1,
+				OptionUnit:      model.ProfitOptionUnitMinute,
+				OptionPercent:   2.40,
+				IsTriggerOption: true,
+			},
+			model.ProfitOption{
+				Index:           1,
+				OptionValue:     2,
+				OptionUnit:      model.ProfitOptionUnitHour,
+				OptionPercent:   2.80,
+				IsTriggerOption: false,
+			},
+		},
+		MinPrice: 0.001,
 	}
 
 	binance.On("GetKLinesCached", limit.Symbol, limit.BuyPriceHistoryCheckInterval, limit.BuyPriceHistoryCheckPeriod).Return([]model.KLine{
@@ -74,9 +92,6 @@ func TestBuyPriceCorrection(t *testing.T) {
 		EthInterpolationUsdt: 21425.00,
 	}, nil)
 
-	price := lossSecurity.CheckBuyPriceOnHistory(limit, 25000.00)
-	assertion.Equal(21484.374999283773, price)
-
-	price = lossSecurity.BuyPriceCorrection(price, limit)
+	price := lossSecurity.BuyPriceCorrection(21484.374999283773, limit)
 	assertion.Equal(21425.00, price)
 }

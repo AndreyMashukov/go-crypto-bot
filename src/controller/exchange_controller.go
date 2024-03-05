@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
-	ExchangeRepository "gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/repository"
 	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"net/http"
 	"strings"
@@ -14,8 +14,8 @@ import (
 )
 
 type ExchangeController struct {
-	SwapRepository     *ExchangeRepository.SwapRepository
-	ExchangeRepository *ExchangeRepository.ExchangeRepository
+	SwapRepository     *repository.SwapRepository
+	ExchangeRepository *repository.ExchangeRepository
 	ChartService       *service.ChartService
 	RDB                *redis.Client
 	Ctx                *context.Context

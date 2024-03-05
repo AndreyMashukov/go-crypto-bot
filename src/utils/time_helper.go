@@ -1,4 +1,4 @@
-package service
+package utils
 
 import "time"
 
@@ -10,21 +10,21 @@ type TimeServiceInterface interface {
 	GetNowDiffMinutes(unixTime int64) float64
 }
 
-type TimeService struct {
+type TimeHelper struct {
 }
 
-func (t *TimeService) WaitMilliseconds(milliseconds int64) {
+func (t *TimeHelper) WaitMilliseconds(milliseconds int64) {
 	time.Sleep(time.Millisecond * time.Duration(milliseconds))
 }
-func (t *TimeService) WaitSeconds(seconds int64) {
+func (t *TimeHelper) WaitSeconds(seconds int64) {
 	time.Sleep(time.Second * time.Duration(seconds))
 }
-func (t *TimeService) GetNowDiffMinutes(unixTime int64) float64 {
+func (t *TimeHelper) GetNowDiffMinutes(unixTime int64) float64 {
 	return float64(time.Now().Unix()-unixTime) / 60.00
 }
-func (t *TimeService) GetNowUnix() int64 {
+func (t *TimeHelper) GetNowUnix() int64 {
 	return time.Now().Unix()
 }
-func (t *TimeService) GetNowDateTimeString() string {
+func (t *TimeHelper) GetNowDateTimeString() string {
 	return time.Now().Format("2006-01-02 15:04:05")
 }

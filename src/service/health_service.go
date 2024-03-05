@@ -8,13 +8,14 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/service/ml"
 	"runtime"
 	"time"
 )
 
 type HealthService struct {
 	ExchangeRepository *repository.ExchangeRepository
-	PythonMLBridge     *PythonMLBridge
+	PythonMLBridge     *ml.PythonMLBridge
 	DB                 *sql.DB
 	RDB                *redis.Client
 	Ctx                *context.Context

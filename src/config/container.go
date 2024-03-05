@@ -100,9 +100,6 @@ func InitServiceContainer() Container {
 		AutoTradeHost: "https://api.autotrade.cloud",
 	}
 
-	isMasterBot := true
-	swapEnabled := true
-
 	orderRepository := repository.OrderRepository{
 		DB:         db,
 		RDB:        rdb,
@@ -204,6 +201,11 @@ func InitServiceContainer() Container {
 		Formatter:          &formatter,
 	}
 
+	botService := service.BotService{
+		CurrentBot:    currentBot,
+		BotRepository: &botRepository,
+	}
+
 	orderExecutor := exchange.OrderExecutor{
 		TradeStack:         &tradeStack,
 		LossSecurity:       &lossSecurity,
@@ -228,7 +230,7 @@ func InitServiceContainer() Container {
 		SwapValidator:          &swapValidator,
 		Formatter:              &formatter,
 		SwapSellOrderDays:      swapOpenedSellOrderFromHoursOpened,
-		SwapEnabled:            swapEnabled,
+		BotService:             &botService,
 		SwapProfitPercent:      swapOrderOnProfitPercent,
 		TurboSwapProfitPercent: 20.00,
 		Lock:                   make(map[string]bool),
@@ -337,6 +339,7 @@ func InitServiceContainer() Container {
 	botController := controller.BotController{
 		HealthService: &healthService,
 		CurrentBot:    currentBot,
+		BotRepository: &botRepository,
 	}
 
 	return Container{
@@ -365,7 +368,7 @@ func InitServiceContainer() Container {
 		MarketDepthStrategy: &marketDepthStrategy,
 		OrderBasedStrategy:  &orderBasedStrategy,
 		BaseKLineStrategy:   &baseKLineStrategy,
-		IsMasterBot:         isMasterBot,
+		IsMasterBot:         botService.IsMasterBot(),
 	}
 }
 
@@ -416,7 +419,8 @@ func (c *Container) StartHttpServer() {
 	http.HandleFunc("/trade/stack", c.TradeController.GetTradeStackAction)
 	http.HandleFunc("/trade/limit/create", c.TradeController.CreateTradeLimitAction)
 	http.HandleFunc("/trade/limit/update", c.TradeController.UpdateTradeLimitAction)
-	http.HandleFunc("/health/check", c.BotController.GetHealthCheck)
+	http.HandleFunc("/health/check", c.BotController.GetHealthCheckAction)
+	http.HandleFunc("/bot/update", c.BotController.PutConfigAction)
 
 	// Start HTTP server!
 	go func() {

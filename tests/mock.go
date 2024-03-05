@@ -410,3 +410,16 @@ func (p *ProfitServiceMock) GetMinProfitPercent(order model.ProfitPositionInterf
 	args := p.Called(order)
 	return args.Get(0).(model.Percent)
 }
+
+type BotServiceMock struct {
+	mock.Mock
+}
+
+func (b *BotServiceMock) IsSwapEnabled() bool {
+	args := b.Called()
+	return args.Get(0).(bool)
+}
+func (b *BotServiceMock) IsMasterBot() bool {
+	args := b.Called()
+	return args.Get(0).(bool)
+}

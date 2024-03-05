@@ -55,6 +55,9 @@ func TestSellAction(t *testing.T) {
 	}
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
+	botServiceMock := new(BotServiceMock)
+	botServiceMock.On("IsSwapEnabled").Return(true)
+
 	orderExecutor := exchange.OrderExecutor{
 		TradeStack:   &exchange.TradeStack{},
 		LossSecurity: lossSecurityMock,
@@ -74,7 +77,7 @@ func TestSellAction(t *testing.T) {
 		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
 		SwapSellOrderDays:  10,
-		SwapEnabled:        true,
+		BotService:         botServiceMock,
 		SwapProfitPercent:  1.50,
 		LockChannel:        &lockChannel,
 		Lock:               make(map[string]bool),
@@ -228,6 +231,9 @@ func TestSellFoundFilled(t *testing.T) {
 	}
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
+	botServiceMock := new(BotServiceMock)
+	botServiceMock.On("IsSwapEnabled").Return(true)
+
 	orderExecutor := exchange.OrderExecutor{
 		TradeStack:   &exchange.TradeStack{},
 		LossSecurity: lossSecurityMock,
@@ -247,7 +253,7 @@ func TestSellFoundFilled(t *testing.T) {
 		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
 		SwapSellOrderDays:  10,
-		SwapEnabled:        true,
+		BotService:         botServiceMock,
 		SwapProfitPercent:  1.50,
 		LockChannel:        &lockChannel,
 		Lock:               make(map[string]bool),
@@ -393,6 +399,9 @@ func TestSellCancelledInProcess(t *testing.T) {
 	}
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
+	botServiceMock := new(BotServiceMock)
+	botServiceMock.On("IsSwapEnabled").Return(true)
+
 	orderExecutor := exchange.OrderExecutor{
 		TradeStack:   &exchange.TradeStack{},
 		LossSecurity: lossSecurityMock,
@@ -412,7 +421,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
 		SwapSellOrderDays:  10,
-		SwapEnabled:        true,
+		BotService:         botServiceMock,
 		SwapProfitPercent:  1.50,
 		LockChannel:        &lockChannel,
 		Lock:               make(map[string]bool),
@@ -551,6 +560,9 @@ func TestSellQueryFail(t *testing.T) {
 	}
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
+	botServiceMock := new(BotServiceMock)
+	botServiceMock.On("IsSwapEnabled").Return(true)
+
 	orderExecutor := exchange.OrderExecutor{
 		TradeStack:   &exchange.TradeStack{},
 		LossSecurity: lossSecurityMock,
@@ -570,7 +582,7 @@ func TestSellQueryFail(t *testing.T) {
 		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
 		SwapSellOrderDays:  10,
-		SwapEnabled:        true,
+		BotService:         botServiceMock,
 		SwapProfitPercent:  1.50,
 		LockChannel:        &lockChannel,
 		Lock:               make(map[string]bool),
@@ -700,6 +712,9 @@ func TestSellClosingAction(t *testing.T) {
 	}
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
+	botServiceMock := new(BotServiceMock)
+	botServiceMock.On("IsSwapEnabled").Return(true)
+
 	orderExecutor := exchange.OrderExecutor{
 		TradeStack:   &exchange.TradeStack{},
 		LossSecurity: lossSecurityMock,
@@ -719,7 +734,7 @@ func TestSellClosingAction(t *testing.T) {
 		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
 		SwapSellOrderDays:  10,
-		SwapEnabled:        true,
+		BotService:         botServiceMock,
 		SwapProfitPercent:  1.50,
 		LockChannel:        &lockChannel,
 		Lock:               make(map[string]bool),
@@ -872,6 +887,9 @@ func TestSellClosingTrxAction(t *testing.T) {
 	}
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
+	botServiceMock := new(BotServiceMock)
+	botServiceMock.On("IsSwapEnabled").Return(true)
+
 	orderExecutor := exchange.OrderExecutor{
 		TradeStack:   &exchange.TradeStack{},
 		LossSecurity: lossSecurityMock,
@@ -891,7 +909,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
 		SwapSellOrderDays:  10,
-		SwapEnabled:        true,
+		BotService:         botServiceMock,
 		SwapProfitPercent:  1.50,
 		LockChannel:        &lockChannel,
 		Lock:               make(map[string]bool),

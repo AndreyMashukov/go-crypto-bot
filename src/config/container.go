@@ -76,7 +76,17 @@ func InitServiceContainer() Container {
 	if currentBot == nil {
 		botUuid := os.Getenv("BOT_UUID")
 		currentBot := &model.Bot{
-			BotUuid: botUuid,
+			BotUuid:       botUuid,
+			IsMasterBot:   false,
+			IsSwapEnabled: false,
+			SwapConfig: model.SwapConfig{
+				MinValidPercent:    2.00,
+				FallPercentTrigger: -5.00,
+				OrderTimeTrigger:   3600,
+				UseSwapCapital:     true,
+				HistoryInterval:    "1d",
+				HistoryPeriod:      14,
+			},
 		}
 		err := botRepository.Create(*currentBot)
 		if err != nil {

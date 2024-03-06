@@ -91,6 +91,7 @@ func (s *SwapRepositoryMock) GetSwapChains(baseAsset string) []model.SwapChainEn
 	return args.Get(0).([]model.SwapChainEntity)
 }
 func (s *SwapRepositoryMock) CreateSwapAction(action model.SwapAction) (*int64, error) {
+	s.swapAction = action
 	args := s.Called(action)
 	return args.Get(0).(*int64), args.Error(1)
 }

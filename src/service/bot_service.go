@@ -8,6 +8,8 @@ import (
 type BotServiceInterface interface {
 	IsSwapEnabled() bool
 	IsMasterBot() bool
+	UseSwapCapital() bool
+	GetSwapConfig() model.SwapConfig
 }
 
 type BotService struct {
@@ -18,7 +20,12 @@ type BotService struct {
 func (b *BotService) IsSwapEnabled() bool {
 	return b.BotRepository.GetCurrentBotCached(b.CurrentBot.Id).IsSwapEnabled
 }
-
 func (b *BotService) IsMasterBot() bool {
 	return b.BotRepository.GetCurrentBotCached(b.CurrentBot.Id).IsMasterBot
+}
+func (b *BotService) UseSwapCapital() bool {
+	return b.BotRepository.GetCurrentBotCached(b.CurrentBot.Id).SwapConfig.UseSwapCapital
+}
+func (b *BotService) GetSwapConfig() model.SwapConfig {
+	return b.BotRepository.GetCurrentBotCached(b.CurrentBot.Id).SwapConfig
 }

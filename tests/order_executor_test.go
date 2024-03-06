@@ -57,6 +57,7 @@ func TestSellAction(t *testing.T) {
 
 	botServiceMock := new(BotServiceMock)
 	botServiceMock.On("IsSwapEnabled").Return(true)
+	botServiceMock.On("UseSwapCapital").Return(true)
 
 	orderExecutor := exchange.OrderExecutor{
 		TradeStack:   &exchange.TradeStack{},
@@ -76,9 +77,7 @@ func TestSellAction(t *testing.T) {
 		SwapExecutor:       swapExecutor,
 		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
-		SwapSellOrderDays:  10,
 		BotService:         botServiceMock,
-		SwapProfitPercent:  1.50,
 		LockChannel:        &lockChannel,
 		Lock:               make(map[string]bool),
 		TradeLockMutex:     sync.RWMutex{},
@@ -233,6 +232,7 @@ func TestSellFoundFilled(t *testing.T) {
 
 	botServiceMock := new(BotServiceMock)
 	botServiceMock.On("IsSwapEnabled").Return(true)
+	botServiceMock.On("UseSwapCapital").Return(true)
 
 	orderExecutor := exchange.OrderExecutor{
 		TradeStack:   &exchange.TradeStack{},
@@ -252,9 +252,7 @@ func TestSellFoundFilled(t *testing.T) {
 		SwapExecutor:       swapExecutor,
 		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
-		SwapSellOrderDays:  10,
 		BotService:         botServiceMock,
-		SwapProfitPercent:  1.50,
 		LockChannel:        &lockChannel,
 		Lock:               make(map[string]bool),
 		TradeLockMutex:     sync.RWMutex{},
@@ -401,6 +399,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 
 	botServiceMock := new(BotServiceMock)
 	botServiceMock.On("IsSwapEnabled").Return(true)
+	botServiceMock.On("UseSwapCapital").Return(true)
 
 	orderExecutor := exchange.OrderExecutor{
 		TradeStack:   &exchange.TradeStack{},
@@ -420,9 +419,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 		SwapExecutor:       swapExecutor,
 		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
-		SwapSellOrderDays:  10,
 		BotService:         botServiceMock,
-		SwapProfitPercent:  1.50,
 		LockChannel:        &lockChannel,
 		Lock:               make(map[string]bool),
 		TradeLockMutex:     sync.RWMutex{},
@@ -562,6 +559,7 @@ func TestSellQueryFail(t *testing.T) {
 
 	botServiceMock := new(BotServiceMock)
 	botServiceMock.On("IsSwapEnabled").Return(true)
+	botServiceMock.On("UseSwapCapital").Return(true)
 
 	orderExecutor := exchange.OrderExecutor{
 		TradeStack:   &exchange.TradeStack{},
@@ -581,9 +579,7 @@ func TestSellQueryFail(t *testing.T) {
 		SwapExecutor:       swapExecutor,
 		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
-		SwapSellOrderDays:  10,
 		BotService:         botServiceMock,
-		SwapProfitPercent:  1.50,
 		LockChannel:        &lockChannel,
 		Lock:               make(map[string]bool),
 		TradeLockMutex:     sync.RWMutex{},
@@ -714,6 +710,7 @@ func TestSellClosingAction(t *testing.T) {
 
 	botServiceMock := new(BotServiceMock)
 	botServiceMock.On("IsSwapEnabled").Return(true)
+	botServiceMock.On("UseSwapCapital").Return(true)
 
 	orderExecutor := exchange.OrderExecutor{
 		TradeStack:   &exchange.TradeStack{},
@@ -733,9 +730,7 @@ func TestSellClosingAction(t *testing.T) {
 		SwapExecutor:       swapExecutor,
 		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
-		SwapSellOrderDays:  10,
 		BotService:         botServiceMock,
-		SwapProfitPercent:  1.50,
 		LockChannel:        &lockChannel,
 		Lock:               make(map[string]bool),
 		TradeLockMutex:     sync.RWMutex{},
@@ -889,6 +884,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 
 	botServiceMock := new(BotServiceMock)
 	botServiceMock.On("IsSwapEnabled").Return(true)
+	botServiceMock.On("UseSwapCapital").Return(true)
 
 	orderExecutor := exchange.OrderExecutor{
 		TradeStack:   &exchange.TradeStack{},
@@ -908,9 +904,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 		SwapExecutor:       swapExecutor,
 		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
-		SwapSellOrderDays:  10,
 		BotService:         botServiceMock,
-		SwapProfitPercent:  1.50,
 		LockChannel:        &lockChannel,
 		Lock:               make(map[string]bool),
 		TradeLockMutex:     sync.RWMutex{},
@@ -1058,9 +1052,7 @@ func TestCreateSwapAction(t *testing.T) {
 		SwapExecutor:       swapExecutor,
 		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
-		SwapSellOrderDays:  10,
 		BotService:         botServiceMock,
-		SwapProfitPercent:  1.50,
 		LockChannel:        &lockChannel,
 		Lock:               make(map[string]bool),
 		TradeLockMutex:     sync.RWMutex{},
@@ -1152,9 +1144,7 @@ func TestCreateSwapActionLessBalance(t *testing.T) {
 		SwapExecutor:       swapExecutor,
 		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
-		SwapSellOrderDays:  10,
 		BotService:         botServiceMock,
-		SwapProfitPercent:  1.50,
 		LockChannel:        &lockChannel,
 		Lock:               make(map[string]bool),
 		TradeLockMutex:     sync.RWMutex{},

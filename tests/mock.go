@@ -424,3 +424,11 @@ func (b *BotServiceMock) IsMasterBot() bool {
 	args := b.Called()
 	return args.Get(0).(bool)
 }
+func (b *BotServiceMock) UseSwapCapital() bool {
+	args := b.Called()
+	return args.Get(0).(bool)
+}
+func (b *BotServiceMock) GetSwapConfig() model.SwapConfig {
+	args := b.Called()
+	return args.Get(0).(model.SwapConfig)
+}

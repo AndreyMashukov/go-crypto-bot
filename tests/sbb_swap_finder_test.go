@@ -158,12 +158,19 @@ func TestSwapSellBuyBuy(t *testing.T) {
 		},
 	})
 
+	botService := new(BotServiceMock)
+	botService.On("GetSwapConfig").Return(model.SwapConfig{
+		MinValidPercent: 0.1,
+		HistoryInterval: "1d",
+		HistoryPeriod:   14,
+	})
+
 	swapChainBuilder := exchange.SwapChainBuilder{}
 	validator := validator.SwapValidator{
 		Binance:        binance,
 		SwapRepository: swapRepoMock,
 		Formatter:      &utils.Formatter{},
-		SwapMinPercent: 0.1,
+		BotService:     botService,
 	}
 
 	order := model.Order{
@@ -467,12 +474,19 @@ func TestSwapSellBuyBuyRollback(t *testing.T) {
 		},
 	})
 
+	botService := new(BotServiceMock)
+	botService.On("GetSwapConfig").Return(model.SwapConfig{
+		MinValidPercent: 0.1,
+		HistoryInterval: "1d",
+		HistoryPeriod:   14,
+	})
+
 	swapChainBuilder := exchange.SwapChainBuilder{}
 	validator := validator.SwapValidator{
 		Binance:        binance,
 		SwapRepository: swapRepoMock,
 		Formatter:      &utils.Formatter{},
-		SwapMinPercent: 0.1,
+		BotService:     botService,
 	}
 
 	order := model.Order{
@@ -780,12 +794,19 @@ func TestSwapSellBuyBuyForceSwap(t *testing.T) {
 		},
 	})
 
+	botService := new(BotServiceMock)
+	botService.On("GetSwapConfig").Return(model.SwapConfig{
+		MinValidPercent: 0.1,
+		HistoryInterval: "1d",
+		HistoryPeriod:   14,
+	})
+
 	swapChainBuilder := exchange.SwapChainBuilder{}
 	validator := validator.SwapValidator{
 		Binance:        binance,
 		SwapRepository: swapRepoMock,
 		Formatter:      &utils.Formatter{},
-		SwapMinPercent: 0.1,
+		BotService:     botService,
 	}
 
 	order := model.Order{

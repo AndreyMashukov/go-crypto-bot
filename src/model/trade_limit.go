@@ -81,7 +81,15 @@ func (t TradeLimit) GetProfitOptions() ProfitOptions {
 	return t.ProfitOptions
 }
 
-func (t *TradeLimit) GetBuyOnFallPercent(order Order, kLine KLine) Percent {
+func (t TradeLimit) GetExecutedQuantity() float64 {
+	return 0.00
+}
+
+func (t TradeLimit) GetPositionQuantityWithSwap() float64 {
+	return 0.00
+}
+
+func (t *TradeLimit) GetBuyOnFallPercent(order Order, kLine KLine, withSwap bool) Percent {
 	buyOnFallPercent := Percent(0.00)
 
 	if len(order.ExtraChargeOptions) > 0 {
@@ -90,7 +98,7 @@ func (t *TradeLimit) GetBuyOnFallPercent(order Order, kLine KLine) Percent {
 			return order.ExtraChargeOptions[i].Percent > order.ExtraChargeOptions[j].Percent
 		})
 
-		profit := order.GetProfitPercent(kLine.Close)
+		profit := order.GetProfitPercent(kLine.Close, withSwap)
 		// set first step as default
 		buyOnFallPercent = order.ExtraChargeOptions[0].Percent
 

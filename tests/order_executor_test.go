@@ -1021,3 +1021,191 @@ func TestSellClosingTrxAction(t *testing.T) {
 	assertion.Equal(0.10457, orderRepository.Updated.Price)
 	assertion.Equal(openedExternalId, *orderRepository.Updated.ExternalId)
 }
+
+func TestCreateSwapAction(t *testing.T) {
+	assertion := assert.New(t)
+
+	profitServiceMock := new(ProfitServiceMock)
+	balanceService := new(BalanceServiceMock)
+	binance := new(ExchangeOrderAPIMock)
+	orderRepository := new(OrderStorageMock)
+	exchangeRepository := new(ExchangeTradeInfoMock)
+	swapRepository := new(SwapRepositoryMock)
+	priceCalculator := new(PriceCalculatorMock)
+	swapExecutor := new(SwapExecutorMock)
+	swapValidator := new(SwapValidatorMock)
+	timeService := new(TimeServiceMock)
+	telegramNotificatorMock := new(TelegramNotificatorMock)
+	lossSecurityMock := new(LossSecurityMock)
+	botServiceMock := new(BotServiceMock)
+	lockChannel := make(chan model.Lock)
+
+	orderExecutor := exchange.OrderExecutor{
+		TradeStack:   &exchange.TradeStack{},
+		LossSecurity: lossSecurityMock,
+		CurrentBot: &model.Bot{
+			Id:      999,
+			BotUuid: uuid.New().String(),
+		},
+		TimeService:        timeService,
+		BalanceService:     balanceService,
+		Binance:            binance,
+		OrderRepository:    orderRepository,
+		ExchangeRepository: exchangeRepository,
+		SwapRepository:     swapRepository,
+		PriceCalculator:    priceCalculator,
+		ProfitService:      profitServiceMock,
+		SwapExecutor:       swapExecutor,
+		SwapValidator:      swapValidator,
+		Formatter:          &utils.Formatter{},
+		SwapSellOrderDays:  10,
+		BotService:         botServiceMock,
+		SwapProfitPercent:  1.50,
+		LockChannel:        &lockChannel,
+		Lock:               make(map[string]bool),
+		TradeLockMutex:     sync.RWMutex{},
+		CallbackManager:    telegramNotificatorMock,
+	}
+
+	order := model.Order{
+		Id:               777,
+		Symbol:           "BTCUSDT",
+		ExecutedQuantity: 1002.00,
+	}
+
+	swapChain := model.SwapChainEntity{
+		Id: 888,
+		SwapOne: &model.SwapTransitionEntity{
+			BaseAsset:  "BTC",
+			QuoteAsset: "ETH",
+			Price:      1000.00, // fake
+		},
+		SwapTwo: &model.SwapTransitionEntity{
+			BaseAsset:  "ETH",
+			QuoteAsset: "SOL",
+			Price:      100.00, // fake
+		},
+		SwapThree: &model.SwapTransitionEntity{
+			BaseAsset:  "SOL",
+			QuoteAsset: "BTC",
+			Price:      4000.00, // fake
+		},
+	}
+
+	balanceService.On("GetAssetBalance", "BTC", false).Return(2000.00, nil)
+	swapRepository.On("GetActiveSwapAction", order).Return(model.SwapAction{}, errors.New("test!"))
+	timeService.On("GetNowUnix").Return(9999)
+
+	swapId := int64(1)
+	swapRepository.On("CreateSwapAction", mock.Anything).Times(1).Return(&swapId, nil)
+	orderRepository.On("Update", mock.Anything).Return(nil)
+
+	orderExecutor.MakeSwap(order, swapChain)
+
+	assertion.Equal(1002.00, swapRepository.swapAction.StartQuantity)
+	assertion.Equal(1000.00, swapRepository.swapAction.SwapOnePrice)
+	assertion.Equal(100.00, swapRepository.swapAction.SwapTwoPrice)
+	assertion.Equal(4000.00, swapRepository.swapAction.SwapThreePrice)
+	assertion.Equal("BTCETH", swapRepository.swapAction.SwapOneSymbol)
+	assertion.Equal("ETHSOL", swapRepository.swapAction.SwapTwoSymbol)
+	assertion.Equal("SOLBTC", swapRepository.swapAction.SwapThreeSymbol)
+	assertion.Equal("BTC", swapRepository.swapAction.Asset)
+	assertion.Equal(model.SwapActionStatusPending, swapRepository.swapAction.Status)
+	assertion.Equal(order.Id, swapRepository.swapAction.OrderId)
+	assertion.Equal(order.Id, orderRepository.Updated.Id)
+	assertion.True(orderRepository.Updated.Swap)
+}
+
+func TestCreateSwapActionLessBalance(t *testing.T) {
+	assertion := assert.New(t)
+
+	profitServiceMock := new(ProfitServiceMock)
+	balanceService := new(BalanceServiceMock)
+	binance := new(ExchangeOrderAPIMock)
+	orderRepository := new(OrderStorageMock)
+	exchangeRepository := new(ExchangeTradeInfoMock)
+	swapRepository := new(SwapRepositoryMock)
+	priceCalculator := new(PriceCalculatorMock)
+	swapExecutor := new(SwapExecutorMock)
+	swapValidator := new(SwapValidatorMock)
+	timeService := new(TimeServiceMock)
+	telegramNotificatorMock := new(TelegramNotificatorMock)
+	lossSecurityMock := new(LossSecurityMock)
+	botServiceMock := new(BotServiceMock)
+	lockChannel := make(chan model.Lock)
+
+	orderExecutor := exchange.OrderExecutor{
+		TradeStack:   &exchange.TradeStack{},
+		LossSecurity: lossSecurityMock,
+		CurrentBot: &model.Bot{
+			Id:      999,
+			BotUuid: uuid.New().String(),
+		},
+		TimeService:        timeService,
+		BalanceService:     balanceService,
+		Binance:            binance,
+		OrderRepository:    orderRepository,
+		ExchangeRepository: exchangeRepository,
+		SwapRepository:     swapRepository,
+		PriceCalculator:    priceCalculator,
+		ProfitService:      profitServiceMock,
+		SwapExecutor:       swapExecutor,
+		SwapValidator:      swapValidator,
+		Formatter:          &utils.Formatter{},
+		SwapSellOrderDays:  10,
+		BotService:         botServiceMock,
+		SwapProfitPercent:  1.50,
+		LockChannel:        &lockChannel,
+		Lock:               make(map[string]bool),
+		TradeLockMutex:     sync.RWMutex{},
+		CallbackManager:    telegramNotificatorMock,
+	}
+
+	order := model.Order{
+		Id:               777,
+		Symbol:           "BTCUSDT",
+		ExecutedQuantity: 1002.00,
+	}
+
+	swapChain := model.SwapChainEntity{
+		Id: 888,
+		SwapOne: &model.SwapTransitionEntity{
+			BaseAsset:  "BTC",
+			QuoteAsset: "ETH",
+			Price:      1000.00, // fake
+		},
+		SwapTwo: &model.SwapTransitionEntity{
+			BaseAsset:  "ETH",
+			QuoteAsset: "SOL",
+			Price:      100.00, // fake
+		},
+		SwapThree: &model.SwapTransitionEntity{
+			BaseAsset:  "SOL",
+			QuoteAsset: "BTC",
+			Price:      4000.00, // fake
+		},
+	}
+
+	balanceService.On("GetAssetBalance", "BTC", false).Return(900.00, nil)
+	swapRepository.On("GetActiveSwapAction", order).Return(model.SwapAction{}, errors.New("test!"))
+	timeService.On("GetNowUnix").Return(9999)
+
+	swapId := int64(1)
+	swapRepository.On("CreateSwapAction", mock.Anything).Times(1).Return(&swapId, nil)
+	orderRepository.On("Update", mock.Anything).Return(nil)
+
+	orderExecutor.MakeSwap(order, swapChain)
+
+	assertion.Equal(900.00, swapRepository.swapAction.StartQuantity)
+	assertion.Equal(1000.00, swapRepository.swapAction.SwapOnePrice)
+	assertion.Equal(100.00, swapRepository.swapAction.SwapTwoPrice)
+	assertion.Equal(4000.00, swapRepository.swapAction.SwapThreePrice)
+	assertion.Equal("BTCETH", swapRepository.swapAction.SwapOneSymbol)
+	assertion.Equal("ETHSOL", swapRepository.swapAction.SwapTwoSymbol)
+	assertion.Equal("SOLBTC", swapRepository.swapAction.SwapThreeSymbol)
+	assertion.Equal("BTC", swapRepository.swapAction.Asset)
+	assertion.Equal(model.SwapActionStatusPending, swapRepository.swapAction.Status)
+	assertion.Equal(order.Id, swapRepository.swapAction.OrderId)
+	assertion.Equal(order.Id, orderRepository.Updated.Id)
+	assertion.True(orderRepository.Updated.Swap)
+}

@@ -1005,10 +1005,23 @@ func (m *OrderExecutor) CalculateSellQuantity(order model.Order) float64 {
 }
 
 func (m *OrderExecutor) MakeSwap(order model.Order, swapChain model.SwapChainEntity) {
-	assetBalance, err := m.BalanceService.GetAssetBalance(swapChain.SwapOne.BaseAsset, false)
+	baseAsset := order.GetBaseAsset()
+
+	if baseAsset != swapChain.SwapOne.BaseAsset {
+		log.Printf("[%s] Wrong swap asset given %s, expected %s", order.Symbol, swapChain.SwapOne.BaseAsset, baseAsset)
+
+		return
+	}
+
+	assetBalance, err := m.BalanceService.GetAssetBalance(baseAsset, false)
 
 	if err != nil {
 		return
+	}
+
+	startQuantity := order.ExecutedQuantity
+	if startQuantity > assetBalance {
+		startQuantity = assetBalance
 	}
 
 	swapAction, err := m.SwapRepository.GetActiveSwapAction(order)
@@ -1026,10 +1039,10 @@ func (m *OrderExecutor) MakeSwap(order model.Order, swapChain model.SwapChainEnt
 		OrderId:         order.Id,
 		BotId:           m.CurrentBot.Id,
 		SwapChainId:     swapChain.Id,
-		Asset:           swapChain.SwapOne.BaseAsset,
+		Asset:           baseAsset,
 		Status:          model.SwapActionStatusPending,
 		StartTimestamp:  m.TimeService.GetNowUnix(),
-		StartQuantity:   assetBalance,
+		StartQuantity:   startQuantity,
 		SwapOneSymbol:   swapChain.SwapOne.GetSymbol(),
 		SwapOnePrice:    swapChain.SwapOne.Price,
 		SwapTwoSymbol:   swapChain.SwapTwo.GetSymbol(),
@@ -1235,15 +1248,15 @@ func (m *OrderExecutor) CheckMinBalance(limit model.TradeLimit, kLine model.KLin
 	return nil
 }
 
-func (o *OrderExecutor) HasCancelRequest(symbol string) bool {
-	value, ok := o.CancelRequestMap[symbol]
+func (m *OrderExecutor) HasCancelRequest(symbol string) bool {
+	value, ok := m.CancelRequestMap[symbol]
 
 	if !ok {
 		return false
 	}
 
 	defer func(symbol string) {
-		delete(o.CancelRequestMap, symbol)
+		delete(m.CancelRequestMap, symbol)
 	}(symbol)
 
 	if value {
@@ -1253,8 +1266,8 @@ func (o *OrderExecutor) HasCancelRequest(symbol string) bool {
 	return false
 }
 
-func (o *OrderExecutor) SetCancelRequest(symbol string) {
-	o.TradeLockMutex.Lock()
-	o.CancelRequestMap[symbol] = true
-	o.TradeLockMutex.Unlock()
+func (m *OrderExecutor) SetCancelRequest(symbol string) {
+	m.TradeLockMutex.Lock()
+	m.CancelRequestMap[symbol] = true
+	m.TradeLockMutex.Unlock()
 }

@@ -6,6 +6,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"log"
 	"strings"
@@ -25,6 +26,7 @@ type PriceCalculator struct {
 	Formatter          *utils.Formatter
 	LossSecurity       LossSecurityInterface
 	ProfitService      ProfitServiceInterface
+	BotService         service.BotServiceInterface
 }
 
 func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, error) {
@@ -39,7 +41,7 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 	order, err := m.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
 
 	// Extra charge by current price
-	if err == nil && order.GetProfitPercent(lastKline.Close).Lte(tradeLimit.GetBuyOnFallPercent(order, *lastKline)) {
+	if err == nil && order.GetProfitPercent(lastKline.Close, m.BotService.UseSwapCapital()).Lte(tradeLimit.GetBuyOnFallPercent(order, *lastKline, m.BotService.UseSwapCapital())) {
 		extraBuyPrice := minPrice
 		if order.GetPositionTime().GetHours() >= 24 {
 			extraBuyPrice = lastKline.Close
@@ -47,7 +49,7 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 				"[%s] Extra buy price is %f (more than 24 hours), profit: %.2f",
 				tradeLimit.Symbol,
 				extraBuyPrice,
-				order.GetProfitPercent(lastKline.Close).Value(),
+				order.GetProfitPercent(lastKline.Close, m.BotService.UseSwapCapital()).Value(),
 			)
 		} else {
 			extraBuyPrice = minPrice
@@ -55,7 +57,7 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 				"[%s] Extra buy price is %f (less than 24 hours), profit: %.2f",
 				tradeLimit.Symbol,
 				extraBuyPrice,
-				order.GetProfitPercent(lastKline.Close),
+				order.GetProfitPercent(lastKline.Close, m.BotService.UseSwapCapital()),
 			)
 		}
 
@@ -179,7 +181,7 @@ func (m *PriceCalculator) CalculateSell(tradeLimit model.TradeLimit, order model
 		log.Printf("[%s] Choosen Current sell price %f", tradeLimit.Symbol, minPrice)
 	}
 
-	profit := (minPrice - order.Price) * order.ExecutedQuantity
+	profit := order.GetQuoteProfit(minPrice, m.BotService.UseSwapCapital())
 
 	log.Printf("[%s] Sell price = %f, expected profit = %f$", order.Symbol, minPrice, profit)
 

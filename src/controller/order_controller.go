@@ -7,6 +7,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"gitlab.com/open-soft/go-crypto-bot/src/service/exchange"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"gitlab.com/open-soft/go-crypto-bot/src/validator"
@@ -26,6 +27,7 @@ type OrderController struct {
 	LossSecurity           *exchange.LossSecurity
 	OrderExecutor          *exchange.OrderExecutor
 	ProfitOptionsValidator *validator.ProfitOptionsValidator
+	BotService             service.BotServiceInterface
 }
 
 func (o *OrderController) GetOrderTradeListAction(w http.ResponseWriter, req *http.Request) {
@@ -99,7 +101,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 		// todo: Decomposition is required here, move it to separate service
 		binanceOrder := o.OrderRepository.GetBinanceOrder(openedOrder.Symbol, "SELL")
 		executedQty := 0.00
-		origQty := openedOrder.ExecutedQuantity
+		origQty := openedOrder.GetPositionQuantityWithSwap()
 
 		if binanceOrder != nil {
 			sellPrice = binanceOrder.Price
@@ -134,10 +136,10 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			Symbol:         limit.Symbol,
 			Order:          openedOrder,
 			KLine:          *kLine,
-			Percent:        openedOrder.GetProfitPercent(kLine.Close),
+			Percent:        openedOrder.GetProfitPercent(kLine.Close, o.BotService.UseSwapCapital()),
 			SellPrice:      sellPrice,
-			Profit:         o.Formatter.ToFixed(openedOrder.GetQuoteProfit(kLine.Close), 2),
-			TargetProfit:   o.Formatter.ToFixed(openedOrder.GetQuoteProfit(sellPrice), 2),
+			Profit:         o.Formatter.ToFixed(openedOrder.GetQuoteProfit(kLine.Close, o.BotService.UseSwapCapital()), 2),
+			TargetProfit:   o.Formatter.ToFixed(openedOrder.GetQuoteProfit(sellPrice, o.BotService.UseSwapCapital()), 2),
 			PredictedPrice: predictedPrice,
 			Interpolation:  interpolation,
 			ExecutedQty:    executedQty,

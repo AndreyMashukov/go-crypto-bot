@@ -66,6 +66,7 @@ func (b *BotController) PutConfigAction(w http.ResponseWriter, req *http.Request
 	bot := b.BotRepository.GetCurrentBot()
 	bot.IsMasterBot = botUpdate.IsMasterBot
 	bot.IsSwapEnabled = botUpdate.IsSwapEnabled
+	bot.SwapConfig = botUpdate.SwapConfig
 	err = b.BotRepository.Update(*bot)
 
 	if err != nil {

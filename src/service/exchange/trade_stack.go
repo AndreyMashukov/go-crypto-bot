@@ -4,6 +4,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"log"
 	"sort"
@@ -19,6 +20,7 @@ type TradeStack struct {
 	ExchangeRepository repository.ExchangeRepositoryInterface
 	BalanceService     BalanceServiceInterface
 	Formatter          *utils.Formatter
+	BotService         service.BotServiceInterface
 }
 
 func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
@@ -93,16 +95,16 @@ func (t *TradeStack) GetTradeStack(skipLocked bool, balanceFilter bool, skipPend
 		openedOrder, err := t.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
 		if err == nil {
 			kline := t.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
-			if kline != nil && openedOrder.CanExtraBuy(*kline) {
+			if kline != nil && openedOrder.CanExtraBuy(*kline, t.BotService.UseSwapCapital()) {
 				// todo: Add filter configuration (in TradeLimit database table) for profitPercent, example: profitPercent < 0
 				// todo: Allow user to trade only after reaching specific daily price fall (or make it multi-step)
-				profitPercent := openedOrder.GetProfitPercent(kline.Close)
-				if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(openedOrder, *kline)) {
+				profitPercent := openedOrder.GetProfitPercent(kline.Close, t.BotService.UseSwapCapital())
+				if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(openedOrder, *kline, t.BotService.UseSwapCapital())) {
 					stack = append(stack, model.TradeStackItem{
 						Index:             int64(index),
 						Symbol:            tradeLimit.Symbol,
 						Percent:           profitPercent,
-						BudgetUsdt:        openedOrder.GetAvailableExtraBudget(*kline),
+						BudgetUsdt:        openedOrder.GetAvailableExtraBudget(*kline, t.BotService.UseSwapCapital()),
 						HasEnoughBalance:  false,
 						BinanceOrder:      binanceOrder,
 						IsExtraCharge:     true,

@@ -6,6 +6,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"strings"
 	"time"
@@ -20,11 +21,11 @@ type SwapValidator struct {
 	Binance        client.ExchangePriceAPIInterface
 	SwapRepository repository.SwapBasicRepositoryInterface
 	Formatter      *utils.Formatter
-	SwapMinPercent float64
+	BotService     service.BotServiceInterface
 }
 
 func (v *SwapValidator) Validate(entity model.SwapChainEntity, order model.Order) error {
-	minPercent := model.Percent(v.SwapMinPercent)
+	minPercent := model.Percent(v.BotService.GetSwapConfig().MinValidPercent)
 
 	if entity.Percent.Lt(minPercent) {
 		return errors.New(fmt.Sprintf("Swap [%s] too small percent %.2f.", entity.Title, entity.Percent))
@@ -110,7 +111,7 @@ func (v *SwapValidator) validateSwap(chain model.SwapChainEntity, order model.Or
 		return errors.New(fmt.Sprintf("Swap [%s:%s] price is too low", entity.Operation, entity.Symbol))
 	}
 
-	notional := chain.GetNotional(order.ExecutedQuantity, index)
+	notional := chain.GetNotional(order.GetPositionQuantityWithSwap(), index)
 
 	if notional < swapCurrentKline.MinNotional {
 		return errors.New(fmt.Sprintf(
@@ -133,8 +134,8 @@ func (v *SwapValidator) validateSwap(chain model.SwapChainEntity, order model.Or
 }
 
 func (v *SwapValidator) checkHistoryData(symbol string, price float64, operation string) error {
-	period := int64(14)
-	history := v.Binance.GetKLinesCached(symbol, "1d", period)
+	period := v.BotService.GetSwapConfig().HistoryPeriod
+	history := v.Binance.GetKLinesCached(symbol, v.BotService.GetSwapConfig().HistoryInterval, period)
 
 	seenTimes := int64(0)
 

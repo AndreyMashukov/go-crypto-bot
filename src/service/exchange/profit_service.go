@@ -3,6 +3,7 @@ package exchange
 import (
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
+	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"log"
 	"math"
 	"sort"
@@ -15,7 +16,8 @@ type ProfitServiceInterface interface {
 }
 
 type ProfitService struct {
-	Binance client.ExchangePriceAPIInterface
+	Binance    client.ExchangePriceAPIInterface
+	BotService service.BotServiceInterface
 }
 
 func (p *ProfitService) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice float64) float64 {
@@ -76,5 +78,14 @@ func (p *ProfitService) GetMinProfitPercent(order model.ProfitPositionInterface)
 }
 
 func (p *ProfitService) GetMinClosePrice(order model.ProfitPositionInterface, currentPrice float64) float64 {
-	return currentPrice * (100 + p.GetMinProfitPercent(order).Value()) / 100
+	minProfitPercent := p.GetMinProfitPercent(order).Value()
+
+	if p.BotService.UseSwapCapital() && order.GetExecutedQuantity() > 0.00 {
+		executedValue := order.GetExecutedQuantity() * currentPrice
+		targetValue := executedValue * (100 + minProfitPercent) / 100
+
+		return targetValue / order.GetPositionQuantityWithSwap()
+	}
+
+	return currentPrice * (100 + minProfitPercent) / 100
 }

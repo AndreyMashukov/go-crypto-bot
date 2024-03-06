@@ -4,6 +4,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"log"
 	"slices"
@@ -22,6 +23,7 @@ type MakerService struct {
 	CurrentBot         *model.Bot
 	PriceCalculator    *PriceCalculator
 	TradeStack         *TradeStack
+	BotService         service.BotServiceInterface
 }
 
 func (m *MakerService) Make(symbol string, decisions []model.Decision) {
@@ -76,13 +78,13 @@ func (m *MakerService) Make(symbol string, decisions []model.Decision) {
 	allowManualOrder := true
 
 	if buyOrderErr == nil && tradeLimit.IsEnabled {
-		profitPercent := openedOrder.GetProfitPercent(lastKline.Close)
-		if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline)) {
+		profitPercent := openedOrder.GetProfitPercent(lastKline.Close, m.BotService.UseSwapCapital())
+		if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline, m.BotService.UseSwapCapital())) {
 			log.Printf(
 				"[%s] Time to extra charge, profit %.2f of %.2f, price = %.8f",
 				symbol,
 				profitPercent,
-				tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline).Value(),
+				tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline, m.BotService.UseSwapCapital()).Value(),
 				lastKline.Close,
 			)
 			holdScore = 0
@@ -172,9 +174,9 @@ func (m *MakerService) Make(symbol string, decisions []model.Decision) {
 				lastKline = m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
 				if lastKline != nil {
-					profit := openedOrder.GetProfitPercent(lastKline.Close)
+					profit := openedOrder.GetProfitPercent(lastKline.Close, m.BotService.UseSwapCapital())
 
-					if profit.Lte(tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline)) {
+					if profit.Lte(tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline, m.BotService.UseSwapCapital())) {
 						binanceOrder := m.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "SELL")
 						if binanceOrder != nil {
 							log.Printf("[%s] Cancel request for SELL order sent, time to extra charge now!", symbol)
@@ -250,9 +252,9 @@ func (m *MakerService) Make(symbol string, decisions []model.Decision) {
 			lastKline = m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
 			if lastKline != nil {
-				profit := openedOrder.GetProfitPercent(lastKline.Close)
+				profit := openedOrder.GetProfitPercent(lastKline.Close, m.BotService.UseSwapCapital())
 
-				if err == nil && profit.Lte(tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline)) {
+				if err == nil && profit.Lte(tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline, m.BotService.UseSwapCapital())) {
 					// extra buy on current price
 					if price < lastKline.Close {
 						price = m.Formatter.FormatPrice(tradeLimit, lastKline.Close)
@@ -269,7 +271,7 @@ func (m *MakerService) Make(symbol string, decisions []model.Decision) {
 						"[%s] Extra charge is not allowed: %.2f of %.2f",
 						symbol,
 						profit.Value(),
-						tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline).Value(),
+						tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline, m.BotService.UseSwapCapital()).Value(),
 					)
 				}
 			}

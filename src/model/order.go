@@ -63,6 +63,8 @@ type ProfitPositionInterface interface {
 	GetPositionTime() PositionTime
 	GetProfitOptions() ProfitOptions
 	GetSymbol() string
+	GetExecutedQuantity() float64
+	GetPositionQuantityWithSwap() float64
 }
 
 type Order struct {
@@ -86,17 +88,30 @@ type Order struct {
 	Swap               bool               `json:"swap"`
 	ProfitOptions      ProfitOptions      `json:"profitOptions"`
 	ExtraChargeOptions ExtraChargeOptions `json:"extraChargeOptions"`
+	SwapQuantity       *float64           `json:"swapQuantity"`
 }
 
-func (o *Order) CanExtraBuy(kLine KLine) bool {
+func (o *Order) CanExtraBuy(kLine KLine, withSwap bool) bool {
+	if o.Swap {
+		return false
+	}
+
 	if len(o.ExtraChargeOptions) == 0 {
 		return false
 	}
 
-	return o.GetAvailableExtraBudget(kLine) >= 10.00
+	return o.GetAvailableExtraBudget(kLine, withSwap) >= 10.00
 }
 
-func (o *Order) GetAvailableExtraBudget(kLine KLine) float64 {
+func (o Order) GetExecutedQuantity() float64 {
+	return o.GetRemainingToSellQuantity(false)
+}
+
+func (o Order) GetPositionQuantityWithSwap() float64 {
+	return o.GetRemainingToSellQuantity(true)
+}
+
+func (o *Order) GetAvailableExtraBudget(kLine KLine, withSwap bool) float64 {
 	availableExtraBudget := 0.00
 
 	if len(o.ExtraChargeOptions) > 0 {
@@ -106,7 +121,7 @@ func (o *Order) GetAvailableExtraBudget(kLine KLine) float64 {
 			return o.ExtraChargeOptions[i].Percent > o.ExtraChargeOptions[j].Percent
 		})
 
-		profit := o.GetProfitPercent(kLine.Close)
+		profit := o.GetProfitPercent(kLine.Close, withSwap)
 
 		for _, option := range o.ExtraChargeOptions {
 			if profit.Lte(option.Percent) {
@@ -130,12 +145,12 @@ func (o Order) GetPositionTime() PositionTime {
 	return PositionTime(time.Now().Unix() - date.Unix())
 }
 
-func (o *Order) GetProfitPercent(currentPrice float64) Percent {
-	return Percent(math.Round((currentPrice-o.Price)*100/o.Price*100) / 100)
+func (o *Order) GetProfitPercent(currentPrice float64, withSwap bool) Percent {
+	return Percent(math.Round(((o.GetQuoteProfit(currentPrice, withSwap)*100.00)/(o.Price*o.GetRemainingToSellQuantity(false)))*100) / 100)
 }
 
-func (o *Order) GetQuoteProfit(sellPrice float64) float64 {
-	return (sellPrice - o.Price) * o.GetRemainingToSellQuantity()
+func (o *Order) GetQuoteProfit(sellPrice float64, withSwap bool) float64 {
+	return (sellPrice * o.GetRemainingToSellQuantity(withSwap)) - (o.GetRemainingToSellQuantity(false) * o.Price)
 }
 
 func (o Order) GetProfitOptions() ProfitOptions {
@@ -158,12 +173,18 @@ func (o *Order) IsClosed() bool {
 	return o.Status == "closed"
 }
 
-func (o *Order) GetRemainingToSellQuantity() float64 {
-	if o.SoldQuantity != nil {
-		return o.ExecutedQuantity - *o.SoldQuantity
+func (o *Order) GetRemainingToSellQuantity(swap bool) float64 {
+	executedQuantity := o.ExecutedQuantity
+
+	if swap && o.SwapQuantity != nil {
+		executedQuantity += *o.SwapQuantity
 	}
 
-	return o.ExecutedQuantity
+	if o.SoldQuantity != nil {
+		executedQuantity -= *o.SoldQuantity
+	}
+
+	return executedQuantity
 }
 
 func (o *Order) IsSwap() bool {

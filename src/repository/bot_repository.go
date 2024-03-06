@@ -72,7 +72,8 @@ func (b *BotRepository) GetCurrentBot() *model.Bot {
 			b.id as Id, 
 			b.uuid as Uuid,
 			b.is_master_bot as IsMasterBot,
-			b.is_swap_enabled as IsSwapEnabled
+			b.is_swap_enabled as IsSwapEnabled,
+			b.swap_config as SwapConfig
 		FROM bots b
 		WHERE b.uuid = ?`, botUuid,
 	).Scan(
@@ -80,6 +81,7 @@ func (b *BotRepository) GetCurrentBot() *model.Bot {
 		&bot.BotUuid,
 		&bot.IsMasterBot,
 		&bot.IsSwapEnabled,
+		&bot.SwapConfig,
 	)
 
 	if err != nil {
@@ -105,11 +107,13 @@ func (b *BotRepository) Update(bot model.Bot) error {
 	_, err := b.DB.Exec(`
 		UPDATE bots b SET
 			b.is_swap_enabled = ?,
-			b.is_master_bot = ?
+			b.is_master_bot = ?,
+			b.swap_config = ?
 	    WHERE b.uuid = ? AND b.id = ?
 	`,
 		bot.IsSwapEnabled,
 		bot.IsMasterBot,
+		bot.SwapConfig,
 		bot.BotUuid,
 		bot.Id,
 	)

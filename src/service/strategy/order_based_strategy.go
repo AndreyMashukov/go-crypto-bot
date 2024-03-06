@@ -3,6 +3,7 @@ package strategy
 import (
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"gitlab.com/open-soft/go-crypto-bot/src/service/exchange"
 	"time"
 )
@@ -12,6 +13,7 @@ type OrderBasedStrategy struct {
 	OrderRepository    repository.OrderRepository
 	ProfitService      exchange.ProfitServiceInterface
 	TradeStack         *exchange.TradeStack
+	BotService         service.BotServiceInterface
 }
 
 func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
@@ -76,9 +78,9 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 		}
 	}
 
-	profitPercent := order.GetProfitPercent(kLine.Close)
+	profitPercent := order.GetProfitPercent(kLine.Close, o.BotService.UseSwapCapital())
 
-	if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(order, kLine)) && tradeLimit.IsEnabled && o.TradeStack.CanBuy(tradeLimit) {
+	if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(order, kLine, o.BotService.UseSwapCapital())) && tradeLimit.IsEnabled && o.TradeStack.CanBuy(tradeLimit) {
 		return model.Decision{
 			StrategyName: model.OrderBasedStrategyName,
 			Score:        999.99,

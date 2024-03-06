@@ -133,20 +133,16 @@ func InitServiceContainer() Container {
 		CurrentBot:         currentBot,
 	}
 
-	// Swap Settings
-	// todo: move to `bot` entity (database table `bot`)
-	swapMinPercentValid := 1.15
-	swapOrderOnProfitPercent := -1.00
-	var swapOpenedSellOrderFromHoursOpened int64 = 2
-	//swapMinPercentValid := 0.1
-	//swapOrderOnProfitPercent := 10.00
-	//var swapOpenedSellOrderFromHoursOpened int64 = 0
+	botService := service.BotService{
+		CurrentBot:    currentBot,
+		BotRepository: &botRepository,
+	}
 
 	swapValidator := validator.SwapValidator{
 		Binance:        &binance,
 		SwapRepository: &swapRepository,
 		Formatter:      &formatter,
-		SwapMinPercent: swapMinPercentValid,
+		BotService:     &botService,
 	}
 
 	lockTradeChannel := make(chan model.Lock)
@@ -172,7 +168,8 @@ func InitServiceContainer() Container {
 	timeService := utils.TimeHelper{}
 
 	profitService := exchange.ProfitService{
-		Binance: &binance,
+		Binance:    &binance,
+		BotService: &botService,
 	}
 
 	lossSecurity := exchange.LossSecurity{
@@ -191,6 +188,7 @@ func InitServiceContainer() Container {
 		FrameService:       &frameService,
 		LossSecurity:       &lossSecurity,
 		ProfitService:      &profitService,
+		BotService:         &botService,
 	}
 
 	tradeStack := exchange.TradeStack{
@@ -199,11 +197,7 @@ func InitServiceContainer() Container {
 		ExchangeRepository: &exchangeRepository,
 		BalanceService:     &balanceService,
 		Formatter:          &formatter,
-	}
-
-	botService := service.BotService{
-		CurrentBot:    currentBot,
-		BotRepository: &botRepository,
+		BotService:         &botService,
 	}
 
 	orderExecutor := exchange.OrderExecutor{
@@ -229,9 +223,7 @@ func InitServiceContainer() Container {
 		},
 		SwapValidator:          &swapValidator,
 		Formatter:              &formatter,
-		SwapSellOrderDays:      swapOpenedSellOrderFromHoursOpened,
 		BotService:             &botService,
-		SwapProfitPercent:      swapOrderOnProfitPercent,
 		TurboSwapProfitPercent: 20.00,
 		Lock:                   make(map[string]bool),
 		TradeLockMutex:         sync.RWMutex{},
@@ -250,6 +242,7 @@ func InitServiceContainer() Container {
 		HoldScore:          75.00,
 		CurrentBot:         currentBot,
 		PriceCalculator:    &priceCalculator,
+		BotService:         &botService,
 	}
 
 	profitOptionsValidator := validator.ProfitOptionsValidator{}
@@ -268,6 +261,7 @@ func InitServiceContainer() Container {
 		LossSecurity:           &lossSecurity,
 		OrderExecutor:          &orderExecutor,
 		ProfitOptionsValidator: &profitOptionsValidator,
+		BotService:             &botService,
 	}
 
 	tradeController := controller.TradeController{
@@ -305,6 +299,7 @@ func InitServiceContainer() Container {
 		OrderRepository:    orderRepository,
 		TradeStack:         &tradeStack,
 		ProfitService:      &profitService,
+		BotService:         &botService,
 	}
 	marketDepthStrategy := strategy.MarketDepthStrategy{}
 	smaStrategy := strategy.SmaTradeStrategy{

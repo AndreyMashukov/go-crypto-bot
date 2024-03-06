@@ -57,7 +57,7 @@ func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation strin
 		var dto model.Order
 		err := json.Unmarshal([]byte(res), &dto)
 
-		if err == nil && dto.ExecutedQuantity > 0 {
+		if err == nil && dto.GetPositionQuantityWithSwap() > 0 {
 			return dto, nil
 		}
 	}
@@ -69,7 +69,7 @@ func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation strin
 	}
 
 	encoded, _ := json.Marshal(order)
-	repo.RDB.Set(*repo.Ctx, repo.getOpenedOrderCacheKey(symbol, operation), string(encoded), time.Minute*60)
+	repo.RDB.Set(*repo.Ctx, repo.getOpenedOrderCacheKey(symbol, operation), string(encoded), time.Second*30)
 
 	return order, nil
 }
@@ -102,11 +102,14 @@ func (repo *OrderRepository) GetOpenedOrder(symbol string, operation string) (mo
 			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
 			o.swap as Swap,
 			o.extra_charge_options as ExtraChargeOptions,
-			o.profit_options as ProfitOptions
+			o.profit_options as ProfitOptions,
+    		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity
 		FROM orders o
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
+		LEFT JOIN swap_action sa on o.id = sa.order_id AND sa.status = ?
 		WHERE o.status = ? AND o.symbol = ? AND o.operation = ? AND o.bot_id = ?
 		GROUP BY o.id`,
+		"success",
 		"opened",
 		symbol,
 		operation,
@@ -132,6 +135,7 @@ func (repo *OrderRepository) GetOpenedOrder(symbol string, operation string) (mo
 		&order.Swap,
 		&order.ExtraChargeOptions,
 		&order.ProfitOptions,
+		&order.SwapQuantity,
 	)
 
 	if err != nil {
@@ -272,11 +276,13 @@ func (repo *OrderRepository) Find(id int64) (model.Order, error) {
 			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
 			o.swap as Swap,
 			o.extra_charge_options as ExtraChargeOptions,
-			o.profit_options as ProfitOptions
+			o.profit_options as ProfitOptions,
+    		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity
 		FROM orders o
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
+		LEFT JOIN swap_action sa on o.id = sa.order_id AND sa.status = ?
 		WHERE o.id = ? AND o.bot_id = ?
-		GROUP BY o.id`, id, repo.CurrentBot.Id,
+		GROUP BY o.id`, "success", id, repo.CurrentBot.Id,
 	).Scan(
 		&order.Id,
 		&order.Symbol,
@@ -298,6 +304,7 @@ func (repo *OrderRepository) Find(id int64) (model.Order, error) {
 		&order.Swap,
 		&order.ExtraChargeOptions,
 		&order.ProfitOptions,
+		&order.SwapQuantity,
 	)
 
 	if err != nil {
@@ -384,12 +391,14 @@ func (repo *OrderRepository) GetList() []model.Order {
 			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
 			o.swap as Swap,
 			o.extra_charge_options as ExtraChargeOptions,
-			o.profit_options as ProfitOptions
+			o.profit_options as ProfitOptions,
+    		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity
 		FROM orders o 
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
+		LEFT JOIN swap_action sa on o.id = sa.order_id AND sa.status = ?
 		WHERE o.bot_id = ?
 		GROUP BY o.id
-	`, repo.CurrentBot.Id)
+	`, "success", repo.CurrentBot.Id)
 	defer res.Close()
 
 	if err != nil {
@@ -421,6 +430,7 @@ func (repo *OrderRepository) GetList() []model.Order {
 			&order.Swap,
 			&order.ExtraChargeOptions,
 			&order.ProfitOptions,
+			&order.SwapQuantity,
 		)
 
 		if err != nil {
@@ -455,12 +465,14 @@ func (repo *OrderRepository) GetClosesOrderList(buyOrder model.Order) []model.Or
 			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
 			o.swap as Swap,
 			o.extra_charge_options as ExtraChargeOptions,
-			o.profit_options as ProfitOptions
+			o.profit_options as ProfitOptions,
+    		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity
 		FROM orders o 
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
+		LEFT JOIN swap_action sa on o.id = sa.order_id AND sa.status = ?
 		WHERE o.bot_id = ? AND o.closes_order = ? AND o.operation = ?
 		GROUP BY o.id
-	`, repo.CurrentBot.Id, buyOrder.Id, "SELL")
+	`, "success", repo.CurrentBot.Id, buyOrder.Id, "SELL")
 	defer res.Close()
 
 	if err != nil {
@@ -492,6 +504,7 @@ func (repo *OrderRepository) GetClosesOrderList(buyOrder model.Order) []model.Or
 			&order.Swap,
 			&order.ExtraChargeOptions,
 			&order.ProfitOptions,
+			&order.SwapQuantity,
 		)
 
 		if err != nil {

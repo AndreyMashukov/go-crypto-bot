@@ -49,7 +49,15 @@ curl --location --request PUT 'http://localhost:8090/bot/update?botUuid={BOT_UUI
 --header 'Content-Type: application/json' \
 --data-raw '{
     "isMasterBot": true,
-    "isSwapEnabled": true
+    "isSwapEnabled": true,
+    "swapConfig": {
+      "swapMinPercent": 2.00, 
+      "swapOrderProfitTrigger": -5.00, 
+      "orderTimeTrigger": 36000, 
+      "useSwapCapital": true, 
+      "historyInterval": "1d", 
+      "historyPeriod": 14
+    }
 }'
 ```
 **What is Master bot?**
@@ -57,7 +65,14 @@ curl --location --request PUT 'http://localhost:8090/bot/update?botUuid={BOT_UUI
 
 **What is swap?**
 > We call `SWAP` is triangular arbitrage, if `SWAP` is enabled, bot will try to do triangular arbitrage with negative profit positions (to gain coin amount).
- 
+SwapConfig: 
+> - `swapMinPercent` - Minimum profit percent for swap
+> - `swapOrderProfitTrigger` - Swap will be activated on orders with negative profit from this value
+> - `orderTimeTrigger` - Swap will be only activated from this position time
+> - `useSwapCapital` - Use swap capital for position profit calculation
+> - `historyInterval` - Swap history check interval
+> - `historyPeriod` - Swap history check period
+
 CREATE YOUR FIRST TRADE LIMIT (Symbol) `PERPUSDT`
 ```bash
 curl --location --request POST 'http://localhost:8090/trade/limit/create?botUuid={BOT_UUID}' \

@@ -56,7 +56,7 @@ curl --location --request PUT 'http://localhost:8090/bot/update?botUuid={BOT_UUI
 > If you use multiple bots on one machine, you can set one of them as `master bot` - master bot is able to update some extra data which is static and can be used by others bots
 
 **What is swap?**
-> We call `SWAP` is triangular arbitrage, if `SWAP` is enabled, bot will try to do triangular arbitrage with negative profit positions (to gain coin amount)
+> We call `SWAP` is triangular arbitrage, if `SWAP` is enabled, bot will try to do triangular arbitrage with negative profit positions (to gain coin amount). **Do not use swaps until issue [#18](https://github.com/AndreyMashukov/go-crypto-bot/issues/18) has been fixed**
  
 CREATE YOUR FIRST TRADE LIMIT (Symbol) `PERPUSDT`
 ```bash

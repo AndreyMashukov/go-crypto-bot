@@ -212,7 +212,7 @@ type Position struct {
 }
 
 type PositionCloseStrategy struct {
-	MinClosePrice    float64 `json:"minProfitUSDT"`
+	MinClosePrice    float64 `json:"minClosePrice"`
 	MinProfitPercent Percent `json:"minProfitPercent"`
 }
 

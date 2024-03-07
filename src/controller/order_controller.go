@@ -28,6 +28,7 @@ type OrderController struct {
 	OrderExecutor          *exchange.OrderExecutor
 	ProfitOptionsValidator *validator.ProfitOptionsValidator
 	BotService             service.BotServiceInterface
+	ProfitService          exchange.ProfitServiceInterface
 }
 
 func (o *OrderController) GetOrderTradeListAction(w http.ResponseWriter, req *http.Request) {
@@ -147,6 +148,11 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			ManualOrderConfig: model.ManualOrderConfig{
 				PriceStep:     limit.MinPrice,
 				MinClosePrice: openedOrder.GetManualMinClosePrice(),
+			},
+			PositionTime: openedOrder.GetPositionTime(),
+			CloseStrategy: model.PositionCloseStrategy{
+				MinProfitPercent: o.ProfitService.GetMinProfitPercent(openedOrder),
+				MinClosePrice:    o.ProfitService.GetMinClosePrice(openedOrder, openedOrder.Price),
 			},
 		})
 	}

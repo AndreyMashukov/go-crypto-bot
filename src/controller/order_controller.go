@@ -154,6 +154,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 				MinProfitPercent: o.ProfitService.GetMinProfitPercent(openedOrder),
 				MinClosePrice:    o.ProfitService.GetMinClosePrice(openedOrder, openedOrder.Price),
 			},
+			IsPriceExpired: kLine.IsPriceExpired(),
 		})
 	}
 

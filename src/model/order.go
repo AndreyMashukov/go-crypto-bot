@@ -195,18 +195,25 @@ func (o Order) GetSymbol() string {
 }
 
 type Position struct {
-	Symbol            string            `json:"symbol"`
-	KLine             KLine             `json:"kLine"`
-	Order             Order             `json:"order"`
-	Percent           Percent           `json:"percent"`
-	SellPrice         float64           `json:"sellPrice"`
-	PredictedPrice    float64           `json:"predictedPrice"`
-	Profit            float64           `json:"profit"`
-	TargetProfit      float64           `json:"targetProfit"`
-	Interpolation     Interpolation     `json:"interpolation"`
-	OrigQty           float64           `json:"origQty"`
-	ExecutedQty       float64           `json:"executedQty"`
-	ManualOrderConfig ManualOrderConfig `json:"manualOrderConfig"`
+	Symbol            string                `json:"symbol"`
+	KLine             KLine                 `json:"kLine"`
+	Order             Order                 `json:"order"`
+	Percent           Percent               `json:"percent"`
+	SellPrice         float64               `json:"sellPrice"`
+	PredictedPrice    float64               `json:"predictedPrice"`
+	Profit            float64               `json:"profit"`
+	TargetProfit      float64               `json:"targetProfit"`
+	Interpolation     Interpolation         `json:"interpolation"`
+	OrigQty           float64               `json:"origQty"`
+	ExecutedQty       float64               `json:"executedQty"`
+	ManualOrderConfig ManualOrderConfig     `json:"manualOrderConfig"`
+	PositionTime      PositionTime          `json:"positionTime"`
+	CloseStrategy     PositionCloseStrategy `json:"closeStrategy"`
+}
+
+type PositionCloseStrategy struct {
+	MinClosePrice    float64 `json:"minProfitUSDT"`
+	MinProfitPercent Percent `json:"minProfitPercent"`
 }
 
 type ManualOrderConfig struct {

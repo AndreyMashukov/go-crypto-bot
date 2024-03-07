@@ -272,6 +272,7 @@ func InitServiceContainer() Container {
 		OrderExecutor:          &orderExecutor,
 		ProfitOptionsValidator: &profitOptionsValidator,
 		BotService:             &botService,
+		ProfitService:          &profitService,
 	}
 
 	tradeController := controller.TradeController{

@@ -209,6 +209,7 @@ type Position struct {
 	ManualOrderConfig ManualOrderConfig     `json:"manualOrderConfig"`
 	PositionTime      PositionTime          `json:"positionTime"`
 	CloseStrategy     PositionCloseStrategy `json:"closeStrategy"`
+	IsPriceExpired    bool                  `json:"isPriceExpired"`
 }
 
 type PositionCloseStrategy struct {

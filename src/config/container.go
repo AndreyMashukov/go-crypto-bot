@@ -416,6 +416,7 @@ func (c *Container) StartHttpServer() {
 	http.HandleFunc("/chart/list", c.ExchangeController.GetChartListAction)
 	http.HandleFunc("/order/list", c.OrderController.GetOrderListAction)
 	http.HandleFunc("/order/extra/charge/update", c.OrderController.UpdateExtraChargeAction)
+	http.HandleFunc("/order/profit/options/update", c.OrderController.UpdateProfitOptionsAction)
 	http.HandleFunc("/order/pending/list", c.OrderController.GetPendingOrderListAction)
 	http.HandleFunc("/order/position/list", c.OrderController.GetPositionListAction)
 	http.HandleFunc("/order", c.OrderController.PostManualOrderAction)

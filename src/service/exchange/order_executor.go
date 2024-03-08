@@ -543,130 +543,26 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 			}
 
 			end := m.TimeService.GetNowUnix()
-			kline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
-			openedBuyPosition, openedBuyPositionErr := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
-
-			if kline != nil && binanceOrder.IsSell() && binanceOrder.IsNew() && m.BotService.IsSwapEnabled() {
-				// Try arbitrage for long orders >= 4 hours and with profit < -1.00%
-				if openedBuyPositionErr == nil {
-					swapChain := m.SwapRepository.GetSwapChainCache(openedBuyPosition.GetBaseAsset())
-					if swapChain != nil {
-						possibleSwaps := m.SwapRepository.GetSwapChains(openedBuyPosition.GetBaseAsset())
-
-						if len(possibleSwaps) == 0 {
-							m.SwapRepository.InvalidateSwapChainCache(openedBuyPosition.GetBaseAsset())
-						}
-
-						for _, possibleSwap := range possibleSwaps {
-							turboSwap := possibleSwap.Percent.Gte(model.Percent(m.TurboSwapProfitPercent))
-							isTimeToSwap := openedBuyPosition.GetPositionTime().GetMinutes() >= m.BotService.GetSwapConfig().OrderTimeTrigger.GetMinutes() && openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital()).Lte(model.Percent(m.BotService.GetSwapConfig().FallPercentTrigger)) && !openedBuyPosition.IsSwap()
-
-							if !turboSwap && !isTimeToSwap {
-								break
-							}
-
-							violation := m.SwapValidator.Validate(possibleSwap, openedBuyPosition)
-
-							if violation == nil {
-								chainCurrentPercent := m.SwapValidator.CalculatePercent(possibleSwap)
-								log.Printf(
-									"[%s] Swap chain [%s] is found for order #%d, initial percent: %.2f, current = %.2f",
-									binanceOrder.Symbol,
-									swapChain.Title,
-									openedBuyPosition.Id,
-									swapChain.Percent,
-									chainCurrentPercent,
-								)
-								orderManageChannel <- "status"
-								action := <-control
-								if action == "stop" {
-									return
-								}
-
-								if binanceOrder.IsNew() {
-									log.Printf("[%s] Cancel signal sent!", binanceOrder.Symbol)
-									orderManageChannel <- "cancel"
-									action := <-control
-									if action == "stop" {
-										m.MakeSwap(openedBuyPosition, possibleSwap)
-										return
-									}
-								}
-							}
-						}
-					}
-				}
+			if m.CheckIsTimeToSwap(binanceOrder, orderManageChannel, control) {
+				return
 			}
-
-			if m.LossSecurity.IsRiskyBuy(*binanceOrder, tradeLimit) {
-				log.Printf("[%s] (LossSecurity) Check status signal sent!", binanceOrder.Symbol)
-				orderManageChannel <- "status"
-				action := <-control
-				if action == "stop" {
-					return
-				}
-				log.Printf("[%s] (LossSecurity) Order status is [%s]", binanceOrder.Symbol, binanceOrder.Status)
-
-				if binanceOrder.IsNew() {
-					log.Printf("[%s] (LossSecurity) Cancel signal sent!", binanceOrder.Symbol)
-					orderManageChannel <- "cancel"
-					action := <-control
-					if action == "stop" {
-						m.OrderRepository.LockBuy(binanceOrder.Symbol, 10)
-
-						return
-					}
-				}
+			if m.CheckIsRiskyBuy(tradeLimit, binanceOrder, orderManageChannel, control) {
+				return
 			}
-
-			if m.HasCancelRequest(binanceOrder.Symbol) && binanceOrder.IsNew() {
-				log.Printf(
-					"[%s] Cancel request received from user",
-					binanceOrder.Symbol,
-				)
-				orderManageChannel <- "cancel"
-				action := <-control
-				if action == "stop" {
-					return
-				}
+			if m.CheckIsTimeToCancel(tradeLimit, binanceOrder, orderManageChannel, control) {
+				return
 			}
-
-			// [BUY] Check is it time to sell (maybe we have already partially filled)
-
-			if kline != nil && openedBuyPositionErr == nil && binanceOrder.IsBuy() && binanceOrder.IsPartiallyFilled() && binanceOrder.GetProfitPercent(kline.Close).Gte(m.ProfitService.GetMinProfitPercent(openedBuyPosition)) {
-				log.Printf(
-					"[%s] Max profit percent reached, current profit is: %.2f, %s [%d] order is cancelled",
-					binanceOrder.Symbol,
-					binanceOrder.GetProfitPercent(kline.Close).Value(),
-					binanceOrder.Side,
-					binanceOrder.OrderId,
-				)
-				orderManageChannel <- "cancel"
-				action := <-control
-				if action == "stop" {
-					return
-				}
+			if m.CheckIsTimeToSell(binanceOrder, orderManageChannel, control) {
+				return
 			}
-
-			// Check is time to extra buy, but we have sell partial...
-			if kline != nil && binanceOrder.IsSell() && (binanceOrder.IsNew() || binanceOrder.IsPartiallyFilled()) {
-				openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
-				if err == nil && openedBuyPosition.CanExtraBuy(*kline, m.BotService.UseSwapCapital()) && m.TradeStack.CanBuy(tradeLimit) && openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital()).Lte(tradeLimit.GetBuyOnFallPercent(openedBuyPosition, *kline, m.BotService.UseSwapCapital())) {
-					log.Printf(
-						"[%s] Extra Charge percent reached, current profit is: %.2f, SELL order is cancelled",
-						binanceOrder.Symbol,
-						openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital()).Value(),
-					)
-					orderManageChannel <- "cancel"
-					action := <-control
-					if action == "stop" {
-						return
-					}
-				}
+			if m.CheckIsTimeToExtraBuy(tradeLimit, binanceOrder, orderManageChannel, control) {
+				return
 			}
 
 			if timer >= 30000 {
+				kline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+
 				orderManageChannel <- "status"
 				action := <-control
 				log.Printf(
@@ -690,95 +586,19 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 
 				// check only new timeout
 				if end >= (start+*ttl) && binanceOrder.IsNew() {
-					if kline != nil && binanceOrder.IsSell() {
-						openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
-						if err == nil {
-							profitPercent := openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital())
-							if profitPercent.Lte(0.00) {
-								log.Printf(
-									"[%s] %s Order [%d] status [%s] ttl reached, current price is [%.8f], order price [%.8f], open [%.8f], profit: %.2f",
-									binanceOrder.Symbol,
-									binanceOrder.Side,
-									binanceOrder.OrderId,
-									binanceOrder.Status,
-									kline.Close,
-									binanceOrder.Price,
-									openedBuyPosition.Price,
-									profitPercent.Value(),
-								)
-								orderManageChannel <- "cancel"
-								action := <-control
-								if action == "stop" {
-									return
-								}
-							} else {
-								log.Printf(
-									"[%s] %s Order [%d] status [%s] ttl ignored, current price is [%.8f], order price [%.8f], open [%.8f], profit: %.2f",
-									binanceOrder.Symbol,
-									binanceOrder.Side,
-									binanceOrder.OrderId,
-									binanceOrder.Status,
-									kline.Close,
-									binanceOrder.Price,
-									openedBuyPosition.Price,
-									profitPercent.Value(),
-								)
-							}
-						} else {
-							log.Printf(
-								"[%s] %s Order [%d] %s",
-								binanceOrder.Symbol,
-								binanceOrder.Side,
-								binanceOrder.OrderId,
-								err.Error(),
-							)
-							orderManageChannel <- "cancel"
-							action := <-control
-							if action == "stop" {
-								return
-							}
-						}
+					if m.CheckIsSellExpired(binanceOrder, orderManageChannel, control) {
+						return
 					}
 
-					if kline != nil && binanceOrder.IsBuy() {
-						positionPercentage := m.Formatter.ComparePercentage(binanceOrder.Price, kline.Close)
-						if positionPercentage.Gte(101.00) {
-							log.Printf(
-								"[%s] %s Order [%d] status [%s] ttl reached, current price is [%.8f], order price [%.8f], diff percent: %.2f",
-								binanceOrder.Symbol,
-								binanceOrder.Side,
-								binanceOrder.OrderId,
-								binanceOrder.Status,
-								kline.Close,
-								binanceOrder.Price,
-								positionPercentage.Value(),
-							)
-							orderManageChannel <- "cancel"
-							action := <-control
-							if action == "stop" {
-								return
-							}
-						} else {
-							log.Printf(
-								"[%s] %s Order [%d] status [%s] ttl ignored, current price is [%.8f], order price [%.8f], diff percent: %.2f",
-								binanceOrder.Symbol,
-								binanceOrder.Side,
-								binanceOrder.OrderId,
-								binanceOrder.Status,
-								kline.Close,
-								binanceOrder.Price,
-								positionPercentage.Value(),
-							)
-						}
+					if m.CheckIsBuyExpired(binanceOrder, orderManageChannel, control) {
+						return
 					}
 				}
 			} else {
 				manualOrder := m.OrderRepository.GetManualOrder(binanceOrder.Symbol)
 				// cancel current immediately on new manual order
 				if manualOrder != nil && manualOrder.Price != binanceOrder.Price {
-					orderManageChannel <- "cancel"
-					action := <-control
-					if action == "stop" {
+					if m.TryCancel(binanceOrder, orderManageChannel, control, func() {}, false) {
 						return
 					}
 				} else {
@@ -977,6 +797,343 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 	log.Printf("Order [%d] is [%s]", binanceOrder.OrderId, binanceOrder.Status)
 
 	return binanceOrder, errors.New(fmt.Sprintf("Order %d was CANCELED", binanceOrder.OrderId))
+}
+
+func (m *OrderExecutor) CheckIsBuyExpired(
+	binanceOrder *model.BinanceOrder,
+	orderManageChannel chan string,
+	control chan string,
+) bool {
+	if !binanceOrder.IsBuy() {
+		return false
+	}
+
+	kline := m.ExchangeRepository.GetLastKLine(binanceOrder.Symbol)
+
+	if kline == nil {
+		return false
+	}
+
+	positionPercentage := m.Formatter.ComparePercentage(binanceOrder.Price, kline.Close)
+	if positionPercentage.Gte(101.00) {
+		log.Printf(
+			"[%s] %s Order [%d] status [%s] ttl reached, current price is [%.8f], order price [%.8f], diff percent: %.2f",
+			binanceOrder.Symbol,
+			binanceOrder.Side,
+			binanceOrder.OrderId,
+			binanceOrder.Status,
+			kline.Close,
+			binanceOrder.Price,
+			positionPercentage.Value(),
+		)
+		if m.TryCancel(binanceOrder, orderManageChannel, control, func() {}, false) {
+			return true
+		}
+	} else {
+		log.Printf(
+			"[%s] %s Order [%d] status [%s] ttl ignored, current price is [%.8f], order price [%.8f], diff percent: %.2f",
+			binanceOrder.Symbol,
+			binanceOrder.Side,
+			binanceOrder.OrderId,
+			binanceOrder.Status,
+			kline.Close,
+			binanceOrder.Price,
+			positionPercentage.Value(),
+		)
+	}
+
+	return false
+}
+
+func (m *OrderExecutor) CheckIsSellExpired(
+	binanceOrder *model.BinanceOrder,
+	orderManageChannel chan string,
+	control chan string,
+) bool {
+	if !binanceOrder.IsSell() {
+		return false
+	}
+
+	kline := m.ExchangeRepository.GetLastKLine(binanceOrder.Symbol)
+
+	if kline == nil {
+		return false
+	}
+
+	openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
+	if err == nil {
+		profitPercent := openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital())
+		if profitPercent.Lte(0.00) {
+			log.Printf(
+				"[%s] %s Order [%d] status [%s] ttl reached, current price is [%.8f], order price [%.8f], open [%.8f], profit: %.2f",
+				binanceOrder.Symbol,
+				binanceOrder.Side,
+				binanceOrder.OrderId,
+				binanceOrder.Status,
+				kline.Close,
+				binanceOrder.Price,
+				openedBuyPosition.Price,
+				profitPercent.Value(),
+			)
+			if m.TryCancel(binanceOrder, orderManageChannel, control, func() {}, false) {
+				return true
+			}
+		} else {
+			log.Printf(
+				"[%s] %s Order [%d] status [%s] ttl ignored, current price is [%.8f], order price [%.8f], open [%.8f], profit: %.2f",
+				binanceOrder.Symbol,
+				binanceOrder.Side,
+				binanceOrder.OrderId,
+				binanceOrder.Status,
+				kline.Close,
+				binanceOrder.Price,
+				openedBuyPosition.Price,
+				profitPercent.Value(),
+			)
+		}
+	} else {
+		log.Printf(
+			"[%s] %s Order [%d] %s",
+			binanceOrder.Symbol,
+			binanceOrder.Side,
+			binanceOrder.OrderId,
+			err.Error(),
+		)
+		if m.TryCancel(binanceOrder, orderManageChannel, control, func() {}, false) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (m *OrderExecutor) CheckIsTimeToExtraBuy(
+	tradeLimit model.TradeLimit,
+	binanceOrder *model.BinanceOrder,
+	orderManageChannel chan string,
+	control chan string,
+) bool {
+	if !binanceOrder.IsSell() {
+		return false
+	}
+
+	kline := m.ExchangeRepository.GetLastKLine(binanceOrder.Symbol)
+
+	if kline == nil {
+		return false
+	}
+
+	if binanceOrder.IsNew() || binanceOrder.IsPartiallyFilled() {
+		openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
+		if err == nil && openedBuyPosition.CanExtraBuy(*kline, m.BotService.UseSwapCapital()) && m.TradeStack.CanBuy(tradeLimit) && openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital()).Lte(tradeLimit.GetBuyOnFallPercent(openedBuyPosition, *kline, m.BotService.UseSwapCapital())) {
+			log.Printf(
+				"[%s] Extra Charge percent reached, current profit is: %.2f, SELL order is cancelled",
+				binanceOrder.Symbol,
+				openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital()).Value(),
+			)
+			if m.TryCancel(binanceOrder, orderManageChannel, control, func() {}, false) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func (m *OrderExecutor) CheckIsTimeToCancel(
+	tradeLimit model.TradeLimit,
+	binanceOrder *model.BinanceOrder,
+	orderManageChannel chan string,
+	control chan string,
+) bool {
+	if binanceOrder.IsNew() && m.HasCancelRequest(binanceOrder.Symbol) {
+		log.Printf(
+			"[%s] Cancel request received from user",
+			binanceOrder.Symbol,
+		)
+		if m.TryCancel(binanceOrder, orderManageChannel, control, func() {}, true) {
+			return true
+		}
+	}
+
+	if binanceOrder.IsSell() && binanceOrder.IsNew() {
+		openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
+
+		if err == nil {
+			kline := m.ExchangeRepository.GetLastKLine(binanceOrder.Symbol)
+
+			if kline == nil {
+				return false
+			}
+
+			if kline.Close >= binanceOrder.Price {
+				return false
+			}
+
+			// Check is sell price changed
+			newSellPrice := m.PriceCalculator.CalculateSell(tradeLimit, openedBuyPosition)
+			if newSellPrice != binanceOrder.Price {
+				log.Printf(
+					"[%s] Sell Price is changed %.2f -> %.2f",
+					binanceOrder.Symbol,
+					binanceOrder.Price,
+					newSellPrice,
+				)
+
+				// Do cancel operation
+				if m.TryCancel(binanceOrder, orderManageChannel, control, func() {}, true) {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+func (m *OrderExecutor) CheckIsRiskyBuy(
+	tradeLimit model.TradeLimit,
+	binanceOrder *model.BinanceOrder,
+	orderManageChannel chan string,
+	control chan string,
+) bool {
+	if m.LossSecurity.IsRiskyBuy(*binanceOrder, tradeLimit) {
+		log.Printf("[%s] (LossSecurity) Check status signal sent!", binanceOrder.Symbol)
+		lockCallback := func() {
+			m.OrderRepository.LockBuy(binanceOrder.Symbol, 10)
+		}
+		if m.TryCancel(binanceOrder, orderManageChannel, control, lockCallback, true) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (m *OrderExecutor) CheckIsTimeToSell(
+	binanceOrder *model.BinanceOrder,
+	orderManageChannel chan string,
+	control chan string,
+) bool {
+	if !binanceOrder.IsBuy() {
+		return false
+	}
+
+	kline := m.ExchangeRepository.GetLastKLine(binanceOrder.Symbol)
+
+	if kline == nil {
+		return false
+	}
+
+	openedBuyPosition, openedBuyPositionErr := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
+
+	// [BUY] Check is it time to sell (maybe we have already partially filled)
+	if openedBuyPositionErr == nil && binanceOrder.IsPartiallyFilled() && binanceOrder.GetProfitPercent(kline.Close).Gte(m.ProfitService.GetMinProfitPercent(openedBuyPosition)) {
+		log.Printf(
+			"[%s] Max profit percent reached, current profit is: %.2f, %s [%d] order is cancelled",
+			binanceOrder.Symbol,
+			binanceOrder.GetProfitPercent(kline.Close).Value(),
+			binanceOrder.Side,
+			binanceOrder.OrderId,
+		)
+		if m.TryCancel(binanceOrder, orderManageChannel, control, func() {}, false) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (m *OrderExecutor) CheckIsTimeToSwap(
+	binanceOrder *model.BinanceOrder,
+	orderManageChannel chan string,
+	control chan string,
+) bool {
+	if !m.BotService.IsSwapEnabled() {
+		return false
+	}
+
+	kline := m.ExchangeRepository.GetLastKLine(binanceOrder.Symbol)
+
+	if kline == nil {
+		return false
+	}
+
+	if binanceOrder.IsSell() && binanceOrder.IsNew() {
+		openedBuyPosition, openedBuyPositionErr := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
+
+		// Try arbitrage for long orders >= 4 hours and with profit < -1.00%
+		if openedBuyPositionErr == nil {
+			swapChain := m.SwapRepository.GetSwapChainCache(openedBuyPosition.GetBaseAsset())
+			if swapChain != nil {
+				possibleSwaps := m.SwapRepository.GetSwapChains(openedBuyPosition.GetBaseAsset())
+
+				if len(possibleSwaps) == 0 {
+					m.SwapRepository.InvalidateSwapChainCache(openedBuyPosition.GetBaseAsset())
+				}
+
+				for _, possibleSwap := range possibleSwaps {
+					turboSwap := possibleSwap.Percent.Gte(model.Percent(m.TurboSwapProfitPercent))
+					isTimeToSwap := openedBuyPosition.GetPositionTime().GetMinutes() >= m.BotService.GetSwapConfig().OrderTimeTrigger.GetMinutes() && openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital()).Lte(model.Percent(m.BotService.GetSwapConfig().FallPercentTrigger)) && !openedBuyPosition.IsSwap()
+
+					if !turboSwap && !isTimeToSwap {
+						break
+					}
+
+					violation := m.SwapValidator.Validate(possibleSwap, openedBuyPosition)
+
+					if violation == nil {
+						chainCurrentPercent := m.SwapValidator.CalculatePercent(possibleSwap)
+						log.Printf(
+							"[%s] Swap chain [%s] is found for order #%d, initial percent: %.2f, current = %.2f",
+							binanceOrder.Symbol,
+							swapChain.Title,
+							openedBuyPosition.Id,
+							swapChain.Percent,
+							chainCurrentPercent,
+						)
+
+						swapCallback := func() {
+							m.MakeSwap(openedBuyPosition, possibleSwap)
+						}
+						if m.TryCancel(binanceOrder, orderManageChannel, control, swapCallback, true) {
+							return true
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+func (m *OrderExecutor) TryCancel(
+	binanceOrder *model.BinanceOrder,
+	orderManageChannel chan string,
+	control chan string,
+	callback func(),
+	checkStatus bool,
+) bool {
+	if checkStatus {
+		orderManageChannel <- "status"
+		action := <-control
+		if action == "stop" {
+			return true
+		}
+	}
+
+	if binanceOrder.IsNew() || !checkStatus {
+		log.Printf("[%s] Cancel signal sent!", binanceOrder.Symbol)
+		orderManageChannel <- "cancel"
+		action := <-control
+		if action == "stop" {
+			callback()
+			return true
+		}
+	}
+
+	return false
 }
 
 func (m *OrderExecutor) CalculateSellQuantity(order model.Order) float64 {

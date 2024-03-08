@@ -1253,7 +1253,9 @@ func TestCheckIsTimeToCancel(t *testing.T) {
 		CancelRequestMap:   make(map[string]bool),
 	}
 
-	limit := model.TradeLimit{}
+	limit := model.TradeLimit{
+		MinPrice: 0.01,
+	}
 	binanceOrder := model.BinanceOrder{
 		Status: "NEW",
 		Side:   "SELL",
@@ -1333,7 +1335,9 @@ func TestCheckIsTimeToCancelSamePrice(t *testing.T) {
 		CancelRequestMap:   make(map[string]bool),
 	}
 
-	limit := model.TradeLimit{}
+	limit := model.TradeLimit{
+		MinPrice: 0.01,
+	}
 	binanceOrder := model.BinanceOrder{
 		Status: "NEW",
 		Side:   "SELL",
@@ -1400,7 +1404,9 @@ func TestCheckIsTimeToCancelPriceIsMoreThanOrder(t *testing.T) {
 		CancelRequestMap:   make(map[string]bool),
 	}
 
-	limit := model.TradeLimit{}
+	limit := model.TradeLimit{
+		MinPrice: 0.01,
+	}
 	binanceOrder := model.BinanceOrder{
 		Status: "NEW",
 		Side:   "SELL",

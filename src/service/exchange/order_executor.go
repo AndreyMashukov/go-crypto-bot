@@ -972,9 +972,9 @@ func (m *OrderExecutor) CheckIsTimeToCancel(
 
 			// Check is sell price changed
 			newSellPrice := m.PriceCalculator.CalculateSell(tradeLimit, openedBuyPosition)
-			if newSellPrice != binanceOrder.Price {
+			if newSellPrice != m.Formatter.FormatPrice(tradeLimit, binanceOrder.Price) {
 				log.Printf(
-					"[%s] Sell Price is changed %.2f -> %.2f",
+					"[%s] Sell Price is changed %.8f -> %.8f",
 					binanceOrder.Symbol,
 					binanceOrder.Price,
 					newSellPrice,

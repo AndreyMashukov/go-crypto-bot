@@ -144,7 +144,7 @@ func (m *PriceCalculator) CalculateSell(tradeLimit model.TradeLimit, order model
 	currentPrice := lastKline.Close
 
 	if avgPrice > minPrice {
-		log.Printf("[%s] Choosen AVG sell price %f", tradeLimit.Symbol, avgPrice)
+		//log.Printf("[%s] Chosen AVG sell price %f", tradeLimit.Symbol, avgPrice)
 		minPrice = avgPrice
 	}
 
@@ -153,7 +153,7 @@ func (m *PriceCalculator) CalculateSell(tradeLimit model.TradeLimit, order model
 
 	// todo: avoid using hardcode
 	if orderHours >= 48.00 {
-		log.Printf("[%s] Order is opened for %d hours, will be used 8-hours frame", tradeLimit.Symbol, orderHours)
+		//log.Printf("[%s] Order is opened for %d hours, will be used 8-hours frame", tradeLimit.Symbol, orderHours)
 		frame = m.FrameService.GetFrame(tradeLimit.Symbol, "2h", 4)
 	} else {
 		frame = m.FrameService.GetFrame(tradeLimit.Symbol, "2h", 8)
@@ -164,26 +164,25 @@ func (m *PriceCalculator) CalculateSell(tradeLimit model.TradeLimit, order model
 	if err == nil {
 		if bestFrameSell[0] > minPrice {
 			minPrice = bestFrameSell[0]
-			log.Printf(
-				"[%s] Choosen Frame [low:%f - high:%f] Sell price = %f",
-				tradeLimit.Symbol,
-				frame.AvgLow,
-				frame.AvgHigh,
-				minPrice,
-			)
+			//log.Printf(
+			//	"[%s] Chosen Frame [low:%f - high:%f] Sell price = %f",
+			//	tradeLimit.Symbol,
+			//	frame.AvgLow,
+			//	frame.AvgHigh,
+			//	minPrice,
+			//)
 		}
 	} else {
-		log.Printf("[%s] Sell Frame: %s, current = %f", tradeLimit.Symbol, err.Error(), currentPrice)
+		//log.Printf("[%s] Sell Frame: %s, current = %f", tradeLimit.Symbol, err.Error(), currentPrice)
 	}
 
 	if currentPrice > minPrice {
 		minPrice = currentPrice
-		log.Printf("[%s] Choosen Current sell price %f", tradeLimit.Symbol, minPrice)
+		//log.Printf("[%s] Chosen Current sell price %f", tradeLimit.Symbol, minPrice)
 	}
 
-	profit := order.GetQuoteProfit(minPrice, m.BotService.UseSwapCapital())
-
-	log.Printf("[%s] Sell price = %f, expected profit = %f$", order.Symbol, minPrice, profit)
+	//profit := order.GetQuoteProfit(minPrice, m.BotService.UseSwapCapital())
+	//log.Printf("[%s] Sell price = %f, expected profit = %f$", order.Symbol, minPrice, profit)
 
 	return m.Formatter.FormatPrice(tradeLimit, minPrice)
 }

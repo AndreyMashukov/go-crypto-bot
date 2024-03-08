@@ -23,7 +23,7 @@ type ProfitService struct {
 func (p *ProfitService) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice float64) float64 {
 	kLines := p.Binance.GetKLinesCached(limit.Symbol, limit.BuyPriceHistoryCheckInterval, limit.BuyPriceHistoryCheckPeriod)
 
-	priceBefore := buyPrice
+	//priceBefore := buyPrice
 
 	for {
 		closePrice := p.GetMinClosePrice(limit, buyPrice)
@@ -41,7 +41,7 @@ func (p *ProfitService) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice 
 		buyPrice -= limit.MinPrice
 	}
 
-	log.Printf("[%s] Price history check completed: %f -> %f", limit.Symbol, priceBefore, buyPrice)
+	// log.Printf("[%s] Price history check completed: %f -> %f", limit.Symbol, priceBefore, buyPrice)
 
 	return buyPrice
 }

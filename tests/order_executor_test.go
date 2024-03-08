@@ -182,6 +182,7 @@ func TestSellAction(t *testing.T) {
 	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
 
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
+	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52)
 
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
 	assertion.Nil(err)
@@ -347,8 +348,8 @@ func TestSellFoundFilled(t *testing.T) {
 	balanceService.On("InvalidateBalanceCache", "ETH").Times(1)
 
 	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
-
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
+	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52)
 
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
 	assertion.Nil(err)
@@ -513,6 +514,8 @@ func TestSellCancelledInProcess(t *testing.T) {
 	balanceService.On("InvalidateBalanceCache", "ETH").Times(1)
 
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
+	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52)
+
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
 	assertion.Error(errors.New("Order is cancelled"), err)
 }
@@ -664,6 +667,8 @@ func TestSellQueryFail(t *testing.T) {
 	balanceService.On("InvalidateBalanceCache", "ETH").Times(1)
 
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
+	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52)
+
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
 	assertion.Equal(errors.New("Order was canceled or expired"), err)
 }
@@ -835,6 +840,8 @@ func TestSellClosingAction(t *testing.T) {
 	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
 
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
+	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(43496.99)
+
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "BTCUSDT", 43496.99, 0.00046, false)
 	assertion.Nil(err)
 	assertion.Equal("closed", orderRepository.Updated.Status)
@@ -1009,6 +1016,8 @@ func TestSellClosingTrxAction(t *testing.T) {
 	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
 
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 2.25) / 100)
+	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(0.10692)
+
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "TRXUSDT", 0.10692, 382.1, false)
 	assertion.Nil(err)
 	assertion.Equal("closed", orderRepository.Updated.Status)
@@ -1198,4 +1207,217 @@ func TestCreateSwapActionLessBalance(t *testing.T) {
 	assertion.Equal(order.Id, swapRepository.swapAction.OrderId)
 	assertion.Equal(order.Id, orderRepository.Updated.Id)
 	assertion.True(orderRepository.Updated.Swap)
+}
+
+func TestCheckIsTimeToCancel(t *testing.T) {
+	assertion := assert.New(t)
+
+	profitServiceMock := new(ProfitServiceMock)
+	balanceService := new(BalanceServiceMock)
+	binance := new(ExchangeOrderAPIMock)
+	orderRepository := new(OrderStorageMock)
+	exchangeRepository := new(ExchangeTradeInfoMock)
+	swapRepository := new(SwapRepositoryMock)
+	priceCalculator := new(PriceCalculatorMock)
+	swapExecutor := new(SwapExecutorMock)
+	swapValidator := new(SwapValidatorMock)
+	timeService := new(TimeServiceMock)
+	telegramNotificatorMock := new(TelegramNotificatorMock)
+	lossSecurityMock := new(LossSecurityMock)
+	botServiceMock := new(BotServiceMock)
+	lockChannel := make(chan model.Lock)
+
+	orderExecutor := exchange.OrderExecutor{
+		TradeStack:   &exchange.TradeStack{},
+		LossSecurity: lossSecurityMock,
+		CurrentBot: &model.Bot{
+			Id:      999,
+			BotUuid: uuid.New().String(),
+		},
+		TimeService:        timeService,
+		BalanceService:     balanceService,
+		Binance:            binance,
+		OrderRepository:    orderRepository,
+		ExchangeRepository: exchangeRepository,
+		SwapRepository:     swapRepository,
+		PriceCalculator:    priceCalculator,
+		ProfitService:      profitServiceMock,
+		SwapExecutor:       swapExecutor,
+		SwapValidator:      swapValidator,
+		Formatter:          &utils.Formatter{},
+		BotService:         botServiceMock,
+		LockChannel:        &lockChannel,
+		Lock:               make(map[string]bool),
+		TradeLockMutex:     sync.RWMutex{},
+		CallbackManager:    telegramNotificatorMock,
+		CancelRequestMap:   make(map[string]bool),
+	}
+
+	limit := model.TradeLimit{}
+	binanceOrder := model.BinanceOrder{
+		Status: "NEW",
+		Side:   "SELL",
+		Price:  100.00,
+		Symbol: "SOLUSDT",
+	}
+	orderManageChannel := make(chan string)
+	control := make(chan string)
+
+	openedPosition := model.Order{}
+
+	go func() {
+		request := <-orderManageChannel
+		assertion.Equal("status", request)
+		control <- "stop"
+		request = <-orderManageChannel
+		assertion.Equal("status", request)
+		control <- "continue"
+		request = <-orderManageChannel
+		assertion.Equal("cancel", request)
+		control <- "continue"
+	}()
+
+	exchangeRepository.On("GetLastKLine", "SOLUSDT").Return(&model.KLine{
+		Symbol: "SOLUSDT",
+		Close:  95.00,
+	})
+
+	orderRepository.On("GetOpenedOrderCached", "SOLUSDT", "BUY").Return(openedPosition, nil)
+	priceCalculator.On("CalculateSell", limit, openedPosition).Return(99.00)
+
+	assertion.True(orderExecutor.CheckIsTimeToCancel(limit, &binanceOrder, orderManageChannel, control))
+	assertion.False(orderExecutor.CheckIsTimeToCancel(limit, &binanceOrder, orderManageChannel, control))
+}
+
+func TestCheckIsTimeToCancelSamePrice(t *testing.T) {
+	assertion := assert.New(t)
+
+	profitServiceMock := new(ProfitServiceMock)
+	balanceService := new(BalanceServiceMock)
+	binance := new(ExchangeOrderAPIMock)
+	orderRepository := new(OrderStorageMock)
+	exchangeRepository := new(ExchangeTradeInfoMock)
+	swapRepository := new(SwapRepositoryMock)
+	priceCalculator := new(PriceCalculatorMock)
+	swapExecutor := new(SwapExecutorMock)
+	swapValidator := new(SwapValidatorMock)
+	timeService := new(TimeServiceMock)
+	telegramNotificatorMock := new(TelegramNotificatorMock)
+	lossSecurityMock := new(LossSecurityMock)
+	botServiceMock := new(BotServiceMock)
+	lockChannel := make(chan model.Lock)
+
+	orderExecutor := exchange.OrderExecutor{
+		TradeStack:   &exchange.TradeStack{},
+		LossSecurity: lossSecurityMock,
+		CurrentBot: &model.Bot{
+			Id:      999,
+			BotUuid: uuid.New().String(),
+		},
+		TimeService:        timeService,
+		BalanceService:     balanceService,
+		Binance:            binance,
+		OrderRepository:    orderRepository,
+		ExchangeRepository: exchangeRepository,
+		SwapRepository:     swapRepository,
+		PriceCalculator:    priceCalculator,
+		ProfitService:      profitServiceMock,
+		SwapExecutor:       swapExecutor,
+		SwapValidator:      swapValidator,
+		Formatter:          &utils.Formatter{},
+		BotService:         botServiceMock,
+		LockChannel:        &lockChannel,
+		Lock:               make(map[string]bool),
+		TradeLockMutex:     sync.RWMutex{},
+		CallbackManager:    telegramNotificatorMock,
+		CancelRequestMap:   make(map[string]bool),
+	}
+
+	limit := model.TradeLimit{}
+	binanceOrder := model.BinanceOrder{
+		Status: "NEW",
+		Side:   "SELL",
+		Price:  100.00,
+		Symbol: "SOLUSDT",
+	}
+	orderManageChannel := make(chan string)
+	control := make(chan string)
+
+	openedPosition := model.Order{}
+
+	exchangeRepository.On("GetLastKLine", "SOLUSDT").Return(&model.KLine{
+		Symbol: "SOLUSDT",
+		Close:  95.00,
+	})
+
+	orderRepository.On("GetOpenedOrderCached", "SOLUSDT", "BUY").Return(openedPosition, nil)
+	priceCalculator.On("CalculateSell", limit, openedPosition).Return(100.00)
+
+	assertion.False(orderExecutor.CheckIsTimeToCancel(limit, &binanceOrder, orderManageChannel, control))
+}
+
+func TestCheckIsTimeToCancelPriceIsMoreThanOrder(t *testing.T) {
+	assertion := assert.New(t)
+
+	profitServiceMock := new(ProfitServiceMock)
+	balanceService := new(BalanceServiceMock)
+	binance := new(ExchangeOrderAPIMock)
+	orderRepository := new(OrderStorageMock)
+	exchangeRepository := new(ExchangeTradeInfoMock)
+	swapRepository := new(SwapRepositoryMock)
+	priceCalculator := new(PriceCalculatorMock)
+	swapExecutor := new(SwapExecutorMock)
+	swapValidator := new(SwapValidatorMock)
+	timeService := new(TimeServiceMock)
+	telegramNotificatorMock := new(TelegramNotificatorMock)
+	lossSecurityMock := new(LossSecurityMock)
+	botServiceMock := new(BotServiceMock)
+	lockChannel := make(chan model.Lock)
+
+	orderExecutor := exchange.OrderExecutor{
+		TradeStack:   &exchange.TradeStack{},
+		LossSecurity: lossSecurityMock,
+		CurrentBot: &model.Bot{
+			Id:      999,
+			BotUuid: uuid.New().String(),
+		},
+		TimeService:        timeService,
+		BalanceService:     balanceService,
+		Binance:            binance,
+		OrderRepository:    orderRepository,
+		ExchangeRepository: exchangeRepository,
+		SwapRepository:     swapRepository,
+		PriceCalculator:    priceCalculator,
+		ProfitService:      profitServiceMock,
+		SwapExecutor:       swapExecutor,
+		SwapValidator:      swapValidator,
+		Formatter:          &utils.Formatter{},
+		BotService:         botServiceMock,
+		LockChannel:        &lockChannel,
+		Lock:               make(map[string]bool),
+		TradeLockMutex:     sync.RWMutex{},
+		CallbackManager:    telegramNotificatorMock,
+		CancelRequestMap:   make(map[string]bool),
+	}
+
+	limit := model.TradeLimit{}
+	binanceOrder := model.BinanceOrder{
+		Status: "NEW",
+		Side:   "SELL",
+		Price:  100.00,
+		Symbol: "SOLUSDT",
+	}
+	orderManageChannel := make(chan string)
+	control := make(chan string)
+
+	openedPosition := model.Order{}
+
+	exchangeRepository.On("GetLastKLine", "SOLUSDT").Return(&model.KLine{
+		Symbol: "SOLUSDT",
+		Close:  101.00,
+	})
+
+	orderRepository.On("GetOpenedOrderCached", "SOLUSDT", "BUY").Return(openedPosition, nil)
+
+	assertion.False(orderExecutor.CheckIsTimeToCancel(limit, &binanceOrder, orderManageChannel, control))
 }

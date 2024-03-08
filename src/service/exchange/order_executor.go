@@ -10,6 +10,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"gitlab.com/open-soft/go-crypto-bot/src/validator"
 	"log"
+	"math"
 	"strings"
 	"sync"
 )
@@ -972,12 +973,16 @@ func (m *OrderExecutor) CheckIsTimeToCancel(
 
 			// Check is sell price changed
 			newSellPrice := m.PriceCalculator.CalculateSell(tradeLimit, openedBuyPosition)
-			if newSellPrice != m.Formatter.FormatPrice(tradeLimit, binanceOrder.Price) {
+			priceDiff := math.Abs(newSellPrice - m.Formatter.FormatPrice(tradeLimit, binanceOrder.Price))
+
+			// Allow 2 points diff
+			if priceDiff >= (tradeLimit.MinPrice * 2) {
 				log.Printf(
-					"[%s] Sell Price is changed %.8f -> %.8f",
+					"[%s] Sell Price is changed %.8f -> %.8f diff = %.8f",
 					binanceOrder.Symbol,
 					binanceOrder.Price,
 					newSellPrice,
+					priceDiff,
 				)
 
 				// Do cancel operation

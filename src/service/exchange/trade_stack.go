@@ -6,7 +6,6 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
 	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
-	"log"
 	"sort"
 )
 
@@ -36,12 +35,12 @@ func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
 		return false
 	}
 
-	for index, stackItem := range result {
-		log.Printf("Stack [%d] %s = %.2f", index, stackItem.Symbol, stackItem.Percent)
-		if index >= 1 {
-			break
-		}
-	}
+	//for index, stackItem := range result {
+	//	log.Printf("Stack [%d] %s = %.2f", index, stackItem.Symbol, stackItem.Percent)
+	//	if index >= 1 {
+	//		break
+	//	}
+	//}
 
 	return limit.Symbol == result[0].Symbol
 }

@@ -421,6 +421,7 @@ func (c *Container) StartHttpServer() {
 	http.HandleFunc("/order/pending/list", c.OrderController.GetPendingOrderListAction)
 	http.HandleFunc("/order/position/list", c.OrderController.GetPositionListAction)
 	http.HandleFunc("/order", c.OrderController.PostManualOrderAction)
+	http.HandleFunc("/order/", c.OrderController.DeleteManualOrderAction)
 	http.HandleFunc("/order/trade/list", c.OrderController.GetOrderTradeListAction)
 	http.HandleFunc("/trade/limit/list", c.TradeController.GetTradeLimitsAction)
 	http.HandleFunc("/trade/stack", c.TradeController.GetTradeStackAction)

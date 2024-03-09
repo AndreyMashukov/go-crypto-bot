@@ -169,8 +169,13 @@ type ExchangePriceStorageMock struct {
 
 func (e *ExchangePriceStorageMock) GetLastKLine(symbol string) *model.KLine {
 	args := e.Called(symbol)
-	kLine := args.Get(0).(*model.KLine)
-	return kLine
+	kLine := args.Get(0)
+
+	if kLine != nil {
+		return kLine.(*model.KLine)
+	}
+
+	return nil
 }
 func (e *ExchangePriceStorageMock) GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair {
 	args := e.Called(baseAsset)
@@ -334,9 +339,9 @@ func (p *PriceCalculatorMock) CalculateBuy(tradeLimit model.TradeLimit) (float64
 	args := p.Called(tradeLimit)
 	return args.Get(0).(float64), args.Error(1)
 }
-func (p *PriceCalculatorMock) CalculateSell(tradeLimit model.TradeLimit, order model.Order) float64 {
+func (p *PriceCalculatorMock) CalculateSell(tradeLimit model.TradeLimit, order model.Order) (float64, error) {
 	args := p.Called(tradeLimit, order)
-	return args.Get(0).(float64)
+	return args.Get(0).(float64), args.Error(1)
 }
 func (p *PriceCalculatorMock) GetDepth(symbol string) model.Depth {
 	args := p.Called(symbol)

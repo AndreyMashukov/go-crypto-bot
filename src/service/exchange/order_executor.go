@@ -168,11 +168,15 @@ func (m *OrderExecutor) BuyExtra(tradeLimit model.TradeLimit, order model.Order,
 	}
 
 	go func(extraOrder model.Order, tradeLimit model.TradeLimit) {
-		m.CallbackManager.BuyOrder(
-			extraOrder,
-			*m.CurrentBot,
-			fmt.Sprintf("Extra Charge! Sell when price will be around: %f USDT", m.PriceCalculator.CalculateSell(tradeLimit, extraOrder)),
-		)
+		sellPrice, priceErr := m.PriceCalculator.CalculateSell(tradeLimit, extraOrder)
+
+		if priceErr == nil {
+			m.CallbackManager.BuyOrder(
+				extraOrder,
+				*m.CurrentBot,
+				fmt.Sprintf("Extra Charge! Sell when price will be around: %f USDT", sellPrice),
+			)
+		}
 	}(extraOrder, tradeLimit)
 	m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 
@@ -265,11 +269,14 @@ func (m *OrderExecutor) Buy(tradeLimit model.TradeLimit, symbol string, price fl
 	}
 
 	go func(order model.Order, tradeLimit model.TradeLimit) {
-		m.CallbackManager.BuyOrder(
-			order,
-			*m.CurrentBot,
-			fmt.Sprintf("Sell when price will be around: %f USDT", m.PriceCalculator.CalculateSell(tradeLimit, order)),
-		)
+		sellPrice, priceErr := m.PriceCalculator.CalculateSell(tradeLimit, order)
+		if priceErr == nil {
+			m.CallbackManager.BuyOrder(
+				order,
+				*m.CurrentBot,
+				fmt.Sprintf("Sell when price will be around: %f USDT", sellPrice),
+			)
+		}
 	}(order, tradeLimit)
 	m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 
@@ -978,22 +985,24 @@ func (m *OrderExecutor) CheckIsTimeToCancel(
 			}
 
 			// Check is sell price changed
-			newSellPrice := m.PriceCalculator.CalculateSell(tradeLimit, openedBuyPosition)
-			priceDiff := math.Abs(newSellPrice - m.Formatter.FormatPrice(tradeLimit, binanceOrder.Price))
+			newSellPrice, priceErr := m.PriceCalculator.CalculateSell(tradeLimit, openedBuyPosition)
+			if priceErr == nil {
+				priceDiff := math.Abs(newSellPrice - m.Formatter.FormatPrice(tradeLimit, binanceOrder.Price))
 
-			// Allow 2 points diff
-			if priceDiff > (tradeLimit.MinPrice * 2) {
-				log.Printf(
-					"[%s] Sell Price is changed %.8f -> %.8f diff = %.8f",
-					binanceOrder.Symbol,
-					binanceOrder.Price,
-					newSellPrice,
-					priceDiff,
-				)
+				// Allow 2 points diff
+				if priceDiff > (tradeLimit.MinPrice * 2) {
+					log.Printf(
+						"[%s] Sell Price is changed %.8f -> %.8f diff = %.8f",
+						binanceOrder.Symbol,
+						binanceOrder.Price,
+						newSellPrice,
+						priceDiff,
+					)
 
-				// Do cancel operation
-				if m.TryCancel(binanceOrder, orderManageChannel, control, func() {}, true) {
-					return true
+					// Do cancel operation
+					if m.TryCancel(binanceOrder, orderManageChannel, control, func() {}, true) {
+						return true
+					}
 				}
 			}
 		}

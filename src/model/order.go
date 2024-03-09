@@ -211,6 +211,7 @@ type Position struct {
 	CloseStrategy     PositionCloseStrategy `json:"closeStrategy"`
 	IsPriceExpired    bool                  `json:"isPriceExpired"`
 	BinanceOrder      *BinanceOrder         `json:"binanceOrder"`
+	ManualOrder       *ManualOrder          `json:"manualOrder"`
 }
 
 type PositionCloseStrategy struct {

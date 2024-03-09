@@ -14,7 +14,7 @@ import (
 
 type PriceCalculatorInterface interface {
 	CalculateBuy(tradeLimit model.TradeLimit) (float64, error)
-	CalculateSell(tradeLimit model.TradeLimit, order model.Order) float64
+	CalculateSell(tradeLimit model.TradeLimit, order model.Order) (float64, error)
 	GetDepth(symbol string) model.Depth
 }
 
@@ -121,70 +121,25 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 	return m.LossSecurity.BuyPriceCorrection(buyPrice, tradeLimit), nil
 }
 
-func (m *PriceCalculator) CalculateSell(tradeLimit model.TradeLimit, order model.Order) float64 {
-	marketDepth := m.GetDepth(tradeLimit.Symbol)
-	avgPrice := marketDepth.GetBestAvgAsk()
+func (m *PriceCalculator) CalculateSell(tradeLimit model.TradeLimit, order model.Order) (float64, error) {
+	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
-	if 0.00 == avgPrice {
-		return m.Formatter.FormatPrice(tradeLimit, avgPrice)
+	if lastKline == nil {
+		return 0.00, errors.New("price is unknown")
 	}
 
 	minPrice := m.Formatter.FormatPrice(tradeLimit, m.ProfitService.GetMinClosePrice(order, order.Price))
-	openedOrder, err := m.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
-
-	if err != nil {
-		return 0.00
-	}
-
-	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
-	if lastKline == nil {
-		return 0.00
-	}
-
 	currentPrice := lastKline.Close
-
-	if avgPrice > minPrice {
-		//log.Printf("[%s] Chosen AVG sell price %f", tradeLimit.Symbol, avgPrice)
-		minPrice = avgPrice
-	}
-
-	var frame model.Frame
-	orderHours := openedOrder.GetPositionTime().GetHours()
-
-	// todo: avoid using hardcode
-	if orderHours >= 48.00 {
-		//log.Printf("[%s] Order is opened for %d hours, will be used 8-hours frame", tradeLimit.Symbol, orderHours)
-		frame = m.FrameService.GetFrame(tradeLimit.Symbol, "2h", 4)
-	} else {
-		frame = m.FrameService.GetFrame(tradeLimit.Symbol, "2h", 8)
-	}
-
-	bestFrameSell, err := frame.GetBestFrameSell(marketDepth)
-
-	if err == nil {
-		if bestFrameSell[0] > minPrice {
-			minPrice = bestFrameSell[0]
-			//log.Printf(
-			//	"[%s] Chosen Frame [low:%f - high:%f] Sell price = %f",
-			//	tradeLimit.Symbol,
-			//	frame.AvgLow,
-			//	frame.AvgHigh,
-			//	minPrice,
-			//)
-		}
-	} else {
-		//log.Printf("[%s] Sell Frame: %s, current = %f", tradeLimit.Symbol, err.Error(), currentPrice)
-	}
 
 	if currentPrice > minPrice {
 		minPrice = currentPrice
-		//log.Printf("[%s] Chosen Current sell price %f", tradeLimit.Symbol, minPrice)
 	}
 
-	//profit := order.GetQuoteProfit(minPrice, m.BotService.UseSwapCapital())
-	//log.Printf("[%s] Sell price = %f, expected profit = %f$", order.Symbol, minPrice, profit)
+	if minPrice <= order.Price {
+		return 0.00, errors.New("price is less than order price")
+	}
 
-	return m.Formatter.FormatPrice(tradeLimit, minPrice)
+	return m.Formatter.FormatPrice(tradeLimit, minPrice), nil
 }
 
 func (m *PriceCalculator) GetDepth(symbol string) model.Depth {

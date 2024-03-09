@@ -127,7 +127,7 @@ func (m *MakerService) Make(symbol string, decisions []model.Decision) {
 		}
 
 		if buyOrderErr == nil {
-			price := m.PriceCalculator.CalculateSell(tradeLimit, openedOrder)
+			price, priceErr := m.PriceCalculator.CalculateSell(tradeLimit, openedOrder)
 
 			isManual := false
 
@@ -136,7 +136,7 @@ func (m *MakerService) Make(symbol string, decisions []model.Decision) {
 				isManual = true
 			}
 
-			if price > 0 {
+			if price > 0 && priceErr == nil {
 				quantity := m.Formatter.FormatQuantity(tradeLimit, m.OrderExecutor.CalculateSellQuantity(openedOrder))
 
 				if quantity >= tradeLimit.MinQuantity {

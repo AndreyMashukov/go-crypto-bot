@@ -971,12 +971,18 @@ func (m *OrderExecutor) CheckIsTimeToCancel(
 				return false
 			}
 
+			manualOrder := m.OrderRepository.GetManualOrder(binanceOrder.Symbol)
+
+			if manualOrder != nil {
+				return false
+			}
+
 			// Check is sell price changed
 			newSellPrice := m.PriceCalculator.CalculateSell(tradeLimit, openedBuyPosition)
 			priceDiff := math.Abs(newSellPrice - m.Formatter.FormatPrice(tradeLimit, binanceOrder.Price))
 
 			// Allow 2 points diff
-			if priceDiff >= (tradeLimit.MinPrice * 2) {
+			if priceDiff > (tradeLimit.MinPrice * 2) {
 				log.Printf(
 					"[%s] Sell Price is changed %.8f -> %.8f diff = %.8f",
 					binanceOrder.Symbol,

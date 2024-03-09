@@ -182,7 +182,7 @@ func TestSellAction(t *testing.T) {
 	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
 
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
-	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52)
+	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52, nil)
 
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
 	assertion.Nil(err)
@@ -349,7 +349,7 @@ func TestSellFoundFilled(t *testing.T) {
 
 	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
-	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52)
+	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52, nil)
 
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
 	assertion.Nil(err)
@@ -514,7 +514,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 	balanceService.On("InvalidateBalanceCache", "ETH").Times(1)
 
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
-	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52)
+	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52, nil)
 
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
 	assertion.Error(errors.New("Order is cancelled"), err)
@@ -667,7 +667,7 @@ func TestSellQueryFail(t *testing.T) {
 	balanceService.On("InvalidateBalanceCache", "ETH").Times(1)
 
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
-	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52)
+	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52, nil)
 
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
 	assertion.Equal(errors.New("Order was canceled or expired"), err)
@@ -840,7 +840,7 @@ func TestSellClosingAction(t *testing.T) {
 	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
 
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
-	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(43496.99)
+	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(43496.99, nil)
 
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "BTCUSDT", 43496.99, 0.00046, false)
 	assertion.Nil(err)
@@ -1016,7 +1016,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 	telegramNotificatorMock.On("SellOrder", mock.Anything, mock.Anything, mock.Anything).Times(1)
 
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 2.25) / 100)
-	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(0.10692)
+	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(0.10692, nil)
 
 	err := orderExecutor.Sell(tradeLimit, openedOrder, "TRXUSDT", 0.10692, 382.1, false)
 	assertion.Nil(err)
@@ -1286,7 +1286,7 @@ func TestCheckIsTimeToCancel(t *testing.T) {
 
 	orderRepository.On("GetManualOrder", "SOLUSDT").Return(nil)
 	orderRepository.On("GetOpenedOrderCached", "SOLUSDT", "BUY").Return(openedPosition, nil)
-	priceCalculator.On("CalculateSell", limit, openedPosition).Return(99.00)
+	priceCalculator.On("CalculateSell", limit, openedPosition).Return(99.00, nil)
 
 	assertion.True(orderExecutor.CheckIsTimeToCancel(limit, &binanceOrder, orderManageChannel, control))
 	assertion.False(orderExecutor.CheckIsTimeToCancel(limit, &binanceOrder, orderManageChannel, control))
@@ -1357,7 +1357,7 @@ func TestCheckIsTimeToCancelSamePrice(t *testing.T) {
 	})
 
 	orderRepository.On("GetOpenedOrderCached", "SOLUSDT", "BUY").Return(openedPosition, nil)
-	priceCalculator.On("CalculateSell", limit, openedPosition).Return(100.00)
+	priceCalculator.On("CalculateSell", limit, openedPosition).Return(100.00, nil)
 
 	assertion.False(orderExecutor.CheckIsTimeToCancel(limit, &binanceOrder, orderManageChannel, control))
 }

@@ -227,3 +227,63 @@ func TestCalculateBuyPriceByFrame3(t *testing.T) {
 	assertion.Nil(err)
 	assertion.Equal(1131.1, price)
 }
+
+func TestCalculateSell(t *testing.T) {
+	assertion := assert.New(t)
+
+	exchangeRepoMock := new(ExchangePriceStorageMock)
+	orderRepositoryMock := new(OrderCachedReaderMock)
+	frameServiceMock := new(FrameServiceMock)
+	binanceMock := new(ExchangePriceAPIMock)
+	lossSecurityMock := new(LossSecurityMock)
+	profitService := new(ProfitServiceMock)
+
+	priceCalculator := exchange.PriceCalculator{
+		LossSecurity:       lossSecurityMock,
+		ExchangeRepository: exchangeRepoMock,
+		OrderRepository:    orderRepositoryMock,
+		FrameService:       frameServiceMock,
+		Binance:            binanceMock,
+		Formatter:          &utils.Formatter{},
+		ProfitService:      profitService,
+	}
+
+	tradeLimit := model.TradeLimit{
+		Symbol:                       "ETHUSDT",
+		MinPrice:                     0.01,
+		MinQuantity:                  0.0001,
+		ProfitOptions:                model.ProfitOptions{},
+		MinPriceMinutesPeriod:        200,
+		FrameInterval:                "2h",
+		FramePeriod:                  20,
+		BuyPriceHistoryCheckInterval: "1d",
+		BuyPriceHistoryCheckPeriod:   14,
+	}
+
+	order := model.Order{
+		Price: 1552.26,
+	}
+
+	exchangeRepoMock.On("GetLastKLine", "ETHUSDT").Times(1).Return(nil)
+	sellPrice, err := priceCalculator.CalculateSell(tradeLimit, order)
+	assertion.ErrorContains(err, "price is unknown")
+	assertion.Equal(0.00, sellPrice)
+
+	exchangeRepoMock.On("GetLastKLine", "ETHUSDT").Times(2).Return(&model.KLine{
+		Close: 1474.64,
+	})
+	profitService.On("GetMinClosePrice", order, 1552.26).Times(1).Return(1400.00)
+
+	sellPrice, err = priceCalculator.CalculateSell(tradeLimit, order)
+	assertion.ErrorContains(err, "price is less than order price")
+	assertion.Equal(0.00, sellPrice)
+
+	profitService.On("GetMinClosePrice", order, 1552.26).Times(2).Return(1600.00)
+	exchangeRepoMock.On("GetLastKLine", "ETHUSDT").Times(3).Return(&model.KLine{
+		Close: 1474.64,
+	})
+
+	sellPrice, err = priceCalculator.CalculateSell(tradeLimit, order)
+	assertion.Nil(err)
+	assertion.Equal(1600.00, sellPrice)
+}

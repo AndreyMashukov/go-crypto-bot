@@ -13,7 +13,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/validator"
 	"net/http"
 	"slices"
-	"time"
+	"strings"
 )
 
 type OrderController struct {
@@ -104,20 +104,14 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 		executedQty := 0.00
 		origQty := openedOrder.GetPositionQuantityWithSwap()
 
+		manualOrder := o.OrderRepository.GetManualOrder(limit.Symbol)
+
 		if binanceOrder != nil {
 			sellPrice = binanceOrder.Price
 			origQty = binanceOrder.OrigQty
 			executedQty = binanceOrder.ExecutedQty
 		} else {
-			sellPriceCacheKey := fmt.Sprintf("sell-price-%d", openedOrder.Id)
-			sellPriceCached := o.RDB.Get(*o.Ctx, sellPriceCacheKey).Val()
-			if len(sellPriceCached) > 0 {
-				_ = json.Unmarshal([]byte(sellPriceCached), &sellPrice)
-			} else {
-				sellPrice = o.PriceCalculator.CalculateSell(limit, openedOrder)
-				encoded, _ := json.Marshal(sellPrice)
-				o.RDB.Set(*o.Ctx, sellPriceCacheKey, string(encoded), time.Hour)
-			}
+			sellPrice, _ = o.PriceCalculator.CalculateSell(limit, openedOrder)
 		}
 
 		predictedPrice, err := o.ExchangeRepository.GetPredict(limit.Symbol)
@@ -156,6 +150,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			},
 			IsPriceExpired: kLine.IsPriceExpired(),
 			BinanceOrder:   binanceOrder,
+			ManualOrder:    manualOrder,
 		})
 	}
 
@@ -416,6 +411,36 @@ func (o *OrderController) GetOrderListAction(w http.ResponseWriter, req *http.Re
 	list := o.OrderRepository.GetList()
 	encoded, _ := json.Marshal(list)
 	fmt.Fprintf(w, string(encoded))
+}
+
+func (o *OrderController) DeleteManualOrderAction(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if req.Method == "OPTIONS" {
+		fmt.Fprintf(w, "OK")
+		return
+	}
+
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != o.CurrentBot.BotUuid {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
+
+	if req.Method != "DELETE" {
+		http.Error(w, "Only DELETE method is allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	symbol := strings.TrimPrefix(req.URL.Path, "/order/")
+	o.OrderRepository.DeleteManualOrder(symbol)
+
+	fmt.Fprintf(w, "OK")
 }
 
 func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http.Request) {

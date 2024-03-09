@@ -328,7 +328,7 @@ func TestSellFoundFilled(t *testing.T) {
 		ExecutedQuantity: 0.009,
 	}
 	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(openedOrder, nil)
-	orderRepository.On("GetManualOrder", "ETHUSDT").Unset()
+	orderRepository.On("GetManualOrder", "ETHUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Unset()
 	binance.On("QueryOrder", "ETHUSDT", int64(999)).Unset()
 	orderRepository.On("DeleteBinanceOrder", initialBinanceOrder).Times(1)
@@ -1284,6 +1284,7 @@ func TestCheckIsTimeToCancel(t *testing.T) {
 		Close:  95.00,
 	})
 
+	orderRepository.On("GetManualOrder", "SOLUSDT").Return(nil)
 	orderRepository.On("GetOpenedOrderCached", "SOLUSDT", "BUY").Return(openedPosition, nil)
 	priceCalculator.On("CalculateSell", limit, openedPosition).Return(99.00)
 
@@ -1349,6 +1350,7 @@ func TestCheckIsTimeToCancelSamePrice(t *testing.T) {
 
 	openedPosition := model.Order{}
 
+	orderRepository.On("GetManualOrder", "SOLUSDT").Return(nil)
 	exchangeRepository.On("GetLastKLine", "SOLUSDT").Return(&model.KLine{
 		Symbol: "SOLUSDT",
 		Close:  95.00,
@@ -1418,6 +1420,7 @@ func TestCheckIsTimeToCancelPriceIsMoreThanOrder(t *testing.T) {
 
 	openedPosition := model.Order{}
 
+	orderRepository.On("GetManualOrder", "SOLUSDT").Return(nil)
 	exchangeRepository.On("GetLastKLine", "SOLUSDT").Return(&model.KLine{
 		Symbol: "SOLUSDT",
 		Close:  101.00,

@@ -525,6 +525,7 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 
 	manual.Price = o.Formatter.FormatPrice(tradeLimit, manual.Price)
 	o.OrderRepository.SetManualOrder(manual)
+	o.OrderExecutor.SetCancelRequest(tradeLimit.Symbol)
 
 	encoded, _ := json.Marshal(manual)
 	fmt.Fprintf(w, string(encoded))

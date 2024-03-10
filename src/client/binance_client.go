@@ -30,6 +30,7 @@ type ExchangePriceAPIInterface interface {
 	GetDepth(symbol string) (model.OrderBook, error)
 	GetKLines(symbol string, interval string, limit int64) []model.KLineHistory
 	GetKLinesCached(symbol string, interval string, limit int64) []model.KLine
+	GetExchangeData(symbols []string) (*model.ExchangeInfo, error)
 }
 
 type Binance struct {

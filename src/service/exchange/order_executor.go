@@ -15,6 +15,16 @@ import (
 	"sync"
 )
 
+type OrderExecutorInterface interface {
+	BuyExtra(tradeLimit model.TradeLimit, order model.Order, price float64) error
+	Buy(tradeLimit model.TradeLimit, price float64, quantity float64) error
+	Sell(tradeLimit model.TradeLimit, opened model.Order, price float64, quantity float64, isManual bool) error
+	ProcessSwap(order model.Order) bool
+	TrySwap(order model.Order)
+	CheckMinBalance(limit model.TradeLimit, kLine model.KLine) error
+	CalculateSellQuantity(order model.Order) float64
+}
+
 type OrderExecutor struct {
 	TradeStack             BuyOrderStackInterface
 	CurrentBot             *model.Bot
@@ -183,16 +193,16 @@ func (m *OrderExecutor) BuyExtra(tradeLimit model.TradeLimit, order model.Order,
 	return nil
 }
 
-func (m *OrderExecutor) Buy(tradeLimit model.TradeLimit, symbol string, price float64, quantity float64) error {
-	if m.isTradeLocked(symbol) {
-		return errors.New(fmt.Sprintf("Operation Buy is Locked %s", symbol))
+func (m *OrderExecutor) Buy(tradeLimit model.TradeLimit, price float64, quantity float64) error {
+	if m.isTradeLocked(tradeLimit.Symbol) {
+		return errors.New(fmt.Sprintf("Operation Buy is Locked %s", tradeLimit.Symbol))
 	}
 
 	if quantity <= 0.00 {
 		return errors.New(fmt.Sprintf("Available quantity is %f", quantity))
 	}
 
-	balanceErr := m.CheckBalance(symbol, price, quantity)
+	balanceErr := m.CheckBalance(tradeLimit.Symbol, price, quantity)
 
 	if balanceErr != nil {
 		m.CallbackManager.Error(
@@ -206,8 +216,8 @@ func (m *OrderExecutor) Buy(tradeLimit model.TradeLimit, symbol string, price fl
 	}
 
 	// to avoid concurrent map writes
-	m.acquireLock(symbol)
-	defer m.releaseLock(symbol)
+	m.acquireLock(tradeLimit.Symbol)
+	defer m.releaseLock(tradeLimit.Symbol)
 
 	// todo: commission
 	// You place an order to buy 10 ETH for 3,452.55 USDT each:
@@ -216,7 +226,7 @@ func (m *OrderExecutor) Buy(tradeLimit model.TradeLimit, symbol string, price fl
 	// todo: check min quantity
 
 	var order = model.Order{
-		Symbol:             symbol,
+		Symbol:             tradeLimit.Symbol,
 		Quantity:           quantity,
 		Price:              price,
 		CreatedAt:          m.TimeService.GetNowDateTimeString(),
@@ -283,13 +293,13 @@ func (m *OrderExecutor) Buy(tradeLimit model.TradeLimit, symbol string, price fl
 	return nil
 }
 
-func (m *OrderExecutor) Sell(tradeLimit model.TradeLimit, opened model.Order, symbol string, price float64, quantity float64, isManual bool) error {
-	if m.isTradeLocked(symbol) {
-		return errors.New(fmt.Sprintf("Operation Sell is Locked %s", symbol))
+func (m *OrderExecutor) Sell(tradeLimit model.TradeLimit, opened model.Order, price float64, quantity float64, isManual bool) error {
+	if m.isTradeLocked(opened.Symbol) {
+		return errors.New(fmt.Sprintf("Operation Sell is Locked %s", opened.Symbol))
 	}
 
-	m.acquireLock(symbol)
-	defer m.releaseLock(symbol)
+	m.acquireLock(opened.Symbol)
+	defer m.releaseLock(opened.Symbol)
 
 	// todo: commission
 	// Or you place an order to sell 10 ETH for 3,452.55 USDT each:
@@ -301,7 +311,7 @@ func (m *OrderExecutor) Sell(tradeLimit model.TradeLimit, opened model.Order, sy
 	if opened.Price >= price {
 		return errors.New(fmt.Sprintf(
 			"[%s] Bad deal, wait for positive profit: %.6f [o:%.6f, c:%.6f]",
-			symbol,
+			tradeLimit.Symbol,
 			profit,
 			opened.Price,
 			price,
@@ -317,14 +327,14 @@ func (m *OrderExecutor) Sell(tradeLimit model.TradeLimit, opened model.Order, sy
 	if price < minPrice {
 		return errors.New(fmt.Sprintf(
 			"[%s] Minimum profit is not reached, Price %.6f < %.6f",
-			symbol,
+			opened.Symbol,
 			price,
 			minPrice,
 		))
 	}
 
 	var order = model.Order{
-		Symbol:             symbol,
+		Symbol:             opened.Symbol,
 		Quantity:           quantity,
 		Price:              price,
 		CreatedAt:          m.TimeService.GetNowDateTimeString(),

@@ -23,6 +23,10 @@ type SwapPairRepositoryInterface interface {
 	GetSwapPair(symbol string) (model.SwapPair, error)
 }
 
+type DecisionReadStorageInterface interface {
+	GetDecisions(symbol string) []model.Decision
+}
+
 type ExchangeTradeInfoInterface interface {
 	GetLastKLine(symbol string) *model.KLine
 	GetTradeLimit(symbol string) (model.TradeLimit, error)

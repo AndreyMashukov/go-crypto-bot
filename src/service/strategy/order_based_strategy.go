@@ -34,7 +34,7 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 	if binanceBuyOrder != nil {
 		return model.Decision{
 			StrategyName: model.OrderBasedStrategyName,
-			Score:        999.99,
+			Score:        model.DecisionHighestPriorityScore,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
 			Price:        binanceBuyOrder.Price,
@@ -62,7 +62,7 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 		if manualOrder != nil && manualOrder.IsBuy() {
 			return model.Decision{
 				StrategyName: model.OrderBasedStrategyName,
-				Score:        999.99,
+				Score:        model.DecisionHighestPriorityScore,
 				Operation:    "BUY",
 				Timestamp:    time.Now().Unix(),
 				Price:        manualOrder.Price,
@@ -84,7 +84,7 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 	if binanceSellOrder != nil {
 		return model.Decision{
 			StrategyName: model.OrderBasedStrategyName,
-			Score:        999.99,
+			Score:        model.DecisionHighestPriorityScore,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
 			Price:        binanceSellOrder.Price,
@@ -97,7 +97,7 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 	if manualOrder != nil && manualOrder.IsSell() {
 		return model.Decision{
 			StrategyName: model.OrderBasedStrategyName,
-			Score:        999.99,
+			Score:        model.DecisionHighestPriorityScore,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
 			Price:        manualOrder.Price,
@@ -113,7 +113,7 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 	if profitPercent.Lte(extraChargePercent) && o.TradeStack.CanBuy(tradeLimit) {
 		return model.Decision{
 			StrategyName: model.OrderBasedStrategyName,
-			Score:        999.99,
+			Score:        model.DecisionHighestPriorityScore,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
 			Price:        kLine.Close,
@@ -124,7 +124,7 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 	if profitPercent.Gte(o.ProfitService.GetMinProfitPercent(order)) {
 		return model.Decision{
 			StrategyName: model.OrderBasedStrategyName,
-			Score:        999.99,
+			Score:        model.DecisionHighestPriorityScore,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
 			Price:        kLine.Close,

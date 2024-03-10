@@ -9,14 +9,15 @@ import (
 )
 
 type StrategyFacade struct {
-	ExchangeRepository repository.ExchangeRepositoryInterface
-	OrderRepository    repository.OrderStorageInterface
-	BotService         service.BotServiceInterface
-	MinDecisions       float64
+	DecisionReadStorage repository.DecisionReadStorageInterface
+	ExchangeRepository  repository.ExchangeTradeInfoInterface
+	OrderRepository     repository.OrderStorageInterface
+	BotService          service.BotServiceInterface
+	MinDecisions        float64
 }
 
 func (s *StrategyFacade) Decide(symbol string) (model.FacadeResponse, error) {
-	decisions := s.ExchangeRepository.GetDecisions(symbol)
+	decisions := s.DecisionReadStorage.GetDecisions(symbol)
 
 	buyScore := 0.00
 	sellScore := 0.00
@@ -44,9 +45,9 @@ func (s *StrategyFacade) Decide(symbol string) (model.FacadeResponse, error) {
 
 	if amount != s.MinDecisions && manualOrder == nil {
 		return model.FacadeResponse{
-			Hold: 999,
-			Buy:  0,
-			Sell: 0,
+			Hold: model.DecisionHighestPriorityScore,
+			Buy:  0.00,
+			Sell: 0.00,
 		}, errors.New(fmt.Sprintf("[%s] Not enough decision amount %d of %d", symbol, int64(amount), int64(s.MinDecisions)))
 	}
 
@@ -54,20 +55,34 @@ func (s *StrategyFacade) Decide(symbol string) (model.FacadeResponse, error) {
 
 	if err != nil {
 		return model.FacadeResponse{
-			Hold: 999,
-			Buy:  0,
-			Sell: 0,
+			Hold: model.DecisionHighestPriorityScore,
+			Buy:  0.00,
+			Sell: 0.00,
 		}, errors.New(fmt.Sprintf("[%s] %s", symbol, err.Error()))
 	}
 
-	lastKline := s.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+	kline := s.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
-	if lastKline == nil {
+	if kline == nil {
 		return model.FacadeResponse{
-			Hold: 999,
-			Buy:  0,
-			Sell: 0,
-		}, errors.New(fmt.Sprintf("[%s] Last price is unknown... skip!", symbol))
+			Hold: model.DecisionHighestPriorityScore,
+			Buy:  0.00,
+			Sell: 0.00,
+		}, errors.New(fmt.Sprintf("[%s] Last price is unknown", symbol))
+	}
+
+	// Do not buy if price expired
+	if kline.IsPriceExpired() && buyScore > sellScore {
+		return model.FacadeResponse{
+			Hold: model.DecisionHighestPriorityScore,
+			Buy:  0.00,
+			Sell: 0.00,
+		}, errors.New(fmt.Sprintf("[%s] Last price is expired", symbol))
+	}
+
+	// Drop HOLD value for high priority sell/buy operations
+	if sellScore == model.DecisionHighestPriorityScore || buyScore == model.DecisionHighestPriorityScore {
+		holdScore = 0.00
 	}
 
 	return model.FacadeResponse{

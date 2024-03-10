@@ -54,7 +54,7 @@ func (m *MakerService) Make(symbol string) {
 		return
 	}
 
-	if decision.Sell >= decision.Buy {
+	if decision.Sell > decision.Buy {
 		if buyOrderErr == nil {
 			m.ProcessSell(tradeLimit, openedOrder)
 		}

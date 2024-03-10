@@ -312,7 +312,12 @@ type ExchangeTradeInfoMock struct {
 
 func (e *ExchangeTradeInfoMock) GetLastKLine(symbol string) *model.KLine {
 	args := e.Called(symbol)
-	return args.Get(0).(*model.KLine)
+	kLine := args.Get(0)
+	if kLine != nil {
+		return kLine.(*model.KLine)
+	}
+
+	return nil
 }
 func (e *ExchangeTradeInfoMock) GetTradeLimit(symbol string) (model.TradeLimit, error) {
 	args := e.Called(symbol)
@@ -445,4 +450,13 @@ type BuyOrderStackMock struct {
 func (b *BuyOrderStackMock) CanBuy(limit model.TradeLimit) bool {
 	args := b.Called(limit)
 	return args.Get(0).(bool)
+}
+
+type DecisionReadStorageMock struct {
+	mock.Mock
+}
+
+func (d *DecisionReadStorageMock) GetDecisions(symbol string) []model.Decision {
+	args := d.Called(symbol)
+	return args.Get(0).([]model.Decision)
 }

@@ -4,6 +4,7 @@ const OrderBasedStrategyName = "order_based_strategy"
 const MarketDepthStrategyName = "market_depth_strategy"
 const BaseKlineStrategyName = "base_kline_strategy"
 const SmaTradeStrategyName = "sma_trade_strategy"
+const DecisionHighestPriorityScore = 999.99
 
 type Decision struct {
 	Operation    string     `json:"operation"`

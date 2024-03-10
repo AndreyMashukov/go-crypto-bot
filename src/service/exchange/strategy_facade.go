@@ -8,6 +8,10 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/service"
 )
 
+type StrategyFacadeInterface interface {
+	Decide(symbol string) (model.FacadeResponse, error)
+}
+
 type StrategyFacade struct {
 	DecisionReadStorage repository.DecisionReadStorageInterface
 	ExchangeRepository  repository.ExchangeTradeInfoInterface

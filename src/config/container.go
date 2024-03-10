@@ -253,10 +253,11 @@ func InitServiceContainer() Container {
 		PriceCalculator:    &priceCalculator,
 		BotService:         &botService,
 		StrategyFacade: &exchange.StrategyFacade{
-			MinDecisions:       4.00,
-			OrderRepository:    &orderRepository,
-			ExchangeRepository: &exchangeRepository,
-			BotService:         &botService,
+			MinDecisions:        4.00,
+			OrderRepository:     &orderRepository,
+			DecisionReadStorage: &exchangeRepository,
+			ExchangeRepository:  &exchangeRepository,
+			BotService:          &botService,
 		},
 	}
 
@@ -311,8 +312,8 @@ func InitServiceContainer() Container {
 		MlEnabled:          true,
 	}
 	orderBasedStrategy := strategy.OrderBasedStrategy{
-		ExchangeRepository: exchangeRepository,
-		OrderRepository:    orderRepository,
+		ExchangeRepository: &exchangeRepository,
+		OrderRepository:    &orderRepository,
 		TradeStack:         &tradeStack,
 		ProfitService:      &profitService,
 		BotService:         &botService,

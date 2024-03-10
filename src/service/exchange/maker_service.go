@@ -13,17 +13,17 @@ import (
 )
 
 type MakerService struct {
-	OrderExecutor      *OrderExecutor
-	OrderRepository    *repository.OrderRepository
-	ExchangeRepository *repository.ExchangeRepository
-	Binance            *client.Binance
-	Formatter          *utils.Formatter
-	HoldScore          float64
-	CurrentBot         *model.Bot
-	PriceCalculator    *PriceCalculator
-	TradeStack         *TradeStack
+	OrderRepository    repository.OrderStorageInterface
+	ExchangeRepository repository.BaseTradeStorageInterface
 	BotService         service.BotServiceInterface
-	StrategyFacade     *StrategyFacade
+	StrategyFacade     StrategyFacadeInterface
+	PriceCalculator    PriceCalculatorInterface
+	TradeStack         BuyOrderStackInterface
+	OrderExecutor      OrderExecutorInterface
+	Binance            client.ExchangePriceAPIInterface
+	Formatter          *utils.Formatter
+	CurrentBot         *model.Bot
+	HoldScore          float64
 }
 
 func (m *MakerService) Make(symbol string) {
@@ -41,7 +41,6 @@ func (m *MakerService) Make(symbol string) {
 		return
 	}
 
-	// todo: fallback to existing order...
 	if decision.Hold >= m.HoldScore {
 		return
 	}
@@ -114,7 +113,7 @@ func (m *MakerService) ProcessBuy(tradeLimit model.TradeLimit) {
 		return
 	}
 
-	if manualOrder != nil && strings.ToUpper(manualOrder.Operation) == "BUY" {
+	if manualOrder != nil && manualOrder.IsBuy() {
 		price = m.Formatter.FormatPrice(tradeLimit, manualOrder.Price)
 	}
 
@@ -132,7 +131,7 @@ func (m *MakerService) ProcessBuy(tradeLimit model.TradeLimit) {
 			return
 		}
 
-		err = m.OrderExecutor.Buy(tradeLimit, tradeLimit.Symbol, price, quantity)
+		err = m.OrderExecutor.Buy(tradeLimit, price, quantity)
 		if err != nil {
 			log.Printf("[%s] %s", tradeLimit.Symbol, err)
 
@@ -195,8 +194,9 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 	}
 
 	profit := openedOrder.GetProfitPercent(lastKline.Close, m.BotService.UseSwapCapital())
+	extraChargePercent := tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline, m.BotService.UseSwapCapital())
 
-	if profit.Lte(tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline, m.BotService.UseSwapCapital())) {
+	if profit.Lte(extraChargePercent) {
 		// extra buy on current price
 		if price < lastKline.Close {
 			price = m.Formatter.FormatPrice(tradeLimit, lastKline.Close)
@@ -206,14 +206,16 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 		if err != nil {
 			log.Printf("[%s] %s", tradeLimit.Symbol, err)
 
-			m.OrderExecutor.TrySwap(openedOrder)
+			if m.BotService.IsSwapEnabled() {
+				m.OrderExecutor.TrySwap(openedOrder)
+			}
 		}
 	} else {
 		log.Printf(
 			"[%s] Extra charge is not allowed: %.2f of %.2f",
 			tradeLimit.Symbol,
 			profit.Value(),
-			tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline, m.BotService.UseSwapCapital()).Value(),
+			extraChargePercent.Value(),
 		)
 	}
 }
@@ -250,7 +252,7 @@ func (m *MakerService) ProcessSell(tradeLimit model.TradeLimit, openedOrder mode
 
 	isManual := false
 
-	if manualOrder != nil && strings.ToUpper(manualOrder.Operation) == "SELL" {
+	if manualOrder != nil && manualOrder.IsSell() {
 		price = m.Formatter.FormatPrice(tradeLimit, manualOrder.Price)
 		isManual = true
 	}
@@ -260,7 +262,7 @@ func (m *MakerService) ProcessSell(tradeLimit model.TradeLimit, openedOrder mode
 
 		if quantity >= tradeLimit.MinQuantity {
 			log.Printf("[%s] SELL QTY = %f", openedOrder.Symbol, quantity)
-			err := m.OrderExecutor.Sell(tradeLimit, openedOrder, tradeLimit.Symbol, price, quantity, isManual)
+			err := m.OrderExecutor.Sell(tradeLimit, openedOrder, price, quantity, isManual)
 			if err != nil {
 				log.Printf("[%s] SELL error: %s", openedOrder.Symbol, err.Error())
 			}

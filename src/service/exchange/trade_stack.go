@@ -7,7 +7,6 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"sort"
-	"strings"
 )
 
 type BuyOrderStackInterface interface {
@@ -32,7 +31,7 @@ func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
 
 	manualOrder := t.OrderRepository.GetManualOrder(limit.Symbol)
 
-	if manualOrder != nil && strings.ToUpper(manualOrder.Operation) == "BUY" {
+	if manualOrder != nil && manualOrder.IsBuy() {
 		return true
 	}
 
@@ -41,13 +40,6 @@ func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
 	if len(result) == 0 {
 		return false
 	}
-
-	//for index, stackItem := range result {
-	//	log.Printf("Stack [%d] %s = %.2f", index, stackItem.Symbol, stackItem.Percent)
-	//	if index >= 1 {
-	//		break
-	//	}
-	//}
 
 	return limit.Symbol == result[0].Symbol
 }

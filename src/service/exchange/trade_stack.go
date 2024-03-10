@@ -29,18 +29,17 @@ func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
 		return true
 	}
 
+	manualOrder := t.OrderRepository.GetManualOrder(limit.Symbol)
+
+	if manualOrder != nil && manualOrder.IsBuy() {
+		return true
+	}
+
 	result := t.GetTradeStack(true, true, true, true, false)
 
 	if len(result) == 0 {
 		return false
 	}
-
-	//for index, stackItem := range result {
-	//	log.Printf("Stack [%d] %s = %.2f", index, stackItem.Symbol, stackItem.Percent)
-	//	if index >= 1 {
-	//		break
-	//	}
-	//}
 
 	return limit.Symbol == result[0].Symbol
 }

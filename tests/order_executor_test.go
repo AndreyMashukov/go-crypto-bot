@@ -184,7 +184,7 @@ func TestSellAction(t *testing.T) {
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
 	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52, nil)
 
-	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
+	err := orderExecutor.Sell(tradeLimit, openedOrder, 2281.52, 0.0089, false)
 	assertion.Nil(err)
 	assertion.Equal("closed", orderRepository.Updated.Status)
 	assertion.Equal(2212.92, orderRepository.Updated.Price)
@@ -351,7 +351,7 @@ func TestSellFoundFilled(t *testing.T) {
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
 	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52, nil)
 
-	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
+	err := orderExecutor.Sell(tradeLimit, openedOrder, 2281.52, 0.0089, false)
 	assertion.Nil(err)
 	assertion.Equal("closed", orderRepository.Updated.Status)
 	assertion.Equal(2212.92, orderRepository.Updated.Price)
@@ -516,7 +516,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
 	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52, nil)
 
-	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
+	err := orderExecutor.Sell(tradeLimit, openedOrder, 2281.52, 0.0089, false)
 	assertion.Error(errors.New("Order is cancelled"), err)
 }
 
@@ -669,7 +669,7 @@ func TestSellQueryFail(t *testing.T) {
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
 	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52, nil)
 
-	err := orderExecutor.Sell(tradeLimit, openedOrder, "ETHUSDT", 2281.52, 0.0089, false)
+	err := orderExecutor.Sell(tradeLimit, openedOrder, 2281.52, 0.0089, false)
 	assertion.Equal(errors.New("Order was canceled or expired"), err)
 }
 
@@ -842,7 +842,7 @@ func TestSellClosingAction(t *testing.T) {
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
 	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(43496.99, nil)
 
-	err := orderExecutor.Sell(tradeLimit, openedOrder, "BTCUSDT", 43496.99, 0.00046, false)
+	err := orderExecutor.Sell(tradeLimit, openedOrder, 43496.99, 0.00046, false)
 	assertion.Nil(err)
 	assertion.Equal("closed", orderRepository.Updated.Status)
 	assertion.Equal(42026.08, orderRepository.Updated.Price)
@@ -1018,7 +1018,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 2.25) / 100)
 	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(0.10692, nil)
 
-	err := orderExecutor.Sell(tradeLimit, openedOrder, "TRXUSDT", 0.10692, 382.1, false)
+	err := orderExecutor.Sell(tradeLimit, openedOrder, 0.10692, 382.1, false)
 	assertion.Nil(err)
 	assertion.Equal("closed", orderRepository.Updated.Status)
 	assertion.Equal(0.10457, orderRepository.Updated.Price)

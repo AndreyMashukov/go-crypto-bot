@@ -23,12 +23,26 @@ type SwapPairRepositoryInterface interface {
 	GetSwapPair(symbol string) (model.SwapPair, error)
 }
 
+type DecisionReadStorageInterface interface {
+	GetDecisions(symbol string) []model.Decision
+}
+
 type ExchangeTradeInfoInterface interface {
 	GetLastKLine(symbol string) *model.KLine
 	GetTradeLimit(symbol string) (model.TradeLimit, error)
 	GetPeriodMinPrice(symbol string, period int64) float64
 	GetPredict(symbol string) (float64, error)
 	GetInterpolation(kLine model.KLine) (model.Interpolation, error)
+}
+
+type BaseTradeStorageInterface interface {
+	GetLastKLine(symbol string) *model.KLine
+	GetTradeLimits() []model.TradeLimit
+	CreateSwapPair(swapPair model.SwapPair) (*int64, error)
+	GetSwapPair(symbol string) (model.SwapPair, error)
+	GetTradeLimit(symbol string) (model.TradeLimit, error)
+	UpdateSwapPair(swapPair model.SwapPair) error
+	UpdateTradeLimit(limit model.TradeLimit) error
 }
 
 type ExchangeRepositoryInterface interface {
@@ -55,6 +69,7 @@ type ExchangeRepositoryInterface interface {
 	SetDecision(decision model.Decision, symbol string)
 	GetDecision(strategy string, symbol string) *model.Decision
 	GetDecisions(symbol string) []model.Decision
+	GetInterpolation(kLine model.KLine) (model.Interpolation, error)
 }
 
 type ExchangePriceStorageInterface interface {

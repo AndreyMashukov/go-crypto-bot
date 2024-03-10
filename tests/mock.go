@@ -32,7 +32,7 @@ func (m *ExchangeRepositoryMock) GetSwapPairsByQuoteAsset(quoteAsset string) []m
 }
 func (m *ExchangeRepositoryMock) GetSwapPair(symbol string) (model.SwapPair, error) {
 	args := m.Called(symbol)
-	return args.Get(0).(model.SwapPair), args.Error(0)
+	return args.Get(0).(model.SwapPair), args.Error(1)
 }
 
 type SwapRepositoryMock struct {
@@ -239,6 +239,10 @@ func (e *ExchangePriceAPIMock) GetKLinesCached(symbol string, interval string, l
 	args := e.Called(symbol, interval, limit)
 	return args.Get(0).([]model.KLine)
 }
+func (e *ExchangePriceAPIMock) GetExchangeData(symbols []string) (*model.ExchangeInfo, error) {
+	args := e.Called(symbols)
+	return args.Get(0).(*model.ExchangeInfo), args.Error(1)
+}
 
 type OrderStorageMock struct {
 	mock.Mock
@@ -312,7 +316,12 @@ type ExchangeTradeInfoMock struct {
 
 func (e *ExchangeTradeInfoMock) GetLastKLine(symbol string) *model.KLine {
 	args := e.Called(symbol)
-	return args.Get(0).(*model.KLine)
+	kLine := args.Get(0)
+	if kLine != nil {
+		return kLine.(*model.KLine)
+	}
+
+	return nil
 }
 func (e *ExchangeTradeInfoMock) GetTradeLimit(symbol string) (model.TradeLimit, error) {
 	args := e.Called(symbol)
@@ -436,4 +445,102 @@ func (b *BotServiceMock) UseSwapCapital() bool {
 func (b *BotServiceMock) GetSwapConfig() model.SwapConfig {
 	args := b.Called()
 	return args.Get(0).(model.SwapConfig)
+}
+
+type BuyOrderStackMock struct {
+	mock.Mock
+}
+
+func (b *BuyOrderStackMock) CanBuy(limit model.TradeLimit) bool {
+	args := b.Called(limit)
+	return args.Get(0).(bool)
+}
+
+type DecisionReadStorageMock struct {
+	mock.Mock
+}
+
+func (d *DecisionReadStorageMock) GetDecisions(symbol string) []model.Decision {
+	args := d.Called(symbol)
+	return args.Get(0).([]model.Decision)
+}
+
+type BaseTradeStorageMock struct {
+	mock.Mock
+}
+
+func (e *BaseTradeStorageMock) GetLastKLine(symbol string) *model.KLine {
+	args := e.Called(symbol)
+	kLine := args.Get(0)
+	if kLine != nil {
+		return kLine.(*model.KLine)
+	}
+
+	return nil
+}
+func (e *BaseTradeStorageMock) GetTradeLimits() []model.TradeLimit {
+	args := e.Called()
+	return args.Get(0).([]model.TradeLimit)
+}
+func (e *BaseTradeStorageMock) CreateSwapPair(swapPair model.SwapPair) (*int64, error) {
+	args := e.Called(swapPair)
+	id := int64(args.Int(1))
+	return &id, args.Error(0)
+}
+func (e *BaseTradeStorageMock) GetSwapPair(symbol string) (model.SwapPair, error) {
+	args := e.Called(symbol)
+	return args.Get(0).(model.SwapPair), args.Error(1)
+}
+func (e *BaseTradeStorageMock) GetTradeLimit(symbol string) (model.TradeLimit, error) {
+	args := e.Called(symbol)
+	return args.Get(0).(model.TradeLimit), args.Error(1)
+}
+func (e *BaseTradeStorageMock) UpdateSwapPair(swapPair model.SwapPair) error {
+	args := e.Called(swapPair)
+	return args.Error(0)
+}
+func (e *BaseTradeStorageMock) UpdateTradeLimit(limit model.TradeLimit) error {
+	args := e.Called(limit)
+	return args.Error(0)
+}
+
+type StrategyFacadeMock struct {
+	mock.Mock
+}
+
+func (s *StrategyFacadeMock) Decide(symbol string) (model.FacadeResponse, error) {
+	args := s.Called(symbol)
+	return args.Get(0).(model.FacadeResponse), args.Error(1)
+}
+
+type OrderExecutorMock struct {
+	mock.Mock
+}
+
+func (o *OrderExecutorMock) BuyExtra(tradeLimit model.TradeLimit, order model.Order, price float64) error {
+	args := o.Called(tradeLimit, order, price)
+	return args.Error(0)
+}
+func (o *OrderExecutorMock) Buy(tradeLimit model.TradeLimit, price float64, quantity float64) error {
+	args := o.Called(tradeLimit, price, quantity)
+	return args.Error(0)
+}
+func (o *OrderExecutorMock) Sell(tradeLimit model.TradeLimit, opened model.Order, price float64, quantity float64, isManual bool) error {
+	args := o.Called(tradeLimit, opened, price, quantity, isManual)
+	return args.Error(0)
+}
+func (o *OrderExecutorMock) ProcessSwap(order model.Order) bool {
+	args := o.Called(order)
+	return args.Get(0).(bool)
+}
+func (o *OrderExecutorMock) TrySwap(order model.Order) {
+	_ = o.Called(order)
+}
+func (o *OrderExecutorMock) CheckMinBalance(limit model.TradeLimit, kLine model.KLine) error {
+	args := o.Called(limit, kLine)
+	return args.Error(0)
+}
+func (o *OrderExecutorMock) CalculateSellQuantity(order model.Order) float64 {
+	args := o.Called(order)
+	return args.Get(0).(float64)
 }

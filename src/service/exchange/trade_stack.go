@@ -7,6 +7,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"sort"
+	"strings"
 )
 
 type BuyOrderStackInterface interface {
@@ -26,6 +27,12 @@ func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
 	// Allow to process existing order
 	binanceOrder := t.OrderRepository.GetBinanceOrder(limit.Symbol, "BUY")
 	if binanceOrder != nil {
+		return true
+	}
+
+	manualOrder := t.OrderRepository.GetManualOrder(limit.Symbol)
+
+	if manualOrder != nil && strings.ToUpper(manualOrder.Operation) == "BUY" {
 		return true
 	}
 

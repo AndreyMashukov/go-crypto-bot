@@ -9,10 +9,10 @@ import (
 )
 
 type OrderBasedStrategy struct {
-	ExchangeRepository repository.ExchangeRepository
-	OrderRepository    repository.OrderRepository
+	ExchangeRepository repository.ExchangeTradeInfoInterface
+	OrderRepository    repository.OrderStorageInterface
 	ProfitService      exchange.ProfitServiceInterface
-	TradeStack         *exchange.TradeStack
+	TradeStack         exchange.BuyOrderStackInterface
 	BotService         service.BotServiceInterface
 }
 
@@ -37,14 +37,15 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 			Score:        999.99,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
-			Price:        kLine.Close,
+			Price:        binanceBuyOrder.Price,
 			Params:       [3]float64{0, 0, 0},
 		}
 	}
 
 	order, err := o.OrderRepository.GetOpenedOrderCached(kLine.Symbol, "BUY")
+	hasBuyOrder := err == nil
 
-	if err != nil {
+	if !hasBuyOrder {
 		if !o.TradeStack.CanBuy(tradeLimit) {
 			return model.Decision{
 				StrategyName: model.OrderBasedStrategyName,
@@ -52,6 +53,19 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 				Operation:    "HOLD",
 				Timestamp:    time.Now().Unix(),
 				Price:        kLine.Close,
+				Params:       [3]float64{0, 0, 0},
+			}
+		}
+
+		manualOrder := o.OrderRepository.GetManualOrder(tradeLimit.Symbol)
+
+		if manualOrder != nil && manualOrder.IsBuy() {
+			return model.Decision{
+				StrategyName: model.OrderBasedStrategyName,
+				Score:        999.99,
+				Operation:    "BUY",
+				Timestamp:    time.Now().Unix(),
+				Price:        manualOrder.Price,
 				Params:       [3]float64{0, 0, 0},
 			}
 		}
@@ -73,14 +87,30 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 			Score:        999.99,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
-			Price:        kLine.Close,
+			Price:        binanceSellOrder.Price,
+			Params:       [3]float64{0, 0, 0},
+		}
+	}
+
+	manualOrder := o.OrderRepository.GetManualOrder(tradeLimit.Symbol)
+
+	if manualOrder != nil && manualOrder.IsSell() {
+		return model.Decision{
+			StrategyName: model.OrderBasedStrategyName,
+			Score:        999.99,
+			Operation:    "SELL",
+			Timestamp:    time.Now().Unix(),
+			Price:        manualOrder.Price,
 			Params:       [3]float64{0, 0, 0},
 		}
 	}
 
 	profitPercent := order.GetProfitPercent(kLine.Close, o.BotService.UseSwapCapital())
+	extraChargePercent := tradeLimit.GetBuyOnFallPercent(order, kLine, o.BotService.UseSwapCapital())
 
-	if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(order, kLine, o.BotService.UseSwapCapital())) && tradeLimit.IsEnabled && o.TradeStack.CanBuy(tradeLimit) {
+	// ATTENTION: We can not do extra buy if CanBuy() is false
+	// It can be the reason of active SELL orders, cancel SELL order when extra buy is possible
+	if profitPercent.Lte(extraChargePercent) && o.TradeStack.CanBuy(tradeLimit) {
 		return model.Decision{
 			StrategyName: model.OrderBasedStrategyName,
 			Score:        999.99,
@@ -128,7 +158,7 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 
 	return model.Decision{
 		StrategyName: model.OrderBasedStrategyName,
-		Score:        99.00,
+		Score:        99.99,
 		Operation:    "HOLD",
 		Timestamp:    time.Now().Unix(),
 		Price:        kLine.Close,

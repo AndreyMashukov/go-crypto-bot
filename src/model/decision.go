@@ -13,3 +13,9 @@ type Decision struct {
 	Price        float64    `json:"price"`
 	Params       [3]float64 `json:"params"`
 }
+
+type FacadeResponse struct {
+	Hold float64
+	Buy  float64
+	Sell float64
+}

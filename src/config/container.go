@@ -248,11 +248,16 @@ func InitServiceContainer() Container {
 		ExchangeRepository: &exchangeRepository,
 		Binance:            &binance,
 		Formatter:          &formatter,
-		MinDecisions:       4.00,
 		HoldScore:          75.00,
 		CurrentBot:         currentBot,
 		PriceCalculator:    &priceCalculator,
 		BotService:         &botService,
+		StrategyFacade: &exchange.StrategyFacade{
+			MinDecisions:       4.00,
+			OrderRepository:    &orderRepository,
+			ExchangeRepository: &exchangeRepository,
+			BotService:         &botService,
+		},
 	}
 
 	profitOptionsValidator := validator.ProfitOptionsValidator{}

@@ -437,3 +437,12 @@ func (b *BotServiceMock) GetSwapConfig() model.SwapConfig {
 	args := b.Called()
 	return args.Get(0).(model.SwapConfig)
 }
+
+type BuyOrderStackMock struct {
+	mock.Mock
+}
+
+func (b *BuyOrderStackMock) CanBuy(limit model.TradeLimit) bool {
+	args := b.Called(limit)
+	return args.Get(0).(bool)
+}

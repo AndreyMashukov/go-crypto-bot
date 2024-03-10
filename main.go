@@ -215,11 +215,8 @@ func main() {
 
 		go func(symbol string, container *config.Container) {
 			for {
-				currentDecisions := container.ExchangeRepository.GetDecisions(symbol)
+				container.MakerService.Make(symbol)
 
-				if len(currentDecisions) > 0 {
-					container.MakerService.Make(symbol, currentDecisions)
-				}
 				time.Sleep(time.Millisecond * 500)
 			}
 		}(limit.Symbol, &container)

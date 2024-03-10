@@ -131,6 +131,7 @@ func (m *PriceCalculator) CalculateSell(tradeLimit model.TradeLimit, order model
 	minPrice := m.Formatter.FormatPrice(tradeLimit, m.ProfitService.GetMinClosePrice(order, order.Price))
 	currentPrice := lastKline.Close
 
+	// todo: Only we do not have active order
 	if currentPrice > minPrice {
 		minPrice = currentPrice
 	}

@@ -92,19 +92,6 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 		}
 	}
 
-	manualOrder := o.OrderRepository.GetManualOrder(tradeLimit.Symbol)
-
-	if manualOrder != nil && manualOrder.IsSell() {
-		return model.Decision{
-			StrategyName: model.OrderBasedStrategyName,
-			Score:        model.DecisionHighestPriorityScore,
-			Operation:    "SELL",
-			Timestamp:    time.Now().Unix(),
-			Price:        manualOrder.Price,
-			Params:       [3]float64{0, 0, 0},
-		}
-	}
-
 	profitPercent := order.GetProfitPercent(kLine.Close, o.BotService.UseSwapCapital())
 	extraChargePercent := tradeLimit.GetBuyOnFallPercent(order, kLine, o.BotService.UseSwapCapital())
 
@@ -117,6 +104,19 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
 			Price:        kLine.Close,
+			Params:       [3]float64{0, 0, 0},
+		}
+	}
+
+	manualOrder := o.OrderRepository.GetManualOrder(tradeLimit.Symbol)
+
+	if manualOrder != nil && manualOrder.IsSell() && manualOrder.CanSell(order, o.BotService.UseSwapCapital()) {
+		return model.Decision{
+			StrategyName: model.OrderBasedStrategyName,
+			Score:        model.DecisionHighestPriorityScore,
+			Operation:    "SELL",
+			Timestamp:    time.Now().Unix(),
+			Price:        manualOrder.Price,
 			Params:       [3]float64{0, 0, 0},
 		}
 	}

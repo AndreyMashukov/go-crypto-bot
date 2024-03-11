@@ -17,6 +17,13 @@ func (m *ManualOrder) IsSell() bool {
 	return strings.ToUpper(m.Operation) == "SELL"
 }
 
+func (m *ManualOrder) CanSell(order Order, withSwap bool) bool {
+	profit := order.GetQuoteProfit(m.Price, withSwap)
+	minProfit := order.GetQuoteProfit(order.GetManualMinClosePrice(), withSwap)
+
+	return profit >= minProfit
+}
+
 type UpdateOrderExtraChargeOptions struct {
 	OrderId            int64              `json:"orderId"`
 	ExtraChargeOptions ExtraChargeOptions `json:"extraChargeOptions"`

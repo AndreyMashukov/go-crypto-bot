@@ -233,7 +233,7 @@ func TestHasOrderAndHasBinanceSellOrder(t *testing.T) {
 	assertion.Equal(40005.00, decision.Price)
 }
 
-func TestHasOrderAndHasManualBuy(t *testing.T) {
+func TestHasOrderAndHasManualSell(t *testing.T) {
 	assertion := assert.New(t)
 
 	exchangeRepository := new(ExchangeTradeInfoMock)
@@ -261,8 +261,10 @@ func TestHasOrderAndHasManualBuy(t *testing.T) {
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "SELL").Return(nil)
+	botService.On("UseSwapCapital").Return(false)
 	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(model.Order{
-		Price: 38000.00,
+		Price:            38000.00,
+		ExecutedQuantity: 1.00,
 	}, nil)
 	orderStorage.On("GetManualOrder", "BTCUSDT").Return(&model.ManualOrder{
 		Price:     40003.00,
@@ -316,7 +318,6 @@ func TestHasOrderAndTimeToExtraBuy(t *testing.T) {
 			},
 		},
 	}, nil)
-	orderStorage.On("GetManualOrder", "BTCUSDT").Return(nil)
 	botService.On("UseSwapCapital").Return(false)
 
 	decision := orderBasedStrategy.Decide(kline)
@@ -324,6 +325,7 @@ func TestHasOrderAndTimeToExtraBuy(t *testing.T) {
 	assertion.Equal("BUY", decision.Operation)
 	assertion.Equal(model.OrderBasedStrategyName, decision.StrategyName)
 	assertion.Equal(98.00, decision.Price)
+	orderStorage.AssertNumberOfCalls(t, "GetManualOrder", 0)
 }
 
 func TestHasOrderAndProfitPercentReached(t *testing.T) {

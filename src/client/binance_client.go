@@ -101,6 +101,7 @@ func (b *Binance) Connect(address string) {
 
 	b.connection = connection
 	b.Connected = true
+	b.connection.SetPingHandler(nil)
 }
 
 func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {

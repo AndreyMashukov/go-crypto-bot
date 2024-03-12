@@ -30,8 +30,6 @@ func (m *MakerService) Make(symbol string) {
 	decision, err := m.StrategyFacade.Decide(symbol)
 
 	if err != nil {
-		log.Println(err.Error())
-
 		return
 	}
 

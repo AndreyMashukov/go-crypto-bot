@@ -234,45 +234,46 @@ func main() {
 					// todo: write only master bot???
 					interpolation := container.PriceCalculator.InterpolatePrice(kLine.Symbol)
 					container.ExchangeRepository.SaveInterpolation(interpolation, *kLine)
-
-					//if interpolation.HasBoth() {
-					//	log.Printf(
-					//		"[%s] price interpolation btc -> %f, eth -> %f, current: %f",
-					//		symbol,
-					//		interpolation.BtcInterpolationUsdt,
-					//		interpolation.EthInterpolationUsdt,
-					//		kLine.Close,
-					//	)
-					//} else {
-					//	if interpolation.HasBtc() {
-					//		log.Printf(
-					//			"[%s] price interpolation btc -> %f, current: %f",
-					//			symbol,
-					//			interpolation.BtcInterpolationUsdt,
-					//			kLine.Close,
-					//		)
-					//	}
-					//
-					//	if interpolation.HasEth() {
-					//		log.Printf(
-					//			"[%s] price interpolation eth -> %f, current: %f",
-					//			symbol,
-					//			interpolation.EthInterpolationUsdt,
-					//			kLine.Close,
-					//		)
-					//	}
-					//}
 				}
 				container.ExchangeRepository.SavePredict(predicted, symbol)
 			}
 		}
 	}(predictChannel, &container)
 
+	klineChannel := make(chan model.KLine)
+
+	go func(klineChannel chan model.KLine) {
+		for {
+			kLine := <-klineChannel
+			go func(channel chan string, symbol string) {
+				predictChannel <- symbol
+			}(predictChannel, kLine.Symbol)
+
+			baseKLineDecision := container.BaseKLineStrategy.Decide(kLine)
+			container.ExchangeRepository.SetDecision(baseKLineDecision, kLine.Symbol)
+			orderBasedDecision := container.OrderBasedStrategy.Decide(kLine)
+			container.ExchangeRepository.SetDecision(orderBasedDecision, kLine.Symbol)
+		}
+	}(klineChannel)
+
 	go func(container *config.Container) {
 		for {
 			message := <-eventChannel
 
 			switch true {
+			case strings.Contains(string(message), "miniTicker"):
+				var tickerEvent model.MiniTickerEvent
+				json.Unmarshal(message, &tickerEvent)
+				ticker := tickerEvent.MiniTicker
+				kLine := container.ExchangeRepository.GetLastKLine(ticker.Symbol)
+
+				if kLine != nil && kLine.Includes(ticker) {
+					kLine.Update(ticker)
+					container.ExchangeRepository.AddKLine(*kLine)
+					klineChannel <- *kLine
+				}
+
+				break
 			case strings.Contains(string(message), "aggTrade"):
 				var tradeEvent model.TradeEvent
 				json.Unmarshal(message, &tradeEvent)
@@ -290,14 +291,7 @@ func main() {
 				kLine.UpdatedAt = time.Now().Unix()
 				container.ExchangeRepository.AddKLine(kLine)
 
-				go func(channel chan string, symbol string) {
-					predictChannel <- symbol
-				}(predictChannel, kLine.Symbol)
-
-				baseKLineDecision := container.BaseKLineStrategy.Decide(kLine)
-				container.ExchangeRepository.SetDecision(baseKLineDecision, kLine.Symbol)
-				orderBasedDecision := container.OrderBasedStrategy.Decide(kLine)
-				container.ExchangeRepository.SetDecision(orderBasedDecision, kLine.Symbol)
+				klineChannel <- kLine
 
 				break
 			case strings.Contains(string(message), "depth20"):
@@ -356,7 +350,7 @@ func main() {
 		tradeLimitCollection = append(tradeLimitCollection, model.DummySymbol{Symbol: "ETHUSDT"})
 	}
 
-	for index, streamBatchItem := range getStreamBatch(tradeLimitCollection, []string{"@aggTrade", "@kline_1m@2000ms", "@depth20@100ms"}) {
+	for index, streamBatchItem := range getStreamBatch(tradeLimitCollection, []string{"@aggTrade", "@kline_1m@2000ms", "@depth20@100ms", "@miniTicker"}) {
 		websockets = append(websockets, client.Listen(fmt.Sprintf(
 			"%s/stream?streams=%s",
 			os.Getenv("BINANCE_STREAM_DSN"),

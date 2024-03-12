@@ -254,7 +254,9 @@ func main() {
 			}
 
 			if len(invalidPriceSymbols) > 0 {
+				log.Printf("Price is invalid for: %s", strings.Join(invalidPriceSymbols, ", "))
 				tickers := container.Binance.GetTickers(invalidPriceSymbols)
+				updated := make([]string, 0)
 				for _, ticker := range tickers {
 					kline := container.ExchangeRepository.GetLastKLine(ticker.Symbol)
 					if kline != nil && kline.IsPriceNotActual() {
@@ -262,11 +264,14 @@ func main() {
 						kline.Close = ticker.Price
 						kline.High = math.Max(ticker.Price, kline.High)
 						kline.Low = math.Min(ticker.Price, kline.Low)
-						container.ExchangeRepository.AddKLine(*kline)
 						klineChannel <- *kline
+
+						updated = append(updated, kline.Symbol)
 					}
 				}
-				log.Printf("Price updated for: %s", strings.Join(invalidPriceSymbols, ", "))
+				if len(updated) > 0 {
+					log.Printf("Price updated for: %s", strings.Join(updated, ", "))
+				}
 			}
 
 			container.TimeService.WaitSeconds(2)
@@ -276,14 +281,14 @@ func main() {
 	go func(klineChannel chan model.KLine) {
 		for {
 			kLine := <-klineChannel
+			container.ExchangeRepository.AddKLine(kLine)
+
 			go func(channel chan string, symbol string) {
 				predictChannel <- symbol
 			}(predictChannel, kLine.Symbol)
 
-			baseKLineDecision := container.BaseKLineStrategy.Decide(kLine)
-			container.ExchangeRepository.SetDecision(baseKLineDecision, kLine.Symbol)
-			orderBasedDecision := container.OrderBasedStrategy.Decide(kLine)
-			container.ExchangeRepository.SetDecision(orderBasedDecision, kLine.Symbol)
+			container.ExchangeRepository.SetDecision(container.BaseKLineStrategy.Decide(kLine), kLine.Symbol)
+			container.ExchangeRepository.SetDecision(container.OrderBasedStrategy.Decide(kLine), kLine.Symbol)
 		}
 	}(klineChannel)
 
@@ -300,7 +305,6 @@ func main() {
 
 				if kLine != nil && kLine.Includes(ticker) {
 					kLine.Update(ticker)
-					container.ExchangeRepository.AddKLine(*kLine)
 					klineChannel <- *kLine
 				}
 
@@ -320,7 +324,6 @@ func main() {
 				json.Unmarshal(message, &event)
 				kLine := event.KlineData.Kline
 				kLine.UpdatedAt = time.Now().Unix()
-				container.ExchangeRepository.AddKLine(kLine)
 
 				klineChannel <- kLine
 

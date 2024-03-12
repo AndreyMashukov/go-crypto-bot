@@ -10,6 +10,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/config"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"log"
+	"math"
 	"os"
 	"slices"
 	"strings"
@@ -241,6 +242,36 @@ func main() {
 	}(predictChannel, &container)
 
 	klineChannel := make(chan model.KLine)
+
+	go func(tradeLimits []model.TradeLimit, container *config.Container, klineChannel chan model.KLine) {
+		for {
+			invalidPriceSymbols := make([]string, 0)
+			for _, limit := range tradeLimits {
+				kline := container.ExchangeRepository.GetLastKLine(limit.Symbol)
+				if kline != nil && kline.IsPriceNotActual() {
+					invalidPriceSymbols = append(invalidPriceSymbols, limit.Symbol)
+				}
+			}
+
+			if len(invalidPriceSymbols) > 0 {
+				tickers := container.Binance.GetTickers(invalidPriceSymbols)
+				for _, ticker := range tickers {
+					kline := container.ExchangeRepository.GetLastKLine(ticker.Symbol)
+					if kline != nil && kline.IsPriceNotActual() {
+						kline.UpdatedAt = time.Now().Unix()
+						kline.Close = ticker.Price
+						kline.High = math.Max(ticker.Price, kline.High)
+						kline.Low = math.Min(ticker.Price, kline.Low)
+						container.ExchangeRepository.AddKLine(*kline)
+						klineChannel <- *kline
+					}
+				}
+				log.Printf("Price updated for: %s", strings.Join(invalidPriceSymbols, ", "))
+			}
+
+			container.TimeService.WaitSeconds(2)
+		}
+	}(tradeLimits, &container, klineChannel)
 
 	go func(klineChannel chan model.KLine) {
 		for {

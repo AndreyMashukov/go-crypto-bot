@@ -332,3 +332,15 @@ type BinanceAggTradesResponse struct {
 	Result []Trade `json:"result"`
 	Error  *Error  `json:"error"`
 }
+
+type WSTickerPrice struct {
+	Symbol string  `json:"symbol"`
+	Price  float64 `json:"price,string"`
+}
+
+type BinanceTickersPriceResponse struct {
+	Id     string          `json:"id"`
+	Status int64           `json:"status"`
+	Result []WSTickerPrice `json:"result"`
+	Error  *Error          `json:"error"`
+}

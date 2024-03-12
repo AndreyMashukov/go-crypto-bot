@@ -459,6 +459,34 @@ func (b *Binance) GetTrades(order model.Order) ([]model.MyTrade, error) {
 	return response.Result, nil
 }
 
+func (b *Binance) GetTickers(symbols []string) []model.WSTickerPrice {
+	b.CheckWait()
+
+	channel := make(chan []byte)
+	defer close(channel)
+
+	socketRequest := model.SocketRequest{
+		Id:     uuid2.New().String(),
+		Method: "ticker.price",
+		Params: make(map[string]any),
+	}
+
+	socketRequest.Params["symbols"] = symbols
+	b.socketRequest(socketRequest, channel)
+	message := <-channel
+
+	var response model.BinanceTickersPriceResponse
+	json.Unmarshal(message, &response)
+
+	if response.Error != nil {
+		log.Println(socketRequest)
+		list := make([]model.WSTickerPrice, 0)
+		return list
+	}
+
+	return response.Result
+}
+
 func (b *Binance) LimitOrder(symbol string, quantity float64, price float64, operation string, timeInForce string) (model.BinanceOrder, error) {
 	b.CheckWait()
 

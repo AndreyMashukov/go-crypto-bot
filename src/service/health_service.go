@@ -61,7 +61,7 @@ func (h *HealthService) HealthCheck() model.BotHealth {
 		redisStatus = model.RedisStatusFail
 	}
 	mlStatus := model.MlStatusReady
-	if h.PythonMLBridge.Learning {
+	if h.PythonMLBridge.IsLearning() {
 		mlStatus = model.MlStatusLearning
 	}
 

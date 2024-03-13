@@ -59,8 +59,9 @@ func main() {
 	}
 
 	container.MarketTradeListener.ListenAll()
-	container.MakerService.StartTrade()
 	container.PythonMLBridge.StartAutoLearn()
+	container.TimeService.WaitSeconds(10)
+	container.MakerService.StartTrade()
 
 	runChannel := make(chan string)
 	// just to keep running

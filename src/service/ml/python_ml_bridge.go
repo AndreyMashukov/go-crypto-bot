@@ -68,8 +68,17 @@ func (p *PythonMLBridge) Finalize() {
 	C.Py_Finalize()
 }
 
+func (p *PythonMLBridge) IsLearning() bool {
+	p.Mutex.Lock()
+	isLearning := p.Learning
+	p.Mutex.Unlock()
+	return isLearning
+}
+
 func (p *PythonMLBridge) setLearning(value bool) {
+	p.Mutex.Lock()
 	p.Learning = value
+	p.Mutex.Unlock()
 }
 
 func (p *PythonMLBridge) getPythonCode(symbol string, datasetPath string) string {
@@ -285,7 +294,7 @@ with open(result_path, 'w') as out:
 }
 
 func (p *PythonMLBridge) Predict(symbol string) (float64, error) {
-	if p.Learning {
+	if p.IsLearning() {
 		return 0.00, errors.New("learning in the process")
 	}
 

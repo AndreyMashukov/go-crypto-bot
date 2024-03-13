@@ -1,12 +1,17 @@
 package exchange
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/redis/go-redis/v9"
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
 	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"sort"
+	"time"
 )
 
 type BuyOrderStackInterface interface {
@@ -21,6 +26,8 @@ type TradeStack struct {
 	Formatter          *utils.Formatter
 	BotService         service.BotServiceInterface
 	PriceCalculator    PriceCalculatorInterface
+	RDB                *redis.Client
+	Ctx                *context.Context
 }
 
 func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
@@ -53,50 +60,38 @@ func (t *TradeStack) GetTradeStack(skipDisabled bool, skipLocked bool, balanceFi
 		return stack
 	}
 
-	//resultChannel := make(chan *model.TradeStackItem)
-	//defer close(resultChannel)
-	//count := 0
+	resultChannel := make(chan *model.TradeStackItem)
+	defer close(resultChannel)
+	count := 0
 
 	for index, tradeLimit := range t.ExchangeRepository.GetTradeLimits() {
-		stackItem := t.ProcessItem(
-			int64(index),
-			tradeLimit,
-			skipDisabled,
-			skipLocked,
-			withValidPrice,
-			skipPending,
-			attachDecisions,
-		)
+		go func(tradeLimit model.TradeLimit, index int64) {
+			resultChannel <- t.ProcessItem(
+				index,
+				tradeLimit,
+				skipDisabled,
+				skipLocked,
+				withValidPrice,
+				skipPending,
+				attachDecisions,
+			)
+		}(tradeLimit, int64(index))
+		count++
+	}
+
+	processed := 0
+
+	for {
+		stackItem := <-resultChannel
 		if stackItem != nil {
 			stack = append(stack, *stackItem)
 		}
-		//go func(tradeLimit model.TradeLimit, index int64) {
-		//	resultChannel <- t.ProcessItem(
-		//		index,
-		//		tradeLimit,
-		//		skipDisabled,
-		//		skipLocked,
-		//		withValidPrice,
-		//		skipPending,
-		//		attachDecisions,
-		//	)
-		//}(tradeLimit, int64(index))
-		//count++
-	}
+		processed++
 
-	//processed := 0
-	//
-	//for {
-	//	stackItem := <-resultChannel
-	//	if stackItem != nil {
-	//		stack = append(stack, *stackItem)
-	//	}
-	//	processed++
-	//
-	//	if processed == count {
-	//		break
-	//	}
-	//}
+		if processed == count {
+			break
+		}
+	}
 
 	switch t.BotService.GetTradeStackSorting() {
 	case model.TradeStackSortingLessPercent:
@@ -230,10 +225,7 @@ func (t *TradeStack) ProcessItem(
 	if binanceOrder != nil {
 		buyPrice = binanceOrder.Price
 	} else {
-		//buyPriceCalc, buyPriceErr := t.PriceCalculator.CalculateBuy(tradeLimit)
-		//if buyPriceErr == nil {
-		//	buyPrice = buyPriceCalc
-		//}
+		buyPrice = t.GetBuyPriceCached(tradeLimit)
 	}
 	pricePointsDiff := int64((t.Formatter.FormatPrice(tradeLimit, buyPrice) - t.Formatter.FormatPrice(tradeLimit, lastPrice)) / tradeLimit.MinPrice)
 
@@ -286,4 +278,35 @@ func (t *TradeStack) ProcessItem(
 	}
 
 	return nil
+}
+
+func (t *TradeStack) GetBuyPriceCached(limit model.TradeLimit) float64 {
+	var ticker model.WSTickerPrice
+
+	cacheKey := fmt.Sprintf("buy-price-cached-%s-%d", limit.Symbol, t.BotService.GetBot().Id)
+	buyPriceCached := t.RDB.Get(*t.Ctx, cacheKey).Val()
+
+	if len(buyPriceCached) > 0 {
+		err := json.Unmarshal([]byte(buyPriceCached), &ticker)
+		if err == nil {
+			return ticker.Price
+		}
+	}
+
+	buyPriceCalc, buyPriceErr := t.PriceCalculator.CalculateBuy(limit)
+	if buyPriceErr == nil {
+		ticker = model.WSTickerPrice{
+			Symbol: limit.Symbol,
+			Price:  buyPriceCalc,
+		}
+
+		encoded, err := json.Marshal(ticker)
+		if err == nil {
+			t.RDB.Set(*t.Ctx, cacheKey, string(encoded), time.Second*20)
+		}
+
+		return ticker.Price
+	}
+
+	return 0.00
 }

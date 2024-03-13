@@ -6,6 +6,7 @@ import (
 )
 
 type BotServiceInterface interface {
+	GetBot() model.Bot
 	IsSwapEnabled() bool
 	IsMasterBot() bool
 	GetTradeStackSorting() string
@@ -18,6 +19,9 @@ type BotService struct {
 	BotRepository *repository.BotRepository
 }
 
+func (b *BotService) GetBot() model.Bot {
+	return b.BotRepository.GetCurrentBotCached(b.CurrentBot.Id)
+}
 func (b *BotService) IsSwapEnabled() bool {
 	return b.BotRepository.GetCurrentBotCached(b.CurrentBot.Id).IsSwapEnabled
 }

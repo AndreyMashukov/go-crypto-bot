@@ -211,6 +211,8 @@ func InitServiceContainer() Container {
 		Formatter:          &formatter,
 		BotService:         &botService,
 		PriceCalculator:    &priceCalculator,
+		RDB:                rdb,
+		Ctx:                &ctx,
 	}
 
 	orderExecutor := exchange.OrderExecutor{

@@ -29,7 +29,6 @@ type PriceCalculator struct {
 }
 
 func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, error) {
-	marketDepth := m.GetDepth(tradeLimit.Symbol)
 	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
 	if lastKline == nil {
@@ -41,43 +40,25 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 
 	// Extra charge by current price
 	if err == nil && order.GetProfitPercent(lastKline.Close, m.BotService.UseSwapCapital()).Lte(tradeLimit.GetBuyOnFallPercent(order, *lastKline, m.BotService.UseSwapCapital())) {
-		extraBuyPrice := minPrice
-		if order.GetPositionTime().GetHours() >= 24 {
-			extraBuyPrice = lastKline.Close
-		} else {
-			extraBuyPrice = minPrice
-		}
-
-		if extraBuyPrice > lastKline.Close {
-			extraBuyPrice = lastKline.Close
-		}
-
-		return m.LossSecurity.BuyPriceCorrection(extraBuyPrice, tradeLimit), nil
+		return m.LossSecurity.BuyPriceCorrection(lastKline.Close, tradeLimit), nil
 	}
 
 	frame := m.FrameService.GetFrame(tradeLimit.Symbol, tradeLimit.FrameInterval, tradeLimit.FramePeriod)
-	bestFramePrice, err := m.GetBestFrameBuy(tradeLimit, marketDepth, frame)
 	buyPrice := minPrice
 
-	if err == nil {
-		if buyPrice > bestFramePrice[1] {
-			buyPrice = bestFramePrice[1]
-		}
-	} else {
-		potentialOpenPrice := lastKline.Close
-		for {
-			closePrice := m.ProfitService.GetMinClosePrice(tradeLimit, potentialOpenPrice)
+	potentialOpenPrice := lastKline.Close
+	for {
+		closePrice := m.ProfitService.GetMinClosePrice(tradeLimit, potentialOpenPrice)
 
-			if closePrice <= frame.AvgHigh {
-				break
-			}
-
-			potentialOpenPrice -= tradeLimit.MinPrice
+		if closePrice <= frame.AvgHigh {
+			break
 		}
 
-		if buyPrice > potentialOpenPrice {
-			buyPrice = potentialOpenPrice
-		}
+		potentialOpenPrice -= tradeLimit.MinPrice * 5
+	}
+
+	if buyPrice > potentialOpenPrice {
+		buyPrice = potentialOpenPrice
 	}
 
 	if buyPrice > lastKline.Close {

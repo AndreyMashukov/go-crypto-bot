@@ -91,9 +91,9 @@ func (m *MarketTradeListener) ListenAll() {
 			kLine := <-klineChannel
 			m.ExchangeRepository.AddKLine(kLine)
 
-			go func(channel chan string, symbol string) {
+			go func(symbol string) {
 				predictChannel <- symbol
-			}(predictChannel, kLine.Symbol)
+			}(kLine.Symbol)
 
 			m.ExchangeRepository.SetDecision(m.BaseKLineStrategy.Decide(kLine), kLine.Symbol)
 			m.ExchangeRepository.SetDecision(m.OrderBasedStrategy.Decide(kLine), kLine.Symbol)
@@ -132,9 +132,6 @@ func (m *MarketTradeListener) ListenAll() {
 				smaDecision := m.SmaTradeStrategy.Decide(tradeEvent.Trade)
 				m.ExchangeRepository.SetDecision(smaDecision, tradeEvent.Trade.Symbol)
 
-				go func(channel chan string, symbol string) {
-					predictChannel <- symbol
-				}(predictChannel, tradeEvent.Trade.Symbol)
 				break
 			case strings.Contains(string(message), "kline"):
 				var event model.KlineEvent

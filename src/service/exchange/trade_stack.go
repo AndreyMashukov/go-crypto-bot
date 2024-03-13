@@ -30,6 +30,15 @@ type TradeStack struct {
 	Ctx                *context.Context
 }
 
+type TradeStackParams struct {
+	SkipDisabled    bool
+	SkipLocked      bool
+	BalanceFilter   bool
+	SkipPending     bool
+	WithValidPrice  bool
+	AttachDecisions bool
+}
+
 func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
 	// Allow to process existing order
 	binanceOrder := t.OrderRepository.GetBinanceOrder(limit.Symbol, "BUY")
@@ -43,7 +52,14 @@ func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
 		return true
 	}
 
-	result := t.GetTradeStack(true, true, true, true, true, false)
+	result := t.GetTradeStack(TradeStackParams{
+		SkipLocked:      true,
+		SkipDisabled:    true,
+		BalanceFilter:   true,
+		SkipPending:     true,
+		WithValidPrice:  true,
+		AttachDecisions: false,
+	})
 
 	if len(result) == 0 {
 		return false
@@ -52,7 +68,7 @@ func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
 	return limit.Symbol == result[0].Symbol
 }
 
-func (t *TradeStack) GetTradeStack(skipDisabled bool, skipLocked bool, balanceFilter bool, skipPending bool, withValidPrice bool, attachDecisions bool) []model.TradeStackItem {
+func (t *TradeStack) GetTradeStack(params TradeStackParams) []model.TradeStackItem {
 	balanceUsdt, err := t.BalanceService.GetAssetBalance("USDT", true)
 	stack := make([]model.TradeStackItem, 0)
 
@@ -65,17 +81,13 @@ func (t *TradeStack) GetTradeStack(skipDisabled bool, skipLocked bool, balanceFi
 	count := 0
 
 	for index, tradeLimit := range t.ExchangeRepository.GetTradeLimits() {
-		go func(tradeLimit model.TradeLimit, index int64) {
+		go func(limit model.TradeLimit, index int64, params TradeStackParams) {
 			resultChannel <- t.ProcessItem(
 				index,
-				tradeLimit,
-				skipDisabled,
-				skipLocked,
-				withValidPrice,
-				skipPending,
-				attachDecisions,
+				limit,
+				params,
 			)
-		}(tradeLimit, int64(index))
+		}(tradeLimit, int64(index), params)
 		count++
 	}
 
@@ -143,7 +155,7 @@ func (t *TradeStack) GetTradeStack(skipDisabled bool, skipLocked bool, balanceFi
 		}
 	}
 
-	if !balanceFilter {
+	if !params.BalanceFilter {
 		for _, stackItem := range impossible {
 			balanceUsdt -= stackItem.BudgetUsdt
 
@@ -173,21 +185,17 @@ func (t *TradeStack) GetTradeStack(skipDisabled bool, skipLocked bool, balanceFi
 func (t *TradeStack) ProcessItem(
 	index int64,
 	tradeLimit model.TradeLimit,
-	skipDisabled bool,
-	skipLocked bool,
-	withValidPrice bool,
-	skipPending bool,
-	attachDecisions bool,
+	params TradeStackParams,
 ) *model.TradeStackItem {
 	isEnabled := tradeLimit.IsEnabled
 
-	if !isEnabled && skipDisabled {
+	if !isEnabled && params.SkipDisabled {
 		return nil
 	}
 
 	isBuyLocked := t.OrderRepository.HasBuyLock(tradeLimit.Symbol)
 
-	if skipLocked && isBuyLocked {
+	if params.SkipLocked && isBuyLocked {
 		return nil
 	}
 
@@ -203,18 +211,18 @@ func (t *TradeStack) ProcessItem(
 		lastPrice = lastKLine.Close
 	}
 
-	if !isPriceValid && withValidPrice {
+	if !isPriceValid && params.WithValidPrice {
 		return nil
 	}
 
 	// Skip if order has already opened
 	binanceOrder := t.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
-	if binanceOrder != nil && skipPending {
+	if binanceOrder != nil && params.SkipPending {
 		return nil
 	}
 
 	decisions := make([]model.Decision, 0)
-	if attachDecisions {
+	if params.AttachDecisions {
 		decisions = t.ExchangeRepository.GetDecisions(tradeLimit.Symbol)
 	}
 

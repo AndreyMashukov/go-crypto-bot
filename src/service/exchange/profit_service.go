@@ -48,7 +48,12 @@ func (p *ProfitService) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice 
 			break
 		}
 
-		buyPrice -= limit.MinPrice * buyPrice
+		step := limit.MinPrice * buyPrice
+		if step < limit.MinPrice {
+			step = limit.MinPrice
+		}
+
+		buyPrice -= step
 
 		if buyPrice < 0.00 {
 			return priceBefore

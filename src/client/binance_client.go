@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -48,11 +49,26 @@ type Binance struct {
 	WaitMode             bool
 	Connected            bool
 	APIKeyCheckCompleted bool
+	Lock                 *sync.Mutex
+}
+
+func (b *Binance) IsWaitingMode() bool {
+	b.Lock.Lock()
+	isWaiting := b.WaitMode
+	b.Lock.Unlock()
+
+	return isWaiting
+}
+
+func (b *Binance) SetWaitingMode(isEnabled bool) {
+	b.Lock.Lock()
+	b.WaitMode = isEnabled
+	b.Lock.Unlock()
 }
 
 func (b *Binance) CheckWait() {
 	for {
-		if !b.WaitMode {
+		if !b.IsWaitingMode() {
 			break
 		}
 	}
@@ -113,7 +129,7 @@ func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {
 			msg := <-b.Channel
 
 			if strings.Contains(string(msg), "Too much request weight used; current limit is 6000 request weight per 1 MINUTE") {
-				b.WaitMode = true
+				b.SetWaitingMode(true)
 
 				log.Printf(
 					"[%s] Socket error [%s]: %s, wait 1 min and retry...",
@@ -124,7 +140,8 @@ func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {
 
 				time.Sleep(time.Minute)
 				serialized, _ := json.Marshal(req)
-				b.WaitMode = false
+				b.SetWaitingMode(false)
+
 				b.SocketWriter <- serialized
 				log.Printf("[%s] retried...", req.Id)
 

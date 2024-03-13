@@ -53,38 +53,50 @@ func (t *TradeStack) GetTradeStack(skipDisabled bool, skipLocked bool, balanceFi
 		return stack
 	}
 
-	resultChannel := make(chan *model.TradeStackItem)
-	defer close(resultChannel)
-	count := 0
+	//resultChannel := make(chan *model.TradeStackItem)
+	//defer close(resultChannel)
+	//count := 0
 
 	for index, tradeLimit := range t.ExchangeRepository.GetTradeLimits() {
-		go func(tradeLimit model.TradeLimit, index int64) {
-			resultChannel <- t.ProcessItem(
-				index,
-				tradeLimit,
-				skipDisabled,
-				skipLocked,
-				withValidPrice,
-				skipPending,
-				attachDecisions,
-			)
-		}(tradeLimit, int64(index))
-		count++
-	}
-
-	processed := 0
-
-	for {
-		stackItem := <-resultChannel
+		stackItem := t.ProcessItem(
+			int64(index),
+			tradeLimit,
+			skipDisabled,
+			skipLocked,
+			withValidPrice,
+			skipPending,
+			attachDecisions,
+		)
 		if stackItem != nil {
 			stack = append(stack, *stackItem)
 		}
-		processed++
-
-		if processed == count {
-			break
-		}
+		//go func(tradeLimit model.TradeLimit, index int64) {
+		//	resultChannel <- t.ProcessItem(
+		//		index,
+		//		tradeLimit,
+		//		skipDisabled,
+		//		skipLocked,
+		//		withValidPrice,
+		//		skipPending,
+		//		attachDecisions,
+		//	)
+		//}(tradeLimit, int64(index))
+		//count++
 	}
+
+	//processed := 0
+	//
+	//for {
+	//	stackItem := <-resultChannel
+	//	if stackItem != nil {
+	//		stack = append(stack, *stackItem)
+	//	}
+	//	processed++
+	//
+	//	if processed == count {
+	//		break
+	//	}
+	//}
 
 	switch t.BotService.GetTradeStackSorting() {
 	case model.TradeStackSortingLessPercent:

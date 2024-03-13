@@ -302,7 +302,7 @@ func (t *TradeStack) GetBuyPriceCached(limit model.TradeLimit) float64 {
 
 		encoded, err := json.Marshal(ticker)
 		if err == nil {
-			t.RDB.Set(*t.Ctx, cacheKey, string(encoded), time.Second*10)
+			t.RDB.Set(*t.Ctx, cacheKey, string(encoded), time.Second*30)
 		}
 
 		return ticker.Price

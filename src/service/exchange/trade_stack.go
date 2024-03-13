@@ -60,7 +60,7 @@ func (t *TradeStack) GetTradeStack(skipDisabled bool, skipLocked bool, balanceFi
 	for index, tradeLimit := range t.ExchangeRepository.GetTradeLimits() {
 		group.Add(1)
 
-		go func(tradeLimit model.TradeLimit, index int64) {
+		go func(tradeLimit model.TradeLimit, index int64, lock *sync.RWMutex) {
 			item := t.ProcessItem(
 				index,
 				tradeLimit,
@@ -81,7 +81,7 @@ func (t *TradeStack) GetTradeStack(skipDisabled bool, skipLocked bool, balanceFi
 			lock.Unlock()
 
 			group.Done()
-		}(tradeLimit, int64(index))
+		}(tradeLimit, int64(index), &lock)
 	}
 
 	group.Wait()

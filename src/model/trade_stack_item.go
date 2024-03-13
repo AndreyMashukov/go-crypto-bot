@@ -13,4 +13,7 @@ type TradeStackItem struct {
 	IsExtraCharge     bool          `json:"isExtraCharge"`
 	StrategyDecisions []Decision    `json:"strategyDecisions"`
 	IsBuyLocked       bool          `json:"isBuyLocked"`
+	IsEnabled         bool          `json:"isEnabled"`
+	BuyPrice          float64       `json:"buyPrice"`
+	PricePointsDiff   int64         `json:"pricePointsDiff"`
 }

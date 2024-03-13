@@ -2,11 +2,37 @@ package client
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"log"
+	"strings"
 	"time"
 )
+
+func GetStreamBatch(tradeLimits []model.SymbolInterface, events []string) [][]string {
+	streamBatch := make([][]string, 0)
+
+	streams := make([]string, 0)
+
+	for _, tradeLimit := range tradeLimits {
+		for i := 0; i < len(events); i++ {
+			event := events[i]
+			streams = append(streams, fmt.Sprintf("%s%s", strings.ToLower(tradeLimit.GetSymbol()), event))
+		}
+
+		if len(streams) >= 24 {
+			streamBatch = append(streamBatch, streams)
+			streams = make([]string, 0)
+		}
+	}
+
+	if len(streams) > 0 {
+		streamBatch = append(streamBatch, streams)
+	}
+
+	return streamBatch
+}
 
 func Listen(address string, tradeChannel chan<- []byte, streams []string, connectionId int64) *websocket.Conn {
 	connection, _, err := websocket.DefaultDialer.Dial(address, nil)

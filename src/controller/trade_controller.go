@@ -8,6 +8,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/service/exchange"
 	"gitlab.com/open-soft/go-crypto-bot/src/validator"
 	"net/http"
+	"strings"
 )
 
 type TradeController struct {
@@ -210,8 +211,61 @@ func (t *TradeController) GetTradeStackAction(w http.ResponseWriter, req *http.R
 		return
 	}
 
-	stack := t.TradeStack.GetTradeStack(false, false, false, false, true)
+	stack := t.TradeStack.GetTradeStack(false, false, false, false, false, true)
 
 	encodedRes, _ := json.Marshal(stack)
+	fmt.Fprintf(w, string(encodedRes))
+}
+
+func (t *TradeController) SwitchTradeLimitAction(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if req.Method == "OPTIONS" {
+		fmt.Fprintf(w, "OK")
+		return
+	}
+
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != t.CurrentBot.BotUuid {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
+
+	if req.Method != "PUT" {
+		http.Error(w, "Разрешены только PUT методы", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	symbol := strings.TrimPrefix(req.URL.Path, "/trade/limit/switch/")
+
+	entity, err := t.ExchangeRepository.GetTradeLimit(symbol)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	entity.IsEnabled = !entity.IsEnabled
+	err = t.ExchangeRepository.UpdateTradeLimit(entity)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	entity, err = t.ExchangeRepository.GetTradeLimit(entity.Symbol)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+
+		return
+	}
+
+	encodedRes, _ := json.Marshal(entity)
 	fmt.Fprintf(w, string(encodedRes))
 }

@@ -8,7 +8,6 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
 	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
-	"log"
 	"strings"
 )
 
@@ -45,20 +44,8 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 		extraBuyPrice := minPrice
 		if order.GetPositionTime().GetHours() >= 24 {
 			extraBuyPrice = lastKline.Close
-			log.Printf(
-				"[%s] Extra buy price is %f (more than 24 hours), profit: %.2f",
-				tradeLimit.Symbol,
-				extraBuyPrice,
-				order.GetProfitPercent(lastKline.Close, m.BotService.UseSwapCapital()).Value(),
-			)
 		} else {
 			extraBuyPrice = minPrice
-			log.Printf(
-				"[%s] Extra buy price is %f (less than 24 hours), profit: %.2f",
-				tradeLimit.Symbol,
-				extraBuyPrice,
-				order.GetProfitPercent(lastKline.Close, m.BotService.UseSwapCapital()),
-			)
 		}
 
 		if extraBuyPrice > lastKline.Close {
@@ -77,7 +64,6 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 			buyPrice = bestFramePrice[1]
 		}
 	} else {
-		log.Printf("[%s] Buy Frame Error: %s, current = %f", tradeLimit.Symbol, err.Error(), lastKline.Close)
 		potentialOpenPrice := lastKline.Close
 		for {
 			closePrice := m.ProfitService.GetMinClosePrice(tradeLimit, potentialOpenPrice)
@@ -91,7 +77,6 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 
 		if buyPrice > potentialOpenPrice {
 			buyPrice = potentialOpenPrice
-			log.Printf("[%s] Choosen potential open price = %f", tradeLimit.Symbol, buyPrice)
 		}
 	}
 
@@ -99,24 +84,7 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 		buyPrice = lastKline.Close
 	}
 
-	log.Printf("[%s] buy price history check", tradeLimit.Symbol)
 	buyPrice = m.LossSecurity.CheckBuyPriceOnHistory(tradeLimit, buyPrice)
-	closePrice := m.ProfitService.GetMinClosePrice(tradeLimit, buyPrice)
-
-	log.Printf(
-		"[%s] Trade Frame [low:%f - high:%f](%.2f%s/%.2f%s): BUY Price = %f [min(200) = %f, current = %f, close = %f]",
-		tradeLimit.Symbol,
-		frame.AvgLow,
-		frame.AvgHigh,
-		frame.GetMediumVolatilityPercent(),
-		"%",
-		frame.GetVolatilityPercent(),
-		"%",
-		buyPrice,
-		minPrice,
-		lastKline.Close,
-		closePrice,
-	)
 
 	return m.LossSecurity.BuyPriceCorrection(buyPrice, tradeLimit), nil
 }

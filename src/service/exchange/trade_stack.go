@@ -7,7 +7,6 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"sort"
-	"sync"
 )
 
 type BuyOrderStackInterface interface {
@@ -54,14 +53,13 @@ func (t *TradeStack) GetTradeStack(skipDisabled bool, skipLocked bool, balanceFi
 		return stack
 	}
 
-	group := sync.WaitGroup{}
-	lock := sync.RWMutex{}
+	resultChannel := make(chan *model.TradeStackItem)
+	defer close(resultChannel)
+	count := 0
 
 	for index, tradeLimit := range t.ExchangeRepository.GetTradeLimits() {
-		group.Add(1)
-
-		go func(tradeLimit model.TradeLimit, index int64, lock *sync.RWMutex) {
-			item := t.ProcessItem(
+		go func(tradeLimit model.TradeLimit, index int64) {
+			resultChannel <- t.ProcessItem(
 				index,
 				tradeLimit,
 				skipDisabled,
@@ -70,21 +68,23 @@ func (t *TradeStack) GetTradeStack(skipDisabled bool, skipLocked bool, balanceFi
 				skipPending,
 				attachDecisions,
 			)
-
-			if nil == item {
-				group.Done()
-				return
-			}
-
-			lock.Lock()
-			stack = append(stack, *item)
-			lock.Unlock()
-
-			group.Done()
-		}(tradeLimit, int64(index), &lock)
+		}(tradeLimit, int64(index))
+		count++
 	}
 
-	group.Wait()
+	processed := 0
+
+	for {
+		stackItem := <-resultChannel
+		if stackItem != nil {
+			stack = append(stack, *stackItem)
+		}
+		processed++
+
+		if processed == count {
+			break
+		}
+	}
 
 	switch t.BotService.GetTradeStackSorting() {
 	case model.TradeStackSortingLessPercent:

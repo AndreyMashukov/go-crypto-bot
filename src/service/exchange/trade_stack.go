@@ -264,6 +264,8 @@ func (t *TradeStack) ProcessItem(
 				}
 			}
 		}
+
+		return nil
 	}
 
 	kLines := t.Binance.GetKLinesCached(tradeLimit.Symbol, "1d", 1)

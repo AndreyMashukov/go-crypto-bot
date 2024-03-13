@@ -34,6 +34,7 @@ func main() {
 	if err != nil {
 		log.Printf("Balance check error: %s", err.Error())
 
+		// todo: `Invalid account.`
 		if err.Error() == model.BinanceErrorInvalidAPIKeyOrPermissions {
 			log.Println("Notify SaaS system about error")
 			container.CallbackManager.Error(
@@ -42,8 +43,9 @@ func main() {
 				"Please check API Key permissions or IP address binding",
 				true,
 			)
-			os.Exit(0)
 		}
+
+		os.Exit(0)
 	}
 	log.Printf("API Key permission check passed, balance is: %.2f", usdtBalance)
 	container.Binance.APIKeyCheckCompleted = true

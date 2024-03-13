@@ -58,6 +58,7 @@ func InitServiceContainer() Container {
 		WaitMode:             false,
 		APIKeyCheckCompleted: false,
 		Connected:            false,
+		Lock:                 &sync.Mutex{},
 	}
 
 	frameService := exchange.FrameService{

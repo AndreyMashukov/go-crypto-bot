@@ -21,9 +21,18 @@ type ProfitService struct {
 }
 
 func (p *ProfitService) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice float64) float64 {
-	kLines := p.Binance.GetKLinesCached(limit.Symbol, limit.BuyPriceHistoryCheckInterval, limit.BuyPriceHistoryCheckPeriod)
+	kLines := p.Binance.GetKLinesCached(
+		limit.Symbol,
+		limit.BuyPriceHistoryCheckInterval,
+		limit.BuyPriceHistoryCheckPeriod,
+	)
 
 	klineCount := len(kLines)
+
+	if klineCount == 0 {
+		return buyPrice
+	}
+
 	priceBefore := buyPrice
 
 	for {
@@ -35,7 +44,7 @@ func (p *ProfitService) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice 
 			}
 		}
 
-		if float64(closePriceMetTimes) > float64(klineCount)*0.8 {
+		if float64(closePriceMetTimes) >= float64(klineCount)*0.8 {
 			break
 		}
 

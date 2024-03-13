@@ -51,3 +51,7 @@ func (k *KLine) Update(ticker MiniTicker) {
 	k.High = math.Max(k.High, ticker.Close)
 	k.Low = math.Min(k.Low, ticker.Close)
 }
+
+type KlineBatch struct {
+	Items []KLine `json:"items"`
+}

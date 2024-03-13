@@ -10,6 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"log"
 	"os"
 	"slices"
@@ -23,6 +24,7 @@ type PythonMLBridge struct {
 	DataSetBuilder     *DataSetBuilder
 	ExchangeRepository *repository.ExchangeRepository
 	SwapRepository     *repository.SwapRepository
+	TimeService        *utils.TimeHelper
 	Mutex              sync.RWMutex
 	RDB                *redis.Client
 	Ctx                *context.Context
@@ -334,4 +336,22 @@ func (p *PythonMLBridge) Predict(symbol string) (float64, error) {
 	result, _ := strconv.ParseFloat(strings.TrimSpace(text), 64)
 
 	return result, nil
+}
+
+func (p *PythonMLBridge) StartAutoLearn() {
+	for _, tradeLimit := range p.ExchangeRepository.GetTradeLimits() {
+		go func(limit model.TradeLimit) {
+			for {
+				// todo: write to database and read from database
+				err := p.LearnModel(limit.Symbol)
+				if err != nil {
+					log.Printf("[%s] %s", limit.Symbol, err.Error())
+					p.TimeService.WaitSeconds(60)
+					continue
+				}
+
+				p.TimeService.WaitSeconds(3600 * 6)
+			}
+		}(tradeLimit)
+	}
 }

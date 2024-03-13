@@ -23,13 +23,13 @@ import (
 )
 
 func InitServiceContainer() Container {
-	db, err := sql.Open("mysql", os.Getenv("DATABASE_DSN")) // root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot
+	db, err := sql.Open("mysql", os.Getenv("DATABASE_DSN"))
 
 	db.SetMaxIdleConns(64)
 	db.SetMaxOpenConns(64)
 	db.SetConnMaxLifetime(time.Minute)
 
-	swapDb, err := sql.Open("mysql", os.Getenv("DATABASE_DSN")) // root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot
+	swapDb, err := sql.Open("mysql", os.Getenv("DATABASE_DSN"))
 
 	swapDb.SetMaxIdleConns(64)
 	swapDb.SetMaxOpenConns(64)
@@ -41,9 +41,9 @@ func InitServiceContainer() Container {
 
 	var ctx = context.Background()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     os.Getenv("REDIS_DSN"),      // redis:6379,
-		Password: os.Getenv("REDIS_PASSWORD"), // redis password
-		DB:       0,                           // use default DB
+		Addr:     os.Getenv("REDIS_DSN"),
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB:       0,
 	})
 
 	httpClient := http.Client{}
@@ -161,6 +161,8 @@ func InitServiceContainer() Container {
 	btcDependent := []string{"LTC", "ZEC", "ATOM", "XMR", "DOT", "XRP", "BCH", "ADA", "ETH", "DOGE", "PERP", "NEO"}
 	etcDependent := []string{"SHIB", "LINK", "UNI", "NEAR", "XLM", "ETC", "MATIC", "SOL", "BNB", "AVAX", "TRX"}
 
+	timeService := utils.TimeHelper{}
+
 	pythonMLBridge := ml.PythonMLBridge{
 		DataSetBuilder: &ml.DataSetBuilder{
 			ExcludeDependedDataset: []string{"SHIBUSDT", "BTCUSDT"},
@@ -169,13 +171,12 @@ func InitServiceContainer() Container {
 		},
 		ExchangeRepository: &exchangeRepository,
 		SwapRepository:     &swapRepository,
+		TimeService:        &timeService,
 		CurrentBot:         currentBot,
 		RDB:                rdb,
 		Ctx:                &ctx,
 		Learning:           true,
 	}
-
-	timeService := utils.TimeHelper{}
 
 	profitService := exchange.ProfitService{
 		Binance:    &binance,
@@ -208,6 +209,7 @@ func InitServiceContainer() Container {
 		BalanceService:     &balanceService,
 		Formatter:          &formatter,
 		BotService:         &botService,
+		PriceCalculator:    &priceCalculator,
 	}
 
 	orderExecutor := exchange.OrderExecutor{
@@ -339,6 +341,7 @@ func InitServiceContainer() Container {
 	}()
 
 	healthService := service.HealthService{
+		BotRepository:      &botRepository,
 		ExchangeRepository: &exchangeRepository,
 		PythonMLBridge:     &pythonMLBridge,
 		Binance:            &binance,
@@ -381,6 +384,25 @@ func InitServiceContainer() Container {
 		OrderBasedStrategy:  &orderBasedStrategy,
 		BaseKLineStrategy:   &baseKLineStrategy,
 		IsMasterBot:         botService.IsMasterBot(),
+		MarketTradeListener: &strategy.MarketTradeListener{
+			SmaTradeStrategy:    &smaStrategy,
+			MarketDepthStrategy: &marketDepthStrategy,
+			OrderBasedStrategy:  &orderBasedStrategy,
+			BaseKLineStrategy:   &baseKLineStrategy,
+			ExchangeRepository:  &exchangeRepository,
+			TimeService:         &timeService,
+			Binance:             &binance,
+			PythonMLBridge:      &pythonMLBridge,
+			PriceCalculator:     &priceCalculator,
+		},
+		MarketSwapListener: &exchange.MarketSwapListener{
+			ExchangeRepository: &exchangeRepository,
+			TimeService:        &timeService,
+			SwapManager:        &swapManager,
+			SwapUpdater:        &swapUpdater,
+			SwapRepository:     &swapRepository,
+			SwapKlineChannel:   make(chan []byte),
+		},
 	}
 }
 
@@ -410,6 +432,8 @@ type Container struct {
 	MarketDepthStrategy *strategy.MarketDepthStrategy
 	BaseKLineStrategy   *strategy.BaseKLineStrategy
 	OrderBasedStrategy  *strategy.OrderBasedStrategy
+	MarketTradeListener *strategy.MarketTradeListener
+	MarketSwapListener  *exchange.MarketSwapListener
 	IsMasterBot         bool
 }
 
@@ -433,6 +457,7 @@ func (c *Container) StartHttpServer() {
 	http.HandleFunc("/trade/stack", c.TradeController.GetTradeStackAction)
 	http.HandleFunc("/trade/limit/create", c.TradeController.CreateTradeLimitAction)
 	http.HandleFunc("/trade/limit/update", c.TradeController.UpdateTradeLimitAction)
+	http.HandleFunc("/trade/limit/switch/", c.TradeController.SwitchTradeLimitAction)
 	http.HandleFunc("/health/check", c.BotController.GetHealthCheckAction)
 	http.HandleFunc("/bot/update", c.BotController.PutConfigAction)
 

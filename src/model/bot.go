@@ -5,12 +5,24 @@ import (
 	"encoding/json"
 )
 
+const TradeStackSortingLessPercent = "percent"
+const TradeStackSortingLessPriceDiff = "diff"
+
 type Bot struct {
-	Id            int64      `json:"id"`
-	BotUuid       string     `json:"botUuid"`
-	IsMasterBot   bool       `json:"isMasterBot"`
-	IsSwapEnabled bool       `json:"isSwapEnabled"`
-	SwapConfig    SwapConfig `json:"swapConfig"`
+	Id                int64      `json:"id"`
+	BotUuid           string     `json:"botUuid"`
+	IsMasterBot       bool       `json:"isMasterBot"`
+	IsSwapEnabled     bool       `json:"isSwapEnabled"`
+	SwapConfig        SwapConfig `json:"swapConfig"`
+	TradeStackSorting string     `json:"tradeStackSorting"`
+}
+
+func (b *Bot) IsPercentSorting() bool {
+	return b.TradeStackSorting == TradeStackSortingLessPercent
+}
+
+func (b *Bot) IsDiffSorting() bool {
+	return b.TradeStackSorting == TradeStackSortingLessPriceDiff
 }
 
 type SwapConfig struct {
@@ -31,7 +43,8 @@ func (s SwapConfig) Value() (driver.Value, error) {
 }
 
 type BotConfigUpdate struct {
-	IsMasterBot   bool       `json:"isMasterBot"`
-	IsSwapEnabled bool       `json:"isSwapEnabled"`
-	SwapConfig    SwapConfig `json:"swapConfig"`
+	IsMasterBot       bool       `json:"isMasterBot"`
+	IsSwapEnabled     bool       `json:"isSwapEnabled"`
+	SwapConfig        SwapConfig `json:"swapConfig"`
+	TradeStackSorting string     `json:"tradeStackSorting"`
 }

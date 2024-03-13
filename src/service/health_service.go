@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"github.com/rafacas/sysstats"
 	"github.com/redis/go-redis/v9"
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
@@ -15,6 +16,7 @@ import (
 
 type HealthService struct {
 	ExchangeRepository *repository.ExchangeRepository
+	BotRepository      *repository.BotRepository
 	PythonMLBridge     *ml.PythonMLBridge
 	DB                 *sql.DB
 	RDB                *redis.Client
@@ -63,8 +65,18 @@ func (h *HealthService) HealthCheck() model.BotHealth {
 		mlStatus = model.MlStatusLearning
 	}
 
+	bot := h.BotRepository.GetCurrentBot()
+
+	if bot == nil {
+		panic("Current Bot is not found")
+	}
+
+	if bot.Id != h.CurrentBot.Id {
+		panic(fmt.Sprintf("Wrong BOT ID %d != %d", bot.Id, h.CurrentBot.Id))
+	}
+
 	return model.BotHealth{
-		Bot:           *h.CurrentBot,
+		Bot:           *bot,
 		DbStatus:      dbStatus,
 		BinanceStatus: binanceStatus,
 		MlStatus:      mlStatus,

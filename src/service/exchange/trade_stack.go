@@ -11,7 +11,6 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"sort"
-	"sync"
 	"time"
 )
 
@@ -29,7 +28,6 @@ type TradeStack struct {
 	PriceCalculator    PriceCalculatorInterface
 	RDB                *redis.Client
 	Ctx                *context.Context
-	Lock               *sync.Mutex
 }
 
 type TradeStackParams struct {
@@ -71,9 +69,6 @@ func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
 }
 
 func (t *TradeStack) GetTradeStack(params TradeStackParams) []model.TradeStackItem {
-	t.Lock.Lock()
-	defer t.Lock.Unlock()
-
 	balanceUsdt, err := t.BalanceService.GetAssetBalance("USDT", true)
 	stack := make([]model.TradeStackItem, 0)
 

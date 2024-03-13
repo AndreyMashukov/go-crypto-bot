@@ -15,14 +15,12 @@ func TestNoTradeLimit(t *testing.T) {
 	exchangeRepository := new(ExchangeTradeInfoMock)
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
-	tradeStack := new(BuyOrderStackMock)
 	botService := new(BotServiceMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
-		TradeStack:         tradeStack,
 		BotService:         botService,
 	}
 
@@ -46,14 +44,12 @@ func TestHasBinanceBuyOrder(t *testing.T) {
 	exchangeRepository := new(ExchangeTradeInfoMock)
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
-	tradeStack := new(BuyOrderStackMock)
 	botService := new(BotServiceMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
-		TradeStack:         tradeStack,
 		BotService:         botService,
 	}
 
@@ -76,56 +72,18 @@ func TestHasBinanceBuyOrder(t *testing.T) {
 	assertion.Equal(40001.00, decision.Price)
 }
 
-func TestNoOrderAndCantBuy(t *testing.T) {
-	assertion := assert.New(t)
-
-	exchangeRepository := new(ExchangeTradeInfoMock)
-	orderStorage := new(OrderStorageMock)
-	profitService := new(ProfitServiceMock)
-	tradeStack := new(BuyOrderStackMock)
-	botService := new(BotServiceMock)
-
-	orderBasedStrategy := strategy.OrderBasedStrategy{
-		ExchangeRepository: exchangeRepository,
-		OrderRepository:    orderStorage,
-		ProfitService:      profitService,
-		TradeStack:         tradeStack,
-		BotService:         botService,
-	}
-
-	kline := model.KLine{
-		Symbol: "BTCUSDT",
-		Close:  40000.00,
-	}
-	tradeLimit := model.TradeLimit{
-		Symbol: "BTCUSDT",
-	}
-
-	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
-	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
-	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(model.Order{}, errors.New("Test!!!"))
-	tradeStack.On("CanBuy", tradeLimit).Return(false)
-	decision := orderBasedStrategy.Decide(kline)
-	assertion.Equal(80.00, decision.Score)
-	assertion.Equal("HOLD", decision.Operation)
-	assertion.Equal(model.OrderBasedStrategyName, decision.StrategyName)
-	assertion.Equal(40000.00, decision.Price)
-}
-
 func TestNoOrderAndCanBuyHasManualBuy(t *testing.T) {
 	assertion := assert.New(t)
 
 	exchangeRepository := new(ExchangeTradeInfoMock)
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
-	tradeStack := new(BuyOrderStackMock)
 	botService := new(BotServiceMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
-		TradeStack:         tradeStack,
 		BotService:         botService,
 	}
 
@@ -140,7 +98,6 @@ func TestNoOrderAndCanBuyHasManualBuy(t *testing.T) {
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(model.Order{}, errors.New("Test!!!"))
-	tradeStack.On("CanBuy", tradeLimit).Return(true)
 	orderStorage.On("GetManualOrder", "BTCUSDT").Return(&model.ManualOrder{
 		Operation: "BUY",
 		Price:     40002.00,
@@ -159,14 +116,12 @@ func TestNoOrderAndCanBuyNoManual(t *testing.T) {
 	exchangeRepository := new(ExchangeTradeInfoMock)
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
-	tradeStack := new(BuyOrderStackMock)
 	botService := new(BotServiceMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
-		TradeStack:         tradeStack,
 		BotService:         botService,
 	}
 
@@ -181,7 +136,6 @@ func TestNoOrderAndCanBuyNoManual(t *testing.T) {
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(model.Order{}, errors.New("Test!!!"))
-	tradeStack.On("CanBuy", tradeLimit).Return(true)
 	orderStorage.On("GetManualOrder", "BTCUSDT").Return(nil)
 
 	decision := orderBasedStrategy.Decide(kline)
@@ -197,14 +151,12 @@ func TestHasOrderAndHasBinanceSellOrder(t *testing.T) {
 	exchangeRepository := new(ExchangeTradeInfoMock)
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
-	tradeStack := new(BuyOrderStackMock)
 	botService := new(BotServiceMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
-		TradeStack:         tradeStack,
 		BotService:         botService,
 	}
 
@@ -239,14 +191,12 @@ func TestHasOrderAndHasManualSell(t *testing.T) {
 	exchangeRepository := new(ExchangeTradeInfoMock)
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
-	tradeStack := new(BuyOrderStackMock)
 	botService := new(BotServiceMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
-		TradeStack:         tradeStack,
 		BotService:         botService,
 	}
 
@@ -284,14 +234,12 @@ func TestHasOrderAndTimeToExtraBuy(t *testing.T) {
 	exchangeRepository := new(ExchangeTradeInfoMock)
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
-	tradeStack := new(BuyOrderStackMock)
 	botService := new(BotServiceMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
-		TradeStack:         tradeStack,
 		BotService:         botService,
 	}
 
@@ -303,7 +251,6 @@ func TestHasOrderAndTimeToExtraBuy(t *testing.T) {
 		Symbol: "BTCUSDT",
 	}
 
-	tradeStack.On("CanBuy", tradeLimit).Return(true)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "SELL").Return(nil)
@@ -334,14 +281,12 @@ func TestHasOrderAndProfitPercentReached(t *testing.T) {
 	exchangeRepository := new(ExchangeTradeInfoMock)
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
-	tradeStack := new(BuyOrderStackMock)
 	botService := new(BotServiceMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
-		TradeStack:         tradeStack,
 		BotService:         botService,
 	}
 
@@ -353,7 +298,6 @@ func TestHasOrderAndProfitPercentReached(t *testing.T) {
 		Symbol: "BTCUSDT",
 	}
 
-	tradeStack.On("CanBuy", tradeLimit).Return(true)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "SELL").Return(nil)
@@ -395,14 +339,12 @@ func TestHasOrderAndHalfOfProfitPercentReached(t *testing.T) {
 	exchangeRepository := new(ExchangeTradeInfoMock)
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
-	tradeStack := new(BuyOrderStackMock)
 	botService := new(BotServiceMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
-		TradeStack:         tradeStack,
 		BotService:         botService,
 	}
 
@@ -414,7 +356,6 @@ func TestHasOrderAndHalfOfProfitPercentReached(t *testing.T) {
 		Symbol: "BTCUSDT",
 	}
 
-	tradeStack.On("CanBuy", tradeLimit).Return(true)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "SELL").Return(nil)
@@ -456,14 +397,12 @@ func TestHasOrderAndCurrentPriceIsGreaterThenOrderPrice(t *testing.T) {
 	exchangeRepository := new(ExchangeTradeInfoMock)
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
-	tradeStack := new(BuyOrderStackMock)
 	botService := new(BotServiceMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
-		TradeStack:         tradeStack,
 		BotService:         botService,
 	}
 
@@ -475,7 +414,6 @@ func TestHasOrderAndCurrentPriceIsGreaterThenOrderPrice(t *testing.T) {
 		Symbol: "BTCUSDT",
 	}
 
-	tradeStack.On("CanBuy", tradeLimit).Return(true)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "SELL").Return(nil)
@@ -525,7 +463,6 @@ func TestHasOrderAndCurrentPriceIsLessOrEqualOrderPrice(t *testing.T) {
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
-		TradeStack:         tradeStack,
 		BotService:         botService,
 	}
 

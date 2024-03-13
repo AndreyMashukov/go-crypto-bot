@@ -12,7 +12,6 @@ type OrderBasedStrategy struct {
 	ExchangeRepository repository.ExchangeTradeInfoInterface
 	OrderRepository    repository.OrderStorageInterface
 	ProfitService      exchange.ProfitServiceInterface
-	TradeStack         exchange.BuyOrderStackInterface
 	BotService         service.BotServiceInterface
 }
 
@@ -46,17 +45,6 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 	hasBuyOrder := err == nil
 
 	if !hasBuyOrder {
-		if !o.TradeStack.CanBuy(tradeLimit) {
-			return model.Decision{
-				StrategyName: model.OrderBasedStrategyName,
-				Score:        80.00,
-				Operation:    "HOLD",
-				Timestamp:    time.Now().Unix(),
-				Price:        kLine.Close,
-				Params:       [3]float64{0, 0, 0},
-			}
-		}
-
 		manualOrder := o.OrderRepository.GetManualOrder(tradeLimit.Symbol)
 
 		if manualOrder != nil && manualOrder.IsBuy() {
@@ -97,7 +85,7 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 
 	// ATTENTION: We can not do extra buy if CanBuy() is false
 	// It can be the reason of active SELL orders, cancel SELL order when extra buy is possible
-	if profitPercent.Lte(extraChargePercent) && o.TradeStack.CanBuy(tradeLimit) {
+	if profitPercent.Lte(extraChargePercent) {
 		return model.Decision{
 			StrategyName: model.OrderBasedStrategyName,
 			Score:        model.DecisionHighestPriorityScore,

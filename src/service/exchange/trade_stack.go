@@ -225,7 +225,7 @@ func (t *TradeStack) ProcessItem(
 	if binanceOrder != nil {
 		buyPrice = binanceOrder.Price
 	} else {
-		//buyPrice = t.GetBuyPriceCached(tradeLimit)
+		buyPrice = t.GetBuyPriceCached(tradeLimit)
 	}
 	pricePointsDiff := int64((t.Formatter.FormatPrice(tradeLimit, buyPrice) - t.Formatter.FormatPrice(tradeLimit, lastPrice)) / tradeLimit.MinPrice)
 
@@ -302,7 +302,7 @@ func (t *TradeStack) GetBuyPriceCached(limit model.TradeLimit) float64 {
 
 		encoded, err := json.Marshal(ticker)
 		if err == nil {
-			t.RDB.Set(*t.Ctx, cacheKey, string(encoded), time.Second*20)
+			t.RDB.Set(*t.Ctx, cacheKey, string(encoded), time.Second*10)
 		}
 
 		return ticker.Price

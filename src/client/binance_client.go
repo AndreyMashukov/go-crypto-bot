@@ -36,8 +36,9 @@ type ExchangePriceAPIInterface interface {
 }
 
 type Binance struct {
-	ApiKey    string
-	ApiSecret string
+	CurrentBot *model.Bot
+	ApiKey     string
+	ApiSecret  string
 
 	HttpClient   *http.Client
 	connection   *websocket.Conn
@@ -360,7 +361,7 @@ func (b *Binance) TradesAggregate(symbol string, limit int64) []model.Trade {
 }
 
 func (b *Binance) GetKLinesCached(symbol string, interval string, limit int64) []model.KLine {
-	cacheKey := fmt.Sprintf("interval-kline-history-%s-%s-%d", symbol, interval, limit)
+	cacheKey := fmt.Sprintf("interval-kline-history-%s-%s-%d-%d", symbol, interval, limit, b.CurrentBot.Id)
 	res := b.RDB.Get(*b.Ctx, cacheKey).Val()
 	if len(res) == 0 {
 		historyKLines := b.GetKLines(symbol, interval, limit)

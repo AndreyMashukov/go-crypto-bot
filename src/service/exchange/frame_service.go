@@ -15,13 +15,14 @@ type FrameServiceInterface interface {
 }
 
 type FrameService struct {
-	Binance *client.Binance
-	RDB     *redis.Client
-	Ctx     *context.Context
+	CurrentBot *model.Bot
+	Binance    *client.Binance
+	RDB        *redis.Client
+	Ctx        *context.Context
 }
 
 func (f *FrameService) GetFrame(symbol string, interval string, limit int64) model.Frame {
-	key := fmt.Sprintf("kline-frame-results-%s-%s-%d", symbol, interval, limit)
+	key := fmt.Sprintf("kline-frame-results-%s-%s-%d-%d", symbol, interval, limit, f.CurrentBot.Id)
 	cached := f.RDB.Get(*f.Ctx, key).String()
 
 	if len(cached) > 0 {

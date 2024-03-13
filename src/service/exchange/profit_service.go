@@ -44,7 +44,7 @@ func (p *ProfitService) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice 
 			}
 		}
 
-		if float64(closePriceMetTimes) >= float64(klineCount)*0.8 {
+		if float64(closePriceMetTimes) >= float64(klineCount)/2 {
 			break
 		}
 

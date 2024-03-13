@@ -9,6 +9,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"io/ioutil"
 	"testing"
+	"time"
 )
 
 func TestCalculateBuyPriceByFrame1(t *testing.T) {
@@ -63,7 +64,8 @@ func TestCalculateBuyPriceByFrame1(t *testing.T) {
 	exchangeRepoMock.On("GetDepth", "ETHUSDT").Return(depth.Depth)
 	binanceMock.On("GetDepth", "ETHUSDT").Times(0)
 	exchangeRepoMock.On("GetLastKLine", "ETHUSDT").Return(&model.KLine{
-		Close: 1474.64,
+		Close:     1474.64,
+		UpdatedAt: time.Now().Unix(),
 	})
 	exchangeRepoMock.On("GetPeriodMinPrice", "ETHUSDT", int64(200)).Return(900.00)
 	orderRepositoryMock.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(model.Order{}, errors.New("Order is not found"))
@@ -134,7 +136,8 @@ func TestCalculateBuyPriceByFrame2(t *testing.T) {
 	exchangeRepoMock.On("GetDepth", "ETHUSDT").Return(depth.Depth)
 	binanceMock.On("GetDepth", "ETHUSDT").Times(0)
 	exchangeRepoMock.On("GetLastKLine", "ETHUSDT").Return(&model.KLine{
-		Close: 1474.64,
+		Close:     1474.64,
+		UpdatedAt: time.Now().Unix(),
 	})
 	exchangeRepoMock.On("GetPeriodMinPrice", "ETHUSDT", int64(200)).Return(1300.00)
 	orderRepositoryMock.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(model.Order{}, errors.New("Order is not found"))
@@ -205,7 +208,8 @@ func TestCalculateBuyPriceByFrame3(t *testing.T) {
 	exchangeRepoMock.On("GetDepth", "ETHUSDT").Return(depth.Depth)
 	binanceMock.On("GetDepth", "ETHUSDT").Times(0)
 	exchangeRepoMock.On("GetLastKLine", "ETHUSDT").Return(&model.KLine{
-		Close: 1474.64,
+		Close:     1474.64,
+		UpdatedAt: time.Now().Unix(),
 	})
 	exchangeRepoMock.On("GetPeriodMinPrice", "ETHUSDT", int64(200)).Return(1400.00)
 	orderRepositoryMock.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(model.Order{}, errors.New("Order is not found"))
@@ -267,7 +271,8 @@ func TestCalculateSell(t *testing.T) {
 	assertion.Equal(0.00, sellPrice)
 
 	exchangeRepoMock.On("GetLastKLine", "ETHUSDT").Times(2).Return(&model.KLine{
-		Close: 1474.64,
+		Close:     1474.64,
+		UpdatedAt: time.Now().Unix(),
 	})
 	profitService.On("GetMinClosePrice", order, 1552.26).Times(1).Return(1400.00)
 
@@ -277,7 +282,8 @@ func TestCalculateSell(t *testing.T) {
 
 	profitService.On("GetMinClosePrice", order, 1552.26).Times(2).Return(1600.00)
 	exchangeRepoMock.On("GetLastKLine", "ETHUSDT").Times(3).Return(&model.KLine{
-		Close: 1474.64,
+		Close:     1474.64,
+		UpdatedAt: time.Now().Unix(),
 	})
 
 	sellPrice, err = priceCalculator.CalculateSell(tradeLimit, order)

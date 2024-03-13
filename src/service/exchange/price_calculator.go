@@ -31,7 +31,7 @@ type PriceCalculator struct {
 func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, error) {
 	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 
-	if lastKline == nil {
+	if lastKline == nil || lastKline.IsPriceExpired() {
 		return 0.00, errors.New(fmt.Sprintf("[%s] Current price is unknown, wait...", tradeLimit.Symbol))
 	}
 

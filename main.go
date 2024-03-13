@@ -48,6 +48,7 @@ func main() {
 		os.Exit(0)
 	}
 	log.Printf("API Key permission check passed, balance is: %.2f", usdtBalance)
+	container.PythonMLBridge.StartAutoLearn()
 	container.Binance.APIKeyCheckCompleted = true
 
 	container.MakerService.RecoverOrders()
@@ -59,7 +60,6 @@ func main() {
 	}
 
 	container.MarketTradeListener.ListenAll()
-	container.PythonMLBridge.StartAutoLearn()
 	container.TimeService.WaitSeconds(10)
 	container.MakerService.StartTrade()
 

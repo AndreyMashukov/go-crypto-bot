@@ -25,7 +25,8 @@ type PythonMLBridge struct {
 	ExchangeRepository *repository.ExchangeRepository
 	SwapRepository     *repository.SwapRepository
 	TimeService        *utils.TimeHelper
-	Mutex              sync.RWMutex
+	Mutex              *sync.RWMutex
+	LearnLock          *sync.RWMutex
 	RDB                *redis.Client
 	Ctx                *context.Context
 	CurrentBot         *model.Bot
@@ -61,7 +62,8 @@ from sklearn.metrics import mean_squared_error
 	pyCodeC := C.CString(pyCode)
 	defer C.free(unsafe.Pointer(pyCodeC))
 	C.PyRun_SimpleString(pyCodeC)
-	p.Mutex = sync.RWMutex{}
+	p.Mutex = &sync.RWMutex{}
+	p.LearnLock = &sync.RWMutex{}
 }
 
 func (p *PythonMLBridge) Finalize() {
@@ -69,16 +71,16 @@ func (p *PythonMLBridge) Finalize() {
 }
 
 func (p *PythonMLBridge) IsLearning() bool {
-	p.Mutex.Lock()
+	p.LearnLock.Lock()
 	isLearning := p.Learning
-	p.Mutex.Unlock()
+	p.LearnLock.Unlock()
 	return isLearning
 }
 
 func (p *PythonMLBridge) setLearning(value bool) {
-	p.Mutex.Lock()
+	p.LearnLock.Lock()
 	p.Learning = value
-	p.Mutex.Unlock()
+	p.LearnLock.Unlock()
 }
 
 func (p *PythonMLBridge) getPythonCode(symbol string, datasetPath string) string {

@@ -211,7 +211,14 @@ func (t *TradeController) GetTradeStackAction(w http.ResponseWriter, req *http.R
 		return
 	}
 
-	stack := t.TradeStack.GetTradeStack(false, false, false, false, false, true)
+	stack := t.TradeStack.GetTradeStack(exchange.TradeStackParams{
+		SkipLocked:      false,
+		SkipDisabled:    false,
+		BalanceFilter:   false,
+		SkipPending:     false,
+		WithValidPrice:  false,
+		AttachDecisions: true,
+	})
 
 	encodedRes, _ := json.Marshal(stack)
 	fmt.Fprintf(w, string(encodedRes))

@@ -434,6 +434,10 @@ type BotServiceMock struct {
 	mock.Mock
 }
 
+func (b *BotServiceMock) GetBot() model.Bot {
+	args := b.Called()
+	return args.Get(0).(model.Bot)
+}
 func (b *BotServiceMock) IsSwapEnabled() bool {
 	args := b.Called()
 	return args.Get(0).(bool)

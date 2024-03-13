@@ -73,8 +73,7 @@ func TestCalculateBuyPriceByFrame1(t *testing.T) {
 		AvgHigh: 1400.00,
 		AvgLow:  1300.00,
 	})
-	profitService.On("GetMinClosePrice", tradeLimit, 900.00).Return(900.00)
-	profitService.On("GetMinClosePrice", tradeLimit, 1552.26).Return(900.00)
+	profitService.On("GetMinClosePrice", tradeLimit, 1474.64).Return(900.00)
 	lossSecurityMock.On("CheckBuyPriceOnHistory", tradeLimit, 900.00).Return(900.00)
 	lossSecurityMock.On("BuyPriceCorrection", 900.00, tradeLimit).Return(900.00)
 
@@ -145,8 +144,7 @@ func TestCalculateBuyPriceByFrame2(t *testing.T) {
 		AvgHigh: 1400.00,
 		AvgLow:  1300.00,
 	})
-	profitService.On("GetMinClosePrice", tradeLimit, 1300.00).Return(1300.00)
-	profitService.On("GetMinClosePrice", tradeLimit, 1552.26).Return(1300.00)
+	profitService.On("GetMinClosePrice", tradeLimit, 1474.64).Return(1300.00)
 	lossSecurityMock.On("CheckBuyPriceOnHistory", tradeLimit, 1300.00).Return(1300.00)
 	lossSecurityMock.On("BuyPriceCorrection", 1300.00, tradeLimit).Return(1200.00)
 
@@ -217,8 +215,7 @@ func TestCalculateBuyPriceByFrame3(t *testing.T) {
 		AvgHigh: 1400.00,
 		AvgLow:  1300.00,
 	})
-	profitService.On("GetMinClosePrice", tradeLimit, 1552.26).Return(1400.00)
-	profitService.On("GetMinClosePrice", tradeLimit, 1131.7).Return(1131.7)
+	profitService.On("GetMinClosePrice", tradeLimit, 1474.64).Return(1131.7)
 	lossSecurityMock.On("CheckBuyPriceOnHistory", tradeLimit, 1400.00).Return(1131.7)
 	lossSecurityMock.On("CheckBuyPriceOnHistory", tradeLimit, 1365.850000000099).Return(1131.7)
 	lossSecurityMock.On("BuyPriceCorrection", 1131.7, tradeLimit).Return(1131.1)

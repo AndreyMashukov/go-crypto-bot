@@ -46,27 +46,6 @@ func InitServiceContainer() Container {
 		DB:       0,
 	})
 
-	httpClient := http.Client{}
-	binance := client.Binance{
-		ApiKey:               os.Getenv("BINANCE_API_KEY"),
-		ApiSecret:            os.Getenv("BINANCE_API_SECRET"),
-		HttpClient:           &httpClient,
-		Channel:              make(chan []byte),
-		SocketWriter:         make(chan []byte),
-		RDB:                  rdb,
-		Ctx:                  &ctx,
-		WaitMode:             false,
-		APIKeyCheckCompleted: false,
-		Connected:            false,
-		Lock:                 &sync.Mutex{},
-	}
-
-	frameService := exchange.FrameService{
-		RDB:     rdb,
-		Ctx:     &ctx,
-		Binance: &binance,
-	}
-
 	botRepository := repository.BotRepository{
 		DB:  db,
 		RDB: rdb,
@@ -98,6 +77,30 @@ func InitServiceContainer() Container {
 		if currentBot == nil {
 			panic(fmt.Sprintf("Can't initialize bot: %s", botUuid))
 		}
+	}
+
+	httpClient := http.Client{}
+
+	binance := client.Binance{
+		CurrentBot:           currentBot,
+		ApiKey:               os.Getenv("BINANCE_API_KEY"),
+		ApiSecret:            os.Getenv("BINANCE_API_SECRET"),
+		HttpClient:           &httpClient,
+		Channel:              make(chan []byte),
+		SocketWriter:         make(chan []byte),
+		RDB:                  rdb,
+		Ctx:                  &ctx,
+		WaitMode:             false,
+		APIKeyCheckCompleted: false,
+		Connected:            false,
+		Lock:                 &sync.Mutex{},
+	}
+
+	frameService := exchange.FrameService{
+		CurrentBot: currentBot,
+		RDB:        rdb,
+		Ctx:        &ctx,
+		Binance:    &binance,
 	}
 
 	balanceService := exchange.BalanceService{
@@ -247,11 +250,12 @@ func InitServiceContainer() Container {
 	}
 
 	makerService := exchange.MakerService{
+		ExchangeApi:        &binance,
+		Binance:            &binance,
 		TradeStack:         &tradeStack,
 		OrderExecutor:      &orderExecutor,
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,
-		Binance:            &binance,
 		Formatter:          &formatter,
 		HoldScore:          75.00,
 		CurrentBot:         currentBot,

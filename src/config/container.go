@@ -216,7 +216,6 @@ func InitServiceContainer() Container {
 		PriceCalculator:    &priceCalculator,
 		RDB:                rdb,
 		Ctx:                &ctx,
-		Lock:               &sync.Mutex{},
 	}
 
 	orderExecutor := exchange.OrderExecutor{

@@ -92,7 +92,6 @@ func (l *LossSecurity) BuyPriceCorrection(price float64, limit model.TradeLimit)
 
 	if kline != nil {
 		if price > kline.Low {
-			log.Printf("[%s] Buy price Low correction %.8f -> %.8f", limit.Symbol, price, kline.Low)
 			price = kline.Low
 		}
 	}
@@ -100,7 +99,6 @@ func (l *LossSecurity) BuyPriceCorrection(price float64, limit model.TradeLimit)
 	if l.MlEnabled {
 		predict, predictErr := l.ExchangeRepository.GetPredict(limit.Symbol)
 		if predictErr == nil && price > predict {
-			log.Printf("[%s] Buy price ML correction %.8f -> %.8f", limit.Symbol, price, predict)
 			price = predict
 		}
 	}
@@ -108,12 +106,10 @@ func (l *LossSecurity) BuyPriceCorrection(price float64, limit model.TradeLimit)
 	if l.InterpolationEnabled && kline != nil {
 		interpolation, err := l.ExchangeRepository.GetInterpolation(*kline)
 		if err == nil && interpolation.HasBtc() && price > interpolation.BtcInterpolationUsdt {
-			log.Printf("[%s] Buy price BTC Index correction %.8f -> %.8f", limit.Symbol, price, interpolation.BtcInterpolationUsdt)
 			price = interpolation.BtcInterpolationUsdt
 		}
 
 		if err == nil && interpolation.HasEth() && price > interpolation.EthInterpolationUsdt {
-			log.Printf("[%s] Buy price ETH Index correction %.8f -> %.8f", limit.Symbol, price, interpolation.EthInterpolationUsdt)
 			price = interpolation.EthInterpolationUsdt
 		}
 	}

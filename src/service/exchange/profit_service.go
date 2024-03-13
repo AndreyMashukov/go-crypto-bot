@@ -44,11 +44,20 @@ func (p *ProfitService) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice 
 			}
 		}
 
+		log.Printf(
+			"[%s] Buy %f, Close %f - %f/%f",
+			limit.Symbol,
+			buyPrice,
+			closePrice,
+			float64(closePriceMetTimes),
+			float64(klineCount)/2,
+		)
+
 		if float64(closePriceMetTimes) >= float64(klineCount)/2 {
 			break
 		}
 
-		buyPrice -= limit.MinPrice
+		buyPrice -= limit.MinPrice * buyPrice
 
 		if buyPrice < 0.00 {
 			return priceBefore

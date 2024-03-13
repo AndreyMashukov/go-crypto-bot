@@ -54,7 +54,7 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 			break
 		}
 
-		potentialOpenPrice -= tradeLimit.MinPrice
+		potentialOpenPrice -= tradeLimit.MinPrice * potentialOpenPrice
 	}
 
 	if buyPrice > potentialOpenPrice {

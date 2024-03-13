@@ -77,7 +77,7 @@ func TestBuyPriceHistoryCorrection(t *testing.T) {
 	botService.On("UseSwapCapital").Return(true)
 
 	price := profitService.CheckBuyPriceOnHistory(limit, 23500)
-	assertion.Equal(22460.936999788315, price)
+	assertion.Equal(22442.969572853646, price)
 }
 
 func TestShouldCalculateMultiStepMinProfitPercent(t *testing.T) {

@@ -361,32 +361,34 @@ func (b *Binance) TradesAggregate(symbol string, limit int64) []model.Trade {
 }
 
 func (b *Binance) GetKLinesCached(symbol string, interval string, limit int64) []model.KLine {
-	cacheKey := fmt.Sprintf("interval-kline-history-%s-%s-%d-%d", symbol, interval, limit, b.CurrentBot.Id)
+	cacheKey := fmt.Sprintf("interval-klines-history-%s-%s-%d-%d", symbol, interval, limit, b.CurrentBot.Id)
+
 	res := b.RDB.Get(*b.Ctx, cacheKey).Val()
-	if len(res) == 0 {
-		historyKLines := b.GetKLines(symbol, interval, limit)
-		kLines := make([]model.KLine, 0)
-		for _, historyKLine := range historyKLines {
-			kLines = append(kLines, historyKLine.ToKLine(symbol))
-		}
+	if len(res) > 0 {
+		var batch model.KlineBatch
 
-		encoded, err := json.Marshal(kLines)
+		err := json.Unmarshal([]byte(res), &batch)
 		if err == nil {
-			b.RDB.Set(*b.Ctx, cacheKey, string(encoded), time.Minute*1)
+			return batch.Items
 		}
-
-		return kLines
+		log.Printf("[%s] kline[%s] history cache invalid", symbol, interval)
 	}
 
-	var kLines []model.KLine
-	err := json.Unmarshal([]byte(res), &kLines)
-	if err != nil {
-		log.Printf("[%s] kline[%s] history cache invalid: Wrong length %d < %d", symbol, interval, len(kLines), limit)
-		b.RDB.Del(*b.Ctx, cacheKey)
-		return b.GetKLinesCached(symbol, interval, limit)
+	historyKLines := b.GetKLines(symbol, interval, limit)
+	kLines := make([]model.KLine, 0)
+	for _, historyKLine := range historyKLines {
+		kLines = append(kLines, historyKLine.ToKLine(symbol))
 	}
 
-	return kLines
+	batch := model.KlineBatch{
+		Items: kLines,
+	}
+	encoded, err := json.Marshal(batch)
+	if err == nil {
+		b.RDB.Set(*b.Ctx, cacheKey, string(encoded), time.Minute*1)
+	}
+
+	return batch.Items
 }
 
 func (b *Binance) GetExchangeData(symbols []string) (*model.ExchangeInfo, error) {

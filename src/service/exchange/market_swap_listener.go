@@ -19,10 +19,11 @@ type MarketSwapListener struct {
 	ExchangeRepository *repository.ExchangeRepository
 	SwapUpdater        *SwapUpdater
 	SwapRepository     *repository.SwapRepository
-	SwapKlineChannel   chan []byte
 }
 
 func (m *MarketSwapListener) ListenAll() {
+	swapKlineChannel := make(chan []byte)
+
 	go func() {
 		for {
 			baseAssets := make([]string, 0)
@@ -43,7 +44,7 @@ func (m *MarketSwapListener) ListenAll() {
 	// existing swaps real time monitoring
 	go func() {
 		for {
-			swapMsg := <-m.SwapKlineChannel
+			swapMsg := <-swapKlineChannel
 			swapSymbol := ""
 
 			if strings.Contains(string(swapMsg), "kline") {
@@ -93,8 +94,13 @@ func (m *MarketSwapListener) ListenAll() {
 			"%s/stream?streams=%s",
 			"wss://stream.binance.com:9443",
 			strings.Join(streamBatchItem, "/"),
-		), m.SwapKlineChannel, []string{}, 10000+int64(index)))
+		), swapKlineChannel, []string{}, 10000+int64(index)))
 
 		log.Printf("Swap batch %d websocket: %s", index, strings.Join(streamBatchItem, ", "))
 	}
+
+	runChannel := make(chan string)
+	// just to keep running
+	runChannel <- "run"
+	log.Panic("Swap Listener Stopped")
 }

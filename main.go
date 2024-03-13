@@ -55,16 +55,13 @@ func main() {
 
 	if container.IsMasterBot {
 		container.MakerService.UpdateSwapPairs()
-		container.MarketSwapListener.ListenAll()
-		defer close(container.MarketSwapListener.SwapKlineChannel)
+		go func() {
+			container.MarketSwapListener.ListenAll()
+		}()
 	}
 
-	container.MarketTradeListener.ListenAll()
 	container.TimeService.WaitSeconds(10)
 	container.MakerService.StartTrade()
 
-	runChannel := make(chan string)
-	// just to keep running
-	runChannel <- "run"
-	log.Panic("Stopped")
+	container.MarketTradeListener.ListenAll()
 }

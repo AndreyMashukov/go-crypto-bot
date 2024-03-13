@@ -408,7 +408,6 @@ func InitServiceContainer() Container {
 			SwapManager:        &swapManager,
 			SwapUpdater:        &swapUpdater,
 			SwapRepository:     &swapRepository,
-			SwapKlineChannel:   make(chan []byte),
 		},
 	}
 }

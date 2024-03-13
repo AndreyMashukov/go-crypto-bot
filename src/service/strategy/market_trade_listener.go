@@ -34,9 +34,9 @@ func (m *MarketTradeListener) ListenAll() {
 	predictChannel := make(chan string)
 	depthChannel := make(chan model.Depth)
 
-	go func(channel chan string) {
+	go func() {
 		for {
-			symbol := <-channel
+			symbol := <-predictChannel
 			predicted, err := m.PythonMLBridge.Predict(symbol)
 			if err == nil && predicted > 0.00 {
 				kLine := m.ExchangeRepository.GetLastKLine(symbol)
@@ -49,9 +49,9 @@ func (m *MarketTradeListener) ListenAll() {
 				m.ExchangeRepository.SavePredict(predicted, symbol)
 			}
 		}
-	}(predictChannel)
+	}()
 
-	go func(klineChannel chan model.KLine) {
+	go func() {
 		for {
 			invalidPriceSymbols := make([]string, 0)
 			for _, limit := range m.ExchangeRepository.GetTradeLimits() {
@@ -84,9 +84,9 @@ func (m *MarketTradeListener) ListenAll() {
 
 			m.TimeService.WaitSeconds(2)
 		}
-	}(klineChannel)
+	}()
 
-	go func(klineChannel chan model.KLine) {
+	go func() {
 		for {
 			kLine := <-klineChannel
 			m.ExchangeRepository.AddKLine(kLine)
@@ -98,9 +98,16 @@ func (m *MarketTradeListener) ListenAll() {
 			m.ExchangeRepository.SetDecision(m.BaseKLineStrategy.Decide(kLine), kLine.Symbol)
 			m.ExchangeRepository.SetDecision(m.OrderBasedStrategy.Decide(kLine), kLine.Symbol)
 		}
-	}(klineChannel)
+	}()
 
 	eventChannel := make(chan []byte)
+
+	go func() {
+		for {
+			depth := <-depthChannel
+			m.ExchangeRepository.SetDepth(depth)
+		}
+	}()
 
 	go func() {
 		for {
@@ -153,13 +160,6 @@ func (m *MarketTradeListener) ListenAll() {
 		}
 	}()
 
-	go func() {
-		for {
-			depth := <-depthChannel
-			m.ExchangeRepository.SetDepth(depth)
-		}
-	}()
-
 	websockets := make([]*websocket.Conn, 0)
 
 	tradeLimitCollection := make([]model.SymbolInterface, 0)
@@ -203,4 +203,9 @@ func (m *MarketTradeListener) ListenAll() {
 
 		log.Printf("Batch %d websocket: %s", index, strings.Join(streamBatchItem, ", "))
 	}
+
+	runChannel := make(chan string)
+	// just to keep running
+	runChannel <- "run"
+	log.Panic("Trade Listener Stopped")
 }

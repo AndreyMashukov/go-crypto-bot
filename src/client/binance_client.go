@@ -27,6 +27,7 @@ type ExchangeOrderAPIInterface interface {
 }
 
 type ExchangePriceAPIInterface interface {
+	GetOpenedOrders() ([]model.BinanceOrder, error)
 	GetDepth(symbol string) (model.OrderBook, error)
 	GetKLines(symbol string, interval string, limit int64) []model.KLineHistory
 	GetKLinesCached(symbol string, interval string, limit int64) []model.KLine

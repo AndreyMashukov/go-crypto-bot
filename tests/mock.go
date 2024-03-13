@@ -227,6 +227,10 @@ type ExchangePriceAPIMock struct {
 	mock.Mock
 }
 
+func (e *ExchangePriceAPIMock) GetOpenedOrders() ([]model.BinanceOrder, error) {
+	args := e.Called()
+	return args.Get(0).([]model.BinanceOrder), args.Error(1)
+}
 func (e *ExchangePriceAPIMock) GetDepth(symbol string) (model.OrderBook, error) {
 	args := e.Called(symbol)
 	return args.Get(0).(model.OrderBook), args.Error(1)
@@ -437,6 +441,10 @@ func (b *BotServiceMock) IsSwapEnabled() bool {
 func (b *BotServiceMock) IsMasterBot() bool {
 	args := b.Called()
 	return args.Get(0).(bool)
+}
+func (b *BotServiceMock) GetTradeStackSorting() string {
+	args := b.Called()
+	return args.Get(0).(string)
 }
 func (b *BotServiceMock) UseSwapCapital() bool {
 	args := b.Called()

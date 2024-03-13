@@ -50,6 +50,7 @@ curl --location --request PUT 'http://localhost:8090/bot/update?botUuid={BOT_UUI
 --data-raw '{
     "isMasterBot": true,
     "isSwapEnabled": true,
+    "tradeStackSorting": "percent",
     "swapConfig": {
       "swapMinPercent": 2.00, 
       "swapOrderProfitTrigger": -5.00, 

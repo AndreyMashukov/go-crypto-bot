@@ -413,3 +413,46 @@ func (m *MakerService) UpdateLimits() {
 		)
 	}
 }
+
+func (m *MakerService) StartTrade() {
+	go func() {
+		for {
+			m.UpdateLimits()
+			time.Sleep(time.Minute * 5)
+		}
+	}()
+
+	for _, tradeLimit := range m.ExchangeRepository.GetTradeLimits() {
+		go func(symbol string) {
+			for {
+				m.Make(symbol)
+				time.Sleep(time.Millisecond * 500)
+			}
+		}(tradeLimit.Symbol)
+	}
+}
+
+func (m *MakerService) RecoverOrders() {
+	tradeLimits := m.ExchangeRepository.GetTradeLimits()
+	symbols := make([]string, 0)
+	for _, limit := range tradeLimits {
+		symbols = append(symbols, limit.Symbol)
+	}
+
+	binanceOrders, err := m.Binance.GetOpenedOrders()
+	if err == nil {
+		for _, binanceOrder := range binanceOrders {
+			if !slices.Contains(symbols, binanceOrder.Symbol) {
+				log.Printf("[%s] binance order %d skipped", binanceOrder.Symbol, binanceOrder.OrderId)
+
+				continue
+			}
+
+			log.Printf("[%s] loaded binance order %d", binanceOrder.Symbol, binanceOrder.OrderId)
+			m.OrderRepository.SetBinanceOrder(binanceOrder)
+		}
+	}
+
+	// Wait 5 seconds, here API can update some settings...
+	time.Sleep(time.Second * 5)
+}

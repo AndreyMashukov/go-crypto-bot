@@ -8,6 +8,7 @@ import (
 type BotServiceInterface interface {
 	IsSwapEnabled() bool
 	IsMasterBot() bool
+	GetTradeStackSorting() string
 	UseSwapCapital() bool
 	GetSwapConfig() model.SwapConfig
 }
@@ -28,4 +29,7 @@ func (b *BotService) UseSwapCapital() bool {
 }
 func (b *BotService) GetSwapConfig() model.SwapConfig {
 	return b.BotRepository.GetCurrentBotCached(b.CurrentBot.Id).SwapConfig
+}
+func (b *BotService) GetTradeStackSorting() string {
+	return b.BotRepository.GetCurrentBotCached(b.CurrentBot.Id).TradeStackSorting
 }

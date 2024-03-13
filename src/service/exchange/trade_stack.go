@@ -230,10 +230,10 @@ func (t *TradeStack) ProcessItem(
 	if binanceOrder != nil {
 		buyPrice = binanceOrder.Price
 	} else {
-		buyPriceCalc, buyPriceErr := t.PriceCalculator.CalculateBuy(tradeLimit)
-		if buyPriceErr == nil {
-			buyPrice = buyPriceCalc
-		}
+		//buyPriceCalc, buyPriceErr := t.PriceCalculator.CalculateBuy(tradeLimit)
+		//if buyPriceErr == nil {
+		//	buyPrice = buyPriceCalc
+		//}
 	}
 	pricePointsDiff := int64((t.Formatter.FormatPrice(tradeLimit, buyPrice) - t.Formatter.FormatPrice(tradeLimit, lastPrice)) / tradeLimit.MinPrice)
 

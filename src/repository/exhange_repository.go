@@ -750,7 +750,7 @@ func (e *ExchangeRepository) GetTradeVolumes(kLine model.KLine) (float64, float6
 }
 
 func (e *ExchangeRepository) AddTrade(trade model.Trade) {
-	tradeCacheKey := fmt.Sprintf("trades-%s-%s", trade.Symbol, e.CurrentBot.Id)
+	tradeCacheKey := fmt.Sprintf("trades-%s-%d", trade.Symbol, e.CurrentBot.Id)
 
 	lastTrades := e.TradeList(trade.Symbol)
 	encoded, _ := json.Marshal(trade)
@@ -766,7 +766,7 @@ func (e *ExchangeRepository) AddTrade(trade model.Trade) {
 }
 
 func (e *ExchangeRepository) TradeList(symbol string) []model.Trade {
-	tradeCacheKey := fmt.Sprintf("trades-%s-%s", symbol, e.CurrentBot.Id)
+	tradeCacheKey := fmt.Sprintf("trades-%s-%d", symbol, e.CurrentBot.Id)
 	res := e.RDB.LRange(*e.Ctx, tradeCacheKey, 0, 2000).Val()
 	list := make([]model.Trade, 0)
 

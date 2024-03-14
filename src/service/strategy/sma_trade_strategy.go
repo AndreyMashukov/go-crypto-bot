@@ -16,7 +16,6 @@ func (s *SmaTradeStrategy) Decide(trade model.Trade) model.Decision {
 	buyPeriod := 60
 	maxPeriod := int(math.Max(float64(sellPeriod), float64(buyPeriod)))
 
-	s.ExchangeRepository.AddTrade(trade)
 	list := s.ExchangeRepository.TradeList(trade.Symbol)
 
 	if len(list) < maxPeriod {
@@ -35,8 +34,8 @@ func (s *SmaTradeStrategy) Decide(trade model.Trade) model.Decision {
 	sellSma := s.calculateSMA(tradeSlice[0:sellPeriod])
 	buySma := s.calculateSMA(tradeSlice[0:buyPeriod])
 
-	buyVolumeS, sellVolumeS := s.getByAndSellVolume(tradeSlice[len(tradeSlice)-sellPeriod:])
-	buyVolumeB, sellVolumeB := s.getByAndSellVolume(tradeSlice[len(tradeSlice)-buyPeriod:])
+	buyVolumeS, sellVolumeS := s.getBuyAndSellVolume(tradeSlice[len(tradeSlice)-sellPeriod:])
+	buyVolumeB, sellVolumeB := s.getBuyAndSellVolume(tradeSlice[len(tradeSlice)-buyPeriod:])
 
 	buyIndicator := buyVolumeB / sellVolumeB
 
@@ -87,7 +86,7 @@ func (s *SmaTradeStrategy) calculateSMA(trades []model.Trade) float64 {
 	return sum / float64(len(slice))
 }
 
-func (s *SmaTradeStrategy) getByAndSellVolume(trades []model.Trade) (float64, float64) {
+func (s *SmaTradeStrategy) getBuyAndSellVolume(trades []model.Trade) (float64, float64) {
 	var buyVolume float64
 	var sellVolume float64
 

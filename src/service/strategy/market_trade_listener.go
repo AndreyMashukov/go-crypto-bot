@@ -129,6 +129,8 @@ func (m *MarketTradeListener) ListenAll() {
 			case strings.Contains(string(message), "aggTrade"):
 				var tradeEvent model.TradeEvent
 				json.Unmarshal(message, &tradeEvent)
+
+				m.ExchangeRepository.AddTrade(tradeEvent.Trade)
 				smaDecision := m.SmaTradeStrategy.Decide(tradeEvent.Trade)
 				m.ExchangeRepository.SetDecision(smaDecision, tradeEvent.Trade.Symbol)
 

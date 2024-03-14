@@ -71,12 +71,10 @@ func (m *MakerService) Make(symbol string) {
 
 func (m *MakerService) ProcessBuy(tradeLimit model.TradeLimit) {
 	if !tradeLimit.IsEnabled {
-		log.Printf("[%s] BUY operation is disabled", tradeLimit.Symbol)
 		return
 	}
 
 	if !m.TradeStack.CanBuy(tradeLimit) {
-		log.Printf("[%s] Trade Stack check is not passed, wait order.", tradeLimit.Symbol)
 		return
 	}
 

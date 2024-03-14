@@ -316,6 +316,8 @@ func InitServiceContainer() Container {
 	}
 
 	baseKLineStrategy := strategy.BaseKLineStrategy{
+		OrderRepository:    &orderRepository,
+		TradeStack:         &tradeStack,
 		ExchangeRepository: &exchangeRepository,
 		Formatter:          &formatter,
 		MlEnabled:          true,

@@ -3,6 +3,7 @@ package exchange
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
@@ -295,6 +296,7 @@ func (t *TradeStack) ProcessItem(
 func (t *TradeStack) GetBuyPriceCached(limit model.TradeLimit) float64 {
 	var ticker model.WSTickerPrice
 
+	// todo: invalidate on limit changes...
 	cacheKey := fmt.Sprintf("buy-price-cached-%s-%d", limit.Symbol, t.BotService.GetBot().Id)
 	buyPriceCached := t.RDB.Get(*t.Ctx, cacheKey).Val()
 
@@ -321,4 +323,18 @@ func (t *TradeStack) GetBuyPriceCached(limit model.TradeLimit) float64 {
 	}
 
 	return 0.00
+}
+
+func (t *TradeStack) GetBuyPricePoints(kLine model.KLine, tradeLimit model.TradeLimit) (int64, error) {
+	if kLine.IsPriceExpired() {
+		return 0, errors.New(fmt.Sprintf("[%s] current price is expired", tradeLimit.Symbol))
+	}
+
+	buyPrice := t.GetBuyPriceCached(tradeLimit)
+
+	if buyPrice == 0.00 {
+		return 0, errors.New(fmt.Sprintf("[%s] buy price is invalid", tradeLimit.Symbol))
+	}
+
+	return int64((t.Formatter.FormatPrice(tradeLimit, buyPrice) - t.Formatter.FormatPrice(tradeLimit, kLine.Close)) / tradeLimit.MinPrice), nil
 }

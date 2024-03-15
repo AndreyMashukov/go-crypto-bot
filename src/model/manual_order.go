@@ -7,6 +7,7 @@ type ManualOrder struct {
 	Price     float64 `json:"price"`
 	Symbol    string  `json:"symbol"`
 	BotUuid   string  `json:"botUuid"`
+	Ttl       int64   `json:"ttl"`
 }
 
 func (m *ManualOrder) IsBuy() bool {

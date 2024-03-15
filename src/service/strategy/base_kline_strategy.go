@@ -28,6 +28,8 @@ func (k *BaseKLineStrategy) Decide(kLine model.KLine) model.Decision {
 		}
 	}
 
+	// todo: Add BTC/ETH interpolation...
+	// todo: Cover By UNIT test!
 	isPositivePredict := false
 
 	if k.MlEnabled {

@@ -212,6 +212,7 @@ type Position struct {
 	IsPriceExpired    bool                  `json:"isPriceExpired"`
 	BinanceOrder      *BinanceOrder         `json:"binanceOrder"`
 	ManualOrder       *ManualOrder          `json:"manualOrder"`
+	IsEnabled         bool                  `json:"isEnabled"`
 }
 
 type PositionCloseStrategy struct {

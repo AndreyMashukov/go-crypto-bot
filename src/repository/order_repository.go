@@ -583,7 +583,7 @@ func (repo *OrderRepository) SetManualOrder(order model.ManualOrder) {
 		"manual-order-%s-bot-%d",
 		strings.ToLower(order.Symbol),
 		repo.CurrentBot.Id,
-	), string(encoded), time.Hour*24)
+	), string(encoded), time.Second*time.Duration(order.Ttl))
 }
 
 func (repo *OrderRepository) DeleteManualOrder(symbol string) {

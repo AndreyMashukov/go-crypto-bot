@@ -151,6 +151,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			IsPriceExpired: kLine.IsPriceExpired(),
 			BinanceOrder:   binanceOrder,
 			ManualOrder:    manualOrder,
+			IsEnabled:      limit.IsEnabled,
 		})
 	}
 

@@ -442,8 +442,12 @@ func (m *OrderExecutor) ProcessSwap(order model.Order) bool {
 }
 
 func (m *OrderExecutor) TrySwap(order model.Order) {
+	if !m.BotService.IsSwapEnabled() {
+		return
+	}
+
 	swapChain := m.SwapRepository.GetSwapChainCache(order.GetBaseAsset())
-	if swapChain != nil && m.BotService.IsSwapEnabled() {
+	if swapChain != nil {
 		possibleSwaps := m.SwapRepository.GetSwapChains(order.GetBaseAsset())
 
 		if len(possibleSwaps) == 0 {

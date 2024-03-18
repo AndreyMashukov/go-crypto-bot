@@ -19,6 +19,7 @@ type HealthService struct {
 	BotRepository      *repository.BotRepository
 	PythonMLBridge     *ml.PythonMLBridge
 	DB                 *sql.DB
+	SwapDb             *sql.DB
 	RDB                *redis.Client
 	Ctx                *context.Context
 	Binance            *client.Binance
@@ -56,6 +57,10 @@ func (h *HealthService) HealthCheck() model.BotHealth {
 	if h.DB.Ping() != nil {
 		dbStatus = model.DbStatusFail
 	}
+	swapDbStatus := model.DbStatusOk
+	if h.SwapDb.Ping() != nil {
+		swapDbStatus = model.DbStatusFail
+	}
 	redisStatus := model.RedisStatusOk
 	if h.RDB.Ping(*h.Ctx).Err() != nil {
 		redisStatus = model.RedisStatusFail
@@ -78,6 +83,7 @@ func (h *HealthService) HealthCheck() model.BotHealth {
 	return model.BotHealth{
 		Bot:           *bot,
 		DbStatus:      dbStatus,
+		SwapDbStatus:  swapDbStatus,
 		BinanceStatus: binanceStatus,
 		MlStatus:      mlStatus,
 		RedisStatus:   redisStatus,

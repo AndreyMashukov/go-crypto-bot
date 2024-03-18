@@ -21,6 +21,8 @@ func main() {
 	}
 
 	container := config.InitServiceContainer()
+	container.PingDB()
+
 	defer container.Db.Close()
 	defer container.DbSwap.Close()
 	container.PythonMLBridge.Initialize()

@@ -25,18 +25,22 @@ import (
 func InitServiceContainer() Container {
 	db, err := sql.Open("mysql", os.Getenv("DATABASE_DSN"))
 
+	if err != nil {
+		log.Fatal(fmt.Sprintf("[DB] MySQL can't connect: %s", err.Error()))
+	}
+
 	db.SetMaxIdleConns(64)
 	db.SetMaxOpenConns(64)
 	db.SetConnMaxLifetime(time.Minute)
 
-	swapDb, err := sql.Open("mysql", os.Getenv("DATABASE_DSN"))
+	swapDb, swapErr := sql.Open("mysql", os.Getenv("DATABASE_DSN"))
 
 	swapDb.SetMaxIdleConns(64)
 	swapDb.SetMaxOpenConns(64)
 	swapDb.SetConnMaxLifetime(time.Minute)
 
-	if err != nil {
-		log.Fatal(fmt.Sprintf("MySQL can't connect: %s", err.Error()))
+	if swapErr != nil {
+		log.Fatal(fmt.Sprintf("[Swap DB] MySQL can't connect: %s", err.Error()))
 	}
 
 	var ctx = context.Background()
@@ -56,9 +60,10 @@ func InitServiceContainer() Container {
 	if currentBot == nil {
 		botUuid := os.Getenv("BOT_UUID")
 		currentBot := &model.Bot{
-			BotUuid:       botUuid,
-			IsMasterBot:   false,
-			IsSwapEnabled: false,
+			BotUuid:           botUuid,
+			IsMasterBot:       false,
+			IsSwapEnabled:     false,
+			TradeStackSorting: model.TradeStackSortingLessPriceDiff,
 			SwapConfig: model.SwapConfig{
 				MinValidPercent:    2.00,
 				FallPercentTrigger: -5.00,
@@ -138,6 +143,10 @@ func InitServiceContainer() Container {
 		ExchangeRepository: &exchangeRepository,
 		OrderRepository:    &orderRepository,
 	}
+	botService := service.BotService{
+		CurrentBot:    currentBot,
+		BotRepository: &botRepository,
+	}
 	exchangeController := controller.ExchangeController{
 		SwapRepository:     &swapRepository,
 		ExchangeRepository: &exchangeRepository,
@@ -145,13 +154,8 @@ func InitServiceContainer() Container {
 		RDB:                rdb,
 		Ctx:                &ctx,
 		CurrentBot:         currentBot,
+		BotService:         &botService,
 	}
-
-	botService := service.BotService{
-		CurrentBot:    currentBot,
-		BotRepository: &botRepository,
-	}
-
 	swapValidator := validator.SwapValidator{
 		Binance:        &binance,
 		SwapRepository: &swapRepository,
@@ -354,7 +358,8 @@ func InitServiceContainer() Container {
 		PythonMLBridge:     &pythonMLBridge,
 		Binance:            &binance,
 		CurrentBot:         currentBot,
-		DB:                 swapDb,
+		DB:                 db,
+		SwapDb:             swapDb,
 		RDB:                rdb,
 		Ctx:                &ctx,
 	}
@@ -471,5 +476,23 @@ func (c *Container) StartHttpServer() {
 	// Start HTTP server!
 	go func() {
 		_ = http.ListenAndServe(":8080", nil)
+	}()
+}
+
+func (c *Container) PingDB() {
+	go func() {
+		for {
+			err := c.Db.Ping()
+			if err != nil {
+				log.Printf("[DB] Connection ping error: %s", err.Error())
+			}
+
+			err = c.DbSwap.Ping()
+			if err != nil {
+				log.Printf("[Swap DB] Connection ping error: %s", err.Error())
+			}
+
+			time.Sleep(time.Second * 30)
+		}
 	}()
 }

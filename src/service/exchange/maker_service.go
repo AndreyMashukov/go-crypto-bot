@@ -370,10 +370,6 @@ func (m *MakerService) UpdateLimits() {
 	tradeLimits := m.ExchangeRepository.GetTradeLimits()
 	limitMap := make(map[string]model.TradeLimit)
 	for _, tradeLimit := range tradeLimits {
-		if !tradeLimit.IsEnabled {
-			continue
-		}
-
 		symbols = append(symbols, tradeLimit.Symbol)
 		limitMap[tradeLimit.Symbol] = tradeLimit
 	}

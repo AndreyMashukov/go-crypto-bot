@@ -20,6 +20,7 @@ type ExchangeController struct {
 	RDB                *redis.Client
 	Ctx                *context.Context
 	CurrentBot         *model.Bot
+	BotService         *service.BotService
 }
 
 func (e *ExchangeController) GetKlineListAction(w http.ResponseWriter, req *http.Request) {
@@ -91,6 +92,12 @@ func (e *ExchangeController) GetSwapListAction(w http.ResponseWriter, req *http.
 
 	if botUuid != e.CurrentBot.BotUuid {
 		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
+
+	if !e.BotService.IsSwapEnabled() {
+		http.Error(w, "Swap is disabled", http.StatusForbidden)
 
 		return
 	}

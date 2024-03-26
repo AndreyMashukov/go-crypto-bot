@@ -133,6 +133,11 @@ func (m *OrderExecutor) BuyExtra(tradeLimit model.TradeLimit, order model.Order,
 	extraOrder.Price = binanceOrder.Price
 	extraOrder.CreatedAt = m.TimeService.GetNowDateTimeString()
 
+	refreshOrder, refreshErr := m.OrderRepository.Find(order.Id)
+	if refreshErr == nil {
+		order = refreshOrder
+	}
+
 	avgPrice := m.getAvgPrice(order, extraOrder)
 
 	_, err = m.OrderRepository.Create(extraOrder)
@@ -300,6 +305,11 @@ func (m *OrderExecutor) Sell(tradeLimit model.TradeLimit, opened model.Order, pr
 
 	m.acquireLock(opened.Symbol)
 	defer m.releaseLock(opened.Symbol)
+
+	refreshOrder, refreshErr := m.OrderRepository.Find(opened.Id)
+	if refreshErr == nil {
+		opened = refreshOrder
+	}
 
 	// todo: commission
 	// Or you place an order to sell 10 ETH for 3,452.55 USDT each:

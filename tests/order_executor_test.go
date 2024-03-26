@@ -142,6 +142,7 @@ func TestSellAction(t *testing.T) {
 	})
 	openedExternalId := int64(988)
 	openedOrder := model.Order{
+		Id:               8889,
 		ExternalId:       &openedExternalId,
 		Status:           "opened",
 		Symbol:           "ETHUSDT",
@@ -150,6 +151,7 @@ func TestSellAction(t *testing.T) {
 		CreatedAt:        time.Now().Format("2006-01-02 15:04:05"),
 		ExecutedQuantity: 0.009,
 	}
+	orderRepository.On("Find", int64(8889)).Return(openedOrder, nil)
 	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(openedOrder, nil)
 	orderRepository.On("GetManualOrder", "ETHUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
@@ -319,6 +321,7 @@ func TestSellFoundFilled(t *testing.T) {
 	})
 	openedExternalId := int64(988)
 	openedOrder := model.Order{
+		Id:               9998,
 		ExternalId:       &openedExternalId,
 		Status:           "opened",
 		Symbol:           "ETHUSDT",
@@ -327,6 +330,7 @@ func TestSellFoundFilled(t *testing.T) {
 		CreatedAt:        time.Now().Format("2006-01-02 15:04:05"),
 		ExecutedQuantity: 0.009,
 	}
+	orderRepository.On("Find", int64(9998)).Return(openedOrder, nil)
 	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(openedOrder, nil)
 	orderRepository.On("GetManualOrder", "ETHUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Unset()
@@ -485,6 +489,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 	})
 	openedExternalId := int64(988)
 	openedOrder := model.Order{
+		Id:               8877,
 		ExternalId:       &openedExternalId,
 		Status:           "opened",
 		Symbol:           "ETHUSDT",
@@ -493,6 +498,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 		CreatedAt:        time.Now().Format("2006-01-02 15:04:05"),
 		ExecutedQuantity: 0.009,
 	}
+	orderRepository.On("Find", int64(8877)).Return(openedOrder, nil)
 	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(openedOrder, nil)
 	orderRepository.On("GetManualOrder", "ETHUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
@@ -647,6 +653,7 @@ func TestSellQueryFail(t *testing.T) {
 	})
 	openedExternalId := int64(988)
 	openedOrder := model.Order{
+		Id:               88811,
 		ExternalId:       &openedExternalId,
 		Status:           "opened",
 		Symbol:           "ETHUSDT",
@@ -655,6 +662,7 @@ func TestSellQueryFail(t *testing.T) {
 		CreatedAt:        time.Now().Format("2006-01-02 15:04:05"),
 		ExecutedQuantity: 0.009,
 	}
+	orderRepository.On("Find", int64(88811)).Return(openedOrder, nil)
 	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(openedOrder, nil)
 	orderRepository.On("GetManualOrder", "ETHUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
@@ -800,6 +808,7 @@ func TestSellClosingAction(t *testing.T) {
 	})
 	openedExternalId := int64(988)
 	openedOrder := model.Order{
+		Id:               11122,
 		ExternalId:       &openedExternalId,
 		Status:           "opened",
 		Symbol:           "BTCUSDT",
@@ -808,6 +817,7 @@ func TestSellClosingAction(t *testing.T) {
 		CreatedAt:        time.Now().Format("2006-01-02 15:04:05"),
 		ExecutedQuantity: 0.00047,
 	}
+	orderRepository.On("Find", int64(11122)).Return(openedOrder, nil)
 	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(openedOrder, nil)
 	orderRepository.On("GetManualOrder", "BTCUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
@@ -976,6 +986,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 	})
 	openedExternalId := int64(988)
 	openedOrder := model.Order{
+		Id:               22235,
 		ExternalId:       &openedExternalId,
 		Status:           "opened",
 		Symbol:           "TRXUSDT",
@@ -984,6 +995,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 		CreatedAt:        time.Now().Format("2006-01-02 15:04:05"),
 		ExecutedQuantity: 382.5,
 	}
+	orderRepository.On("Find", int64(22235)).Return(openedOrder, nil)
 	orderRepository.On("GetOpenedOrderCached", "TRXUSDT", "BUY").Return(openedOrder, nil)
 	orderRepository.On("GetManualOrder", "TRXUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()

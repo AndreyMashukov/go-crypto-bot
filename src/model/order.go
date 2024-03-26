@@ -173,6 +173,10 @@ func (o *Order) IsClosed() bool {
 	return o.Status == "closed"
 }
 
+func (o *Order) IsOpened() bool {
+	return o.Status == "opened"
+}
+
 func (o *Order) GetRemainingToSellQuantity(swap bool) float64 {
 	executedQuantity := o.ExecutedQuantity
 

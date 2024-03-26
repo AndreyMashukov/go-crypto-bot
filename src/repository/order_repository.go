@@ -57,7 +57,7 @@ func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation strin
 		var dto model.Order
 		err := json.Unmarshal([]byte(res), &dto)
 
-		if err == nil && dto.GetPositionQuantityWithSwap() > 0 {
+		if err == nil && dto.GetPositionQuantityWithSwap() > 0 && dto.IsOpened() {
 			return dto, nil
 		}
 	}
@@ -68,10 +68,19 @@ func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation strin
 		return order, err
 	}
 
-	encoded, _ := json.Marshal(order)
-	repo.RDB.Set(*repo.Ctx, repo.getOpenedOrderCacheKey(symbol, operation), string(encoded), time.Second*30)
+	repo.SaveOrderCache(order)
 
 	return order, nil
+}
+
+func (repo *OrderRepository) SaveOrderCache(order model.Order) {
+	encoded, err := json.Marshal(order)
+
+	if err == nil {
+		repo.RDB.Set(*repo.Ctx, repo.getOpenedOrderCacheKey(order.Symbol, order.Operation), string(encoded), time.Second*30)
+	} else {
+		repo.DeleteOpenedOrderCache(order)
+	}
 }
 
 func (repo *OrderRepository) DeleteOpenedOrderCache(order model.Order) {
@@ -200,6 +209,7 @@ func (repo *OrderRepository) Create(order model.Order) (*int64, error) {
 
 func (repo *OrderRepository) Update(order model.Order) error {
 	repo.DeleteOpenedOrderCache(order)
+
 	_, err := repo.DB.Exec(`
 		UPDATE orders o SET
 	  		o.symbol = ?,

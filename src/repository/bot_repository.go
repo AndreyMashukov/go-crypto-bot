@@ -95,7 +95,20 @@ func (b *BotRepository) GetCurrentBot() *model.Bot {
 }
 
 func (b *BotRepository) Create(bot model.Bot) error {
-	_, err := b.DB.Exec(`INSERT INTO bots SET	uuid = ?`, bot.BotUuid)
+	_, err := b.DB.Exec(`
+		INSERT INTO bots SET 
+			uuid = ?,
+			is_swap_enabled = ?,
+			is_master_bot = ?,
+			swap_config = ?,
+			trade_stack_sorting = ?
+	`,
+		bot.BotUuid,
+		bot.IsSwapEnabled,
+		bot.IsMasterBot,
+		bot.SwapConfig,
+		bot.TradeStackSorting,
+	)
 
 	if err != nil {
 		log.Println(err)

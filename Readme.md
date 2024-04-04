@@ -1,5 +1,10 @@
 [![Docker Image CI](https://github.com/AndreyMashukov/go-crypto-bot/actions/workflows/docker-image.yml/badge.svg)](https://github.com/AndreyMashukov/go-crypto-bot/actions/workflows/docker-image.yml)
 ### Go Multithreading Crypto Trading Bot
+![Go Multithreading Crypto Trading Bot](.github/images/orders.png)
+
+- Join our Discord server: [Autotrade.cloud - Discord Traders Community](https://discord.gg/6DZZFQsT)
+- Try cloud crypto bot: [Autotrade.cloud](https://autotrade.cloud)
+> Register and get 10$ for free trial
 
 This is production ready crypto trading bot, supports:
 - Classic trading (no margin, long only)

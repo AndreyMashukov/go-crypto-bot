@@ -29,9 +29,11 @@ type TradeStack struct {
 	PriceCalculator    PriceCalculatorInterface
 	RDB                *redis.Client
 	Ctx                *context.Context
+	TradeFilterService TradeFilterServiceInterface
 }
 
 type TradeStackParams struct {
+	SkipFiltered    bool
 	SkipDisabled    bool
 	SkipLocked      bool
 	BalanceFilter   bool
@@ -54,6 +56,7 @@ func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
 	}
 
 	result := t.GetTradeStack(TradeStackParams{
+		SkipFiltered:    true,
 		SkipLocked:      true,
 		SkipDisabled:    true,
 		BalanceFilter:   true,
@@ -150,6 +153,7 @@ func (t *TradeStack) GetTradeStack(params TradeStackParams) []model.TradeStackIt
 				IsEnabled:         stackItem.IsEnabled,
 				BuyPrice:          stackItem.BuyPrice,
 				PricePointsDiff:   stackItem.PricePointsDiff,
+				IsFiltered:        stackItem.IsFiltered,
 			})
 		} else {
 			impossible = append(impossible, stackItem)
@@ -176,6 +180,7 @@ func (t *TradeStack) GetTradeStack(params TradeStackParams) []model.TradeStackIt
 				IsEnabled:         stackItem.IsEnabled,
 				BuyPrice:          stackItem.BuyPrice,
 				PricePointsDiff:   stackItem.PricePointsDiff,
+				IsFiltered:        stackItem.IsFiltered,
 			})
 		}
 	}
@@ -229,6 +234,17 @@ func (t *TradeStack) ProcessItem(
 
 	openedOrder, err := t.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
 
+	isFiltered := false
+	if err != nil {
+		isFiltered = !t.TradeFilterService.CanBuy(tradeLimit)
+	} else {
+		isFiltered = !t.TradeFilterService.CanExtraBuy(tradeLimit)
+	}
+
+	if isFiltered && params.SkipFiltered {
+		return nil
+	}
+
 	buyPrice := 0.00
 
 	if binanceOrder != nil {
@@ -262,6 +278,7 @@ func (t *TradeStack) ProcessItem(
 					IsEnabled:         isEnabled,
 					BuyPrice:          buyPrice,
 					PricePointsDiff:   pricePointsDiff,
+					IsFiltered:        isFiltered,
 				}
 			}
 		}
@@ -287,6 +304,7 @@ func (t *TradeStack) ProcessItem(
 			IsEnabled:         isEnabled,
 			BuyPrice:          buyPrice,
 			PricePointsDiff:   pricePointsDiff,
+			IsFiltered:        isFiltered,
 		}
 	}
 

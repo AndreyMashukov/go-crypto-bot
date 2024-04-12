@@ -113,7 +113,10 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 		    tl.buy_price_history_check_interval as BuyPriceHistoryCheckInterval,
 		    tl.buy_price_history_check_period as BuyPriceHistoryCheckPeriod,
 		    tl.extra_charge_options as ExtraChargeOptions,
-		    tl.profit_options as ProfitOptions
+		    tl.profit_options as ProfitOptions,
+		    tl.trade_filters_buy as TradeFiltersBuy,
+		    tl.trade_filters_sell as TradeFiltersSell,
+		    tl.trade_filters_extra_charge as TradeFiltersExtraCharge
 		FROM trade_limit tl WHERE tl.bot_id = ?
 	`, e.CurrentBot.Id)
 	defer res.Close()
@@ -141,6 +144,9 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 			&tradeLimit.BuyPriceHistoryCheckPeriod,
 			&tradeLimit.ExtraChargeOptions,
 			&tradeLimit.ProfitOptions,
+			&tradeLimit.TradeFiltersBuy,
+			&tradeLimit.TradeFiltersSell,
+			&tradeLimit.TradeFiltersExtraCharge,
 		)
 
 		if err != nil {
@@ -170,7 +176,10 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		    tl.buy_price_history_check_interval as BuyPriceHistoryCheckInterval,
 		    tl.buy_price_history_check_period as BuyPriceHistoryCheckPeriod,
 		    tl.extra_charge_options as ExtraChargeOptions,
-		    tl.profit_options as ProfitOptions
+		    tl.profit_options as ProfitOptions,
+		    tl.trade_filters_buy as TradeFiltersBuy,
+		    tl.trade_filters_sell as TradeFiltersSell,
+		    tl.trade_filters_extra_charge as TradeFiltersExtraCharge
 		FROM trade_limit tl
 		WHERE tl.symbol = ? AND tl.bot_id = ?
 	`,
@@ -191,6 +200,9 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		&tradeLimit.BuyPriceHistoryCheckPeriod,
 		&tradeLimit.ExtraChargeOptions,
 		&tradeLimit.ProfitOptions,
+		&tradeLimit.TradeFiltersBuy,
+		&tradeLimit.TradeFiltersSell,
+		&tradeLimit.TradeFiltersExtraCharge,
 	)
 	if err != nil {
 		return tradeLimit, err
@@ -215,6 +227,9 @@ func (e *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64, e
 		    buy_price_history_check_period = ?,
 		    extra_charge_options = ?,
 		    profit_options = ?,
+		    trade_filters_buy = ?,
+		    trade_filters_sell = ?,
+		    trade_filters_extra_charge = ?,
 		    bot_id = ?
 	`,
 		limit.Symbol,
@@ -230,6 +245,9 @@ func (e *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64, e
 		limit.BuyPriceHistoryCheckPeriod,
 		limit.ExtraChargeOptions,
 		limit.ProfitOptions,
+		limit.TradeFiltersBuy,
+		limit.TradeFiltersSell,
+		limit.TradeFiltersExtraCharge,
 		e.CurrentBot.Id,
 	)
 
@@ -605,7 +623,10 @@ func (e *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 		    tl.buy_price_history_check_interval = ?,
 		    tl.buy_price_history_check_period = ?,
 		    tl.extra_charge_options = ?,
-		    tl.profit_options = ?
+		    tl.profit_options = ?,
+		    tl.trade_filters_buy = ?,
+		    tl.trade_filters_sell = ?,
+		    tl.trade_filters_extra_charge = ?
 		WHERE tl.id = ?
 	`,
 		limit.Symbol,
@@ -621,6 +642,9 @@ func (e *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 		limit.BuyPriceHistoryCheckPeriod,
 		limit.ExtraChargeOptions,
 		limit.ProfitOptions,
+		limit.TradeFiltersBuy,
+		limit.TradeFiltersSell,
+		limit.TradeFiltersExtraCharge,
 		limit.Id,
 	)
 

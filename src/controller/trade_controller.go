@@ -212,6 +212,7 @@ func (t *TradeController) GetTradeStackAction(w http.ResponseWriter, req *http.R
 	}
 
 	stack := t.TradeStack.GetTradeStack(exchange.TradeStackParams{
+		SkipFiltered:    false,
 		SkipLocked:      false,
 		SkipDisabled:    false,
 		BalanceFilter:   false,

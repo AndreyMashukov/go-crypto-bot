@@ -222,6 +222,8 @@ func InitServiceContainer() Container {
 		Ctx:                &ctx,
 		TradeFilterService: &exchange.TradeFilterService{
 			ExchangeTradeInfo: &exchangeRepository,
+			ExchangePriceAPI:  &binance,
+			Formatter:         &formatter,
 		},
 	}
 

@@ -41,6 +41,9 @@ type TradeLimit struct {
 	BuyPriceHistoryCheckPeriod   int64              `json:"buyPriceHistoryCheckPeriod"`   //14,
 	ProfitOptions                ProfitOptions      `json:"profitOptions"`
 	ExtraChargeOptions           ExtraChargeOptions `json:"extraChargeOptions"`
+	TradeFiltersBuy              TradeFilters       `json:"tradeFiltersBuy"`
+	TradeFiltersSell             TradeFilters       `json:"tradeFiltersSell"`
+	TradeFiltersExtraCharge      TradeFilters       `json:"tradeFiltersExtraCharge"`
 }
 
 func (t TradeLimit) GetMinPrice() float64 {

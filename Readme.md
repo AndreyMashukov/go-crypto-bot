@@ -112,7 +112,19 @@ curl --location --request POST 'http://localhost:8090/trade/limit/create?botUuid
                 "percent": -4.50,
                 "amountUsdt": 20.00
             }
-        ]
+        ],
+        "profitOptions": [
+            {
+                "index": 0,
+                "isTriggerOption": false,
+                "optionValue": 30,
+                "optionUnit": "i",
+                "optionPercent": 1.50
+            }
+        ],
+        "tradeFiltersBuy" : [],
+        "tradeFiltersSell": [],
+        "tradeFiltersExtraCharge": []
 }'
 ```
 UPDATING TRADE LIMIT FOR `PERPUSDT`
@@ -148,7 +160,28 @@ curl --location --request PUT 'http://localhost:8090/trade/limit/update?botUuid=
                 "percent": -4.50,
                 "amountUsdt": 20.00
             }
-        ]
+        ],
+        "profitOptions": [
+            {
+                "index": 0,
+                "isTriggerOption": false,
+                "optionValue": 30,
+                "optionUnit": "i",
+                "optionPercent": 1.50
+            }
+        ],
+        "tradeFiltersBuy" : [
+          {
+              "symbol": "BTCUSDT",
+              "parameter": "price",
+              "condition": "lt", // lt|gt|lte|gte|eq|neq
+              "value": "50000.00",
+              "type": "or", // or|and
+              "children": []
+          }
+        ],
+        "tradeFiltersSell": [],
+        "tradeFiltersExtraCharge": []
 }'
 ```
 GETTING TRADE LIMIT LIST `ALL`

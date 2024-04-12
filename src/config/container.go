@@ -220,6 +220,9 @@ func InitServiceContainer() Container {
 		PriceCalculator:    &priceCalculator,
 		RDB:                rdb,
 		Ctx:                &ctx,
+		TradeFilterService: &exchange.TradeFilterService{
+			ExchangeTradeInfo: &exchangeRepository,
+		},
 	}
 
 	orderExecutor := exchange.OrderExecutor{

@@ -385,7 +385,7 @@ func (b *Binance) GetKLinesCached(symbol string, interval string, limit int64) [
 	}
 	encoded, err := json.Marshal(batch)
 	if err == nil {
-		b.RDB.Set(*b.Ctx, cacheKey, string(encoded), time.Minute)
+		b.RDB.Set(*b.Ctx, cacheKey, string(encoded), time.Second*15)
 	}
 
 	return batch.Items

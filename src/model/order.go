@@ -220,6 +220,8 @@ type Position struct {
 	TradeFiltersBuy         TradeFilters          `json:"tradeFiltersBuy"`
 	TradeFiltersSell        TradeFilters          `json:"tradeFiltersSell"`
 	TradeFiltersExtraCharge TradeFilters          `json:"tradeFiltersExtraCharge"`
+	CanSell                 bool                  `json:"canSell"`
+	CanExtraBuy             bool                  `json:"canExtraBuy"`
 }
 
 type PositionCloseStrategy struct {

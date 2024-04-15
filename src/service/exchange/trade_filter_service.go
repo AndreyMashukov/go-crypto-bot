@@ -11,6 +11,7 @@ import (
 type TradeFilterServiceInterface interface {
 	CanBuy(limit model.TradeLimit) bool
 	CanExtraBuy(limit model.TradeLimit) bool
+	CanSell(limit model.TradeLimit) bool
 }
 
 type TradeFilterService struct {
@@ -33,6 +34,14 @@ func (t *TradeFilterService) CanExtraBuy(limit model.TradeLimit) bool {
 	}
 
 	return t.IsFilterMatched(limit.TradeFiltersExtraCharge)
+}
+
+func (t *TradeFilterService) CanSell(limit model.TradeLimit) bool {
+	if len(limit.TradeFiltersSell) == 0 {
+		return true
+	}
+
+	return t.IsFilterMatched(limit.TradeFiltersSell)
 }
 
 func (t *TradeFilterService) IsFilterMatched(filters []model.TradeFilter) bool {

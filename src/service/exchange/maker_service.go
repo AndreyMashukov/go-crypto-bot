@@ -13,6 +13,7 @@ import (
 )
 
 type MakerService struct {
+	TradeFilterService TradeFilterServiceInterface
 	ExchangeApi        client.ExchangeOrderAPIInterface
 	OrderRepository    repository.OrderStorageInterface
 	ExchangeRepository repository.BaseTradeStorageInterface
@@ -222,6 +223,12 @@ func (m *MakerService) ProcessSell(tradeLimit model.TradeLimit, openedOrder mode
 
 	if lastKline == nil {
 		log.Printf("[%s] Last price is unknown... skip!", tradeLimit.Symbol)
+
+		return
+	}
+
+	if !m.TradeFilterService.CanSell(tradeLimit) {
+		log.Printf("[%s] Can't sell, trade filter conditions is not matched", tradeLimit.Symbol)
 
 		return
 	}

@@ -556,3 +556,20 @@ func (o *OrderExecutorMock) CalculateSellQuantity(order model.Order) float64 {
 	args := o.Called(order)
 	return args.Get(0).(float64)
 }
+
+type TradeFilterServiceMock struct {
+	mock.Mock
+}
+
+func (o *TradeFilterServiceMock) CanBuy(limit model.TradeLimit) bool {
+	args := o.Called(limit)
+	return args.Get(0).(bool)
+}
+func (o *TradeFilterServiceMock) CanExtraBuy(limit model.TradeLimit) bool {
+	args := o.Called(limit)
+	return args.Get(0).(bool)
+}
+func (o *TradeFilterServiceMock) CanSell(limit model.TradeLimit) bool {
+	args := o.Called(limit)
+	return args.Get(0).(bool)
+}

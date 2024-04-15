@@ -140,7 +140,10 @@ func TestSellOperation(t *testing.T) {
 	orderExecutor := new(OrderExecutorMock)
 	binance := new(ExchangePriceAPIMock)
 
+	tradeFilterService := new(TradeFilterServiceMock)
+
 	maker := exchange.MakerService{
+		TradeFilterService: tradeFilterService,
 		OrderRepository:    orderRepository,
 		ExchangeRepository: exchangeRepository,
 		BotService:         botService,
@@ -156,6 +159,10 @@ func TestSellOperation(t *testing.T) {
 		HoldScore: 80.00,
 	}
 
+	tradeLimit := model.TradeLimit{
+		Symbol: "BTCUSDT",
+	}
+	tradeFilterService.On("CanSell", tradeLimit).Return(true)
 	strategyFacade.On("Decide", "BTCUSDT").Return(model.FacadeResponse{
 		Hold: 40.00,
 		Sell: 50.00,
@@ -168,9 +175,6 @@ func TestSellOperation(t *testing.T) {
 	}
 	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(order, nil)
 	orderExecutor.On("ProcessSwap", order).Return(false)
-	tradeLimit := model.TradeLimit{
-		Symbol: "BTCUSDT",
-	}
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	kline := model.KLine{
 		Symbol: "BTCUSDT",

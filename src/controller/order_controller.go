@@ -29,6 +29,7 @@ type OrderController struct {
 	ProfitOptionsValidator *validator.ProfitOptionsValidator
 	BotService             service.BotServiceInterface
 	ProfitService          exchange.ProfitServiceInterface
+	TradeFilterService     exchange.TradeFilterServiceInterface
 }
 
 func (o *OrderController) GetOrderTradeListAction(w http.ResponseWriter, req *http.Request) {
@@ -155,6 +156,8 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			TradeFiltersBuy:         limit.TradeFiltersBuy,
 			TradeFiltersSell:        limit.TradeFiltersSell,
 			TradeFiltersExtraCharge: limit.TradeFiltersExtraCharge,
+			CanSell:                 o.TradeFilterService.CanSell(limit),
+			CanExtraBuy:             o.TradeFilterService.CanExtraBuy(limit),
 		})
 	}
 

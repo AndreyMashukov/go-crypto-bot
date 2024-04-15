@@ -148,10 +148,13 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 				MinProfitPercent: o.ProfitService.GetMinProfitPercent(openedOrder),
 				MinClosePrice:    o.ProfitService.GetMinClosePrice(openedOrder, openedOrder.Price),
 			},
-			IsPriceExpired: kLine.IsPriceExpired(),
-			BinanceOrder:   binanceOrder,
-			ManualOrder:    manualOrder,
-			IsEnabled:      limit.IsEnabled,
+			IsPriceExpired:          kLine.IsPriceExpired(),
+			BinanceOrder:            binanceOrder,
+			ManualOrder:             manualOrder,
+			IsEnabled:               limit.IsEnabled,
+			TradeFiltersBuy:         limit.TradeFiltersBuy,
+			TradeFiltersSell:        limit.TradeFiltersSell,
+			TradeFiltersExtraCharge: limit.TradeFiltersExtraCharge,
 		})
 	}
 

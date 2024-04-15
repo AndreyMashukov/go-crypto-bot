@@ -199,24 +199,27 @@ func (o Order) GetSymbol() string {
 }
 
 type Position struct {
-	Symbol            string                `json:"symbol"`
-	KLine             KLine                 `json:"kLine"`
-	Order             Order                 `json:"order"`
-	Percent           Percent               `json:"percent"`
-	SellPrice         float64               `json:"sellPrice"`
-	PredictedPrice    float64               `json:"predictedPrice"`
-	Profit            float64               `json:"profit"`
-	TargetProfit      float64               `json:"targetProfit"`
-	Interpolation     Interpolation         `json:"interpolation"`
-	OrigQty           float64               `json:"origQty"`
-	ExecutedQty       float64               `json:"executedQty"`
-	ManualOrderConfig ManualOrderConfig     `json:"manualOrderConfig"`
-	PositionTime      PositionTime          `json:"positionTime"`
-	CloseStrategy     PositionCloseStrategy `json:"closeStrategy"`
-	IsPriceExpired    bool                  `json:"isPriceExpired"`
-	BinanceOrder      *BinanceOrder         `json:"binanceOrder"`
-	ManualOrder       *ManualOrder          `json:"manualOrder"`
-	IsEnabled         bool                  `json:"isEnabled"`
+	Symbol                  string                `json:"symbol"`
+	KLine                   KLine                 `json:"kLine"`
+	Order                   Order                 `json:"order"`
+	Percent                 Percent               `json:"percent"`
+	SellPrice               float64               `json:"sellPrice"`
+	PredictedPrice          float64               `json:"predictedPrice"`
+	Profit                  float64               `json:"profit"`
+	TargetProfit            float64               `json:"targetProfit"`
+	Interpolation           Interpolation         `json:"interpolation"`
+	OrigQty                 float64               `json:"origQty"`
+	ExecutedQty             float64               `json:"executedQty"`
+	ManualOrderConfig       ManualOrderConfig     `json:"manualOrderConfig"`
+	PositionTime            PositionTime          `json:"positionTime"`
+	CloseStrategy           PositionCloseStrategy `json:"closeStrategy"`
+	IsPriceExpired          bool                  `json:"isPriceExpired"`
+	BinanceOrder            *BinanceOrder         `json:"binanceOrder"`
+	ManualOrder             *ManualOrder          `json:"manualOrder"`
+	IsEnabled               bool                  `json:"isEnabled"`
+	TradeFiltersBuy         TradeFilters          `json:"tradeFiltersBuy"`
+	TradeFiltersSell        TradeFilters          `json:"tradeFiltersSell"`
+	TradeFiltersExtraCharge TradeFilters          `json:"tradeFiltersExtraCharge"`
 }
 
 type PositionCloseStrategy struct {

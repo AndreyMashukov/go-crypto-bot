@@ -210,6 +210,12 @@ func InitServiceContainer() Container {
 		BotService:         &botService,
 	}
 
+	tradeFilterService := exchange.TradeFilterService{
+		ExchangeTradeInfo: &exchangeRepository,
+		ExchangePriceAPI:  &binance,
+		Formatter:         &formatter,
+	}
+
 	tradeStack := exchange.TradeStack{
 		OrderRepository:    &orderRepository,
 		Binance:            &binance,
@@ -220,11 +226,7 @@ func InitServiceContainer() Container {
 		PriceCalculator:    &priceCalculator,
 		RDB:                rdb,
 		Ctx:                &ctx,
-		TradeFilterService: &exchange.TradeFilterService{
-			ExchangeTradeInfo: &exchangeRepository,
-			ExchangePriceAPI:  &binance,
-			Formatter:         &formatter,
-		},
+		TradeFilterService: &tradeFilterService,
 	}
 
 	orderExecutor := exchange.OrderExecutor{
@@ -259,6 +261,7 @@ func InitServiceContainer() Container {
 	}
 
 	makerService := exchange.MakerService{
+		TradeFilterService: &tradeFilterService,
 		ExchangeApi:        &binance,
 		Binance:            &binance,
 		TradeStack:         &tradeStack,
@@ -297,6 +300,7 @@ func InitServiceContainer() Container {
 		ProfitOptionsValidator: &profitOptionsValidator,
 		BotService:             &botService,
 		ProfitService:          &profitService,
+		TradeFilterService:     &tradeFilterService,
 	}
 
 	tradeController := controller.TradeController{

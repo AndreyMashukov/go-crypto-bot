@@ -1442,3 +1442,24 @@ func TestCheckIsTimeToCancelPriceIsMoreThanOrder(t *testing.T) {
 
 	assertion.False(orderExecutor.CheckIsTimeToCancel(limit, &binanceOrder, orderManageChannel, control))
 }
+
+func TestAvgPriceCalculation(t *testing.T) {
+	assertion := assert.New(t)
+
+	opened := model.Order{
+		ExecutedQuantity: 1.00,
+		Price:            100.00,
+	}
+	extra := model.Order{
+		ExecutedQuantity: 1.00,
+		Price:            80.00,
+	}
+
+	orderExecutor := exchange.OrderExecutor{}
+	avgPrice := orderExecutor.GetAvgPrice(opened, extra)
+	assertion.Equal(90.00, avgPrice)
+	opened.Price = avgPrice
+	opened.ExecutedQuantity = 2.00
+	avgPrice = orderExecutor.GetAvgPrice(opened, extra)
+	assertion.Equal(86.66666666666667, avgPrice)
+}

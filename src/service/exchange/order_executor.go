@@ -56,6 +56,11 @@ func (m *OrderExecutor) BuyExtra(tradeLimit model.TradeLimit, order model.Order,
 		return errors.New(fmt.Sprintf("[%s] Price is unknown", tradeLimit.Symbol))
 	}
 
+	refreshOrder, refreshErr := m.OrderRepository.Find(order.Id)
+	if refreshErr == nil {
+		order = refreshOrder
+	}
+
 	if tradeLimit.GetBuyOnFallPercent(order, *lastKline, m.BotService.UseSwapCapital()).Gte(0.00) {
 		return errors.New(fmt.Sprintf("[%s] Extra buy is disabled", tradeLimit.Symbol))
 	}
@@ -133,12 +138,12 @@ func (m *OrderExecutor) BuyExtra(tradeLimit model.TradeLimit, order model.Order,
 	extraOrder.Price = binanceOrder.Price
 	extraOrder.CreatedAt = m.TimeService.GetNowDateTimeString()
 
-	refreshOrder, refreshErr := m.OrderRepository.Find(order.Id)
+	refreshOrder, refreshErr = m.OrderRepository.Find(order.Id)
 	if refreshErr == nil {
 		order = refreshOrder
 	}
 
-	avgPrice := m.getAvgPrice(order, extraOrder)
+	avgPrice := m.GetAvgPrice(order, extraOrder)
 
 	_, err = m.OrderRepository.Create(extraOrder)
 	if err != nil {
@@ -1370,7 +1375,7 @@ func (m *OrderExecutor) findOrCreateOrder(order model.Order, operation string) (
 	return binanceOrder, nil
 }
 
-func (m *OrderExecutor) getAvgPrice(opened model.Order, extra model.Order) float64 {
+func (m *OrderExecutor) GetAvgPrice(opened model.Order, extra model.Order) float64 {
 	return ((opened.ExecutedQuantity * opened.Price) + (extra.ExecutedQuantity * extra.Price)) / (opened.ExecutedQuantity + extra.ExecutedQuantity)
 }
 

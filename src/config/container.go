@@ -119,6 +119,7 @@ func InitServiceContainer() Container {
 		AutoTradeHost: "https://api.autotrade.cloud",
 	}
 
+	formatter := utils.Formatter{}
 	orderRepository := repository.OrderRepository{
 		DB:         db,
 		RDB:        rdb,
@@ -130,6 +131,7 @@ func InitServiceContainer() Container {
 		RDB:        rdb,
 		Ctx:        &ctx,
 		CurrentBot: currentBot,
+		Formatter:  &formatter,
 	}
 	swapRepository := repository.SwapRepository{
 		DB:         swapDb,
@@ -138,7 +140,6 @@ func InitServiceContainer() Container {
 		CurrentBot: currentBot,
 	}
 
-	formatter := utils.Formatter{}
 	chartService := service.ChartService{
 		ExchangeRepository: &exchangeRepository,
 		OrderRepository:    &orderRepository,

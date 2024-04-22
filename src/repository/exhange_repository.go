@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"log"
 	"slices"
 	"strings"
@@ -88,6 +89,7 @@ type ExchangeRepository struct {
 	RDB        *redis.Client
 	Ctx        *context.Context
 	CurrentBot *model.Bot
+	Formatter  *utils.Formatter
 }
 
 func (e *ExchangeRepository) GetSubscribedSymbols() []model.Symbol {
@@ -677,17 +679,58 @@ func (e *ExchangeRepository) GetLastKLine(symbol string) *model.KLine {
 
 func (e *ExchangeRepository) AddKLine(kLine model.KLine) {
 	lastKLines := e.KLineList(kLine.Symbol, false, 200)
-	encoded, _ := json.Marshal(kLine)
+
+	kLines3 := make([]model.KLine, 0)
 
 	for _, lastKline := range lastKLines {
 		if lastKline.Timestamp == kLine.Timestamp {
 			e.RDB.LPop(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id)).Val()
 		}
+
+		if len(kLines3) == 0 {
+			kLines3 = append(kLines3, lastKline)
+		} else if len(kLines3) < 3 && lastKline.Timestamp != kLines3[len(kLines3)-1].Timestamp {
+			kLines3 = append(kLines3, lastKline)
+		}
 	}
+
+	priceChangeSpeed := make([]model.PriceChangeSpeed, 0)
+
+	for _, klineHistory := range kLines3 {
+		priceChangeSpeedValue := e.GetPriceChangeSpeed(kLine, klineHistory)
+		priceChangeSpeed = append(priceChangeSpeed, priceChangeSpeedValue)
+	}
+
+	kLine.PriceChangeSpeed = priceChangeSpeed
+	encoded, _ := json.Marshal(kLine)
 
 	e.RDB.LPush(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id), string(encoded))
 	e.RDB.LTrim(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id), 0, 2880)
 	e.RDB.Set(*e.Ctx, fmt.Sprintf("last-kline-%s-%d", kLine.Symbol, e.CurrentBot.Id), string(encoded), time.Hour)
+}
+
+func (e *ExchangeRepository) GetPriceChangeSpeed(kLine model.KLine, lastKlineOld model.KLine) model.PriceChangeSpeed {
+	priceChangeSpeed := model.PriceChangeSpeed{
+		CloseTime:       lastKlineOld.Timestamp,
+		FromPrice:       lastKlineOld.Close,
+		FromTime:        lastKlineOld.UpdatedAt,
+		ToTime:          kLine.UpdatedAt,
+		ToPrice:         kLine.Close,
+		PointsPerSecond: 0.00,
+	}
+
+	tradeLimit := e.GetTradeLimitCached(kLine.Symbol)
+
+	if tradeLimit != nil && lastKlineOld.UpdatedAt != kLine.UpdatedAt {
+		secondsDiff := float64(kLine.UpdatedAt - lastKlineOld.UpdatedAt)
+		pricePointsDiff := (kLine.Close - lastKlineOld.Close) / tradeLimit.MinPrice
+
+		if pricePointsDiff != 0.00 {
+			priceChangeSpeed.PointsPerSecond = e.Formatter.ToFixed(pricePointsDiff/secondsDiff, 2)
+		}
+	}
+
+	return priceChangeSpeed
 }
 
 func (e *ExchangeRepository) KLineList(symbol string, reverse bool, size int64) []model.KLine {
@@ -801,6 +844,31 @@ func (e *ExchangeRepository) TradeList(symbol string) []model.Trade {
 	}
 
 	return list
+}
+
+func (e *ExchangeRepository) SetTradeLimit(limit model.TradeLimit) {
+	encoded, _ := json.Marshal(limit)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("trade-limit-%s-bot-%d", limit.Symbol, e.CurrentBot.Id), string(encoded), time.Second*60)
+}
+
+func (e *ExchangeRepository) GetTradeLimitCached(symbol string) *model.TradeLimit {
+	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("trade-limit-%s-bot-%d", symbol, e.CurrentBot.Id)).Val()
+	if len(res) == 0 {
+		tradeLimit, err := e.GetTradeLimit(symbol)
+
+		if err == nil {
+			e.SetTradeLimit(tradeLimit)
+
+			return &tradeLimit
+		}
+
+		return nil
+	}
+
+	var dto model.TradeLimit
+	json.Unmarshal([]byte(res), &dto)
+
+	return &dto
 }
 
 func (e *ExchangeRepository) SetDecision(decision model.Decision, symbol string) {

@@ -16,3 +16,6 @@ init-db-dev:
 	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_13.sql
 	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_14.sql
 	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_15.sql
+	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_16.sql
+	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_17.sql
+	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_18.sql

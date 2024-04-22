@@ -157,6 +157,7 @@ func (t *TradeStack) GetTradeStack(params TradeStackParams) []model.TradeStackIt
 				TradeFiltersBuy:         stackItem.TradeFiltersBuy,
 				TradeFiltersSell:        stackItem.TradeFiltersSell,
 				TradeFiltersExtraCharge: stackItem.TradeFiltersExtraCharge,
+				PriceChangeSpeedAvg:     stackItem.PriceChangeSpeedAvg,
 			})
 		} else {
 			impossible = append(impossible, stackItem)
@@ -187,6 +188,7 @@ func (t *TradeStack) GetTradeStack(params TradeStackParams) []model.TradeStackIt
 				TradeFiltersBuy:         stackItem.TradeFiltersBuy,
 				TradeFiltersSell:        stackItem.TradeFiltersSell,
 				TradeFiltersExtraCharge: stackItem.TradeFiltersExtraCharge,
+				PriceChangeSpeedAvg:     stackItem.PriceChangeSpeedAvg,
 			})
 		}
 	}
@@ -214,6 +216,7 @@ func (t *TradeStack) ProcessItem(
 	lastKLine := t.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
 	lastPrice := 0.00
 	isPriceValid := false
+	priceChangeSpeedAvg := 0.00
 
 	if lastKLine != nil && !lastKLine.IsPriceExpired() {
 		isPriceValid = true
@@ -221,6 +224,7 @@ func (t *TradeStack) ProcessItem(
 
 	if lastKLine != nil {
 		lastPrice = lastKLine.Close
+		priceChangeSpeedAvg = t.Formatter.ToFixed(lastKLine.GetPriceChangeSpeedAvg(), 2)
 	}
 
 	if !isPriceValid && params.WithValidPrice {
@@ -255,7 +259,7 @@ func (t *TradeStack) ProcessItem(
 
 	if binanceOrder != nil {
 		buyPrice = binanceOrder.Price
-	} else {
+	} else if lastKLine != nil {
 		if !lastKLine.IsPriceExpired() {
 			buyPrice = t.GetBuyPriceCached(tradeLimit)
 		}
@@ -288,6 +292,7 @@ func (t *TradeStack) ProcessItem(
 					TradeFiltersBuy:         tradeLimit.TradeFiltersBuy,
 					TradeFiltersSell:        tradeLimit.TradeFiltersSell,
 					TradeFiltersExtraCharge: tradeLimit.TradeFiltersExtraCharge,
+					PriceChangeSpeedAvg:     priceChangeSpeedAvg,
 				}
 			}
 		}
@@ -317,6 +322,7 @@ func (t *TradeStack) ProcessItem(
 			TradeFiltersBuy:         tradeLimit.TradeFiltersBuy,
 			TradeFiltersSell:        tradeLimit.TradeFiltersSell,
 			TradeFiltersExtraCharge: tradeLimit.TradeFiltersExtraCharge,
+			PriceChangeSpeedAvg:     priceChangeSpeedAvg,
 		}
 	}
 

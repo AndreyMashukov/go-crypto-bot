@@ -20,4 +20,5 @@ type TradeStackItem struct {
 	TradeFiltersBuy         TradeFilters  `json:"tradeFiltersBuy"`
 	TradeFiltersSell        TradeFilters  `json:"tradeFiltersSell"`
 	TradeFiltersExtraCharge TradeFilters  `json:"tradeFiltersExtraCharge"`
+	PriceChangeSpeedAvg     float64       `json:"priceChangeSpeedAvg"`
 }

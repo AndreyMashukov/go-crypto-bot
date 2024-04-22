@@ -158,6 +158,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			TradeFiltersExtraCharge: limit.TradeFiltersExtraCharge,
 			CanSell:                 o.TradeFilterService.CanSell(limit),
 			CanExtraBuy:             o.TradeFilterService.CanExtraBuy(limit),
+			PriceChangeSpeedAvg:     kLine.GetPriceChangeSpeedAvg(),
 		})
 	}
 

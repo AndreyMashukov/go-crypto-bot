@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"slices"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 type ChartService struct {
 	ExchangeRepository *repository.ExchangeRepository
 	OrderRepository    *repository.OrderRepository
+	Formatter          *utils.Formatter
 }
 
 type ChartResult struct {
@@ -94,6 +96,10 @@ func (e *ChartService) processSymbol(symbol string, orderMap map[string][]model.
 			XAxis: kLine.Timestamp,
 			YAxis: kLinePredict,
 		}
+		kLineAvgChangeSpeedPoint := model.ChartPoint{
+			XAxis: kLine.Timestamp,
+			YAxis: e.Formatter.ToFixed(kLine.GetPriceChangeSpeedAvg(), 2),
+		}
 		interpolationBtcPoint := model.ChartPoint{
 			XAxis: kLine.Timestamp,
 			YAxis: interpolation.BtcInterpolationUsdt,
@@ -139,7 +145,7 @@ func (e *ChartService) processSymbol(symbol string, orderMap map[string][]model.
 		}
 
 		openedBuyOrder, err := e.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
-		if err == nil {
+		if err == nil && openedBuyOrder.IsOpened() {
 			date, _ := time.Parse("2006-01-02 15:04:05", openedBuyOrder.CreatedAt)
 			openedOrderTimestamp := date.UnixMilli() // convert date to timestamp
 			if openedOrderTimestamp <= kLine.Timestamp {
@@ -148,16 +154,17 @@ func (e *ChartService) processSymbol(symbol string, orderMap map[string][]model.
 		}
 
 		binanceBuyOrder := e.OrderRepository.GetBinanceOrder(symbol, "BUY")
-		if binanceBuyOrder != nil {
+		if binanceBuyOrder != nil && (binanceBuyOrder.IsNew() || binanceBuyOrder.IsPartiallyFilled()) {
 			buyPendingPoint.YAxis = binanceBuyOrder.Price
 		}
 
 		binanceSellOrder := e.OrderRepository.GetBinanceOrder(symbol, "SELL")
-		if binanceSellOrder != nil {
+		if binanceSellOrder != nil && (binanceSellOrder.IsNew() || binanceSellOrder.IsPartiallyFilled()) {
 			sellPendingPoint.YAxis = binanceSellOrder.Price
 		}
 
 		klineKey := fmt.Sprintf("kline-%s", symbol)
+		klineAvgChangeSpeedKey := fmt.Sprintf("avg-change-speed-%s", symbol)
 		klinePredictKey := fmt.Sprintf("predict-%s", symbol)
 		interpolationBtcKey := fmt.Sprintf("interpolation-btc-%s", symbol)
 		interpolationEthKey := fmt.Sprintf("interpolation-eth-%s", symbol)
@@ -175,6 +182,7 @@ func (e *ChartService) processSymbol(symbol string, orderMap map[string][]model.
 		list[orderBuyPendingKey] = append(list[orderBuyPendingKey], buyPendingPoint)
 		list[orderSellPendingKey] = append(list[orderSellPendingKey], sellPendingPoint)
 		list[openedOrderBuyKey] = append(list[openedOrderBuyKey], openedBuyPoint)
+		list[klineAvgChangeSpeedKey] = append(list[klineAvgChangeSpeedKey], kLineAvgChangeSpeedPoint)
 	}
 
 	return list

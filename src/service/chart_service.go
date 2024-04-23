@@ -81,9 +81,11 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 	symbolOrders := orderMap[symbol]
 	kLines := e.ExchangeRepository.KLineList(symbol, true, 200)
 
+	tradeLimit := e.ExchangeRepository.GetTradeLimitCached(symbol)
+
 	for kLineIndex, kLine := range kLines {
 		klinePoint := model.FinancialPoint{
-			XAxis: kLine.Timestamp,
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			High:  kLine.High,
 			Close: kLine.Close,
 			Open:  kLine.Open,
@@ -105,70 +107,68 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		capitalizationPrice := 0.00
 		capitalizationValue := e.ExchangeRepository.GetCapitalization(kLine.Symbol, kLine.Timestamp)
 		if capitalizationValue != nil {
-			tradeLimit := e.ExchangeRepository.GetTradeLimitCached(symbol)
-
 			capitalization = e.Formatter.ToFixed(capitalizationValue.Capitalization, 2)
 			capitalizationPrice = e.Formatter.FormatPrice(tradeLimit, capitalizationValue.Price)
 		}
 
 		capitalizationValuePoint := model.ChartPoint{
-			XAxis: kLine.Timestamp,
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: capitalization,
 		}
 		capitalizationPricePoint := model.ChartPoint{
-			XAxis: kLine.Timestamp,
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: capitalizationPrice,
 		}
 		tradeVolumeSell := model.ChartPoint{
-			XAxis: kLine.Timestamp,
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: tradeVolumeSellVal,
 		}
 		tradeVolumeBuy := model.ChartPoint{
-			XAxis: kLine.Timestamp,
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: tradeVolumeBuyVal,
 		}
 		kLinePredictPoint := model.ChartPoint{
-			XAxis: kLine.Timestamp,
-			YAxis: kLinePredict,
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
+			YAxis: e.Formatter.FormatPrice(tradeLimit, kLinePredict),
 		}
 		kLineAvgChangeSpeedPoint := model.ChartPoint{
-			XAxis: kLine.Timestamp,
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: e.Formatter.ToFixed(kLine.GetPriceChangeSpeedAvg(), 2),
 		}
 		kLineMinChangeSpeedPoint := model.ChartPoint{
-			XAxis: kLine.Timestamp,
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: e.Formatter.ToFixed(kLine.GetPriceChangeSpeedMin(), 2),
 		}
 		kLineMaxChangeSpeedPoint := model.ChartPoint{
-			XAxis: kLine.Timestamp,
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: e.Formatter.ToFixed(kLine.GetPriceChangeSpeedMax(), 2),
 		}
 		interpolationBtcPoint := model.ChartPoint{
-			XAxis: kLine.Timestamp,
-			YAxis: interpolation.BtcInterpolationUsdt,
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
+			YAxis: e.Formatter.FormatPrice(tradeLimit, interpolation.BtcInterpolationUsdt),
 		}
 		interpolationEthPoint := model.ChartPoint{
-			XAxis: kLine.Timestamp,
-			YAxis: interpolation.EthInterpolationUsdt,
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
+			YAxis: e.Formatter.FormatPrice(tradeLimit, interpolation.EthInterpolationUsdt),
 		}
 		openedBuyPoint := model.ChartPoint{
-			XAxis: kLine.Timestamp,
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: 0,
 		}
 		sellPoint := model.ChartPoint{
-			XAxis: kLine.Timestamp,
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: 0,
 		}
 		buyPoint := model.ChartPoint{
-			XAxis: kLine.Timestamp,
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: 0,
 		}
 		sellPendingPoint := model.ChartPoint{
-			XAxis: kLine.Timestamp,
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: 0,
 		}
 		buyPendingPoint := model.ChartPoint{
-			XAxis: kLine.Timestamp,
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: 0,
 		}
 
@@ -178,7 +178,7 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 			date, _ := time.Parse("2006-01-02 15:04:05", symbolOrder.CreatedAt)
 			orderTimestamp := date.UnixMilli() // convert date to timestamp
 
-			if orderTimestamp >= kLine.Timestamp && len(kLines) > kLineIndex+1 && orderTimestamp < kLines[kLineIndex+1].Timestamp {
+			if orderTimestamp >= kLine.Timestamp.GetPeriodToMinute() && len(kLines) > kLineIndex+1 && orderTimestamp < kLines[kLineIndex+1].Timestamp.Value() {
 				if strings.ToUpper(symbolOrder.Operation) == "BUY" {
 					buyPoint.YAxis = symbolOrder.Price
 				} else {
@@ -191,7 +191,7 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		if err == nil && openedBuyOrder.IsOpened() {
 			date, _ := time.Parse("2006-01-02 15:04:05", openedBuyOrder.CreatedAt)
 			openedOrderTimestamp := date.UnixMilli() // convert date to timestamp
-			if openedOrderTimestamp <= kLine.Timestamp {
+			if openedOrderTimestamp <= kLine.Timestamp.GetPeriodToMinute() {
 				openedBuyPoint.YAxis = openedBuyOrder.Price
 			}
 		}

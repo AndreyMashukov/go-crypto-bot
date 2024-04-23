@@ -6,12 +6,12 @@ import (
 )
 
 type PriceChangeSpeed struct {
-	CloseTime       int64   `json:"closeTime"`
-	FromPrice       float64 `json:"fromPrice"`
-	ToPrice         float64 `json:"toPrice"`
-	FromTime        int64   `json:"fromTime"`
-	ToTime          int64   `json:"ToTime"`
-	PointsPerSecond float64 `json:"pointsPerSecond"`
+	CloseTime       TimestampMilli `json:"closeTime"`
+	FromPrice       float64        `json:"fromPrice"`
+	ToPrice         float64        `json:"toPrice"`
+	FromTime        TimestampMilli `json:"fromTime"`
+	ToTime          TimestampMilli `json:"ToTime"`
+	PointsPerSecond float64        `json:"pointsPerSecond"`
 }
 
 type KLine struct {
@@ -21,8 +21,8 @@ type KLine struct {
 	Low                 float64            `json:"l,string"`
 	High                float64            `json:"h,string"`
 	Interval            string             `json:"i"`
-	Timestamp           int64              `json:"T,int"`
-	OpenTime            int64              `json:"t,int"`
+	Timestamp           TimestampMilli     `json:"T,int"`
+	OpenTime            TimestampMilli     `json:"t,int"`
 	Volume              float64            `json:"v,string"`
 	UpdatedAt           int64              `json:"updatedAt"`
 	PriceChangeSpeed    []PriceChangeSpeed `json:"priceChangeSpeed"`

@@ -71,7 +71,7 @@ type ExchangeRepositoryInterface interface {
 	GetDecision(strategy string, symbol string) *model.Decision
 	GetDecisions(symbol string) []model.Decision
 	GetInterpolation(kLine model.KLine) (model.Interpolation, error)
-	GetCapitalization(symbol string, timestamp int64) *model.MCObject
+	GetCapitalization(symbol string, timestamp model.TimestampMilli) *model.MCObject
 }
 
 type ExchangePriceStorageInterface interface {
@@ -730,8 +730,8 @@ func (e *ExchangeRepository) GetPriceChangeSpeed(kLine model.KLine, lastKlineOld
 	priceChangeSpeed := model.PriceChangeSpeed{
 		CloseTime:       lastKlineOld.Timestamp,
 		FromPrice:       lastKlineOld.Close,
-		FromTime:        lastKlineOld.UpdatedAt,
-		ToTime:          kLine.UpdatedAt,
+		FromTime:        model.TimestampMilli(lastKlineOld.UpdatedAt * 1000),
+		ToTime:          model.TimestampMilli(kLine.UpdatedAt * 1000),
 		ToPrice:         kLine.Close,
 		PointsPerSecond: 0.00,
 	}
@@ -818,7 +818,7 @@ func (e *ExchangeRepository) GetTradeVolumes(kLine model.KLine) (float64, float6
 	sellVolume := 0.00
 
 	for _, trade := range e.TradeList(kLine.Symbol) {
-		if trade.Timestamp >= (time.Now().UnixMilli() - 60000) {
+		if trade.Timestamp.Value() >= (time.Now().UnixMilli() - 60000) {
 			if trade.GetOperation() == "BUY" {
 				buyVolume += trade.Price * trade.Quantity
 			} else {
@@ -836,17 +836,15 @@ func (e *ExchangeRepository) GetTradeVolumes(kLine model.KLine) (float64, float6
 func (e *ExchangeRepository) AddTrade(trade model.Trade) {
 	tradeCacheKey := fmt.Sprintf("trades-%s-%d", trade.Symbol, e.CurrentBot.Id)
 
-	minuteUnixTimeFrom := e.Formatter.Floor(float64(trade.Timestamp)/10000) * 10000
-	minuteUnixTimeTo := minuteUnixTimeFrom + 9999
-	tradeVolume := e.GetTradeVolume(trade.Symbol, minuteUnixTimeTo)
+	tradeVolume := e.GetTradeVolume(trade.Symbol, trade.Timestamp)
 	if trade.IsSell() {
 		tradeVolume.SellQty += trade.Quantity
 	}
 	if trade.IsBuy() {
 		tradeVolume.BuyQty += trade.Quantity
 	}
-	tradeVolume.PeriodFrom = minuteUnixTimeFrom
-	tradeVolume.PeriodTo = minuteUnixTimeTo
+	tradeVolume.PeriodFrom = model.TimestampMilli(trade.Timestamp.GetPeriodFromMinute())
+	tradeVolume.PeriodTo = model.TimestampMilli(trade.Timestamp.GetPeriodToMinute())
 	e.SetTradeVolume(tradeVolume)
 
 	lastTrades := e.TradeList(trade.Symbol)
@@ -950,7 +948,7 @@ func (e *ExchangeRepository) SavePredict(predicted float64, symbol string) {
 func (e *ExchangeRepository) GetKLinePredict(kLine model.KLine) (float64, error) {
 	var predictedPrice float64
 
-	predictedPriceCacheKey := fmt.Sprintf("%s-%d", e.getPredictedCacheKey(kLine.Symbol), kLine.Timestamp)
+	predictedPriceCacheKey := fmt.Sprintf("%s-%d", e.getPredictedCacheKey(kLine.Symbol), kLine.Timestamp.GetPeriodToMinute())
 	predictedPriceCached := e.RDB.Get(*e.Ctx, predictedPriceCacheKey).Val()
 
 	if len(predictedPriceCached) > 0 {
@@ -962,7 +960,7 @@ func (e *ExchangeRepository) GetKLinePredict(kLine model.KLine) (float64, error)
 }
 
 func (e *ExchangeRepository) SaveKLinePredict(predicted float64, kLine model.KLine) {
-	predictedPriceCacheKey := fmt.Sprintf("%s-%d", e.getPredictedCacheKey(kLine.Symbol), kLine.Timestamp)
+	predictedPriceCacheKey := fmt.Sprintf("%s-%d", e.getPredictedCacheKey(kLine.Symbol), kLine.Timestamp.GetPeriodToMinute())
 
 	encoded, _ := json.Marshal(predicted)
 	e.RDB.Set(*e.Ctx, predictedPriceCacheKey, string(encoded), time.Minute*600)
@@ -974,7 +972,7 @@ func (e *ExchangeRepository) getInterpolationCacheKey(symbol string) string {
 func (e *ExchangeRepository) GetInterpolation(kLine model.KLine) (model.Interpolation, error) {
 	var interpolation model.Interpolation
 
-	cacheKey := fmt.Sprintf("%s-%d", e.getInterpolationCacheKey(kLine.Symbol), kLine.Timestamp)
+	cacheKey := fmt.Sprintf("%s-%d", e.getInterpolationCacheKey(kLine.Symbol), kLine.Timestamp.GetPeriodToMinute())
 	interpolationCached := e.RDB.Get(*e.Ctx, cacheKey).Val()
 
 	if len(interpolationCached) > 0 {
@@ -990,7 +988,7 @@ func (e *ExchangeRepository) GetInterpolation(kLine model.KLine) (model.Interpol
 }
 
 func (e *ExchangeRepository) SaveInterpolation(interpolation model.Interpolation, kLine model.KLine) {
-	cacheKey := fmt.Sprintf("%s-%d", e.getInterpolationCacheKey(kLine.Symbol), kLine.Timestamp)
+	cacheKey := fmt.Sprintf("%s-%d", e.getInterpolationCacheKey(kLine.Symbol), kLine.Timestamp.GetPeriodToMinute())
 
 	encoded, _ := json.Marshal(interpolation)
 	e.RDB.Set(*e.Ctx, cacheKey, string(encoded), time.Minute*600)
@@ -1021,11 +1019,11 @@ func (e *ExchangeRepository) GetDecisions(symbol string) []model.Decision {
 
 func (e *ExchangeRepository) SetTradeVolume(volume model.TradeVolume) {
 	encoded, _ := json.Marshal(volume)
-	e.RDB.Set(*e.Ctx, fmt.Sprintf("trade-volume-%s-%d-bot-%d", strings.ToUpper(volume.Symbol), volume.Timestamp, e.CurrentBot.Id), string(encoded), time.Minute*400)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("trade-volume-%s-%d-bot-%d", strings.ToUpper(volume.Symbol), volume.Timestamp.GetPeriodToMinute(), e.CurrentBot.Id), string(encoded), time.Minute*400)
 }
 
-func (e *ExchangeRepository) GetTradeVolume(symbol string, timestamp int64) model.TradeVolume {
-	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("trade-volume-%s-%d-bot-%d", strings.ToUpper(symbol), timestamp, e.CurrentBot.Id)).Val()
+func (e *ExchangeRepository) GetTradeVolume(symbol string, timestamp model.TimestampMilli) model.TradeVolume {
+	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("trade-volume-%s-%d-bot-%d", strings.ToUpper(symbol), timestamp.GetPeriodToMinute(), e.CurrentBot.Id)).Val()
 	if len(res) == 0 {
 		return model.TradeVolume{
 			Symbol:     symbol,
@@ -1056,11 +1054,11 @@ func (e *ExchangeRepository) GetTradeVolume(symbol string, timestamp int64) mode
 
 func (e *ExchangeRepository) SetCapitalization(event model.MCEvent) {
 	encoded, _ := json.Marshal(event.Data)
-	e.RDB.Set(*e.Ctx, fmt.Sprintf("capitalization-%s-%d", strings.ToUpper(event.Data.Symbol()), event.Timestamp.GetPeriodTo()), string(encoded), time.Minute*400)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("capitalization-%s-%d", strings.ToUpper(event.Data.Symbol()), event.Timestamp.GetPeriodToMinute()), string(encoded), time.Minute*400)
 }
 
-func (e *ExchangeRepository) GetCapitalization(symbol string, timestamp int64) *model.MCObject {
-	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("capitalization-%s-%d", strings.ToUpper(symbol), timestamp)).Val()
+func (e *ExchangeRepository) GetCapitalization(symbol string, timestamp model.TimestampMilli) *model.MCObject {
+	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("capitalization-%s-%d", strings.ToUpper(symbol), timestamp.GetPeriodToMinute())).Val()
 	if len(res) == 0 {
 		return nil
 	}

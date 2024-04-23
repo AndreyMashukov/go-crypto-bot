@@ -683,6 +683,7 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
 	kLines3 := make([]model.KLine, 0)
 	priceChangeSpeed := make([]model.PriceChangeSpeed, 0)
 
+	// todo: history update does not work, check timestamp
 	for _, lastKline := range lastKLines {
 		if lastKline.Timestamp == kLine.Timestamp {
 			e.RDB.LPop(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id)).Val()
@@ -697,6 +698,8 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
 			kLines3 = append(kLines3, lastKline)
 		}
 	}
+
+	// todo: event on new kline received and fulfill previous kline data (finalize)
 
 	if !recoverMode {
 		for idx, klineHistory := range kLines3 {
@@ -1017,11 +1020,11 @@ func (e *ExchangeRepository) GetDecisions(symbol string) []model.Decision {
 
 func (e *ExchangeRepository) SetTradeVolume(volume model.TradeVolume) {
 	encoded, _ := json.Marshal(volume)
-	e.RDB.Set(*e.Ctx, fmt.Sprintf("trade-volume-%s-%d-bot-%d", volume.Symbol, volume.Timestamp, e.CurrentBot.Id), string(encoded), time.Minute*200)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("trade-volume-%s-%d-bot-%d", strings.ToUpper(volume.Symbol), volume.Timestamp, e.CurrentBot.Id), string(encoded), time.Minute*200)
 }
 
 func (e *ExchangeRepository) GetTradeVolume(symbol string, timestamp int64) model.TradeVolume {
-	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("trade-volume-%s-%d-bot-%d", symbol, timestamp, e.CurrentBot.Id)).Val()
+	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("trade-volume-%s-%d-bot-%d", strings.ToUpper(symbol), timestamp, e.CurrentBot.Id)).Val()
 	if len(res) == 0 {
 		return model.TradeVolume{
 			Symbol:     symbol,

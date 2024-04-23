@@ -50,7 +50,7 @@ func (e *ChartService) GetCharts(symbolFilter []string) []map[string][]any {
 		go func(symbol string, orderMap map[string][]model.Order) {
 			resultChannel <- ChartResult{
 				Symbol: symbol,
-				Charts: e.processSymbol(symbol, orderMap),
+				Charts: e.ProcessSymbol(symbol, orderMap),
 			}
 		}(symbol, orderMap)
 	}
@@ -76,7 +76,7 @@ func (e *ChartService) GetCharts(symbolFilter []string) []map[string][]any {
 	return charts
 }
 
-func (e *ChartService) processSymbol(symbol string, orderMap map[string][]model.Order) map[string][]any {
+func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.Order) map[string][]any {
 	list := make(map[string][]any, 0)
 	symbolOrders := orderMap[symbol]
 	kLines := e.ExchangeRepository.KLineList(symbol, true, 200)
@@ -99,6 +99,14 @@ func (e *ChartService) processSymbol(symbol string, orderMap map[string][]model.
 		kLineAvgChangeSpeedPoint := model.ChartPoint{
 			XAxis: kLine.Timestamp,
 			YAxis: e.Formatter.ToFixed(kLine.GetPriceChangeSpeedAvg(), 2),
+		}
+		kLineMinChangeSpeedPoint := model.ChartPoint{
+			XAxis: kLine.Timestamp,
+			YAxis: e.Formatter.ToFixed(kLine.GetPriceChangeSpeedMin(), 2),
+		}
+		kLineMaxChangeSpeedPoint := model.ChartPoint{
+			XAxis: kLine.Timestamp,
+			YAxis: e.Formatter.ToFixed(kLine.GetPriceChangeSpeedMax(), 2),
 		}
 		interpolationBtcPoint := model.ChartPoint{
 			XAxis: kLine.Timestamp,
@@ -165,6 +173,8 @@ func (e *ChartService) processSymbol(symbol string, orderMap map[string][]model.
 
 		klineKey := fmt.Sprintf("kline-%s", symbol)
 		klineAvgChangeSpeedKey := fmt.Sprintf("avg-change-speed-%s", symbol)
+		klineMinChangeSpeedKey := fmt.Sprintf("min-change-speed-%s", symbol)
+		klineMaxChangeSpeedKey := fmt.Sprintf("max-change-speed-%s", symbol)
 		klinePredictKey := fmt.Sprintf("predict-%s", symbol)
 		interpolationBtcKey := fmt.Sprintf("interpolation-btc-%s", symbol)
 		interpolationEthKey := fmt.Sprintf("interpolation-eth-%s", symbol)
@@ -183,6 +193,8 @@ func (e *ChartService) processSymbol(symbol string, orderMap map[string][]model.
 		list[orderSellPendingKey] = append(list[orderSellPendingKey], sellPendingPoint)
 		list[openedOrderBuyKey] = append(list[openedOrderBuyKey], openedBuyPoint)
 		list[klineAvgChangeSpeedKey] = append(list[klineAvgChangeSpeedKey], kLineAvgChangeSpeedPoint)
+		list[klineMinChangeSpeedKey] = append(list[klineMinChangeSpeedKey], kLineMinChangeSpeedPoint)
+		list[klineMaxChangeSpeedKey] = append(list[klineMaxChangeSpeedKey], kLineMaxChangeSpeedPoint)
 	}
 
 	return list

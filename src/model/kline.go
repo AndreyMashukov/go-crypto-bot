@@ -15,17 +15,35 @@ type PriceChangeSpeed struct {
 }
 
 type KLine struct {
-	Symbol           string             `json:"s"`
-	Open             float64            `json:"o,string"`
-	Close            float64            `json:"c,string"`
-	Low              float64            `json:"l,string"`
-	High             float64            `json:"h,string"`
-	Interval         string             `json:"i"`
-	Timestamp        int64              `json:"T,int"`
-	OpenTime         int64              `json:"t,int"`
-	Volume           float64            `json:"v,string"`
-	UpdatedAt        int64              `json:"updatedAt"`
-	PriceChangeSpeed []PriceChangeSpeed `json:"priceChangeSpeed"`
+	Symbol              string             `json:"s"`
+	Open                float64            `json:"o,string"`
+	Close               float64            `json:"c,string"`
+	Low                 float64            `json:"l,string"`
+	High                float64            `json:"h,string"`
+	Interval            string             `json:"i"`
+	Timestamp           int64              `json:"T,int"`
+	OpenTime            int64              `json:"t,int"`
+	Volume              float64            `json:"v,string"`
+	UpdatedAt           int64              `json:"updatedAt"`
+	PriceChangeSpeed    []PriceChangeSpeed `json:"priceChangeSpeed"`
+	PriceChangeSpeedMax *float64           `json:"priceChangeSpeedMax"`
+	PriceChangeSpeedMin *float64           `json:"priceChangeSpeedMin"`
+}
+
+func (k *KLine) GetPriceChangeSpeedMax() float64 {
+	if k.PriceChangeSpeedMax != nil {
+		return *k.PriceChangeSpeedMax
+	}
+
+	return 0.00
+}
+
+func (k *KLine) GetPriceChangeSpeedMin() float64 {
+	if k.PriceChangeSpeedMin != nil {
+		return *k.PriceChangeSpeedMin
+	}
+
+	return 0.00
 }
 
 func (k *KLine) GetPriceChangeSpeed() []PriceChangeSpeed {

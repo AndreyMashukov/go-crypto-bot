@@ -223,18 +223,18 @@ type AccountStatusResponse struct {
 }
 
 type KLineHistory struct {
-	OpenTime                 int64  `json:"openTime"`
-	Open                     string `json:"open"`
-	High                     string `json:"high"`
-	Low                      string `json:"low"`
-	Close                    string `json:"close"`
-	Volume                   string `json:"volume"`
-	CloseTime                int64  `json:"closeTime"`
-	QuoteAssetVolume         string `json:"quoteAssetVolume"`
-	TradesNumber             int64  `json:"tradesNumber"`
-	TakerBuyBaseAssetVolume  string `json:"takerBuyBaseAssetVolume"`
-	TakerBuyQuoteAssetVolume string `json:"TakerBuyQuoteAssetVolume"`
-	UnusedField              string `json:"_"`
+	OpenTime                 TimestampMilli `json:"openTime"`
+	Open                     string         `json:"open"`
+	High                     string         `json:"high"`
+	Low                      string         `json:"low"`
+	Close                    string         `json:"close"`
+	Volume                   string         `json:"volume"`
+	CloseTime                TimestampMilli `json:"closeTime"`
+	QuoteAssetVolume         string         `json:"quoteAssetVolume"`
+	TradesNumber             int64          `json:"tradesNumber"`
+	TakerBuyBaseAssetVolume  string         `json:"takerBuyBaseAssetVolume"`
+	TakerBuyQuoteAssetVolume string         `json:"TakerBuyQuoteAssetVolume"`
+	UnusedField              string         `json:"_"`
 }
 
 func (k *KLineHistory) ToKLine(symbol string) KLine {
@@ -253,7 +253,7 @@ func (k *KLineHistory) ToKLine(symbol string) KLine {
 		Interval:  "1m",
 		Timestamp: k.CloseTime,
 		Volume:    volume,
-		UpdatedAt: k.CloseTime / 1000,
+		UpdatedAt: k.CloseTime.GetPeriodToMinute() / 1000,
 	}
 }
 
@@ -346,8 +346,8 @@ type BinanceTickersPriceResponse struct {
 }
 
 type MCEvent struct {
-	Data      MCObject  `json:"d"`
-	Timestamp Timestamp `json:"t,string"`
+	Data      MCObject       `json:"d"`
+	Timestamp TimestampMilli `json:"t,string"`
 }
 
 type MCObject struct {

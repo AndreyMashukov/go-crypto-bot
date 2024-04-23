@@ -685,6 +685,8 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine) {
 	for _, lastKline := range lastKLines {
 		if lastKline.Timestamp == kLine.Timestamp {
 			e.RDB.LPop(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id)).Val()
+			kLine.PriceChangeSpeedMin = lastKline.PriceChangeSpeedMin
+			kLine.PriceChangeSpeedMax = lastKline.PriceChangeSpeedMax
 		}
 
 		if len(kLines3) == 0 {

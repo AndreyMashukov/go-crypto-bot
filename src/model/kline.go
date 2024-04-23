@@ -28,6 +28,23 @@ type KLine struct {
 	PriceChangeSpeed    []PriceChangeSpeed `json:"priceChangeSpeed"`
 	PriceChangeSpeedMax *float64           `json:"priceChangeSpeedMax"`
 	PriceChangeSpeedMin *float64           `json:"priceChangeSpeedMin"`
+	TradeVolume         *TradeVolume       `json:"tradeVolume"`
+}
+
+func (k *KLine) GetTradeVolumeSell() float64 {
+	if k.TradeVolume != nil {
+		return k.TradeVolume.SellQty
+	}
+
+	return 0.00
+}
+
+func (k *KLine) GetTradeVolumeBuy() float64 {
+	if k.TradeVolume != nil {
+		return k.TradeVolume.BuyQty
+	}
+
+	return 0.00
 }
 
 func (k *KLine) GetPriceChangeSpeedMax() float64 {

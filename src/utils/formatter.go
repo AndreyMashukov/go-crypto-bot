@@ -63,3 +63,7 @@ func (m *Formatter) ToFixed(num float64, precision int) float64 {
 	output := math.Pow(10, float64(precision))
 	return float64(m.Round(num*output)) / output
 }
+
+func (m *Formatter) Floor(num float64) int64 {
+	return int64(math.Floor(num))
+}

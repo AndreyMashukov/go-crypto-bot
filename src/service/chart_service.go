@@ -92,6 +92,14 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		kLinePredict, _ := e.ExchangeRepository.GetKLinePredict(kLine)
 		interpolation, _ := e.ExchangeRepository.GetInterpolation(kLine)
 
+		tradeVolumeSell := model.ChartPoint{
+			XAxis: kLine.Timestamp,
+			YAxis: kLine.GetTradeVolumeSell(),
+		}
+		tradeVolumeBuy := model.ChartPoint{
+			XAxis: kLine.Timestamp,
+			YAxis: kLine.GetTradeVolumeBuy(),
+		}
 		kLinePredictPoint := model.ChartPoint{
 			XAxis: kLine.Timestamp,
 			YAxis: kLinePredict,
@@ -172,6 +180,8 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		}
 
 		klineKey := fmt.Sprintf("kline-%s", symbol)
+		klineTradeVolumeBuyKey := fmt.Sprintf("trade-volume-buy-%s", symbol)
+		klineTradeVolumeSellKey := fmt.Sprintf("trade-volume-sell-%s", symbol)
 		klineAvgChangeSpeedKey := fmt.Sprintf("avg-change-speed-%s", symbol)
 		klineMinChangeSpeedKey := fmt.Sprintf("min-change-speed-%s", symbol)
 		klineMaxChangeSpeedKey := fmt.Sprintf("max-change-speed-%s", symbol)
@@ -195,6 +205,8 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		list[klineAvgChangeSpeedKey] = append(list[klineAvgChangeSpeedKey], kLineAvgChangeSpeedPoint)
 		list[klineMinChangeSpeedKey] = append(list[klineMinChangeSpeedKey], kLineMinChangeSpeedPoint)
 		list[klineMaxChangeSpeedKey] = append(list[klineMaxChangeSpeedKey], kLineMaxChangeSpeedPoint)
+		list[klineTradeVolumeBuyKey] = append(list[klineTradeVolumeBuyKey], tradeVolumeBuy)
+		list[klineTradeVolumeSellKey] = append(list[klineTradeVolumeSellKey], tradeVolumeSell)
 	}
 
 	return list

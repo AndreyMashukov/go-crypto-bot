@@ -677,16 +677,18 @@ func (e *ExchangeRepository) GetLastKLine(symbol string) *model.KLine {
 	return nil
 }
 
-func (e *ExchangeRepository) AddKLine(kLine model.KLine) {
+func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
 	lastKLines := e.KLineList(kLine.Symbol, false, 200)
 
 	kLines3 := make([]model.KLine, 0)
+	priceChangeSpeed := make([]model.PriceChangeSpeed, 0)
 
 	for _, lastKline := range lastKLines {
 		if lastKline.Timestamp == kLine.Timestamp {
 			e.RDB.LPop(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id)).Val()
 			kLine.PriceChangeSpeedMin = lastKline.PriceChangeSpeedMin
 			kLine.PriceChangeSpeedMax = lastKline.PriceChangeSpeedMax
+			priceChangeSpeed = lastKline.GetPriceChangeSpeed()
 		}
 
 		if len(kLines3) == 0 {
@@ -696,17 +698,17 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine) {
 		}
 	}
 
-	priceChangeSpeed := make([]model.PriceChangeSpeed, 0)
-
-	for idx, klineHistory := range kLines3 {
-		priceChangeSpeedValue := e.GetPriceChangeSpeed(kLine, klineHistory)
-		if idx == 0 && kLine.GetPriceChangeSpeedMax() < priceChangeSpeedValue.PointsPerSecond {
-			kLine.PriceChangeSpeedMax = &priceChangeSpeedValue.PointsPerSecond
+	if !recoverMode {
+		for idx, klineHistory := range kLines3 {
+			priceChangeSpeedValue := e.GetPriceChangeSpeed(kLine, klineHistory)
+			if idx == 0 && kLine.GetPriceChangeSpeedMax() < priceChangeSpeedValue.PointsPerSecond {
+				kLine.PriceChangeSpeedMax = &priceChangeSpeedValue.PointsPerSecond
+			}
+			if idx == 0 && kLine.GetPriceChangeSpeedMin() > priceChangeSpeedValue.PointsPerSecond {
+				kLine.PriceChangeSpeedMin = &priceChangeSpeedValue.PointsPerSecond
+			}
+			priceChangeSpeed = append(priceChangeSpeed, priceChangeSpeedValue)
 		}
-		if idx == 0 && kLine.GetPriceChangeSpeedMin() > priceChangeSpeedValue.PointsPerSecond {
-			kLine.PriceChangeSpeedMin = &priceChangeSpeedValue.PointsPerSecond
-		}
-		priceChangeSpeed = append(priceChangeSpeed, priceChangeSpeedValue)
 	}
 
 	kLine.PriceChangeSpeed = priceChangeSpeed

@@ -158,6 +158,7 @@ func (t *TradeStack) GetTradeStack(params TradeStackParams) []model.TradeStackIt
 				TradeFiltersSell:        stackItem.TradeFiltersSell,
 				TradeFiltersExtraCharge: stackItem.TradeFiltersExtraCharge,
 				PriceChangeSpeedAvg:     stackItem.PriceChangeSpeedAvg,
+				Capitalization:          stackItem.Capitalization,
 			})
 		} else {
 			impossible = append(impossible, stackItem)
@@ -189,6 +190,7 @@ func (t *TradeStack) GetTradeStack(params TradeStackParams) []model.TradeStackIt
 				TradeFiltersSell:        stackItem.TradeFiltersSell,
 				TradeFiltersExtraCharge: stackItem.TradeFiltersExtraCharge,
 				PriceChangeSpeedAvg:     stackItem.PriceChangeSpeedAvg,
+				Capitalization:          stackItem.Capitalization,
 			})
 		}
 	}
@@ -256,14 +258,27 @@ func (t *TradeStack) ProcessItem(
 	}
 
 	buyPrice := 0.00
+	capitalization := model.Capitalization{
+		Capitalization: 0.00,
+		MarketPrice:    0.00,
+	}
 
 	if binanceOrder != nil {
 		buyPrice = binanceOrder.Price
 	} else if lastKLine != nil {
 		if !lastKLine.IsPriceExpired() {
 			buyPrice = t.GetBuyPriceCached(tradeLimit)
+
+			capitalizationValue := t.ExchangeRepository.GetCapitalization(tradeLimit.Symbol, lastKLine.Timestamp)
+			if capitalizationValue != nil {
+				capitalization = model.Capitalization{
+					Capitalization: t.Formatter.ToFixed(capitalizationValue.Capitalization, 2),
+					MarketPrice:    t.Formatter.FormatPrice(tradeLimit, capitalizationValue.Price),
+				}
+			}
 		}
 	}
+
 	pricePointsDiff := int64((t.Formatter.FormatPrice(tradeLimit, buyPrice) - t.Formatter.FormatPrice(tradeLimit, lastPrice)) / tradeLimit.MinPrice)
 
 	if err == nil {
@@ -293,6 +308,7 @@ func (t *TradeStack) ProcessItem(
 					TradeFiltersSell:        tradeLimit.TradeFiltersSell,
 					TradeFiltersExtraCharge: tradeLimit.TradeFiltersExtraCharge,
 					PriceChangeSpeedAvg:     priceChangeSpeedAvg,
+					Capitalization:          capitalization,
 				}
 			}
 		}
@@ -323,6 +339,7 @@ func (t *TradeStack) ProcessItem(
 			TradeFiltersSell:        tradeLimit.TradeFiltersSell,
 			TradeFiltersExtraCharge: tradeLimit.TradeFiltersExtraCharge,
 			PriceChangeSpeedAvg:     priceChangeSpeedAvg,
+			Capitalization:          capitalization,
 		}
 	}
 

@@ -60,6 +60,9 @@ func main() {
 		go func() {
 			container.MarketSwapListener.ListenAll()
 		}()
+		go func() {
+			container.MCListener.ListenAll()
+		}()
 	}
 
 	container.TimeService.WaitSeconds(10)

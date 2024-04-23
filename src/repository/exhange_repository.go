@@ -71,6 +71,7 @@ type ExchangeRepositoryInterface interface {
 	GetDecision(strategy string, symbol string) *model.Decision
 	GetDecisions(symbol string) []model.Decision
 	GetInterpolation(kLine model.KLine) (model.Interpolation, error)
+	GetCapitalization(symbol string, timestamp int64) *model.MCObject
 }
 
 type ExchangePriceStorageInterface interface {
@@ -1020,7 +1021,7 @@ func (e *ExchangeRepository) GetDecisions(symbol string) []model.Decision {
 
 func (e *ExchangeRepository) SetTradeVolume(volume model.TradeVolume) {
 	encoded, _ := json.Marshal(volume)
-	e.RDB.Set(*e.Ctx, fmt.Sprintf("trade-volume-%s-%d-bot-%d", strings.ToUpper(volume.Symbol), volume.Timestamp, e.CurrentBot.Id), string(encoded), time.Minute*200)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("trade-volume-%s-%d-bot-%d", strings.ToUpper(volume.Symbol), volume.Timestamp, e.CurrentBot.Id), string(encoded), time.Minute*400)
 }
 
 func (e *ExchangeRepository) GetTradeVolume(symbol string, timestamp int64) model.TradeVolume {
@@ -1051,4 +1052,25 @@ func (e *ExchangeRepository) GetTradeVolume(symbol string, timestamp int64) mode
 	}
 
 	return dto
+}
+
+func (e *ExchangeRepository) SetCapitalization(event model.MCEvent) {
+	encoded, _ := json.Marshal(event.Data)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("capitalization-%s-%d-bot-%d", strings.ToUpper(event.Data.Symbol()), event.Timestamp.GetPeriodTo(), e.CurrentBot.Id), string(encoded), time.Minute*400)
+}
+
+func (e *ExchangeRepository) GetCapitalization(symbol string, timestamp int64) *model.MCObject {
+	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("capitalization-%s-%d-bot-%d", strings.ToUpper(symbol), timestamp, e.CurrentBot.Id)).Val()
+	if len(res) == 0 {
+		return nil
+	}
+
+	var dto model.MCObject
+	err := json.Unmarshal([]byte(res), &dto)
+
+	if err != nil {
+		return nil
+	}
+
+	return &dto
 }

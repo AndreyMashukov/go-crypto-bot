@@ -344,3 +344,66 @@ type BinanceTickersPriceResponse struct {
 	Result []WSTickerPrice `json:"result"`
 	Error  *Error          `json:"error"`
 }
+
+type MCEvent struct {
+	Data      MCObject  `json:"d"`
+	Timestamp Timestamp `json:"t,string"`
+}
+
+type MCObject struct {
+	Id             int64   `json:"id"`
+	Price          float64 `json:"p"`
+	Volume         float64 `json:"v"`
+	Capitalization float64 `json:"mc"`
+}
+
+func (m *MCObject) Symbol() string {
+	switch m.Id {
+	case int64(1):
+		return "BTCUSDT"
+	case int64(1027):
+		return "ETHUSDT"
+	case int64(1839):
+		return "BNBUSDT"
+	case int64(5426):
+		return "SOLUSDT"
+	case int64(52):
+		return "XRPUSDT"
+	case int64(74):
+		return "DOGEUSDT"
+	case int64(2010):
+		return "ADAUSDT"
+	case int64(5994):
+		return "SHIBUSDT"
+	case int64(5805):
+		return "AVAXUSDT"
+	case int64(6636):
+		return "DOTUSDT"
+	case int64(1831):
+		return "BCHUSDT"
+	case int64(1958):
+		return "TRXUSDT"
+	case int64(1975):
+		return "LINKUSDT"
+	case int64(6535):
+		return "NEARUSDT"
+	case int64(3890):
+		return "MATICUSDT"
+	case int64(2):
+		return "LTCUSDT"
+	case int64(7083):
+		return "UNIUSDT"
+	case int64(1321):
+		return "ETCUSDT"
+	case int64(3794):
+		return "ATOMUSDT"
+	case int64(512):
+		return "XLMUSDT"
+	case int64(1376):
+		return "NEOUSDT"
+	case int64(1437):
+		return "ZECUSDT"
+	}
+
+	return ""
+}

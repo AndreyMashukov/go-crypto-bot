@@ -1,5 +1,17 @@
 package model
 
+import "math"
+
+type Timestamp int64
+
+func (t *Timestamp) GetPeriodFrom() int64 {
+	return int64(math.Floor(float64(*t)/10000)) * 10000
+}
+
+func (t *Timestamp) GetPeriodTo() int64 {
+	return t.GetPeriodFrom() + 9999
+}
+
 type Trade struct {
 	AggregateTradeId int64   `json:"a,int"`
 	Price            float64 `json:"p,string"`

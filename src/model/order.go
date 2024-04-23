@@ -223,6 +223,7 @@ type Position struct {
 	CanSell                 bool                  `json:"canSell"`
 	CanExtraBuy             bool                  `json:"canExtraBuy"`
 	PriceChangeSpeedAvg     float64               `json:"priceChangeSpeedAvg"`
+	Capitalization          Capitalization        `json:"capitalization"`
 }
 
 type PositionCloseStrategy struct {
@@ -323,4 +324,9 @@ func (p PositionTime) GetDays() float64 {
 }
 func (p PositionTime) GetMonths() float64 {
 	return float64(p) / float64(3600*24*30)
+}
+
+type Capitalization struct {
+	Capitalization float64 `json:"capitalization"`
+	MarketPrice    float64 `json:"marketPrice"`
 }

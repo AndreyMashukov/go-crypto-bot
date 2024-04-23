@@ -128,6 +128,19 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			interpolation.EthInterpolationUsdt = o.Formatter.FormatPrice(limit, interpolation.EthInterpolationUsdt)
 		}
 
+		capitalization := model.Capitalization{
+			Capitalization: 0.00,
+			MarketPrice:    0.00,
+		}
+
+		capitalizationValue := o.ExchangeRepository.GetCapitalization(limit.Symbol, kLine.Timestamp)
+		if capitalizationValue != nil {
+			capitalization = model.Capitalization{
+				Capitalization: o.Formatter.ToFixed(capitalizationValue.Capitalization, 2),
+				MarketPrice:    o.Formatter.FormatPrice(limit, capitalizationValue.Price),
+			}
+		}
+
 		positions = append(positions, model.Position{
 			Symbol:         limit.Symbol,
 			Order:          openedOrder,
@@ -159,6 +172,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			CanSell:                 o.TradeFilterService.CanSell(limit),
 			CanExtraBuy:             o.TradeFilterService.CanExtraBuy(limit),
 			PriceChangeSpeedAvg:     kLine.GetPriceChangeSpeedAvg(),
+			Capitalization:          capitalization,
 		})
 	}
 

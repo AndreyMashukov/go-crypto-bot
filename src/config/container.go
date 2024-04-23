@@ -381,6 +381,13 @@ func InitServiceContainer() Container {
 		BotRepository: &botRepository,
 	}
 
+	mcGatewayAddress := os.Getenv("MC_DSN")
+
+	mcListener := exchange.MCListener{
+		MSGatewayAddress:   mcGatewayAddress,
+		ExchangeRepository: &exchangeRepository,
+	}
+
 	return Container{
 		PriceCalculator:     &priceCalculator,
 		BotController:       &botController,
@@ -426,10 +433,12 @@ func InitServiceContainer() Container {
 			SwapUpdater:        &swapUpdater,
 			SwapRepository:     &swapRepository,
 		},
+		MCListener: &mcListener,
 	}
 }
 
 type Container struct {
+	MCListener          *exchange.MCListener
 	PriceCalculator     *exchange.PriceCalculator
 	BotController       *controller.BotController
 	HealthService       *service.HealthService

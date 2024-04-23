@@ -14,6 +14,7 @@ services:
         BINANCE_API_DSN: 'https://testnet.binance.vision'
         BINANCE_WS_DSN: 'wss://testnet.binance.vision/ws-api/v3'
         BINANCE_STREAM_DSN: 'wss://stream.binance.com' #'wss://stream.binancefuture.com'
+        MC_DSN: "it should be your own capitalization service here"
     networks:
       - bot-net
     ports:

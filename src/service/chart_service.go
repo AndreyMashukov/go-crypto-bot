@@ -101,6 +101,24 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 			tradeVolumeBuyVal = tradeVolume.BuyQty
 		}
 
+		capitalization := 0.00
+		capitalizationPrice := 0.00
+		capitalizationValue := e.ExchangeRepository.GetCapitalization(kLine.Symbol, kLine.Timestamp)
+		if capitalizationValue != nil {
+			tradeLimit := e.ExchangeRepository.GetTradeLimitCached(symbol)
+
+			capitalization = e.Formatter.ToFixed(capitalizationValue.Capitalization, 2)
+			capitalizationPrice = e.Formatter.FormatPrice(tradeLimit, capitalizationValue.Price)
+		}
+
+		capitalizationValuePoint := model.ChartPoint{
+			XAxis: kLine.Timestamp,
+			YAxis: capitalization,
+		}
+		capitalizationPricePoint := model.ChartPoint{
+			XAxis: kLine.Timestamp,
+			YAxis: capitalizationPrice,
+		}
 		tradeVolumeSell := model.ChartPoint{
 			XAxis: kLine.Timestamp,
 			YAxis: tradeVolumeSellVal,
@@ -189,6 +207,8 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		}
 
 		klineKey := fmt.Sprintf("kline-%s", symbol)
+		capitalizationValueKey := fmt.Sprintf("capitalization-value-%s", symbol)
+		capitalizationPriceKey := fmt.Sprintf("capitalization-price-%s", symbol)
 		klineTradeVolumeBuyKey := fmt.Sprintf("trade-volume-buy-%s", symbol)
 		klineTradeVolumeSellKey := fmt.Sprintf("trade-volume-sell-%s", symbol)
 		klineAvgChangeSpeedKey := fmt.Sprintf("avg-change-speed-%s", symbol)
@@ -216,6 +236,8 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		list[klineMaxChangeSpeedKey] = append(list[klineMaxChangeSpeedKey], kLineMaxChangeSpeedPoint)
 		list[klineTradeVolumeBuyKey] = append(list[klineTradeVolumeBuyKey], tradeVolumeBuy)
 		list[klineTradeVolumeSellKey] = append(list[klineTradeVolumeSellKey], tradeVolumeSell)
+		list[capitalizationValueKey] = append(list[capitalizationValueKey], capitalizationValuePoint)
+		list[capitalizationPriceKey] = append(list[capitalizationPriceKey], capitalizationPricePoint)
 	}
 
 	return list

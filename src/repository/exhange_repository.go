@@ -696,8 +696,14 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine) {
 
 	priceChangeSpeed := make([]model.PriceChangeSpeed, 0)
 
-	for _, klineHistory := range kLines3 {
+	for idx, klineHistory := range kLines3 {
 		priceChangeSpeedValue := e.GetPriceChangeSpeed(kLine, klineHistory)
+		if idx == 0 && kLine.GetPriceChangeSpeedMax() < priceChangeSpeedValue.PointsPerSecond {
+			kLine.PriceChangeSpeedMax = &priceChangeSpeedValue.PointsPerSecond
+		}
+		if idx == 0 && kLine.GetPriceChangeSpeedMin() > priceChangeSpeedValue.PointsPerSecond {
+			kLine.PriceChangeSpeedMin = &priceChangeSpeedValue.PointsPerSecond
+		}
 		priceChangeSpeed = append(priceChangeSpeed, priceChangeSpeedValue)
 	}
 

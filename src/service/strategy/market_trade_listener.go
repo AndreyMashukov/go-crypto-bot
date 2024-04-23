@@ -89,7 +89,7 @@ func (m *MarketTradeListener) ListenAll() {
 	go func() {
 		for {
 			kLine := <-klineChannel
-			m.ExchangeRepository.AddKLine(kLine)
+			m.ExchangeRepository.AddKLine(kLine, false)
 
 			go func(symbol string) {
 				predictChannel <- symbol
@@ -174,7 +174,7 @@ func (m *MarketTradeListener) ListenAll() {
 
 			for _, kline := range history {
 				klineAmount++
-				m.ExchangeRepository.AddKLine(kline.ToKLine(tradeLimit.GetSymbol()))
+				m.ExchangeRepository.AddKLine(kline.ToKLine(tradeLimit.GetSymbol()), true)
 			}
 			log.Printf("Loaded history %s -> %d klines", tradeLimit.Symbol, klineAmount)
 		}(limit)

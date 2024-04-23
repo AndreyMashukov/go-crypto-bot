@@ -1056,11 +1056,11 @@ func (e *ExchangeRepository) GetTradeVolume(symbol string, timestamp int64) mode
 
 func (e *ExchangeRepository) SetCapitalization(event model.MCEvent) {
 	encoded, _ := json.Marshal(event.Data)
-	e.RDB.Set(*e.Ctx, fmt.Sprintf("capitalization-%s-%d-bot-%d", strings.ToUpper(event.Data.Symbol()), event.Timestamp.GetPeriodTo(), e.CurrentBot.Id), string(encoded), time.Minute*400)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("capitalization-%s-%d", strings.ToUpper(event.Data.Symbol()), event.Timestamp.GetPeriodTo()), string(encoded), time.Minute*400)
 }
 
 func (e *ExchangeRepository) GetCapitalization(symbol string, timestamp int64) *model.MCObject {
-	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("capitalization-%s-%d-bot-%d", strings.ToUpper(symbol), timestamp, e.CurrentBot.Id)).Val()
+	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("capitalization-%s-%d", strings.ToUpper(symbol), timestamp)).Val()
 	if len(res) == 0 {
 		return nil
 	}

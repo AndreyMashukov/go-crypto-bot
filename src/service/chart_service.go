@@ -92,13 +92,22 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		kLinePredict, _ := e.ExchangeRepository.GetKLinePredict(kLine)
 		interpolation, _ := e.ExchangeRepository.GetInterpolation(kLine)
 
+		tradeVolume := e.ExchangeRepository.GetTradeVolume(kLine.Symbol, kLine.Timestamp)
+		tradeVolumeSellVal := kLine.GetTradeVolumeSell()
+		tradeVolumeBuyVal := kLine.GetTradeVolumeBuy()
+
+		if tradeVolume.PeriodTo != tradeVolume.PeriodFrom {
+			tradeVolumeSellVal = tradeVolume.SellQty
+			tradeVolumeBuyVal = tradeVolume.BuyQty
+		}
+
 		tradeVolumeSell := model.ChartPoint{
 			XAxis: kLine.Timestamp,
-			YAxis: kLine.GetTradeVolumeSell(),
+			YAxis: tradeVolumeSellVal,
 		}
 		tradeVolumeBuy := model.ChartPoint{
 			XAxis: kLine.Timestamp,
-			YAxis: kLine.GetTradeVolumeBuy(),
+			YAxis: tradeVolumeBuyVal,
 		}
 		kLinePredictPoint := model.ChartPoint{
 			XAxis: kLine.Timestamp,

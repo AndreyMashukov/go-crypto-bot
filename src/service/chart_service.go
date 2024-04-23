@@ -127,9 +127,13 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: tradeVolumeBuyVal,
 		}
+		if kLinePredict > 0.00 {
+			kLinePredict = e.Formatter.FormatPrice(tradeLimit, kLinePredict)
+		}
+
 		kLinePredictPoint := model.ChartPoint{
 			XAxis: kLine.Timestamp.GetPeriodToMinute(),
-			YAxis: e.Formatter.FormatPrice(tradeLimit, kLinePredict),
+			YAxis: kLinePredict,
 		}
 		kLineAvgChangeSpeedPoint := model.ChartPoint{
 			XAxis: kLine.Timestamp.GetPeriodToMinute(),
@@ -143,13 +147,21 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: e.Formatter.ToFixed(kLine.GetPriceChangeSpeedMax(), 2),
 		}
+
+		if interpolation.BtcInterpolationUsdt > 0.00 {
+			interpolation.BtcInterpolationUsdt = e.Formatter.FormatPrice(tradeLimit, interpolation.BtcInterpolationUsdt)
+		}
+
 		interpolationBtcPoint := model.ChartPoint{
 			XAxis: kLine.Timestamp.GetPeriodToMinute(),
-			YAxis: e.Formatter.FormatPrice(tradeLimit, interpolation.BtcInterpolationUsdt),
+			YAxis: interpolation.BtcInterpolationUsdt,
+		}
+		if interpolation.EthInterpolationUsdt > 0.00 {
+			interpolation.EthInterpolationUsdt = e.Formatter.FormatPrice(tradeLimit, interpolation.EthInterpolationUsdt)
 		}
 		interpolationEthPoint := model.ChartPoint{
 			XAxis: kLine.Timestamp.GetPeriodToMinute(),
-			YAxis: e.Formatter.FormatPrice(tradeLimit, interpolation.EthInterpolationUsdt),
+			YAxis: interpolation.EthInterpolationUsdt,
 		}
 		openedBuyPoint := model.ChartPoint{
 			XAxis: kLine.Timestamp.GetPeriodToMinute(),

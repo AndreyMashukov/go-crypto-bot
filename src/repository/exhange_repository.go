@@ -712,10 +712,10 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
 	kLine.PriceChangeSpeed = e.GetPriceChangeSpeed(kLine.Symbol, kLine.Timestamp)
 	if kLine.PriceChangeSpeed == nil {
 		kLine.PriceChangeSpeed = &model.PriceChangeSpeed{
-			Changes:             make([]model.PriceChange, 0),
-			PriceChangeSpeedMin: 0.00,
-			PriceChangeSpeedMax: 0.00,
-			Timestamp:           kLine.Timestamp,
+			Changes:   make([]model.PriceChange, 0),
+			MinChange: 0.00,
+			MaxChange: 0.00,
+			Timestamp: kLine.Timestamp,
 		}
 	}
 
@@ -735,10 +735,10 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
 		for idx, klineHistory := range kLines3 {
 			priceChangeSpeedValue := e.GetPriceChangeSpeedItem(kLine, klineHistory)
 			if idx == 0 && kLine.GetPriceChangeSpeedMax() < priceChangeSpeedValue.PointsPerSecond {
-				kLine.PriceChangeSpeed.PriceChangeSpeedMax = priceChangeSpeedValue.PointsPerSecond
+				kLine.PriceChangeSpeed.MaxChange = priceChangeSpeedValue.PointsPerSecond
 			}
 			if idx == 0 && kLine.GetPriceChangeSpeedMin() > priceChangeSpeedValue.PointsPerSecond {
-				kLine.PriceChangeSpeed.PriceChangeSpeedMin = priceChangeSpeedValue.PointsPerSecond
+				kLine.PriceChangeSpeed.MinChange = priceChangeSpeedValue.PointsPerSecond
 			}
 			kLine.PriceChangeSpeed.Changes = append(kLine.PriceChangeSpeed.Changes, priceChangeSpeedValue)
 		}

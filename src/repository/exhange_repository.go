@@ -672,6 +672,11 @@ func (e *ExchangeRepository) GetLastKLine(symbol string) *model.KLine {
 				dto.TradeVolume = tradeVolume
 			}
 
+			priceChangeSpeed := e.GetPriceChangeSpeed(dto.Symbol, dto.Timestamp)
+			if priceChangeSpeed != nil {
+				dto.PriceChangeSpeed = priceChangeSpeed
+			}
+
 			return &dto
 		}
 	}
@@ -683,6 +688,11 @@ func (e *ExchangeRepository) GetLastKLine(symbol string) *model.KLine {
 		tradeVolume := e.GetTradeVolume(dto.Symbol, dto.Timestamp)
 		if tradeVolume != nil {
 			dto.TradeVolume = tradeVolume
+		}
+
+		priceChangeSpeed := e.GetPriceChangeSpeed(dto.Symbol, dto.Timestamp)
+		if priceChangeSpeed != nil {
+			dto.PriceChangeSpeed = priceChangeSpeed
 		}
 
 		return &dto
@@ -699,15 +709,19 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
 	lastKLines := e.KLineList(kLine.Symbol, false, 200)
 
 	kLines3 := make([]model.KLine, 0)
-	priceChangeSpeed := make([]model.PriceChangeSpeed, 0)
+	kLine.PriceChangeSpeed = e.GetPriceChangeSpeed(kLine.Symbol, kLine.Timestamp)
+	if kLine.PriceChangeSpeed == nil {
+		kLine.PriceChangeSpeed = &model.PriceChangeSpeed{
+			Changes:             make([]model.PriceChange, 0),
+			PriceChangeSpeedMin: 0.00,
+			PriceChangeSpeedMax: 0.00,
+			Timestamp:           kLine.Timestamp,
+		}
+	}
 
-	// todo: history update does not work, check timestamp
 	for _, lastKline := range lastKLines {
 		if lastKline.Timestamp == kLine.Timestamp {
 			e.RDB.LPop(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id)).Val()
-			kLine.PriceChangeSpeedMin = lastKline.PriceChangeSpeedMin
-			kLine.PriceChangeSpeedMax = lastKline.PriceChangeSpeedMax
-			priceChangeSpeed = lastKline.GetPriceChangeSpeed()
 		}
 
 		if len(kLines3) == 0 {
@@ -717,18 +731,16 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
 		}
 	}
 
-	// todo: event on new kline received and fulfill previous kline data (finalize)
-
 	if !recoverMode {
 		for idx, klineHistory := range kLines3 {
-			priceChangeSpeedValue := e.GetPriceChangeSpeed(kLine, klineHistory)
+			priceChangeSpeedValue := e.GetPriceChangeSpeedItem(kLine, klineHistory)
 			if idx == 0 && kLine.GetPriceChangeSpeedMax() < priceChangeSpeedValue.PointsPerSecond {
-				kLine.PriceChangeSpeedMax = &priceChangeSpeedValue.PointsPerSecond
+				kLine.PriceChangeSpeed.PriceChangeSpeedMax = priceChangeSpeedValue.PointsPerSecond
 			}
 			if idx == 0 && kLine.GetPriceChangeSpeedMin() > priceChangeSpeedValue.PointsPerSecond {
-				kLine.PriceChangeSpeedMin = &priceChangeSpeedValue.PointsPerSecond
+				kLine.PriceChangeSpeed.PriceChangeSpeedMin = priceChangeSpeedValue.PointsPerSecond
 			}
-			priceChangeSpeed = append(priceChangeSpeed, priceChangeSpeedValue)
+			kLine.PriceChangeSpeed.Changes = append(kLine.PriceChangeSpeed.Changes, priceChangeSpeedValue)
 		}
 	}
 
@@ -737,7 +749,9 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
 		kLine.TradeVolume = tradeVolume
 	}
 
-	kLine.PriceChangeSpeed = priceChangeSpeed
+	if kLine.PriceChangeSpeed != nil {
+		e.SetPriceChangeSpeed(*kLine.PriceChangeSpeed)
+	}
 	encoded, _ := json.Marshal(kLine)
 
 	e.RDB.LPush(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id), string(encoded))
@@ -745,8 +759,8 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
 	e.RDB.Set(*e.Ctx, fmt.Sprintf("last-kline-%s-%d", kLine.Symbol, e.CurrentBot.Id), string(encoded), time.Hour)
 }
 
-func (e *ExchangeRepository) GetPriceChangeSpeed(kLine model.KLine, lastKlineOld model.KLine) model.PriceChangeSpeed {
-	priceChangeSpeed := model.PriceChangeSpeed{
+func (e *ExchangeRepository) GetPriceChangeSpeedItem(kLine model.KLine, lastKlineOld model.KLine) model.PriceChange {
+	priceChangeSpeed := model.PriceChange{
 		CloseTime:       lastKlineOld.Timestamp,
 		FromPrice:       lastKlineOld.Close,
 		FromTime:        model.TimestampMilli(lastKlineOld.UpdatedAt * 1000),
@@ -1085,14 +1099,29 @@ func (e *ExchangeRepository) GetTradeVolume(symbol string, timestamp model.Times
 
 	if err != nil {
 		log.Printf("[%s] error during trade volume reading: %s", symbol, err.Error())
-		return &model.TradeVolume{
-			Symbol:     symbol,
-			Timestamp:  timestamp,
-			PeriodFrom: 0,
-			PeriodTo:   timestamp,
-			SellQty:    0.00,
-			BuyQty:     0.00,
-		}
+		return nil
+	}
+
+	return &dto
+}
+
+func (e *ExchangeRepository) SetPriceChangeSpeed(speed model.PriceChangeSpeed) {
+	encoded, _ := json.Marshal(speed)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("price-change-speed-%s-%d-bot-%d", strings.ToUpper(speed.Symbol), speed.Timestamp.GetPeriodToMinute(), e.CurrentBot.Id), string(encoded), time.Minute*400)
+}
+
+func (e *ExchangeRepository) GetPriceChangeSpeed(symbol string, timestamp model.TimestampMilli) *model.PriceChangeSpeed {
+	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("price-change-speed-%s-%d-bot-%d", strings.ToUpper(symbol), timestamp.GetPeriodToMinute(), e.CurrentBot.Id)).Val()
+	if len(res) == 0 {
+		return nil
+	}
+
+	var dto model.PriceChangeSpeed
+	err := json.Unmarshal([]byte(res), &dto)
+
+	if err != nil {
+		log.Printf("[%s] error during PCS reading: %s", symbol, err.Error())
+		return nil
 	}
 
 	return &dto

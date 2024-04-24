@@ -182,6 +182,12 @@ func (m *MarketTradeListener) ListenAll() {
 		go func(tradeLimit model.TradeLimit) {
 			klineAmount := 0
 
+			lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+			if lastKline != nil && !lastKline.IsPriceExpired() {
+				log.Printf("Price is not expired for %s history recovery skipped", tradeLimit.Symbol)
+				return
+			}
+
 			history := m.Binance.GetKLines(tradeLimit.GetSymbol(), "1m", 200)
 
 			if len(history) > 0 {

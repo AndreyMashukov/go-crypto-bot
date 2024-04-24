@@ -172,6 +172,10 @@ func (m *MarketTradeListener) ListenAll() {
 
 			history := m.Binance.GetKLines(tradeLimit.GetSymbol(), "1m", 200)
 
+			if len(history) > 0 {
+				m.ExchangeRepository.ClearKlineList(tradeLimit.GetSymbol())
+			}
+
 			for _, kline := range history {
 				klineAmount++
 				m.ExchangeRepository.AddKLine(kline.ToKLine(tradeLimit.GetSymbol()), true)

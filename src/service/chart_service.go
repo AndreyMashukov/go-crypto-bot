@@ -83,6 +83,8 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 
 	tradeLimit := e.ExchangeRepository.GetTradeLimitCached(symbol)
 
+	cummulativeTradeQuantity := 0.00
+
 	for kLineIndex, kLine := range kLines {
 		klinePoint := model.FinancialPoint{
 			XAxis: kLine.Timestamp.GetPeriodToMinute(),
@@ -101,6 +103,8 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		if tradeVolume.PeriodTo != tradeVolume.PeriodFrom {
 			tradeVolumeSellVal = tradeVolume.SellQty
 			tradeVolumeBuyVal = tradeVolume.BuyQty
+			cummulativeTradeQuantity += tradeVolume.BuyQty
+			cummulativeTradeQuantity -= tradeVolume.SellQty
 		}
 
 		capitalization := 0.00
@@ -126,6 +130,10 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		tradeVolumeBuy := model.ChartPoint{
 			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: tradeVolumeBuyVal,
+		}
+		cummulativeTradeQtyPoint := model.ChartPoint{
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
+			YAxis: cummulativeTradeQuantity,
 		}
 		if kLinePredict > 0.00 {
 			kLinePredict = e.Formatter.FormatPrice(tradeLimit, kLinePredict)
@@ -221,6 +229,7 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		klineKey := fmt.Sprintf("kline-%s", symbol)
 		capitalizationValueKey := fmt.Sprintf("capitalization-value-%s", symbol)
 		capitalizationPriceKey := fmt.Sprintf("capitalization-price-%s", symbol)
+		cummulativeTradeQtyKey := fmt.Sprintf("cummulative-trade-qty-%s", symbol)
 		klineTradeVolumeBuyKey := fmt.Sprintf("trade-volume-buy-%s", symbol)
 		klineTradeVolumeSellKey := fmt.Sprintf("trade-volume-sell-%s", symbol)
 		klineAvgChangeSpeedKey := fmt.Sprintf("avg-change-speed-%s", symbol)
@@ -250,6 +259,7 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		list[klineTradeVolumeSellKey] = append(list[klineTradeVolumeSellKey], tradeVolumeSell)
 		list[capitalizationValueKey] = append(list[capitalizationValueKey], capitalizationValuePoint)
 		list[capitalizationPriceKey] = append(list[capitalizationPriceKey], capitalizationPricePoint)
+		list[cummulativeTradeQtyKey] = append(list[cummulativeTradeQtyKey], cummulativeTradeQtyPoint)
 	}
 
 	return list

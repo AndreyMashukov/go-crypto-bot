@@ -87,7 +87,8 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 
 	lastTimestamp := int64(0)
 
-	for kLineIndex, kLine := range kLines {
+	deduplicated := make([]model.KLine, 0)
+	for _, kLine := range kLines {
 		// Skip duplicates
 		if lastTimestamp == kLine.Timestamp.GetPeriodToMinute() {
 			continue
@@ -95,8 +96,13 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 
 		if lastTimestamp != kLine.Timestamp.GetPeriodToMinute() {
 			lastTimestamp = kLine.Timestamp.GetPeriodToMinute()
+			deduplicated = append(deduplicated, kLine)
 		}
+	}
 
+	slices.Reverse(deduplicated)
+
+	for kLineIndex, kLine := range deduplicated {
 		klinePoint := model.FinancialPoint{
 			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			High:  kLine.High,
@@ -272,10 +278,6 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		list[capitalizationValueKey] = append(list[capitalizationValueKey], capitalizationValuePoint)
 		list[capitalizationPriceKey] = append(list[capitalizationPriceKey], capitalizationPricePoint)
 		list[cummulativeTradeQtyKey] = append(list[cummulativeTradeQtyKey], cummulativeTradeQtyPoint)
-	}
-
-	for idx, _ := range list {
-		slices.Reverse(list[idx])
 	}
 
 	return list

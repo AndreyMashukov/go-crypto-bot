@@ -103,9 +103,10 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		if tradeVolume.PeriodTo != tradeVolume.PeriodFrom {
 			tradeVolumeSellVal = tradeVolume.SellQty
 			tradeVolumeBuyVal = tradeVolume.BuyQty
-			cummulativeTradeQuantity += tradeVolume.BuyQty
-			cummulativeTradeQuantity -= tradeVolume.SellQty
 		}
+
+		cummulativeTradeQuantity += tradeVolumeBuyVal
+		cummulativeTradeQuantity -= tradeVolumeSellVal
 
 		capitalization := 0.00
 		capitalizationPrice := 0.00

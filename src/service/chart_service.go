@@ -144,6 +144,12 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: kLinePredict,
 		}
+
+		priceChangeSpeed := e.ExchangeRepository.GetPriceChangeSpeed(kLine.Symbol, kLine.Timestamp)
+		if priceChangeSpeed != nil {
+			kLine.PriceChangeSpeed = priceChangeSpeed
+		}
+
 		kLineAvgChangeSpeedPoint := model.ChartPoint{
 			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			YAxis: e.Formatter.ToFixed(kLine.GetPriceChangeSpeedAvg(), 2),

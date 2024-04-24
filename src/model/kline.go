@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type PriceChangeSpeed struct {
+type PriceChange struct {
 	CloseTime       TimestampMilli `json:"closeTime"`
 	FromPrice       float64        `json:"fromPrice"`
 	ToPrice         float64        `json:"toPrice"`
@@ -14,21 +14,27 @@ type PriceChangeSpeed struct {
 	PointsPerSecond float64        `json:"pointsPerSecond"`
 }
 
+type PriceChangeSpeed struct {
+	Symbol              string         `json:"symbol"`
+	Timestamp           TimestampMilli `json:"timestamp"`
+	Changes             []PriceChange  `json:"changes"`
+	PriceChangeSpeedMax float64        `json:"priceChangeSpeedMax"`
+	PriceChangeSpeedMin float64        `json:"priceChangeSpeedMin"`
+}
+
 type KLine struct {
-	Symbol              string             `json:"s"`
-	Open                float64            `json:"o,string"`
-	Close               float64            `json:"c,string"`
-	Low                 float64            `json:"l,string"`
-	High                float64            `json:"h,string"`
-	Interval            string             `json:"i"`
-	Timestamp           TimestampMilli     `json:"T,int"`
-	OpenTime            TimestampMilli     `json:"t,int"`
-	Volume              float64            `json:"v,string"`
-	UpdatedAt           int64              `json:"updatedAt"`
-	PriceChangeSpeed    []PriceChangeSpeed `json:"priceChangeSpeed"`
-	PriceChangeSpeedMax *float64           `json:"priceChangeSpeedMax"`
-	PriceChangeSpeedMin *float64           `json:"priceChangeSpeedMin"`
-	TradeVolume         *TradeVolume       `json:"tradeVolume"`
+	Symbol           string            `json:"s"`
+	Open             float64           `json:"o,string"`
+	Close            float64           `json:"c,string"`
+	Low              float64           `json:"l,string"`
+	High             float64           `json:"h,string"`
+	Interval         string            `json:"i"`
+	Timestamp        TimestampMilli    `json:"T,int"`
+	OpenTime         TimestampMilli    `json:"t,int"`
+	Volume           float64           `json:"v,string"`
+	UpdatedAt        int64             `json:"updatedAt"`
+	PriceChangeSpeed *PriceChangeSpeed `json:"priceChangeSpeedSymbol"`
+	TradeVolume      *TradeVolume      `json:"tradeVolume"`
 }
 
 func (k *KLine) GetTradeVolumeSell() float64 {
@@ -48,26 +54,26 @@ func (k *KLine) GetTradeVolumeBuy() float64 {
 }
 
 func (k *KLine) GetPriceChangeSpeedMax() float64 {
-	if k.PriceChangeSpeedMax != nil {
-		return *k.PriceChangeSpeedMax
+	if k.PriceChangeSpeed != nil {
+		return k.PriceChangeSpeed.PriceChangeSpeedMax
 	}
 
 	return 0.00
 }
 
 func (k *KLine) GetPriceChangeSpeedMin() float64 {
-	if k.PriceChangeSpeedMin != nil {
-		return *k.PriceChangeSpeedMin
+	if k.PriceChangeSpeed != nil {
+		return k.PriceChangeSpeed.PriceChangeSpeedMin
 	}
 
 	return 0.00
 }
 
-func (k *KLine) GetPriceChangeSpeed() []PriceChangeSpeed {
-	priceChangeSpeed := make([]PriceChangeSpeed, 0)
+func (k *KLine) GetPriceChangeSpeed() []PriceChange {
+	priceChangeSpeed := make([]PriceChange, 0)
 
 	if k.PriceChangeSpeed != nil {
-		return k.PriceChangeSpeed
+		return k.PriceChangeSpeed.Changes
 	}
 
 	return priceChangeSpeed

@@ -7,6 +7,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/controller"
+	"gitlab.com/open-soft/go-crypto-bot/src/event_subscriber"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
 	"gitlab.com/open-soft/go-crypto-bot/src/service"
@@ -388,6 +389,16 @@ func InitServiceContainer() Container {
 		ExchangeRepository: &exchangeRepository,
 	}
 
+	eventDispatcher := service.EventDispatcher{
+		Subscribers: []event_subscriber.SubscriberInterface{
+			&event_subscriber.KLineEventSubscriber{
+				Binance:            &binance,
+				ExchangeRepository: &exchangeRepository,
+			},
+		},
+		Enabled: false,
+	}
+
 	return Container{
 		PriceCalculator:     &priceCalculator,
 		BotController:       &botController,
@@ -425,6 +436,7 @@ func InitServiceContainer() Container {
 			Binance:             &binance,
 			PythonMLBridge:      &pythonMLBridge,
 			PriceCalculator:     &priceCalculator,
+			EventDispatcher:     &eventDispatcher,
 		},
 		MarketSwapListener: &exchange.MarketSwapListener{
 			ExchangeRepository: &exchangeRepository,
@@ -433,11 +445,13 @@ func InitServiceContainer() Container {
 			SwapUpdater:        &swapUpdater,
 			SwapRepository:     &swapRepository,
 		},
-		MCListener: &mcListener,
+		MCListener:      &mcListener,
+		EventDispatcher: &eventDispatcher,
 	}
 }
 
 type Container struct {
+	EventDispatcher     *service.EventDispatcher
 	MCListener          *exchange.MCListener
 	PriceCalculator     *exchange.PriceCalculator
 	BotController       *controller.BotController

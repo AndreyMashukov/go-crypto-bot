@@ -67,6 +67,8 @@ func main() {
 
 	container.TimeService.WaitSeconds(10)
 	container.MakerService.StartTrade()
+	// Enable event subscribing functionality
+	container.EventDispatcher.Enabled = true
 
 	container.MarketTradeListener.ListenAll()
 }

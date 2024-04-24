@@ -79,30 +79,13 @@ func (e *ChartService) GetCharts(symbolFilter []string) []map[string][]any {
 func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.Order) map[string][]any {
 	list := make(map[string][]any, 0)
 	symbolOrders := orderMap[symbol]
-	kLines := e.ExchangeRepository.KLineList(symbol, false, 200)
+	kLines := e.ExchangeRepository.KLineList(symbol, true, 200)
 
 	tradeLimit := e.ExchangeRepository.GetTradeLimitCached(symbol)
 
 	cummulativeTradeQuantity := 0.00
 
-	lastTimestamp := int64(0)
-
-	deduplicated := make([]model.KLine, 0)
-	for _, kLine := range kLines {
-		// Skip duplicates
-		if lastTimestamp == kLine.Timestamp.GetPeriodToMinute() {
-			continue
-		}
-
-		if lastTimestamp != kLine.Timestamp.GetPeriodToMinute() {
-			lastTimestamp = kLine.Timestamp.GetPeriodToMinute()
-			deduplicated = append(deduplicated, kLine)
-		}
-	}
-
-	slices.Reverse(deduplicated)
-
-	for kLineIndex, kLine := range deduplicated {
+	for kLineIndex, kLine := range kLines {
 		klinePoint := model.FinancialPoint{
 			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			High:  kLine.High,

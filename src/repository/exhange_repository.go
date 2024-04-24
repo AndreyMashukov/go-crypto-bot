@@ -678,6 +678,10 @@ func (e *ExchangeRepository) GetLastKLine(symbol string) *model.KLine {
 	return nil
 }
 
+func (e *ExchangeRepository) ClearKlineList(symbol string) {
+	e.RDB.Del(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", symbol, e.CurrentBot.Id)).Val()
+}
+
 func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
 	lastKLines := e.KLineList(kLine.Symbol, false, 200)
 
@@ -754,10 +758,27 @@ func (e *ExchangeRepository) KLineList(symbol string, reverse bool, size int64) 
 	res := e.RDB.LRange(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", symbol, e.CurrentBot.Id), 0, size).Val()
 	list := make([]model.KLine, 0)
 
+	lastTimestamp := int64(0)
+
 	for _, str := range res {
 		var dto model.KLine
-		json.Unmarshal([]byte(str), &dto)
-		list = append(list, dto)
+		err := json.Unmarshal([]byte(str), &dto)
+
+		// Skip errors
+		if err != nil {
+			continue
+		}
+
+		// Skip duplicates
+		if lastTimestamp == dto.Timestamp.GetPeriodToMinute() {
+			continue
+		}
+
+		// Restore consistency
+		if lastTimestamp == int64(0) || lastTimestamp > dto.Timestamp.GetPeriodToMinute() {
+			lastTimestamp = dto.Timestamp.GetPeriodToMinute()
+			list = append(list, dto)
+		}
 	}
 
 	if reverse {

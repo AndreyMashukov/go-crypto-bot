@@ -709,13 +709,14 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
 	lastKLines := e.KLineList(kLine.Symbol, false, 200)
 
 	kLines3 := make([]model.KLine, 0)
-	kLine.PriceChangeSpeed = e.GetPriceChangeSpeed(kLine.Symbol, kLine.Timestamp)
-	if kLine.PriceChangeSpeed == nil {
-		kLine.PriceChangeSpeed = &model.PriceChangeSpeed{
+	priceChangeSpeed := e.GetPriceChangeSpeed(kLine.Symbol, kLine.Timestamp)
+	if priceChangeSpeed == nil {
+		priceChangeSpeed = &model.PriceChangeSpeed{
+			Symbol:    kLine.Symbol,
+			Timestamp: model.TimestampMilli(kLine.Timestamp.GetPeriodToMinute()),
 			Changes:   make([]model.PriceChange, 0),
 			MinChange: 0.00,
 			MaxChange: 0.00,
-			Timestamp: kLine.Timestamp,
 		}
 	}
 
@@ -735,12 +736,12 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
 		for idx, klineHistory := range kLines3 {
 			priceChangeSpeedValue := e.GetPriceChangeSpeedItem(kLine, klineHistory)
 			if idx == 0 && kLine.GetPriceChangeSpeedMax() < priceChangeSpeedValue.PointsPerSecond {
-				kLine.PriceChangeSpeed.MaxChange = priceChangeSpeedValue.PointsPerSecond
+				priceChangeSpeed.MaxChange = priceChangeSpeedValue.PointsPerSecond
 			}
 			if idx == 0 && kLine.GetPriceChangeSpeedMin() > priceChangeSpeedValue.PointsPerSecond {
-				kLine.PriceChangeSpeed.MinChange = priceChangeSpeedValue.PointsPerSecond
+				priceChangeSpeed.MinChange = priceChangeSpeedValue.PointsPerSecond
 			}
-			kLine.PriceChangeSpeed.Changes = append(kLine.PriceChangeSpeed.Changes, priceChangeSpeedValue)
+			priceChangeSpeed.Changes = append(priceChangeSpeed.Changes, priceChangeSpeedValue)
 		}
 	}
 
@@ -749,9 +750,8 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
 		kLine.TradeVolume = tradeVolume
 	}
 
-	if kLine.PriceChangeSpeed != nil {
-		e.SetPriceChangeSpeed(*kLine.PriceChangeSpeed)
-	}
+	kLine.PriceChangeSpeed = priceChangeSpeed
+	e.SetPriceChangeSpeed(*priceChangeSpeed)
 	encoded, _ := json.Marshal(kLine)
 
 	e.RDB.LPush(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id), string(encoded))

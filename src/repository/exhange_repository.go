@@ -664,15 +664,28 @@ func (e *ExchangeRepository) GetLastKLine(symbol string) *model.KLine {
 
 	if len(encodedLast) > 0 {
 		var dto model.KLine
-		json.Unmarshal([]byte(encodedLast), &dto)
+		err := json.Unmarshal([]byte(encodedLast), &dto)
 
-		return &dto
+		if err == nil {
+			tradeVolume := e.GetTradeVolume(dto.Symbol, dto.Timestamp)
+			if tradeVolume != nil {
+				dto.TradeVolume = tradeVolume
+			}
+
+			return &dto
+		}
 	}
 
 	list := e.KLineList(symbol, false, 1)
 
 	if len(list) > 0 {
-		return &list[0]
+		dto := list[0]
+		tradeVolume := e.GetTradeVolume(dto.Symbol, dto.Timestamp)
+		if tradeVolume != nil {
+			dto.TradeVolume = tradeVolume
+		}
+
+		return &dto
 	}
 
 	return nil
@@ -720,7 +733,9 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
 	}
 
 	tradeVolume := e.GetTradeVolume(kLine.Symbol, kLine.Timestamp)
-	kLine.TradeVolume = &tradeVolume
+	if tradeVolume != nil {
+		kLine.TradeVolume = tradeVolume
+	}
 
 	kLine.PriceChangeSpeed = priceChangeSpeed
 	encoded, _ := json.Marshal(kLine)
@@ -854,10 +869,20 @@ func (e *ExchangeRepository) GetTradeVolumes(kLine model.KLine) (float64, float6
 	return buyVolume, sellVolume
 }
 
-func (e *ExchangeRepository) AddTrade(trade model.Trade) {
-	tradeCacheKey := fmt.Sprintf("trades-%s-%d", trade.Symbol, e.CurrentBot.Id)
-
+func (e *ExchangeRepository) UpdateTradeVolume(trade model.Trade) {
 	tradeVolume := e.GetTradeVolume(trade.Symbol, trade.Timestamp)
+
+	if tradeVolume == nil {
+		tradeVolume = &model.TradeVolume{
+			Symbol:     trade.Symbol,
+			Timestamp:  trade.Timestamp,
+			PeriodFrom: model.TimestampMilli(trade.Timestamp.GetPeriodFromMinute()),
+			PeriodTo:   model.TimestampMilli(trade.Timestamp.GetPeriodToMinute()),
+			SellQty:    0.00,
+			BuyQty:     0.00,
+		}
+	}
+
 	if trade.IsSell() {
 		tradeVolume.SellQty += trade.Quantity
 	}
@@ -866,7 +891,13 @@ func (e *ExchangeRepository) AddTrade(trade model.Trade) {
 	}
 	tradeVolume.PeriodFrom = model.TimestampMilli(trade.Timestamp.GetPeriodFromMinute())
 	tradeVolume.PeriodTo = model.TimestampMilli(trade.Timestamp.GetPeriodToMinute())
-	e.SetTradeVolume(tradeVolume)
+	e.SetTradeVolume(*tradeVolume)
+}
+
+func (e *ExchangeRepository) AddTrade(trade model.Trade) {
+	tradeCacheKey := fmt.Sprintf("trades-%s-%d", trade.Symbol, e.CurrentBot.Id)
+
+	e.UpdateTradeVolume(trade)
 
 	lastTrades := e.TradeList(trade.Symbol)
 	encoded, _ := json.Marshal(trade)
@@ -1043,24 +1074,18 @@ func (e *ExchangeRepository) SetTradeVolume(volume model.TradeVolume) {
 	e.RDB.Set(*e.Ctx, fmt.Sprintf("trade-volume-%s-%d-bot-%d", strings.ToUpper(volume.Symbol), volume.Timestamp.GetPeriodToMinute(), e.CurrentBot.Id), string(encoded), time.Minute*400)
 }
 
-func (e *ExchangeRepository) GetTradeVolume(symbol string, timestamp model.TimestampMilli) model.TradeVolume {
+func (e *ExchangeRepository) GetTradeVolume(symbol string, timestamp model.TimestampMilli) *model.TradeVolume {
 	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("trade-volume-%s-%d-bot-%d", strings.ToUpper(symbol), timestamp.GetPeriodToMinute(), e.CurrentBot.Id)).Val()
 	if len(res) == 0 {
-		return model.TradeVolume{
-			Symbol:     symbol,
-			Timestamp:  timestamp,
-			PeriodFrom: 0,
-			PeriodTo:   timestamp,
-			SellQty:    0.00,
-			BuyQty:     0.00,
-		}
+		return nil
 	}
 
 	var dto model.TradeVolume
 	err := json.Unmarshal([]byte(res), &dto)
 
 	if err != nil {
-		return model.TradeVolume{
+		log.Printf("[%s] error during trade volume reading: %s", symbol, err.Error())
+		return &model.TradeVolume{
 			Symbol:     symbol,
 			Timestamp:  timestamp,
 			PeriodFrom: 0,
@@ -1070,7 +1095,7 @@ func (e *ExchangeRepository) GetTradeVolume(symbol string, timestamp model.Times
 		}
 	}
 
-	return dto
+	return &dto
 }
 
 func (e *ExchangeRepository) SetCapitalization(event model.MCEvent) {

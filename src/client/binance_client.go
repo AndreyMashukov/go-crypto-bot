@@ -331,7 +331,7 @@ func (b *Binance) GetKLines(symbol string, interval string, limit int64) []model
 	return response.Result
 }
 
-func (b *Binance) TradesAggregate(symbol string, limit int64) []model.Trade {
+func (b *Binance) TradesAggregate(symbol string, limit int64, startTime int64, endTime int64) []model.Trade {
 	b.CheckWait()
 
 	channel := make(chan []byte)
@@ -345,6 +345,12 @@ func (b *Binance) TradesAggregate(symbol string, limit int64) []model.Trade {
 
 	socketRequest.Params["symbol"] = symbol
 	socketRequest.Params["limit"] = limit
+	if startTime > 0 {
+		socketRequest.Params["startTime"] = startTime
+	}
+	if endTime > 0 {
+		socketRequest.Params["endTime"] = endTime
+	}
 	b.socketRequest(socketRequest, channel)
 	message := <-channel
 

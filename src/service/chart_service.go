@@ -100,7 +100,7 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		tradeVolumeSellVal := kLine.GetTradeVolumeSell()
 		tradeVolumeBuyVal := kLine.GetTradeVolumeBuy()
 
-		if tradeVolume.PeriodTo != tradeVolume.PeriodFrom {
+		if tradeVolume != nil {
 			tradeVolumeSellVal = tradeVolume.SellQty
 			tradeVolumeBuyVal = tradeVolume.BuyQty
 		}

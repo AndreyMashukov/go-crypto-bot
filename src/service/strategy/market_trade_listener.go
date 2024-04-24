@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/event"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/service"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/exchange"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/ml"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
@@ -27,6 +29,7 @@ type MarketTradeListener struct {
 	Binance             *client.Binance
 	PythonMLBridge      *ml.PythonMLBridge
 	PriceCalculator     *exchange.PriceCalculator
+	EventDispatcher     *service.EventDispatcher
 }
 
 func (m *MarketTradeListener) ListenAll() {
@@ -89,7 +92,16 @@ func (m *MarketTradeListener) ListenAll() {
 	go func() {
 		for {
 			kLine := <-klineChannel
+
+			lastKline := m.ExchangeRepository.GetLastKLine(kLine.Symbol)
 			m.ExchangeRepository.AddKLine(kLine, false)
+
+			if lastKline != nil && lastKline.Timestamp.GetPeriodToMinute() != kLine.Timestamp.GetPeriodToMinute() {
+				m.EventDispatcher.Dispatch(event.NewKlineReceived{
+					Previous: lastKline,
+					Current:  &kLine,
+				}, event.EventNewKLineReceived)
+			}
 
 			go func(symbol string) {
 				predictChannel <- symbol

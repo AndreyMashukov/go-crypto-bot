@@ -57,65 +57,20 @@ func (m *MarketTradeListener) ListenAll() {
 
 	go func() {
 		for {
-			lock := sync.Mutex{}
-			wg := sync.WaitGroup{}
-
-			invalidPriceSymbols := make([]string, 0)
-			for _, limit := range m.ExchangeRepository.GetTradeLimits() {
-				wg.Add(1)
-				go func(l model.TradeLimit) {
-					defer wg.Done()
-
-					k := m.ExchangeRepository.GetLastKLine(l.Symbol)
-					if k != nil && k.IsPriceNotActual() {
-						lock.Lock()
-						invalidPriceSymbols = append(invalidPriceSymbols, l.Symbol)
-						lock.Unlock()
-					}
-				}(limit)
-			}
-			wg.Wait()
-
-			if len(invalidPriceSymbols) > 0 {
-				log.Printf("Price is invalid for: %s", strings.Join(invalidPriceSymbols, ", "))
-				tickers := m.Binance.GetTickers(invalidPriceSymbols)
-				updated := make([]string, 0)
-				wg = sync.WaitGroup{}
-
-				for _, ticker := range tickers {
-					wg.Add(1)
-					go func(t model.WSTickerPrice) {
-						defer wg.Done()
-
-						k := m.ExchangeRepository.GetLastKLine(t.Symbol)
-						if k != nil && k.IsPriceNotActual() {
-							k.UpdatedAt = time.Now().Unix()
-							k.Close = t.Price
-							k.High = math.Max(t.Price, k.High)
-							k.Low = math.Min(t.Price, k.Low)
-							klineChannel <- *k
-							lock.Lock()
-							updated = append(updated, k.Symbol)
-							lock.Unlock()
-						}
-					}(ticker)
-				}
-				wg.Wait()
-
-				if len(updated) > 0 {
-					log.Printf("Price updated for: %s", strings.Join(updated, ", "))
-				}
-			}
-			m.TimeService.WaitSeconds(2)
-		}
-	}()
-
-	go func() {
-		for {
 			kLine := <-klineChannel
 
 			lastKline := m.ExchangeRepository.GetLastKLine(kLine.Symbol)
 			m.ExchangeRepository.AddKLine(kLine, false)
+
+			if lastKline.Timestamp.Gt(kLine.Timestamp) {
+				log.Printf(
+					"[%s] Exchange sent expired stream price. T= %d < %d",
+					kLine.Symbol,
+					kLine.Timestamp.Value(),
+					lastKline.Timestamp.Value(),
+				)
+				continue
+			}
 
 			if lastKline != nil && lastKline.Timestamp.GetPeriodToMinute() != kLine.Timestamp.GetPeriodToMinute() {
 				m.EventDispatcher.Dispatch(event.NewKlineReceived{
@@ -256,6 +211,79 @@ func (m *MarketTradeListener) ListenAll() {
 
 		log.Printf("Batch %d websocket: %s", index, strings.Join(streamBatchItem, ", "))
 	}
+
+	// Price recovery watcher
+	go func() {
+		for {
+			lock := sync.Mutex{}
+			wg := sync.WaitGroup{}
+
+			invalidPriceSymbols := make([]string, 0)
+			for _, limit := range m.ExchangeRepository.GetTradeLimits() {
+				wg.Add(1)
+				go func(l model.TradeLimit) {
+					defer wg.Done()
+
+					k := m.ExchangeRepository.GetLastKLine(l.Symbol)
+					if k != nil && k.IsPriceNotActual() {
+						lock.Lock()
+						invalidPriceSymbols = append(invalidPriceSymbols, l.Symbol)
+						lock.Unlock()
+					}
+				}(limit)
+			}
+			wg.Wait()
+
+			if len(invalidPriceSymbols) > 0 {
+				log.Printf("Price is invalid for: %s", strings.Join(invalidPriceSymbols, ", "))
+				tickers := m.Binance.GetTickers(invalidPriceSymbols)
+				updated := make([]string, 0)
+				wg = sync.WaitGroup{}
+
+				for _, ticker := range tickers {
+					wg.Add(1)
+					go func(t model.WSTickerPrice) {
+						defer wg.Done()
+
+						k := m.ExchangeRepository.GetLastKLine(t.Symbol)
+						if k != nil && k.IsPriceNotActual() {
+							currentInterval := model.TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute()
+							if k.Timestamp.GetPeriodToMinute() < currentInterval {
+								log.Printf(
+									"[%s] New time interval reached %d -> %d, price is unknown",
+									k.Symbol,
+									k.Timestamp.GetPeriodToMinute(),
+									currentInterval,
+								)
+								k.Timestamp = model.TimestampMilli(currentInterval)
+								k.Open = t.Price
+								k.Close = t.Price
+								k.High = t.Price
+								k.Low = t.Price
+							}
+
+							// todo: update timestamp and recover max, min prices...
+							k.UpdatedAt = time.Now().Unix()
+							k.Close = t.Price
+							k.High = math.Max(t.Price, k.High)
+							k.Low = math.Min(t.Price, k.Low)
+							klineChannel <- *k
+							lock.Lock()
+							updated = append(updated, k.Symbol)
+							lock.Unlock()
+						}
+					}(ticker)
+				}
+				wg.Wait()
+
+				if len(updated) > 0 {
+					log.Printf("Price updated for: %s", strings.Join(updated, ", "))
+				}
+			}
+			m.TimeService.WaitSeconds(2)
+		}
+	}()
+	log.Printf("Price recovery watcher started")
 
 	runChannel := make(chan string)
 	// just to keep running

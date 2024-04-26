@@ -20,6 +20,22 @@ func (t TimestampMilli) GetPeriodToMinute() int64 {
 	return newDate.UnixMilli() + 999
 }
 
+func (t TimestampMilli) Gt(milli TimestampMilli) bool {
+	return t.Value() > milli.Value()
+}
+
+func (t TimestampMilli) Gte(milli TimestampMilli) bool {
+	return t.Value() >= milli.Value()
+}
+
+func (t TimestampMilli) Lt(milli TimestampMilli) bool {
+	return t.Value() < milli.Value()
+}
+
+func (t TimestampMilli) Lte(milli TimestampMilli) bool {
+	return t.Value() <= milli.Value()
+}
+
 type Trade struct {
 	AggregateTradeId int64          `json:"a,int"`
 	Price            float64        `json:"p,string"`

@@ -1,6 +1,6 @@
 package model
 
-import "math"
+import "time"
 
 type TimestampMilli int64
 
@@ -9,11 +9,15 @@ func (t TimestampMilli) Value() int64 {
 }
 
 func (t TimestampMilli) GetPeriodFromMinute() int64 {
-	return int64(math.Floor(float64(t)/10000)) * 10000
+	dateTime := time.Unix(0, t.Value()*int64(time.Millisecond))
+	newDate := time.Date(dateTime.Year(), dateTime.Month(), dateTime.Day(), dateTime.Hour(), dateTime.Minute(), 0, 0, dateTime.Location())
+	return newDate.UnixMilli()
 }
 
 func (t TimestampMilli) GetPeriodToMinute() int64 {
-	return t.GetPeriodFromMinute() + 9999
+	dateTime := time.Unix(0, t.Value()*int64(time.Millisecond))
+	newDate := time.Date(dateTime.Year(), dateTime.Month(), dateTime.Day(), dateTime.Hour(), dateTime.Minute(), 59, 0, dateTime.Location())
+	return newDate.UnixMilli() + 999
 }
 
 type Trade struct {

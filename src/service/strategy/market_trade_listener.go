@@ -16,6 +16,7 @@ import (
 	"math"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -56,35 +57,55 @@ func (m *MarketTradeListener) ListenAll() {
 
 	go func() {
 		for {
+			lock := sync.Mutex{}
+			wg := sync.WaitGroup{}
+
 			invalidPriceSymbols := make([]string, 0)
 			for _, limit := range m.ExchangeRepository.GetTradeLimits() {
-				kline := m.ExchangeRepository.GetLastKLine(limit.Symbol)
-				if kline != nil && kline.IsPriceNotActual() {
-					invalidPriceSymbols = append(invalidPriceSymbols, limit.Symbol)
-				}
+				wg.Add(1)
+				go func(l model.TradeLimit) {
+					defer wg.Done()
+
+					k := m.ExchangeRepository.GetLastKLine(l.Symbol)
+					if k != nil && k.IsPriceNotActual() {
+						lock.Lock()
+						invalidPriceSymbols = append(invalidPriceSymbols, l.Symbol)
+						lock.Unlock()
+					}
+				}(limit)
 			}
+			wg.Wait()
 
 			if len(invalidPriceSymbols) > 0 {
 				log.Printf("Price is invalid for: %s", strings.Join(invalidPriceSymbols, ", "))
 				tickers := m.Binance.GetTickers(invalidPriceSymbols)
 				updated := make([]string, 0)
-				for _, ticker := range tickers {
-					kline := m.ExchangeRepository.GetLastKLine(ticker.Symbol)
-					if kline != nil && kline.IsPriceNotActual() {
-						kline.UpdatedAt = time.Now().Unix()
-						kline.Close = ticker.Price
-						kline.High = math.Max(ticker.Price, kline.High)
-						kline.Low = math.Min(ticker.Price, kline.Low)
-						klineChannel <- *kline
+				wg = sync.WaitGroup{}
 
-						updated = append(updated, kline.Symbol)
-					}
+				for _, ticker := range tickers {
+					wg.Add(1)
+					go func(t model.WSTickerPrice) {
+						defer wg.Done()
+
+						k := m.ExchangeRepository.GetLastKLine(t.Symbol)
+						if k != nil && k.IsPriceNotActual() {
+							k.UpdatedAt = time.Now().Unix()
+							k.Close = t.Price
+							k.High = math.Max(t.Price, k.High)
+							k.Low = math.Min(t.Price, k.Low)
+							klineChannel <- *k
+							lock.Lock()
+							updated = append(updated, k.Symbol)
+							lock.Unlock()
+						}
+					}(ticker)
 				}
+				wg.Wait()
+
 				if len(updated) > 0 {
 					log.Printf("Price updated for: %s", strings.Join(updated, ", "))
 				}
 			}
-
 			m.TimeService.WaitSeconds(2)
 		}
 	}()
@@ -176,10 +197,16 @@ func (m *MarketTradeListener) ListenAll() {
 	tradeLimitCollection := make([]model.SymbolInterface, 0)
 	hasBtcUsdt := false
 	hasEthUsdt := false
+
+	waitGroup := sync.WaitGroup{}
+	log.Printf("Price history recovery started")
+
 	for _, limit := range m.ExchangeRepository.GetTradeLimits() {
+		waitGroup.Add(1)
 		tradeLimitCollection = append(tradeLimitCollection, limit)
 
 		go func(tradeLimit model.TradeLimit) {
+			defer waitGroup.Done()
 			klineAmount := 0
 
 			lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
@@ -207,6 +234,11 @@ func (m *MarketTradeListener) ListenAll() {
 			hasEthUsdt = true
 		}
 	}
+
+	waitGroup.Wait()
+	log.Printf("Price history recovery finished")
+	m.EventDispatcher.Enabled = true
+	log.Printf("Event subscribers are enabled")
 
 	if !hasBtcUsdt {
 		tradeLimitCollection = append(tradeLimitCollection, model.DummySymbol{Symbol: "BTCUSDT"})

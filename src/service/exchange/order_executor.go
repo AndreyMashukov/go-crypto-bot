@@ -528,7 +528,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 		return binanceOrder, nil
 	}
 
-	depth := m.PriceCalculator.GetDepth(binanceOrder.Symbol)
+	depth := m.PriceCalculator.GetDepth(binanceOrder.Symbol, 20)
 
 	var currentPosition int
 	var book [2]model.Number

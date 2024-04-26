@@ -182,7 +182,7 @@ func TestSellOperation(t *testing.T) {
 	}
 	exchangeRepository.On("GetCurrentKline", "BTCUSDT").Return(&kline)
 	orderRepository.On("GetManualOrder", "BTCUSDT").Return(nil)
-	priceCalculator.On("GetDepth", "BTCUSDT").Return(model.Depth{
+	priceCalculator.On("GetDepth", "BTCUSDT", int64(20)).Return(model.OrderBookModel{
 		Asks: [][2]model.Number{
 			{
 				{
@@ -281,7 +281,7 @@ func TestBuyOperation(t *testing.T) {
 	exchangeRepository.On("GetCurrentKline", "BTCUSDT").Return(&kline)
 	orderExecutor.On("CheckMinBalance", tradeLimit, kline).Return(nil)
 	orderRepository.On("GetManualOrder", "BTCUSDT").Return(nil)
-	priceCalculator.On("GetDepth", "BTCUSDT").Return(model.Depth{
+	priceCalculator.On("GetDepth", "BTCUSDT", int64(20)).Return(model.OrderBookModel{
 		Bids: [][2]model.Number{
 			{
 				{
@@ -393,7 +393,7 @@ func TestExtraBuyOperation(t *testing.T) {
 	exchangeRepository.On("GetCurrentKline", "BTCUSDT").Return(&kline)
 	orderExecutor.On("CheckMinBalance", tradeLimit, kline).Return(nil)
 	orderRepository.On("GetManualOrder", "BTCUSDT").Return(nil)
-	priceCalculator.On("GetDepth", "BTCUSDT").Return(model.Depth{
+	priceCalculator.On("GetDepth", "BTCUSDT", int64(20)).Return(model.OrderBookModel{
 		Bids: [][2]model.Number{
 			{
 				{

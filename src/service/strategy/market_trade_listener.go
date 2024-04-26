@@ -36,7 +36,7 @@ type MarketTradeListener struct {
 func (m *MarketTradeListener) ListenAll() {
 	klineChannel := make(chan model.KLine)
 	predictChannel := make(chan string)
-	depthChannel := make(chan model.Depth)
+	depthChannel := make(chan model.OrderBookModel)
 
 	go func() {
 		for {
@@ -135,7 +135,7 @@ func (m *MarketTradeListener) ListenAll() {
 				var event model.OrderBookEvent
 				json.Unmarshal(message, &event)
 
-				depth := event.Depth.ToDepth(strings.ToUpper(strings.ReplaceAll(event.Stream, "@depth20@100ms", "")))
+				depth := event.Depth.ToOrderBookModel(strings.ToUpper(strings.ReplaceAll(event.Stream, "@depth20@100ms", "")))
 				depthDecision := m.MarketDepthStrategy.Decide(depth)
 				m.ExchangeRepository.SetDecision(depthDecision, depth.Symbol)
 				go func() {

@@ -2,14 +2,72 @@ package model
 
 import "sort"
 
-type Depth struct {
+const IcebergSideSell = "SELL"
+const IcebergSideBuy = "BUY"
+
+type Iceberg struct {
+	Side     string  `json:"side"`
+	Price    float64 `json:"price"`
+	Quantity float64 `json:"quantity"`
+}
+
+type OrderBookStat struct {
+	BuyVolumeSum   float64 `json:"buyVolumeSum"`
+	SellVolumeSum  float64 `json:"sellVolumeSum"`
+	BuyQtySum      float64 `json:"buyQtySum"`
+	SellQtySum     float64 `json:"sellQtySum"`
+	BuyLength      int64   `json:"buyLength"`
+	SellLength     int64   `json:"sellLength"`
+	SellIceberg    Iceberg `json:"sellIceberg"`
+	BuyIceberg     Iceberg `json:"buyIceberg"`
+	FirstBuyQty    float64 `json:"firstBuyQty"`
+	FirstBuyPrice  float64 `json:"firstBuyPrice"`
+	FirstSellQty   float64 `json:"firstSellQty"`
+	FirstSellPrice float64 `json:"firstSellPrice"`
+}
+
+type OrderBookModel struct {
 	Symbol    string      `json:"s"`
 	Timestamp int64       `json:"T,int"`
 	Bids      [][2]Number `json:"b"`
 	Asks      [][2]Number `json:"a"`
 }
 
-func (d *Depth) GetBestBid() float64 {
+func (d *OrderBookModel) GetStat() OrderBookStat {
+	bids := d.GetBids()
+	asks := d.GetAsks()
+
+	firstBuyPrice := 0.00
+	firstBuyQty := 0.00
+	if len(bids) > 0 {
+		firstBuyPrice = bids[0][0].Value
+		firstBuyQty = bids[0][1].Value
+	}
+
+	firstSellPrice := 0.00
+	firstSellQty := 0.00
+	if len(asks) > 0 {
+		firstSellPrice = asks[0][0].Value
+		firstSellQty = asks[0][1].Value
+	}
+
+	return OrderBookStat{
+		BuyLength:      int64(len(bids)),
+		SellLength:     int64(len(asks)),
+		BuyQtySum:      d.GetQtySumBid(),
+		SellQtySum:     d.GetQtySumAsk(),
+		BuyVolumeSum:   d.GetBidVolume(),
+		SellVolumeSum:  d.GetAskVolume(),
+		SellIceberg:    d.GetIcebergSell(),
+		BuyIceberg:     d.GetIcebergBuy(),
+		FirstBuyPrice:  firstBuyPrice,
+		FirstBuyQty:    firstBuyQty,
+		FirstSellPrice: firstSellPrice,
+		FirstSellQty:   firstSellQty,
+	}
+}
+
+func (d *OrderBookModel) GetBestBid() float64 {
 	topPrice := 0.00
 	priceSum := 0.00
 	bidCount := 0.00
@@ -28,7 +86,41 @@ func (d *Depth) GetBestBid() float64 {
 	return topPrice
 }
 
-func (d *Depth) GetBestAsk() float64 {
+func (d *OrderBookModel) GetIcebergSell() Iceberg {
+	iceberg := Iceberg{
+		Side:     IcebergSideSell,
+		Price:    0.00,
+		Quantity: 0.00,
+	}
+
+	for _, ask := range d.Asks {
+		if iceberg.Quantity < ask[1].Value {
+			iceberg.Price = ask[0].Value
+			iceberg.Quantity = ask[1].Value
+		}
+	}
+
+	return iceberg
+}
+
+func (d *OrderBookModel) GetIcebergBuy() Iceberg {
+	iceberg := Iceberg{
+		Side:     IcebergSideBuy,
+		Price:    0.00,
+		Quantity: 0.00,
+	}
+
+	for _, bid := range d.Bids {
+		if iceberg.Quantity < bid[1].Value {
+			iceberg.Price = bid[0].Value
+			iceberg.Quantity = bid[1].Value
+		}
+	}
+
+	return iceberg
+}
+
+func (d *OrderBookModel) GetBestAsk() float64 {
 	topPrice := 0.00
 	priceSum := 0.00
 	askCount := 0.00
@@ -47,7 +139,7 @@ func (d *Depth) GetBestAsk() float64 {
 	return topPrice
 }
 
-func (d *Depth) GetAvgAsk() float64 {
+func (d *OrderBookModel) GetAvgAsk() float64 {
 	sum := 0.00
 	amount := 0.00
 
@@ -59,7 +151,7 @@ func (d *Depth) GetAvgAsk() float64 {
 	return sum / amount
 }
 
-func (d *Depth) GetAvgBid() float64 {
+func (d *OrderBookModel) GetAvgBid() float64 {
 	sum := 0.00
 	amount := 0.00
 
@@ -71,7 +163,7 @@ func (d *Depth) GetAvgBid() float64 {
 	return sum / amount
 }
 
-func (d *Depth) GetMaxQtyAsk() float64 {
+func (d *OrderBookModel) GetMaxQtyAsk() float64 {
 	value := 0.00
 	qty := 0.00
 
@@ -85,7 +177,7 @@ func (d *Depth) GetMaxQtyAsk() float64 {
 	return value
 }
 
-func (d *Depth) GetMaxQtyBid() float64 {
+func (d *OrderBookModel) GetMaxQtyBid() float64 {
 	value := 0.00
 	qty := 0.00
 
@@ -98,7 +190,8 @@ func (d *Depth) GetMaxQtyBid() float64 {
 
 	return value
 }
-func (d *Depth) GetAvgVolAsk() float64 {
+
+func (d *OrderBookModel) GetAvgVolAsk() float64 {
 	sumVolume := 0.00
 	sumQty := 0.00
 
@@ -110,7 +203,7 @@ func (d *Depth) GetAvgVolAsk() float64 {
 	return sumVolume / sumQty
 }
 
-func (d *Depth) GetAvgVolBid() float64 {
+func (d *OrderBookModel) GetAvgVolBid() float64 {
 	sumVolume := 0.00
 	sumQty := 0.00
 
@@ -122,7 +215,7 @@ func (d *Depth) GetAvgVolBid() float64 {
 	return sumVolume / sumQty
 }
 
-func (d *Depth) GetBidVolume() float64 {
+func (d *OrderBookModel) GetBidVolume() float64 {
 	volume := 0.00
 
 	for _, bid := range d.Bids {
@@ -132,7 +225,7 @@ func (d *Depth) GetBidVolume() float64 {
 	return volume
 }
 
-func (d *Depth) GetAskVolume() float64 {
+func (d *OrderBookModel) GetAskVolume() float64 {
 	volume := 0.00
 
 	for _, ask := range d.Asks {
@@ -142,7 +235,7 @@ func (d *Depth) GetAskVolume() float64 {
 	return volume
 }
 
-func (d *Depth) GetBidPosition(price float64) (int, [2]Number) {
+func (d *OrderBookModel) GetBidPosition(price float64) (int, [2]Number) {
 	bids := d.GetBids()
 
 	for index, bid := range bids {
@@ -160,7 +253,7 @@ func (d *Depth) GetBidPosition(price float64) (int, [2]Number) {
 	return len(bids) - 1, lastPosition
 }
 
-func (d *Depth) GetAskPosition(price float64) (int, [2]Number) {
+func (d *OrderBookModel) GetAskPosition(price float64) (int, [2]Number) {
 	asks := d.GetAsks()
 
 	for index, ask := range asks {
@@ -178,7 +271,7 @@ func (d *Depth) GetAskPosition(price float64) (int, [2]Number) {
 	return len(asks) - 1, lastPosition
 }
 
-func (d *Depth) GetBestAvgBid() float64 {
+func (d *OrderBookModel) GetBestAvgBid() float64 {
 	priceSum := 0.00
 	bidCount := 0.00
 
@@ -200,7 +293,7 @@ func (d *Depth) GetBestAvgBid() float64 {
 	return bestPriceSum / bestPriceAmount
 }
 
-func (d *Depth) GetBestAvgAsk() float64 {
+func (d *OrderBookModel) GetBestAvgAsk() float64 {
 	priceSum := 0.00
 	askCount := 0.00
 
@@ -222,7 +315,7 @@ func (d *Depth) GetBestAvgAsk() float64 {
 	return bestPriceSum / bestPriceAmount
 }
 
-func (d *Depth) GetBids() [][2]Number {
+func (d *OrderBookModel) GetBids() [][2]Number {
 	bids := make([][2]Number, len(d.Bids))
 	copy(bids, d.Bids)
 	sort.SliceStable(bids, func(i int, j int) bool {
@@ -232,7 +325,7 @@ func (d *Depth) GetBids() [][2]Number {
 	return bids
 }
 
-func (d *Depth) GetAsks() [][2]Number {
+func (d *OrderBookModel) GetAsks() [][2]Number {
 	asks := make([][2]Number, len(d.Asks))
 	copy(asks, d.Asks)
 	sort.SliceStable(asks, func(i int, j int) bool {
@@ -242,7 +335,7 @@ func (d *Depth) GetAsks() [][2]Number {
 	return asks
 }
 
-func (d *Depth) GetAsksReversed() [][2]Number {
+func (d *OrderBookModel) GetAsksReversed() [][2]Number {
 	asks := make([][2]Number, len(d.Asks))
 	copy(asks, d.Asks)
 	sort.SliceStable(asks, func(i int, j int) bool {
@@ -250,4 +343,24 @@ func (d *Depth) GetAsksReversed() [][2]Number {
 	})
 
 	return asks
+}
+
+func (d *OrderBookModel) GetQtySumAsk() float64 {
+	qty := 0.00
+
+	for _, ask := range d.Asks {
+		qty += ask[1].Value
+	}
+
+	return qty
+}
+
+func (d *OrderBookModel) GetQtySumBid() float64 {
+	qty := 0.00
+
+	for _, bid := range d.Bids {
+		qty += bid[1].Value
+	}
+
+	return qty
 }

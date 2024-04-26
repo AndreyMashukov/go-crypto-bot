@@ -95,7 +95,7 @@ func (m *MakerService) ProcessBuy(tradeLimit model.TradeLimit) {
 		return
 	}
 
-	marketDepth := m.PriceCalculator.GetDepth(tradeLimit.Symbol)
+	marketDepth := m.PriceCalculator.GetDepth(tradeLimit.Symbol, 20)
 	manualOrder := m.OrderRepository.GetManualOrder(tradeLimit.Symbol)
 
 	if len(marketDepth.Bids) < 3 && manualOrder == nil {
@@ -176,7 +176,7 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 		return
 	}
 
-	marketDepth := m.PriceCalculator.GetDepth(tradeLimit.Symbol)
+	marketDepth := m.PriceCalculator.GetDepth(tradeLimit.Symbol, 20)
 	manualOrder := m.OrderRepository.GetManualOrder(tradeLimit.Symbol)
 
 	if len(marketDepth.Bids) < 3 && manualOrder == nil {
@@ -234,7 +234,7 @@ func (m *MakerService) ProcessSell(tradeLimit model.TradeLimit, openedOrder mode
 	}
 
 	manualOrder := m.OrderRepository.GetManualOrder(tradeLimit.Symbol)
-	marketDepth := m.PriceCalculator.GetDepth(tradeLimit.Symbol)
+	marketDepth := m.PriceCalculator.GetDepth(tradeLimit.Symbol, 20)
 
 	if len(marketDepth.Asks) < 3 && manualOrder == nil {
 		log.Printf("[%s] Too small ASKs amount: %d\n", tradeLimit.Symbol, len(marketDepth.Asks))

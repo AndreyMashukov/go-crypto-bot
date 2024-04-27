@@ -14,6 +14,7 @@ type ChartService struct {
 	ExchangeRepository *repository.ExchangeRepository
 	OrderRepository    *repository.OrderRepository
 	Formatter          *utils.Formatter
+	StatRepository     *repository.StatRepository
 }
 
 type ChartResult struct {
@@ -82,8 +83,8 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 	kLines := e.ExchangeRepository.KLineList(symbol, true, 200)
 
 	tradeLimit := e.ExchangeRepository.GetTradeLimitCached(symbol)
-
 	cummulativeTradeQuantity := 0.00
+	statMap := e.StatRepository.GetStatRange(symbol, 200)
 
 	for kLineIndex, kLine := range kLines {
 		klinePoint := model.FinancialPoint{
@@ -114,6 +115,37 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		if capitalizationValue != nil {
 			capitalization = e.Formatter.ToFixed(capitalizationValue.Capitalization, 2)
 			capitalizationPrice = e.Formatter.FormatPrice(tradeLimit, capitalizationValue.Price)
+		}
+
+		icebergQtyBuyVal := 0.00
+		icebergQtySellVal := 0.00
+		icebergPriceBuyVal := 0.00
+		icebergPriceSellVal := 0.00
+
+		if tradeStatObj, ok := statMap.Load(kLine.Timestamp.GetPeriodToMinute()); ok {
+			if tradeStat, ok := tradeStatObj.(model.TradeStat); ok {
+				icebergPriceBuyVal = e.Formatter.FormatPrice(tradeLimit, tradeStat.OrderBookStat.BuyIceberg.Price)
+				icebergPriceSellVal = e.Formatter.FormatPrice(tradeLimit, tradeStat.OrderBookStat.SellIceberg.Price)
+				icebergQtyBuyVal = e.Formatter.FormatQuantity(tradeLimit, tradeStat.OrderBookStat.BuyIceberg.Quantity)
+				icebergQtySellVal = e.Formatter.FormatQuantity(tradeLimit, tradeStat.OrderBookStat.SellIceberg.Quantity)
+			}
+		}
+
+		icebergPriceBuyPoint := model.ChartPoint{
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
+			YAxis: icebergPriceBuyVal,
+		}
+		icebergPriceSellPoint := model.ChartPoint{
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
+			YAxis: icebergPriceSellVal,
+		}
+		icebergQtyBuyPoint := model.ChartPoint{
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
+			YAxis: icebergQtyBuyVal,
+		}
+		icebergQtySellPoint := model.ChartPoint{
+			XAxis: kLine.Timestamp.GetPeriodToMinute(),
+			YAxis: icebergQtySellVal,
 		}
 
 		capitalizationValuePoint := model.ChartPoint{
@@ -234,6 +266,10 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		}
 
 		klineKey := fmt.Sprintf("kline-%s", symbol)
+		icebergPriceBuyValueKey := fmt.Sprintf("iceberg-price-buy-value-%s", symbol)
+		icebergPriceSellValueKey := fmt.Sprintf("iceberg-price-sell-value-%s", symbol)
+		icebergQtyBuyValueKey := fmt.Sprintf("iceberg-qty-buy-value-%s", symbol)
+		icebergQtySellValueKey := fmt.Sprintf("iceberg-qty-sell-value-%s", symbol)
 		capitalizationValueKey := fmt.Sprintf("capitalization-value-%s", symbol)
 		capitalizationPriceKey := fmt.Sprintf("capitalization-price-%s", symbol)
 		cummulativeTradeQtyKey := fmt.Sprintf("cummulative-trade-qty-%s", symbol)
@@ -267,6 +303,10 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		list[capitalizationValueKey] = append(list[capitalizationValueKey], capitalizationValuePoint)
 		list[capitalizationPriceKey] = append(list[capitalizationPriceKey], capitalizationPricePoint)
 		list[cummulativeTradeQtyKey] = append(list[cummulativeTradeQtyKey], cummulativeTradeQtyPoint)
+		list[icebergPriceBuyValueKey] = append(list[icebergPriceBuyValueKey], icebergPriceBuyPoint)
+		list[icebergPriceSellValueKey] = append(list[icebergPriceSellValueKey], icebergPriceSellPoint)
+		list[icebergQtyBuyValueKey] = append(list[icebergQtyBuyValueKey], icebergQtyBuyPoint)
+		list[icebergQtySellValueKey] = append(list[icebergQtySellValueKey], icebergQtySellPoint)
 	}
 
 	return list

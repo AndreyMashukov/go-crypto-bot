@@ -215,7 +215,7 @@ func (t *TradeStack) ProcessItem(
 		return nil
 	}
 
-	lastKLine := t.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+	lastKLine := t.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
 	lastPrice := 0.00
 	isPriceValid := false
 	priceChangeSpeedAvg := 0.00
@@ -282,7 +282,7 @@ func (t *TradeStack) ProcessItem(
 	pricePointsDiff := int64((t.Formatter.FormatPrice(tradeLimit, buyPrice) - t.Formatter.FormatPrice(tradeLimit, lastPrice)) / tradeLimit.MinPrice)
 
 	if err == nil {
-		kline := t.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+		kline := t.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
 		if kline != nil && openedOrder.CanExtraBuy(*kline, t.BotService.UseSwapCapital()) {
 			// todo: Add filter configuration (in TradeLimit database table) for profitPercent, example: profitPercent < 0
 			// todo: Allow user to trade only after reaching specific daily price fall (or make it multi-step)

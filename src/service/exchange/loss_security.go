@@ -22,7 +22,7 @@ type LossSecurity struct {
 }
 
 func (l *LossSecurity) IsRiskyBuy(binanceOrder model.BinanceOrder, limit model.TradeLimit) bool {
-	kline := l.ExchangeRepository.GetLastKLine(binanceOrder.Symbol)
+	kline := l.ExchangeRepository.GetCurrentKline(binanceOrder.Symbol)
 
 	if kline != nil && binanceOrder.IsBuy() && binanceOrder.IsNew() {
 		if l.MlEnabled {
@@ -88,7 +88,7 @@ func (l *LossSecurity) IsRiskyBuy(binanceOrder model.BinanceOrder, limit model.T
 }
 
 func (l *LossSecurity) BuyPriceCorrection(price float64, limit model.TradeLimit) float64 {
-	kline := l.ExchangeRepository.GetLastKLine(limit.Symbol)
+	kline := l.ExchangeRepository.GetCurrentKline(limit.Symbol)
 
 	if kline != nil {
 		if price > kline.Low {

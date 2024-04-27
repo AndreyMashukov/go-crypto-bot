@@ -70,7 +70,7 @@ func TestCantGetTradeLimit(t *testing.T) {
 	assertion.Equal(999.99, result.Hold)
 }
 
-func TestCantGetLastKLine(t *testing.T) {
+func TestCantGetCurrentKline(t *testing.T) {
 	assertion := assert.New(t)
 
 	exchangeRepository := new(ExchangeTradeInfoMock)
@@ -99,7 +99,7 @@ func TestCantGetLastKLine(t *testing.T) {
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(model.TradeLimit{
 		Symbol: "BTCUSDT",
 	}, nil)
-	exchangeRepository.On("GetLastKLine", "BTCUSDT").Return(nil)
+	exchangeRepository.On("GetCurrentKline", "BTCUSDT").Return(nil)
 
 	result, err := strategyFacade.Decide("BTCUSDT")
 	assertion.ErrorContains(err, "[BTCUSDT] Last price is unknown")
@@ -135,7 +135,7 @@ func TestPriceIsExpired(t *testing.T) {
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(model.TradeLimit{
 		Symbol: "BTCUSDT",
 	}, nil)
-	exchangeRepository.On("GetLastKLine", "BTCUSDT").Return(&model.KLine{
+	exchangeRepository.On("GetCurrentKline", "BTCUSDT").Return(&model.KLine{
 		UpdatedAt: time.Now().Unix() - 60,
 	})
 
@@ -191,7 +191,7 @@ func TestDropHoldForHighPriority(t *testing.T) {
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(model.TradeLimit{
 		Symbol: "BTCUSDT",
 	}, nil)
-	exchangeRepository.On("GetLastKLine", "BTCUSDT").Return(&model.KLine{
+	exchangeRepository.On("GetCurrentKline", "BTCUSDT").Return(&model.KLine{
 		UpdatedAt: time.Now().Unix(),
 	})
 

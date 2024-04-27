@@ -82,7 +82,7 @@ func (t *TradeFilterService) IsValueMatched(filter model.TradeFilter) bool {
 
 	switch filter.Parameter {
 	case model.TradeFilterParameterPrice:
-		kline := t.ExchangeTradeInfo.GetLastKLine(filter.Symbol)
+		kline := t.ExchangeTradeInfo.GetCurrentKline(filter.Symbol)
 		if kline != nil {
 			matched = t.CompareFloat(kline.Close, filter)
 		}

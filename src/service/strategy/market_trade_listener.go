@@ -43,7 +43,7 @@ func (m *MarketTradeListener) ListenAll() {
 			symbol := <-predictChannel
 			predicted, err := m.PythonMLBridge.Predict(symbol)
 			if err == nil && predicted > 0.00 {
-				kLine := m.ExchangeRepository.GetLastKLine(symbol)
+				kLine := m.ExchangeRepository.GetCurrentKline(symbol)
 				if kLine != nil {
 					m.ExchangeRepository.SaveKLinePredict(predicted, *kLine)
 					// todo: write only master bot???
@@ -59,10 +59,10 @@ func (m *MarketTradeListener) ListenAll() {
 		for {
 			kLine := <-klineChannel
 
-			lastKline := m.ExchangeRepository.GetLastKLine(kLine.Symbol)
-			m.ExchangeRepository.AddKLine(kLine, false)
+			lastKline := m.ExchangeRepository.GetCurrentKline(kLine.Symbol)
+			m.ExchangeRepository.SetCurrentKline(kLine)
 
-			if lastKline.Timestamp.Gt(kLine.Timestamp) {
+			if lastKline != nil && lastKline.Timestamp.Gt(kLine.Timestamp) {
 				log.Printf(
 					"[%s] Exchange sent expired stream price. T= %d < %d",
 					kLine.Symbol,
@@ -106,7 +106,7 @@ func (m *MarketTradeListener) ListenAll() {
 				var tickerEvent model.MiniTickerEvent
 				json.Unmarshal(message, &tickerEvent)
 				ticker := tickerEvent.MiniTicker
-				kLine := m.ExchangeRepository.GetLastKLine(ticker.Symbol)
+				kLine := m.ExchangeRepository.GetCurrentKline(ticker.Symbol)
 
 				if kLine != nil && kLine.Includes(ticker) {
 					kLine.Update(ticker)
@@ -164,7 +164,7 @@ func (m *MarketTradeListener) ListenAll() {
 			defer waitGroup.Done()
 			klineAmount := 0
 
-			lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+			lastKline := m.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
 			if lastKline != nil && !lastKline.IsPriceExpired() {
 				log.Printf("Price is not expired for %s history recovery skipped", tradeLimit.Symbol)
 				return
@@ -173,12 +173,12 @@ func (m *MarketTradeListener) ListenAll() {
 			history := m.Binance.GetKLines(tradeLimit.GetSymbol(), "1m", 200)
 
 			if len(history) > 0 {
-				m.ExchangeRepository.ClearKlineList(tradeLimit.GetSymbol())
+				m.ExchangeRepository.ClearKlineHistory(tradeLimit.GetSymbol())
 			}
 
 			for _, kline := range history {
 				klineAmount++
-				m.ExchangeRepository.AddKLine(kline.ToKLine(tradeLimit.GetSymbol()), true)
+				m.ExchangeRepository.SaveKlineHistory(kline.ToKLine(tradeLimit.GetSymbol()))
 			}
 			log.Printf("Loaded history %s -> %d klines", tradeLimit.Symbol, klineAmount)
 		}(limit)
@@ -224,7 +224,7 @@ func (m *MarketTradeListener) ListenAll() {
 				go func(l model.TradeLimit) {
 					defer wg.Done()
 
-					k := m.ExchangeRepository.GetLastKLine(l.Symbol)
+					k := m.ExchangeRepository.GetCurrentKline(l.Symbol)
 					if k != nil && k.IsPriceNotActual() {
 						lock.Lock()
 						invalidPriceSymbols = append(invalidPriceSymbols, l.Symbol)
@@ -245,7 +245,7 @@ func (m *MarketTradeListener) ListenAll() {
 					go func(t model.WSTickerPrice) {
 						defer wg.Done()
 
-						k := m.ExchangeRepository.GetLastKLine(t.Symbol)
+						k := m.ExchangeRepository.GetCurrentKline(t.Symbol)
 						if k != nil && k.IsPriceNotActual() {
 							currentInterval := model.TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute()
 							if k.Timestamp.GetPeriodToMinute() < currentInterval {

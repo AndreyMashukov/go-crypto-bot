@@ -62,4 +62,6 @@ func (k KLineEventSubscriber) OnNewKlineReceived(eventModel interface{}) {
 		buyQty,
 		sellQty,
 	)
+
+	k.ExchangeRepository.SaveKlineHistory(*e.Previous)
 }

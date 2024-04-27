@@ -25,7 +25,7 @@ func TestTradeFilterMatchingOrNoChildren(t *testing.T) {
 	filterService := exchange.TradeFilterService{
 		ExchangeTradeInfo: exchangeRepoMock,
 	}
-	exchangeRepoMock.On("GetLastKLine", "BTCUSDT").Return(&model.KLine{
+	exchangeRepoMock.On("GetCurrentKline", "BTCUSDT").Return(&model.KLine{
 		Close: 60000.00,
 	})
 	tradeLimit := model.TradeLimit{
@@ -59,7 +59,7 @@ func TestTradeFilterMatchingAndNoChildren(t *testing.T) {
 	filterService := exchange.TradeFilterService{
 		ExchangeTradeInfo: exchangeRepoMock,
 	}
-	exchangeRepoMock.On("GetLastKLine", "BTCUSDT").Return(&model.KLine{
+	exchangeRepoMock.On("GetCurrentKline", "BTCUSDT").Return(&model.KLine{
 		Close: 60000.99,
 	})
 	tradeLimit := model.TradeLimit{
@@ -127,7 +127,7 @@ func TestTradeFilterMatchingChildrenTrue(t *testing.T) {
 		ExchangeTradeInfo: exchangeRepoMock,
 		ExchangePriceAPI:  binance,
 	}
-	exchangeRepoMock.On("GetLastKLine", "BTCUSDT").Return(&model.KLine{
+	exchangeRepoMock.On("GetCurrentKline", "BTCUSDT").Return(&model.KLine{
 		Close: 60000.99,
 	})
 	binance.On("GetKLinesCached", "BTCUSDT", "1d", int64(1)).Return([]model.KLine{
@@ -217,7 +217,7 @@ func TestTradeFilterMatchingChildrenFalse(t *testing.T) {
 	filterService := exchange.TradeFilterService{
 		ExchangeTradeInfo: exchangeRepoMock,
 	}
-	exchangeRepoMock.On("GetLastKLine", "BTCUSDT").Return(&model.KLine{
+	exchangeRepoMock.On("GetCurrentKline", "BTCUSDT").Return(&model.KLine{
 		Close: 60000.99,
 	})
 	tradeLimit := model.TradeLimit{

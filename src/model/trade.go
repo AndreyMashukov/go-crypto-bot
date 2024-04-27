@@ -20,6 +20,18 @@ func (t TimestampMilli) GetPeriodToMinute() int64 {
 	return newDate.UnixMilli() + 999
 }
 
+func (t TimestampMilli) Neq(milli TimestampMilli) bool {
+	return t.Value() != milli.Value()
+}
+
+func (t TimestampMilli) Eq(milli TimestampMilli) bool {
+	return t.Value() == milli.Value()
+}
+
+func (t TimestampMilli) PeriodToEq(milli TimestampMilli) bool {
+	return t.GetPeriodToMinute() == milli.GetPeriodToMinute()
+}
+
 func (t TimestampMilli) Gt(milli TimestampMilli) bool {
 	return t.Value() > milli.Value()
 }

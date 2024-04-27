@@ -65,7 +65,7 @@ func (s *StrategyFacade) Decide(symbol string) (model.FacadeResponse, error) {
 		}, errors.New(fmt.Sprintf("[%s] %s", symbol, err.Error()))
 	}
 
-	kline := s.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+	kline := s.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
 
 	if kline == nil {
 		return model.FacadeResponse{

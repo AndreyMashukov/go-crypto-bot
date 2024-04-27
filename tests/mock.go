@@ -167,7 +167,7 @@ type ExchangePriceStorageMock struct {
 	mock.Mock
 }
 
-func (e *ExchangePriceStorageMock) GetLastKLine(symbol string) *model.KLine {
+func (e *ExchangePriceStorageMock) GetCurrentKline(symbol string) *model.KLine {
 	args := e.Called(symbol)
 	kLine := args.Get(0)
 
@@ -318,7 +318,7 @@ type ExchangeTradeInfoMock struct {
 	mock.Mock
 }
 
-func (e *ExchangeTradeInfoMock) GetLastKLine(symbol string) *model.KLine {
+func (e *ExchangeTradeInfoMock) GetCurrentKline(symbol string) *model.KLine {
 	args := e.Called(symbol)
 	kLine := args.Get(0)
 	if kLine != nil {
@@ -481,7 +481,7 @@ type BaseTradeStorageMock struct {
 	mock.Mock
 }
 
-func (e *BaseTradeStorageMock) GetLastKLine(symbol string) *model.KLine {
+func (e *BaseTradeStorageMock) GetCurrentKline(symbol string) *model.KLine {
 	args := e.Called(symbol)
 	kLine := args.Get(0)
 	if kLine != nil {

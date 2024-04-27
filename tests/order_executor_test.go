@@ -136,7 +136,7 @@ func TestSellAction(t *testing.T) {
 	for i := 2; i < 1002; i++ {
 		timeService.On("GetNowUnix").Times(i).Return(480)
 	}
-	exchangeRepository.On("GetLastKLine", "ETHUSDT").Return(&model.KLine{
+	exchangeRepository.On("GetCurrentKline", "ETHUSDT").Return(&model.KLine{
 		Symbol: "ETHUSDT",
 		Close:  2281.52,
 	})
@@ -315,7 +315,7 @@ func TestSellFoundFilled(t *testing.T) {
 	for i := 2; i < 1002; i++ {
 		timeService.On("GetNowUnix").Times(i).Return(480)
 	}
-	exchangeRepository.On("GetLastKLine", "ETHUSDT").Return(&model.KLine{
+	exchangeRepository.On("GetCurrentKline", "ETHUSDT").Return(&model.KLine{
 		Symbol: "ETHUSDT",
 		Close:  2281.52,
 	})
@@ -483,7 +483,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 	for i := 2; i < 1002; i++ {
 		timeService.On("GetNowUnix").Times(i).Return(480)
 	}
-	exchangeRepository.On("GetLastKLine", "ETHUSDT").Return(&model.KLine{
+	exchangeRepository.On("GetCurrentKline", "ETHUSDT").Return(&model.KLine{
 		Symbol: "ETHUSDT",
 		Close:  2281.52,
 	})
@@ -647,7 +647,7 @@ func TestSellQueryFail(t *testing.T) {
 	for i := 2; i < 1002; i++ {
 		timeService.On("GetNowUnix").Times(i).Return(480)
 	}
-	exchangeRepository.On("GetLastKLine", "ETHUSDT").Return(&model.KLine{
+	exchangeRepository.On("GetCurrentKline", "ETHUSDT").Return(&model.KLine{
 		Symbol: "ETHUSDT",
 		Close:  2281.52,
 	})
@@ -802,7 +802,7 @@ func TestSellClosingAction(t *testing.T) {
 	for i := 2; i < 1002; i++ {
 		timeService.On("GetNowUnix").Times(i).Return(480)
 	}
-	exchangeRepository.On("GetLastKLine", "BTCUSDT").Return(&model.KLine{
+	exchangeRepository.On("GetCurrentKline", "BTCUSDT").Return(&model.KLine{
 		Symbol: "BTCUSDT",
 		Close:  43496.99,
 	})
@@ -980,7 +980,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 	for i := 2; i < 1002; i++ {
 		timeService.On("GetNowUnix").Times(i).Return(480)
 	}
-	exchangeRepository.On("GetLastKLine", "TRXUSDT").Return(&model.KLine{
+	exchangeRepository.On("GetCurrentKline", "TRXUSDT").Return(&model.KLine{
 		Symbol: "TRXUSDT",
 		Close:  0.10692,
 	})
@@ -1291,7 +1291,7 @@ func TestCheckIsTimeToCancel(t *testing.T) {
 		control <- "continue"
 	}()
 
-	exchangeRepository.On("GetLastKLine", "SOLUSDT").Return(&model.KLine{
+	exchangeRepository.On("GetCurrentKline", "SOLUSDT").Return(&model.KLine{
 		Symbol: "SOLUSDT",
 		Close:  95.00,
 	})
@@ -1363,7 +1363,7 @@ func TestCheckIsTimeToCancelSamePrice(t *testing.T) {
 	openedPosition := model.Order{}
 
 	orderRepository.On("GetManualOrder", "SOLUSDT").Return(nil)
-	exchangeRepository.On("GetLastKLine", "SOLUSDT").Return(&model.KLine{
+	exchangeRepository.On("GetCurrentKline", "SOLUSDT").Return(&model.KLine{
 		Symbol: "SOLUSDT",
 		Close:  95.00,
 	})
@@ -1433,7 +1433,7 @@ func TestCheckIsTimeToCancelPriceIsMoreThanOrder(t *testing.T) {
 	openedPosition := model.Order{}
 
 	orderRepository.On("GetManualOrder", "SOLUSDT").Return(nil)
-	exchangeRepository.On("GetLastKLine", "SOLUSDT").Return(&model.KLine{
+	exchangeRepository.On("GetCurrentKline", "SOLUSDT").Return(&model.KLine{
 		Symbol: "SOLUSDT",
 		Close:  101.00,
 	})

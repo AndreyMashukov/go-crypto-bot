@@ -1,6 +1,7 @@
 package model
 
 import (
+	"log"
 	"math"
 	"time"
 )
@@ -123,6 +124,21 @@ func (k *KLine) Includes(ticker MiniTicker) bool {
 }
 
 func (k *KLine) Update(ticker MiniTicker) {
+	currentInterval := TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute()
+	if k.Timestamp.GetPeriodToMinute() < currentInterval {
+		log.Printf(
+			"[%s] New time interval reached %d -> %d, price is unknown",
+			k.Symbol,
+			k.Timestamp.GetPeriodToMinute(),
+			currentInterval,
+		)
+		k.Timestamp = TimestampMilli(currentInterval)
+		k.Open = ticker.Open
+		k.Close = ticker.Close
+		k.High = ticker.High
+		k.Low = ticker.Low
+	}
+
 	k.UpdatedAt = time.Now().Unix()
 	k.Close = ticker.Close
 	k.High = math.Max(k.High, ticker.Close)

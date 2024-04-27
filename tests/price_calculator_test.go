@@ -63,7 +63,7 @@ func TestCalculateBuyPriceByFrame1(t *testing.T) {
 	}
 	exchangeRepoMock.On("GetDepth", "ETHUSDT").Return(depth.Depth)
 	binanceMock.On("GetDepth", "ETHUSDT").Times(0)
-	exchangeRepoMock.On("GetLastKLine", "ETHUSDT").Return(&model.KLine{
+	exchangeRepoMock.On("GetCurrentKline", "ETHUSDT").Return(&model.KLine{
 		Close:     1474.64,
 		UpdatedAt: time.Now().Unix(),
 	})
@@ -135,7 +135,7 @@ func TestCalculateBuyPriceByFrame2(t *testing.T) {
 	}
 	exchangeRepoMock.On("GetDepth", "ETHUSDT").Return(depth.Depth)
 	binanceMock.On("GetDepth", "ETHUSDT").Times(0)
-	exchangeRepoMock.On("GetLastKLine", "ETHUSDT").Return(&model.KLine{
+	exchangeRepoMock.On("GetCurrentKline", "ETHUSDT").Return(&model.KLine{
 		Close:     1474.64,
 		UpdatedAt: time.Now().Unix(),
 	})
@@ -207,7 +207,7 @@ func TestCalculateBuyPriceByFrame3(t *testing.T) {
 	}
 	exchangeRepoMock.On("GetDepth", "ETHUSDT").Return(depth.Depth)
 	binanceMock.On("GetDepth", "ETHUSDT").Times(0)
-	exchangeRepoMock.On("GetLastKLine", "ETHUSDT").Return(&model.KLine{
+	exchangeRepoMock.On("GetCurrentKline", "ETHUSDT").Return(&model.KLine{
 		Close:     1474.64,
 		UpdatedAt: time.Now().Unix(),
 	})
@@ -265,12 +265,12 @@ func TestCalculateSell(t *testing.T) {
 		Price: 1552.26,
 	}
 
-	exchangeRepoMock.On("GetLastKLine", "ETHUSDT").Times(1).Return(nil)
+	exchangeRepoMock.On("GetCurrentKline", "ETHUSDT").Times(1).Return(nil)
 	sellPrice, err := priceCalculator.CalculateSell(tradeLimit, order)
 	assertion.ErrorContains(err, "price is unknown")
 	assertion.Equal(0.00, sellPrice)
 
-	exchangeRepoMock.On("GetLastKLine", "ETHUSDT").Times(2).Return(&model.KLine{
+	exchangeRepoMock.On("GetCurrentKline", "ETHUSDT").Times(2).Return(&model.KLine{
 		Close:     1474.64,
 		UpdatedAt: time.Now().Unix(),
 	})
@@ -281,7 +281,7 @@ func TestCalculateSell(t *testing.T) {
 	assertion.Equal(0.00, sellPrice)
 
 	profitService.On("GetMinClosePrice", order, 1552.26).Times(2).Return(1600.00)
-	exchangeRepoMock.On("GetLastKLine", "ETHUSDT").Times(3).Return(&model.KLine{
+	exchangeRepoMock.On("GetCurrentKline", "ETHUSDT").Times(3).Return(&model.KLine{
 		Close:     1474.64,
 		UpdatedAt: time.Now().Unix(),
 	})

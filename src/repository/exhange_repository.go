@@ -29,7 +29,7 @@ type DecisionReadStorageInterface interface {
 }
 
 type ExchangeTradeInfoInterface interface {
-	GetLastKLine(symbol string) *model.KLine
+	GetCurrentKline(symbol string) *model.KLine
 	GetTradeLimit(symbol string) (model.TradeLimit, error)
 	GetPeriodMinPrice(symbol string, period int64) float64
 	GetPredict(symbol string) (float64, error)
@@ -37,7 +37,7 @@ type ExchangeTradeInfoInterface interface {
 }
 
 type BaseTradeStorageInterface interface {
-	GetLastKLine(symbol string) *model.KLine
+	GetCurrentKline(symbol string) *model.KLine
 	GetTradeLimits() []model.TradeLimit
 	CreateSwapPair(swapPair model.SwapPair) (*int64, error)
 	GetSwapPair(symbol string) (model.SwapPair, error)
@@ -58,10 +58,10 @@ type ExchangeRepositoryInterface interface {
 	GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair
 	GetSwapPair(symbol string) (model.SwapPair, error)
 	UpdateTradeLimit(limit model.TradeLimit) error
-	GetLastKLine(symbol string) *model.KLine
-	AddKLine(kLine model.KLine, recoverMode bool)
+	GetCurrentKline(symbol string) *model.KLine
+	SetCurrentKline(kLine model.KLine)
+	SaveKlineHistory(kLine model.KLine)
 	KLineList(symbol string, reverse bool, size int64) []model.KLine
-	GetPeriodMaxPrice(symbol string, period int64) float64
 	GetPeriodMinPrice(symbol string, period int64) float64
 	SetDepth(depth model.Depth)
 	GetDepth(symbol string) model.Depth
@@ -75,7 +75,7 @@ type ExchangeRepositoryInterface interface {
 }
 
 type ExchangePriceStorageInterface interface {
-	GetLastKLine(symbol string) *model.KLine
+	GetCurrentKline(symbol string) *model.KLine
 	GetPeriodMinPrice(symbol string, period int64) float64
 	GetDepth(symbol string) model.Depth
 	SetDepth(depth model.Depth)
@@ -659,7 +659,7 @@ func (e *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 	return nil
 }
 
-func (e *ExchangeRepository) GetLastKLine(symbol string) *model.KLine {
+func (e *ExchangeRepository) GetCurrentKline(symbol string) *model.KLine {
 	encodedLast := e.RDB.Get(*e.Ctx, fmt.Sprintf("last-kline-%s-%d", symbol, e.CurrentBot.Id)).Val()
 
 	if len(encodedLast) > 0 {
@@ -681,34 +681,19 @@ func (e *ExchangeRepository) GetLastKLine(symbol string) *model.KLine {
 		}
 	}
 
-	list := e.KLineList(symbol, false, 1)
-
-	if len(list) > 0 {
-		dto := list[0]
-		tradeVolume := e.GetTradeVolume(dto.Symbol, dto.Timestamp)
-		if tradeVolume != nil {
-			dto.TradeVolume = tradeVolume
-		}
-
-		priceChangeSpeed := e.GetPriceChangeSpeed(dto.Symbol, dto.Timestamp)
-		if priceChangeSpeed != nil {
-			dto.PriceChangeSpeed = priceChangeSpeed
-		}
-
-		return &dto
-	}
-
 	return nil
 }
 
-func (e *ExchangeRepository) ClearKlineList(symbol string) {
+func (e *ExchangeRepository) ClearKlineHistory(symbol string) {
 	e.RDB.Del(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", symbol, e.CurrentBot.Id)).Val()
 }
 
-func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
-	lastKLines := e.KLineList(kLine.Symbol, false, 200)
+func (e *ExchangeRepository) SetCurrentKline(kLine model.KLine) {
+	tradeVolume := e.GetTradeVolume(kLine.Symbol, kLine.Timestamp)
+	if tradeVolume != nil {
+		kLine.TradeVolume = tradeVolume
+	}
 
-	kLines3 := make([]model.KLine, 0)
 	priceChangeSpeed := e.GetPriceChangeSpeed(kLine.Symbol, kLine.Timestamp)
 	if priceChangeSpeed == nil {
 		priceChangeSpeed = &model.PriceChangeSpeed{
@@ -720,28 +705,31 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
 		}
 	}
 
-	for _, lastKline := range lastKLines {
-		if lastKline.Timestamp == kLine.Timestamp {
-			e.RDB.LPop(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id)).Val()
+	prevKline := e.GetCurrentKline(kLine.Symbol)
+	if prevKline != nil {
+		priceChangeSpeedValue := e.GetPriceChangeSpeedItem(kLine, *prevKline)
+		if priceChangeSpeed.MaxChange < priceChangeSpeedValue.PointsPerSecond {
+			priceChangeSpeed.MaxChange = priceChangeSpeedValue.PointsPerSecond
 		}
-
-		if len(kLines3) == 0 {
-			kLines3 = append(kLines3, lastKline)
-		} else if len(kLines3) < 3 && lastKline.Timestamp != kLines3[len(kLines3)-1].Timestamp {
-			kLines3 = append(kLines3, lastKline)
+		if priceChangeSpeed.MinChange > priceChangeSpeedValue.PointsPerSecond {
+			priceChangeSpeed.MinChange = priceChangeSpeedValue.PointsPerSecond
 		}
+		priceChangeSpeed.Changes = append(priceChangeSpeed.Changes, priceChangeSpeedValue)
 	}
 
-	if !recoverMode {
-		for idx, klineHistory := range kLines3 {
-			priceChangeSpeedValue := e.GetPriceChangeSpeedItem(kLine, klineHistory)
-			if idx == 0 && priceChangeSpeed.MaxChange < priceChangeSpeedValue.PointsPerSecond {
-				priceChangeSpeed.MaxChange = priceChangeSpeedValue.PointsPerSecond
-			}
-			if idx == 0 && priceChangeSpeed.MinChange > priceChangeSpeedValue.PointsPerSecond {
-				priceChangeSpeed.MinChange = priceChangeSpeedValue.PointsPerSecond
-			}
-			priceChangeSpeed.Changes = append(priceChangeSpeed.Changes, priceChangeSpeedValue)
+	kLine.PriceChangeSpeed = priceChangeSpeed
+	e.SetPriceChangeSpeed(*priceChangeSpeed)
+	encoded, _ := json.Marshal(kLine)
+
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("last-kline-%s-%d", kLine.Symbol, e.CurrentBot.Id), string(encoded), time.Hour)
+}
+
+func (e *ExchangeRepository) SaveKlineHistory(kLine model.KLine) {
+	lastKLines := e.KLineList(kLine.Symbol, false, 200)
+
+	for _, lastKline := range lastKLines {
+		if lastKline.Timestamp.PeriodToEq(kLine.Timestamp) {
+			e.RDB.LPop(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id)).Val()
 		}
 	}
 
@@ -750,13 +738,16 @@ func (e *ExchangeRepository) AddKLine(kLine model.KLine, recoverMode bool) {
 		kLine.TradeVolume = tradeVolume
 	}
 
-	kLine.PriceChangeSpeed = priceChangeSpeed
-	e.SetPriceChangeSpeed(*priceChangeSpeed)
-	encoded, _ := json.Marshal(kLine)
+	priceChangeSpeed := e.GetPriceChangeSpeed(kLine.Symbol, kLine.Timestamp)
+	if priceChangeSpeed == nil {
+		kLine.PriceChangeSpeed = priceChangeSpeed
+	}
 
-	e.RDB.LPush(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id), string(encoded))
-	e.RDB.LTrim(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id), 0, 2880)
-	e.RDB.Set(*e.Ctx, fmt.Sprintf("last-kline-%s-%d", kLine.Symbol, e.CurrentBot.Id), string(encoded), time.Hour)
+	encoded, err := json.Marshal(kLine)
+	if err == nil {
+		e.RDB.LPush(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id), string(encoded))
+		e.RDB.LTrim(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id), 0, 2880)
+	}
 }
 
 func (e *ExchangeRepository) GetPriceChangeSpeedItem(kLine model.KLine, lastKlineOld model.KLine) model.PriceChange {
@@ -787,6 +778,11 @@ func (e *ExchangeRepository) KLineList(symbol string, reverse bool, size int64) 
 	res := e.RDB.LRange(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", symbol, e.CurrentBot.Id), 0, size).Val()
 	list := make([]model.KLine, 0)
 
+	prevKline := e.GetCurrentKline(symbol)
+	if prevKline != nil {
+		list = append(list, *prevKline)
+	}
+
 	lastTimestamp := int64(0)
 
 	for _, str := range res {
@@ -815,18 +811,6 @@ func (e *ExchangeRepository) KLineList(symbol string, reverse bool, size int64) 
 	}
 
 	return list
-}
-
-func (e *ExchangeRepository) GetPeriodMaxPrice(symbol string, period int64) float64 {
-	kLines := e.KLineList(symbol, true, period)
-	maxPrice := 0.00
-	for _, kLine := range kLines {
-		if maxPrice < kLine.High {
-			maxPrice = kLine.High
-		}
-	}
-
-	return maxPrice
 }
 
 func (e *ExchangeRepository) GetPeriodMinPrice(symbol string, period int64) float64 {

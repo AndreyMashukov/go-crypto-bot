@@ -168,24 +168,9 @@ func InitServiceContainer() Container {
 		Ctx:        &ctx,
 		CurrentBot: currentBot,
 	}
-
-	chartService := service.ChartService{
-		ExchangeRepository: &exchangeRepository,
-		OrderRepository:    &orderRepository,
-		Formatter:          &formatter,
-	}
 	botService := service.BotService{
 		CurrentBot:    currentBot,
 		BotRepository: &botRepository,
-	}
-	exchangeController := controller.ExchangeController{
-		SwapRepository:     &swapRepository,
-		ExchangeRepository: &exchangeRepository,
-		ChartService:       &chartService,
-		RDB:                rdb,
-		Ctx:                &ctx,
-		CurrentBot:         currentBot,
-		BotService:         &botService,
 	}
 	swapValidator := validator.SwapValidator{
 		Binance:        &binance,
@@ -238,6 +223,29 @@ func InitServiceContainer() Container {
 		FrameService:       &frameService,
 		LossSecurity:       &lossSecurity,
 		ProfitService:      &profitService,
+		BotService:         &botService,
+	}
+
+	statService := service.StatService{
+		Binance:            &binance,
+		ExchangeRepository: &exchangeRepository,
+	}
+
+	chartService := service.ChartService{
+		ExchangeRepository: &exchangeRepository,
+		OrderRepository:    &orderRepository,
+		Formatter:          &formatter,
+		StatRepository:     &statRepository,
+		StatService:        &statService,
+	}
+
+	exchangeController := controller.ExchangeController{
+		SwapRepository:     &swapRepository,
+		ExchangeRepository: &exchangeRepository,
+		ChartService:       &chartService,
+		RDB:                rdb,
+		Ctx:                &ctx,
+		CurrentBot:         currentBot,
 		BotService:         &botService,
 	}
 
@@ -420,10 +428,10 @@ func InitServiceContainer() Container {
 	eventDispatcher := service.EventDispatcher{
 		Subscribers: []event_subscriber.SubscriberInterface{
 			&service.KLineEventSubscriber{
-				Binance:            &binance,
 				ExchangeRepository: &exchangeRepository,
 				StatRepository:     &statRepository,
 				BotService:         &botService,
+				StatService:        &statService,
 			},
 		},
 		Enabled: false,

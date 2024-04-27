@@ -84,7 +84,7 @@ func TestBuyPriceCorrection(t *testing.T) {
 		Low:    22500.00,
 		Symbol: "BTCUSDT",
 	}
-	exchangeRepo.On("GetLastKLine", "BTCUSDT").Return(&kline)
+	exchangeRepo.On("GetCurrentKline", "BTCUSDT").Return(&kline)
 	exchangeRepo.On("GetPredict", "BTCUSDT").Return(22450.00, nil)
 	exchangeRepo.On("GetInterpolation", kline).Return(model.Interpolation{
 		Asset:                "BTC",

@@ -30,7 +30,7 @@ func (h *HealthService) HealthCheck() model.BotHealth {
 	updateMap := make(map[string]string)
 
 	for _, limit := range h.ExchangeRepository.GetTradeLimits() {
-		kLine := h.ExchangeRepository.GetLastKLine(limit.Symbol)
+		kLine := h.ExchangeRepository.GetCurrentKline(limit.Symbol)
 		dateString := ""
 		if kLine != nil {
 			dateString = time.Unix(kLine.UpdatedAt, 0).Format("2006-01-02 15:04:05")

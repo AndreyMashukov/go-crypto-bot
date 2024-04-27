@@ -50,7 +50,7 @@ type OrderExecutor struct {
 }
 
 func (m *OrderExecutor) BuyExtra(tradeLimit model.TradeLimit, order model.Order, price float64) error {
-	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+	lastKline := m.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
 
 	if lastKline == nil {
 		return errors.New(fmt.Sprintf("[%s] Price is unknown", tradeLimit.Symbol))
@@ -598,7 +598,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 			}
 
 			if timer >= 30000 {
-				kline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+				kline := m.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
 
 				orderManageChannel <- "status"
 				action := <-control
@@ -845,7 +845,7 @@ func (m *OrderExecutor) CheckIsBuyExpired(
 		return false
 	}
 
-	kline := m.ExchangeRepository.GetLastKLine(binanceOrder.Symbol)
+	kline := m.ExchangeRepository.GetCurrentKline(binanceOrder.Symbol)
 
 	if kline == nil {
 		return false
@@ -891,7 +891,7 @@ func (m *OrderExecutor) CheckIsSellExpired(
 		return false
 	}
 
-	kline := m.ExchangeRepository.GetLastKLine(binanceOrder.Symbol)
+	kline := m.ExchangeRepository.GetCurrentKline(binanceOrder.Symbol)
 
 	if kline == nil {
 		return false
@@ -954,7 +954,7 @@ func (m *OrderExecutor) CheckIsTimeToExtraBuy(
 		return false
 	}
 
-	kline := m.ExchangeRepository.GetLastKLine(binanceOrder.Symbol)
+	kline := m.ExchangeRepository.GetCurrentKline(binanceOrder.Symbol)
 
 	if kline == nil {
 		return false
@@ -997,7 +997,7 @@ func (m *OrderExecutor) CheckIsTimeToCancel(
 		openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
 
 		if err == nil {
-			kline := m.ExchangeRepository.GetLastKLine(binanceOrder.Symbol)
+			kline := m.ExchangeRepository.GetCurrentKline(binanceOrder.Symbol)
 
 			if kline == nil {
 				return false
@@ -1068,7 +1068,7 @@ func (m *OrderExecutor) CheckIsTimeToSell(
 		return false
 	}
 
-	kline := m.ExchangeRepository.GetLastKLine(binanceOrder.Symbol)
+	kline := m.ExchangeRepository.GetCurrentKline(binanceOrder.Symbol)
 
 	if kline == nil {
 		return false
@@ -1102,7 +1102,7 @@ func (m *OrderExecutor) CheckIsTimeToSwap(
 		return false
 	}
 
-	kline := m.ExchangeRepository.GetLastKLine(binanceOrder.Symbol)
+	kline := m.ExchangeRepository.GetCurrentKline(binanceOrder.Symbol)
 
 	if kline == nil {
 		return false

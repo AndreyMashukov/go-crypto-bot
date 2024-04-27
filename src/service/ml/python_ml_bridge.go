@@ -309,7 +309,7 @@ func (p *PythonMLBridge) Predict(symbol string) (float64, error) {
 	p.Mutex.Lock()
 	defer p.Mutex.Unlock()
 
-	kLine := p.ExchangeRepository.GetLastKLine(symbol)
+	kLine := p.ExchangeRepository.GetCurrentKline(symbol)
 
 	if kLine == nil {
 		return 0.00, errors.New("price is unknown")
@@ -321,12 +321,12 @@ func (p *PythonMLBridge) Predict(symbol string) (float64, error) {
 	if "BTCUSDT" == symbol {
 		pyCode = p.GetPythonPredictCode(*kLine)
 	} else {
-		btcKline := p.ExchangeRepository.GetLastKLine("BTCUSDT")
+		btcKline := p.ExchangeRepository.GetCurrentKline("BTCUSDT")
 		if btcKline == nil {
 			return 0.00, errors.New("BTC price is unknown")
 		}
 
-		ethKline := p.ExchangeRepository.GetLastKLine("ETHUSDT")
+		ethKline := p.ExchangeRepository.GetCurrentKline("ETHUSDT")
 		if ethKline == nil {
 			return 0.00, errors.New("BTC price is unknown")
 		}
@@ -350,11 +350,14 @@ func (p *PythonMLBridge) Predict(symbol string) (float64, error) {
 }
 
 func (p *PythonMLBridge) StartAutoLearn() {
+	wg := sync.WaitGroup{}
 	for _, tradeLimit := range p.ExchangeRepository.GetTradeLimits() {
+		wg.Add(1)
 		go func(limit model.TradeLimit) {
 			for {
 				// todo: write to database and read from database
 				err := p.LearnModel(limit.Symbol)
+				wg.Done()
 				if err != nil {
 					log.Printf("[%s] %s", limit.Symbol, err.Error())
 					p.TimeService.WaitSeconds(60)
@@ -365,4 +368,7 @@ func (p *PythonMLBridge) StartAutoLearn() {
 			}
 		}(tradeLimit)
 	}
+
+	wg.Wait()
+	log.Printf("ML autolearn enabled, all models processed")
 }

@@ -180,7 +180,7 @@ func TestSellOperation(t *testing.T) {
 		Symbol: "BTCUSDT",
 		Close:  65000.00,
 	}
-	exchangeRepository.On("GetLastKLine", "BTCUSDT").Return(&kline)
+	exchangeRepository.On("GetCurrentKline", "BTCUSDT").Return(&kline)
 	orderRepository.On("GetManualOrder", "BTCUSDT").Return(nil)
 	priceCalculator.On("GetDepth", "BTCUSDT").Return(model.Depth{
 		Asks: [][2]model.Number{
@@ -278,7 +278,7 @@ func TestBuyOperation(t *testing.T) {
 		Close:     50000.00,
 		UpdatedAt: time.Now().Unix(),
 	}
-	exchangeRepository.On("GetLastKLine", "BTCUSDT").Return(&kline)
+	exchangeRepository.On("GetCurrentKline", "BTCUSDT").Return(&kline)
 	orderExecutor.On("CheckMinBalance", tradeLimit, kline).Return(nil)
 	orderRepository.On("GetManualOrder", "BTCUSDT").Return(nil)
 	priceCalculator.On("GetDepth", "BTCUSDT").Return(model.Depth{
@@ -390,7 +390,7 @@ func TestExtraBuyOperation(t *testing.T) {
 		Close:     40000.00,
 		UpdatedAt: time.Now().Unix(),
 	}
-	exchangeRepository.On("GetLastKLine", "BTCUSDT").Return(&kline)
+	exchangeRepository.On("GetCurrentKline", "BTCUSDT").Return(&kline)
 	orderExecutor.On("CheckMinBalance", tradeLimit, kline).Return(nil)
 	orderRepository.On("GetManualOrder", "BTCUSDT").Return(nil)
 	priceCalculator.On("GetDepth", "BTCUSDT").Return(model.Depth{

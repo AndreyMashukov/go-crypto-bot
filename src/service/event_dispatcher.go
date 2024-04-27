@@ -13,12 +13,10 @@ func (d *EventDispatcher) Dispatch(event interface{}, eventName string) {
 	}
 
 	for _, subscriber := range d.Subscribers {
-		go func(s event_subscriber.SubscriberInterface, e interface{}, n string) {
-			eventMap := s.GetSubscribedEvents()
-			callback, ok := eventMap[n]
-			if ok {
-				callback(e)
-			}
-		}(subscriber, event, eventName)
+		eventMap := subscriber.GetSubscribedEvents()
+		callback, ok := eventMap[eventName]
+		if ok {
+			callback(event)
+		}
 	}
 }

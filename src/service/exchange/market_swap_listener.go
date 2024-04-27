@@ -51,7 +51,8 @@ func (m *MarketSwapListener) ListenAll() {
 				var event model.KlineEvent
 				json.Unmarshal(swapMsg, &event)
 				kLine := event.KlineData.Kline
-				m.ExchangeRepository.AddKLine(kLine, false)
+				// todo: track price timestamp...
+				m.ExchangeRepository.SetCurrentKline(kLine)
 				swapSymbol = kLine.Symbol
 			}
 

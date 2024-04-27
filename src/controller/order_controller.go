@@ -93,7 +93,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			continue
 		}
 
-		kLine := o.ExchangeRepository.GetLastKLine(limit.Symbol)
+		kLine := o.ExchangeRepository.GetCurrentKline(limit.Symbol)
 		if kLine == nil {
 			continue
 		}
@@ -380,7 +380,7 @@ func (o *OrderController) GetPendingOrderListAction(w http.ResponseWriter, req *
 			continue
 		}
 
-		kLine := o.ExchangeRepository.GetLastKLine(limit.Symbol)
+		kLine := o.ExchangeRepository.GetCurrentKline(limit.Symbol)
 		if kLine == nil {
 			continue
 		}

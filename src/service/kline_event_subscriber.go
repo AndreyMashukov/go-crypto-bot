@@ -1,11 +1,10 @@
-package event_subscriber
+package service
 
 import (
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/event"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
-	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"log"
 )
 
@@ -13,7 +12,7 @@ type KLineEventSubscriber struct {
 	Binance            *client.Binance
 	ExchangeRepository *repository.ExchangeRepository
 	StatRepository     *repository.StatRepository
-	BotService         service.BotServiceInterface
+	BotService         BotServiceInterface
 }
 
 func (k KLineEventSubscriber) GetSubscribedEvents() map[string]func(interface{}) {

@@ -419,7 +419,7 @@ func InitServiceContainer() Container {
 
 	eventDispatcher := service.EventDispatcher{
 		Subscribers: []event_subscriber.SubscriberInterface{
-			&event_subscriber.KLineEventSubscriber{
+			&service.KLineEventSubscriber{
 				Binance:            &binance,
 				ExchangeRepository: &exchangeRepository,
 				StatRepository:     &statRepository,

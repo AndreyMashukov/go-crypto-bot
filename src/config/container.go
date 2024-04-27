@@ -173,6 +173,7 @@ func InitServiceContainer() Container {
 		ExchangeRepository: &exchangeRepository,
 		OrderRepository:    &orderRepository,
 		Formatter:          &formatter,
+		StatRepository:     &statRepository,
 	}
 	botService := service.BotService{
 		CurrentBot:    currentBot,

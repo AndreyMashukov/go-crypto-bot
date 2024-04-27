@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"log"
+	"sync"
 )
 
 type StatRepository struct {
@@ -86,4 +87,103 @@ func (s *StatRepository) WriteTradeStat(stat model.TradeStat) error {
 	_, err = res.LastInsertId()
 
 	return err
+}
+
+func (s *StatRepository) GetStatRange(symbol string, limit int64) *sync.Map {
+	statMap := sync.Map{}
+
+	res, err := s.DB.Query(`
+		SELECT
+		    symbol as Symbol,
+			toUnixTimestamp64Milli(timestamp) as DateTime,
+			bot_id as BotId,
+			price as Price,
+			buy_qty as BuyQty,
+			sell_qty as SellQty,
+			buy_volume as BuyVolume,
+			sell_volume as SellVolume,
+			trade_count as TradeCount,
+			max_pcs as MaxPcs,
+			min_pcs as MinPcs,
+			open as Open,
+			close as Close,
+			high as High,
+			low as Low,
+			volume as Volume,
+			order_book_buy_length as OrderBookBuyLength,
+			order_book_sell_length as OrderBookSellLength,
+			order_book_buy_qty_sum as OrderBookBuyQtySum,
+			order_book_sell_qty_sum as OrderBookSellQtySum,
+			order_book_buy_volume_sum as OrderBookBuyVolumeSum,
+			order_book_sell_volume_sum as OrderBookSellVolumeSum,
+			order_book_buy_iceberg_qty as OrderBookBuyIcebergQty,
+			order_book_buy_iceberg_price as OrderBookBuyIcebergPrice,
+			order_book_sell_iceberg_qty as OrderBookSellIcebergQty,
+			order_book_sell_iceberg_price as OrderBookSellIcebergPrice,
+			order_book_buy_first_qty as OrderBookBuyFirstQty,
+			order_book_buy_first_price as OrderBookBuyFirstPrice,
+			order_book_sell_first_qty as OrderBookSellFirstQty,
+			order_book_sell_first_price as OrderBookSellFirstPrice
+		FROM default.trades
+		WHERE symbol = ?
+		ORDER BY timestamp DESC LIMIT ?
+	`, symbol, limit)
+	defer res.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for res.Next() {
+		tradeStat := model.TradeStat{
+			OrderBookStat: model.OrderBookStat{
+				SellIceberg: model.Iceberg{
+					Side: model.IcebergSideSell,
+				},
+				BuyIceberg: model.Iceberg{
+					Side: model.IcebergSideBuy,
+				},
+			},
+		}
+		err := res.Scan(
+			&tradeStat.Symbol,
+			&tradeStat.Timestamp,
+			&tradeStat.BotId,
+			&tradeStat.Price,
+			&tradeStat.BuyQty,
+			&tradeStat.SellQty,
+			&tradeStat.BuyVolume,
+			&tradeStat.SellVolume,
+			&tradeStat.TradeCount,
+			&tradeStat.MaxPSC,
+			&tradeStat.MinPCS,
+			&tradeStat.Open,
+			&tradeStat.Close,
+			&tradeStat.High,
+			&tradeStat.Low,
+			&tradeStat.Volume,
+			&tradeStat.OrderBookStat.BuyLength,
+			&tradeStat.OrderBookStat.SellLength,
+			&tradeStat.OrderBookStat.BuyQtySum,
+			&tradeStat.OrderBookStat.SellQtySum,
+			&tradeStat.OrderBookStat.BuyVolumeSum,
+			&tradeStat.OrderBookStat.SellVolumeSum,
+			&tradeStat.OrderBookStat.BuyIceberg.Quantity,
+			&tradeStat.OrderBookStat.BuyIceberg.Price,
+			&tradeStat.OrderBookStat.SellIceberg.Quantity,
+			&tradeStat.OrderBookStat.SellIceberg.Price,
+			&tradeStat.OrderBookStat.FirstBuyQty,
+			&tradeStat.OrderBookStat.FirstBuyPrice,
+			&tradeStat.OrderBookStat.FirstSellQty,
+			&tradeStat.OrderBookStat.FirstSellPrice,
+		)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		statMap.Store(tradeStat.Timestamp.GetPeriodToMinute(), tradeStat)
+	}
+
+	return &statMap
 }

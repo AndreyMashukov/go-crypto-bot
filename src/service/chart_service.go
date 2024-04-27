@@ -131,10 +131,18 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 
 		if tradeStatObj, ok := statMap.Load(kLine.Timestamp.GetPeriodToMinute()); ok {
 			if tradeStat, ok := tradeStatObj.(model.TradeStat); ok {
-				icebergPriceBuyVal = e.Formatter.FormatPrice(tradeLimit, tradeStat.OrderBookStat.BuyIceberg.Price)
-				icebergPriceSellVal = e.Formatter.FormatPrice(tradeLimit, tradeStat.OrderBookStat.SellIceberg.Price)
-				icebergQtyBuyVal = e.Formatter.FormatQuantity(tradeLimit, tradeStat.OrderBookStat.BuyIceberg.Quantity)
-				icebergQtySellVal = e.Formatter.FormatQuantity(tradeLimit, tradeStat.OrderBookStat.SellIceberg.Quantity)
+				if tradeStat.OrderBookStat.BuyIceberg.Price != 0.00 {
+					icebergPriceBuyVal = e.Formatter.FormatPrice(tradeLimit, tradeStat.OrderBookStat.BuyIceberg.Price)
+				}
+				if tradeStat.OrderBookStat.SellIceberg.Price != 0.00 {
+					icebergPriceSellVal = e.Formatter.FormatPrice(tradeLimit, tradeStat.OrderBookStat.SellIceberg.Price)
+				}
+				if tradeStat.OrderBookStat.BuyIceberg.Quantity != 0.00 {
+					icebergQtyBuyVal = e.Formatter.FormatQuantity(tradeLimit, tradeStat.OrderBookStat.BuyIceberg.Quantity)
+				}
+				if tradeStat.OrderBookStat.SellIceberg.Quantity != 0.00 {
+					icebergQtySellVal = e.Formatter.FormatQuantity(tradeLimit, tradeStat.OrderBookStat.SellIceberg.Quantity)
+				}
 			}
 		}
 

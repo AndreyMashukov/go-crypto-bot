@@ -15,6 +15,7 @@ type ChartService struct {
 	OrderRepository    *repository.OrderRepository
 	Formatter          *utils.Formatter
 	StatRepository     *repository.StatRepository
+	StatService        *StatService
 }
 
 type ChartResult struct {
@@ -85,6 +86,12 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 	tradeLimit := e.ExchangeRepository.GetTradeLimitCached(symbol)
 	cummulativeTradeQuantity := 0.00
 	statMap := e.StatRepository.GetStatRange(symbol, 200)
+
+	cKLine := e.ExchangeRepository.GetCurrentKline(symbol)
+	if cKLine != nil {
+		cStat := e.StatService.GetTradeStat(*cKLine, true, false)
+		statMap.Store(cKLine.Timestamp.GetPeriodToMinute(), cStat)
+	}
 
 	for kLineIndex, kLine := range kLines {
 		klinePoint := model.FinancialPoint{
@@ -231,8 +238,7 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 			YAxis: 0,
 		}
 
-		// todo: add current sell and buy limit orders...
-
+		// todo: rewrite to sync-Map in future, increase speed and reduce cyclomatic
 		for _, symbolOrder := range symbolOrders {
 			date, _ := time.Parse("2006-01-02 15:04:05", symbolOrder.CreatedAt)
 			orderTimestamp := date.UnixMilli() // convert date to timestamp

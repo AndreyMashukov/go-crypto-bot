@@ -29,7 +29,7 @@ type ExchangeOrderAPIInterface interface {
 
 type ExchangePriceAPIInterface interface {
 	GetOpenedOrders() ([]model.BinanceOrder, error)
-	GetDepth(symbol string) (model.OrderBook, error)
+	GetDepth(symbol string, limit int64) *model.OrderBook
 	GetKLines(symbol string, interval string, limit int64) []model.KLineHistory
 	GetKLinesCached(symbol string, interval string, limit int64) []model.KLine
 	GetExchangeData(symbols []string) (*model.ExchangeInfo, error)
@@ -246,7 +246,7 @@ func (b *Binance) UserDataStreamStart() (model.UserDataStreamStart, error) {
 	return response.Result, nil
 }
 
-func (b *Binance) GetDepth(symbol string) (model.OrderBook, error) {
+func (b *Binance) GetDepth(symbol string, limit int64) *model.OrderBook {
 	b.CheckWait()
 
 	channel := make(chan []byte)
@@ -257,7 +257,7 @@ func (b *Binance) GetDepth(symbol string) (model.OrderBook, error) {
 		Method: "depth",
 		Params: make(map[string]any),
 	}
-	socketRequest.Params["limit"] = 20
+	socketRequest.Params["limit"] = limit
 	socketRequest.Params["symbol"] = symbol
 	b.socketRequest(socketRequest, channel)
 	message := <-channel
@@ -266,10 +266,10 @@ func (b *Binance) GetDepth(symbol string) (model.OrderBook, error) {
 	json.Unmarshal(message, &response)
 
 	if response.Error != nil {
-		return model.OrderBook{}, errors.New(response.Error.GetMessage())
+		return nil
 	}
 
-	return response.Result, nil
+	return &response.Result
 }
 
 func (b *Binance) GetOpenedOrders() ([]model.BinanceOrder, error) {

@@ -108,7 +108,7 @@ func TestSellAction(t *testing.T) {
 		initialBinanceOrder,
 	}, nil)
 	orderRepository.On("SetBinanceOrder", mock.Anything).Times(2)
-	priceCalculator.On("GetDepth", "ETHUSDT").Return(model.Depth{
+	priceCalculator.On("GetDepth", "ETHUSDT", int64(20)).Return(model.OrderBookModel{
 		Symbol: "ETHUSDT",
 		Asks: [][2]model.Number{
 			{
@@ -287,7 +287,7 @@ func TestSellFoundFilled(t *testing.T) {
 		initialBinanceOrder,
 	}, nil)
 	orderRepository.On("SetBinanceOrder", mock.Anything).Times(2)
-	priceCalculator.On("GetDepth", "ETHUSDT").Return(model.Depth{
+	priceCalculator.On("GetDepth", "ETHUSDT", int64(20)).Return(model.OrderBookModel{
 		Symbol: "ETHUSDT",
 		Asks: [][2]model.Number{
 			{
@@ -455,7 +455,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 		initialBinanceOrder,
 	}, nil)
 	orderRepository.On("SetBinanceOrder", mock.Anything).Times(2)
-	priceCalculator.On("GetDepth", "ETHUSDT").Return(model.Depth{
+	priceCalculator.On("GetDepth", "ETHUSDT", int64(20)).Return(model.OrderBookModel{
 		Symbol: "ETHUSDT",
 		Asks: [][2]model.Number{
 			{
@@ -619,7 +619,7 @@ func TestSellQueryFail(t *testing.T) {
 		initialBinanceOrder,
 	}, nil)
 	orderRepository.On("SetBinanceOrder", mock.Anything).Times(2)
-	priceCalculator.On("GetDepth", "ETHUSDT").Return(model.Depth{
+	priceCalculator.On("GetDepth", "ETHUSDT", int64(20)).Return(model.OrderBookModel{
 		Symbol: "ETHUSDT",
 		Asks: [][2]model.Number{
 			{
@@ -774,7 +774,7 @@ func TestSellClosingAction(t *testing.T) {
 		initialBinanceOrder,
 	}, nil)
 	orderRepository.On("SetBinanceOrder", mock.Anything).Times(2)
-	priceCalculator.On("GetDepth", "BTCUSDT").Return(model.Depth{
+	priceCalculator.On("GetDepth", "BTCUSDT", int64(20)).Return(model.OrderBookModel{
 		Symbol: "BTCUSDT",
 		Asks: [][2]model.Number{
 			{
@@ -952,7 +952,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 		initialBinanceOrder,
 	}, nil)
 	orderRepository.On("SetBinanceOrder", mock.Anything).Times(2)
-	priceCalculator.On("GetDepth", "TRXUSDT").Return(model.Depth{
+	priceCalculator.On("GetDepth", "TRXUSDT", int64(20)).Return(model.OrderBookModel{
 		Symbol: "TRXUSDT",
 		Asks: [][2]model.Number{
 			{

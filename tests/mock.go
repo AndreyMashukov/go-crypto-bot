@@ -193,11 +193,11 @@ func (e *ExchangePriceStorageMock) GetPeriodMinPrice(symbol string, period int64
 	args := e.Called(symbol, period)
 	return args.Get(0).(float64)
 }
-func (e *ExchangePriceStorageMock) GetDepth(symbol string) model.Depth {
+func (e *ExchangePriceStorageMock) GetDepth(symbol string) model.OrderBookModel {
 	args := e.Called(symbol)
-	return args.Get(0).(model.Depth)
+	return args.Get(0).(model.OrderBookModel)
 }
-func (e *ExchangePriceStorageMock) SetDepth(depth model.Depth) {
+func (e *ExchangePriceStorageMock) SetDepth(depth model.OrderBookModel) {
 	_ = e.Called(depth)
 }
 func (e *ExchangePriceStorageMock) GetPredict(symbol string) (float64, error) {
@@ -231,9 +231,15 @@ func (e *ExchangePriceAPIMock) GetOpenedOrders() ([]model.BinanceOrder, error) {
 	args := e.Called()
 	return args.Get(0).([]model.BinanceOrder), args.Error(1)
 }
-func (e *ExchangePriceAPIMock) GetDepth(symbol string) (model.OrderBook, error) {
-	args := e.Called(symbol)
-	return args.Get(0).(model.OrderBook), args.Error(1)
+func (e *ExchangePriceAPIMock) GetDepth(symbol string, limit int64) *model.OrderBook {
+	args := e.Called(symbol, limit)
+
+	val := args.Get(0)
+	if val == nil {
+		return nil
+	}
+
+	return val.(*model.OrderBook)
 }
 func (e *ExchangePriceAPIMock) GetKLines(symbol string, interval string, limit int64) []model.KLineHistory {
 	args := e.Called(symbol, interval, limit)
@@ -356,9 +362,9 @@ func (p *PriceCalculatorMock) CalculateSell(tradeLimit model.TradeLimit, order m
 	args := p.Called(tradeLimit, order)
 	return args.Get(0).(float64), args.Error(1)
 }
-func (p *PriceCalculatorMock) GetDepth(symbol string) model.Depth {
-	args := p.Called(symbol)
-	return args.Get(0).(model.Depth)
+func (p *PriceCalculatorMock) GetDepth(symbol string, limit int64) model.OrderBookModel {
+	args := p.Called(symbol, limit)
+	return args.Get(0).(model.OrderBookModel)
 }
 
 type SwapExecutorMock struct {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/redis/go-redis/v9"
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/controller"
@@ -50,6 +51,28 @@ func InitServiceContainer() Container {
 		Password: os.Getenv("REDIS_PASSWORD"),
 		DB:       0,
 	})
+
+	clickhouseDb := clickhouse.OpenDB(&clickhouse.Options{
+		Addr: []string{os.Getenv("CLICKHOUSE_DSN")},
+		Auth: clickhouse.Auth{
+			Database: "default",
+			Username: "default",
+			Password: os.Getenv("CLICKHOUSE_PASSWORD"),
+		},
+		Settings: clickhouse.Settings{
+			"max_execution_time": 60,
+		},
+		DialTimeout: 30 * time.Second,
+		Compression: &clickhouse.Compression{
+			Method: clickhouse.CompressionLZ4,
+		},
+		Protocol: clickhouse.HTTP,
+	})
+	chErr := clickhouseDb.Ping()
+
+	if chErr != nil {
+		log.Fatal(fmt.Sprintf("[Stat DB] Clickhouse can't connect: %s", err.Error()))
+	}
 
 	botRepository := repository.BotRepository{
 		DB:  db,
@@ -100,6 +123,11 @@ func InitServiceContainer() Container {
 		APIKeyCheckCompleted: false,
 		Connected:            false,
 		Lock:                 &sync.Mutex{},
+	}
+
+	statRepository := repository.StatRepository{
+		DB:         clickhouseDb,
+		CurrentBot: currentBot,
 	}
 
 	frameService := exchange.FrameService{
@@ -394,6 +422,8 @@ func InitServiceContainer() Container {
 			&event_subscriber.KLineEventSubscriber{
 				Binance:            &binance,
 				ExchangeRepository: &exchangeRepository,
+				StatRepository:     &statRepository,
+				BotService:         &botService,
 			},
 		},
 		Enabled: false,

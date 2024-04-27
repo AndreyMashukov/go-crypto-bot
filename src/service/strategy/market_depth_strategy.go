@@ -8,7 +8,7 @@ import (
 type MarketDepthStrategy struct {
 }
 
-func (m *MarketDepthStrategy) Decide(depth model.Depth) model.Decision {
+func (m *MarketDepthStrategy) Decide(depth model.OrderBookModel) model.Decision {
 	sellVolume := depth.GetAskVolume()
 	buyVolume := depth.GetBidVolume()
 

@@ -62,7 +62,7 @@ func TestCalculateBuyPriceByFrame1(t *testing.T) {
 		BuyPriceHistoryCheckPeriod:   14,
 	}
 	exchangeRepoMock.On("GetDepth", "ETHUSDT").Return(depth.Depth)
-	binanceMock.On("GetDepth", "ETHUSDT").Times(0)
+	binanceMock.On("GetDepth", "ETHUSDT", int64(20)).Times(0)
 	exchangeRepoMock.On("GetCurrentKline", "ETHUSDT").Return(&model.KLine{
 		Close:     1474.64,
 		UpdatedAt: time.Now().Unix(),
@@ -134,7 +134,7 @@ func TestCalculateBuyPriceByFrame2(t *testing.T) {
 		BuyPriceHistoryCheckPeriod:   14,
 	}
 	exchangeRepoMock.On("GetDepth", "ETHUSDT").Return(depth.Depth)
-	binanceMock.On("GetDepth", "ETHUSDT").Times(0)
+	binanceMock.On("GetDepth", "ETHUSDT", int64(20)).Times(0)
 	exchangeRepoMock.On("GetCurrentKline", "ETHUSDT").Return(&model.KLine{
 		Close:     1474.64,
 		UpdatedAt: time.Now().Unix(),
@@ -206,7 +206,7 @@ func TestCalculateBuyPriceByFrame3(t *testing.T) {
 		BuyPriceHistoryCheckPeriod:   14,
 	}
 	exchangeRepoMock.On("GetDepth", "ETHUSDT").Return(depth.Depth)
-	binanceMock.On("GetDepth", "ETHUSDT").Times(0)
+	binanceMock.On("GetDepth", "ETHUSDT", int64(20)).Times(0)
 	exchangeRepoMock.On("GetCurrentKline", "ETHUSDT").Return(&model.KLine{
 		Close:     1474.64,
 		UpdatedAt: time.Now().Unix(),

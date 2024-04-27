@@ -163,13 +163,6 @@ func (m *MarketTradeListener) ListenAll() {
 		go func(tradeLimit model.TradeLimit) {
 			defer waitGroup.Done()
 			klineAmount := 0
-
-			lastKline := m.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
-			if lastKline != nil && !lastKline.IsPriceExpired() {
-				log.Printf("Price is not expired for %s history recovery skipped", tradeLimit.Symbol)
-				return
-			}
-
 			history := m.Binance.GetKLines(tradeLimit.GetSymbol(), "1m", 200)
 
 			if len(history) > 0 {
@@ -202,15 +195,26 @@ func (m *MarketTradeListener) ListenAll() {
 		tradeLimitCollection = append(tradeLimitCollection, model.DummySymbol{Symbol: "ETHUSDT"})
 	}
 
-	for index, streamBatchItem := range client.GetStreamBatch(tradeLimitCollection, []string{"@aggTrade", "@kline_1m@2000ms", "@depth20@100ms", "@miniTicker"}) {
-		websockets = append(websockets, client.Listen(fmt.Sprintf(
-			"%s/stream?streams=%s",
-			os.Getenv("BINANCE_STREAM_DSN"),
-			strings.Join(streamBatchItem, "/"),
-		), eventChannel, []string{}, int64(index)))
+	lock := sync.Mutex{}
+	sWg := sync.WaitGroup{}
 
-		log.Printf("Batch %d websocket: %s", index, strings.Join(streamBatchItem, ", "))
+	for index, streamBatchItem := range client.GetStreamBatch(tradeLimitCollection, []string{"@aggTrade", "@kline_1m@2000ms", "@depth20@100ms", "@miniTicker"}) {
+		sWg.Add(1)
+		go func(sbi []string, i int) {
+			defer sWg.Done()
+			lock.Lock()
+			websockets = append(websockets, client.Listen(fmt.Sprintf(
+				"%s/stream?streams=%s",
+				os.Getenv("BINANCE_STREAM_DSN"),
+				strings.Join(sbi, "/"),
+			), eventChannel, []string{}, int64(i)))
+			lock.Unlock()
+			log.Printf("Batch %d websocket: %d connected", i, len(sbi))
+		}(streamBatchItem, index)
 	}
+
+	sWg.Wait()
+	log.Printf("WS Price stream started.")
 
 	// Price recovery watcher
 	go func() {

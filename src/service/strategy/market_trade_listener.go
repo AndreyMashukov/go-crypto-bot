@@ -60,7 +60,6 @@ func (m *MarketTradeListener) ListenAll() {
 			kLine := <-klineChannel
 
 			lastKline := m.ExchangeRepository.GetCurrentKline(kLine.Symbol)
-			m.ExchangeRepository.SetCurrentKline(kLine)
 
 			if lastKline != nil && lastKline.Timestamp.Gt(kLine.Timestamp) {
 				log.Printf(
@@ -72,6 +71,7 @@ func (m *MarketTradeListener) ListenAll() {
 				continue
 			}
 
+			m.ExchangeRepository.SetCurrentKline(kLine)
 			if lastKline != nil && lastKline.Timestamp.GetPeriodToMinute() != kLine.Timestamp.GetPeriodToMinute() {
 				m.EventDispatcher.Dispatch(event.NewKlineReceived{
 					Previous: lastKline,

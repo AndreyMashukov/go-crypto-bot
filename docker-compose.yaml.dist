@@ -6,6 +6,8 @@ services:
     container_name: go_crypto_bot
     environment:
         BOT_UUID: '{BOT_UUID_4_HERE}'
+        CLICKHOUSE_DSN: 'clickhouse:8123'
+        CLICKHOUSE_PASSWORD: '123456' # .docker/data/clickhouse-server/users.xml:63
         DATABASE_DSN: 'root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot'
         REDIS_DSN: 'redis:6379'
         REDIS_PASSWORD: ''

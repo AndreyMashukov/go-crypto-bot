@@ -11,6 +11,7 @@ import (
 	"log"
 	"slices"
 	"strings"
+	"sync"
 )
 
 type MarketSwapListener struct {
@@ -90,15 +91,26 @@ func (m *MarketSwapListener) ListenAll() {
 		swapPairCollection = append(swapPairCollection, swapPair)
 	}
 
-	for index, streamBatchItem := range client.GetStreamBatch(swapPairCollection, []string{"@kline_1m", "@depth20@1000ms"}) {
-		swapWebsockets = append(swapWebsockets, client.Listen(fmt.Sprintf(
-			"%s/stream?streams=%s",
-			"wss://stream.binance.com:9443",
-			strings.Join(streamBatchItem, "/"),
-		), swapKlineChannel, []string{}, 10000+int64(index)))
+	lock := sync.Mutex{}
+	sWg := sync.WaitGroup{}
 
-		log.Printf("Swap batch %d websocket: %s", index, strings.Join(streamBatchItem, ", "))
+	for index, streamBatchItem := range client.GetStreamBatch(swapPairCollection, []string{"@kline_1m", "@depth20@1000ms"}) {
+		sWg.Add(1)
+		go func(sbi []string, i int) {
+			defer sWg.Done()
+			lock.Lock()
+			swapWebsockets = append(swapWebsockets, client.Listen(fmt.Sprintf(
+				"%s/stream?streams=%s",
+				"wss://stream.binance.com:9443",
+				strings.Join(sbi, "/"),
+			), swapKlineChannel, []string{}, 10000+int64(i)))
+			lock.Unlock()
+			log.Printf("Swap batch %d websocket: %d connected", i, len(sbi))
+		}(streamBatchItem, index)
 	}
+
+	sWg.Wait()
+	log.Printf("WS Swap Price stream started.")
 
 	runChannel := make(chan string)
 	// just to keep running

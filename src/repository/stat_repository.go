@@ -13,7 +13,7 @@ type StatRepository struct {
 
 func (s *StatRepository) WriteTradeStat(stat model.TradeStat) error {
 	res, err := s.DB.Exec(`
-		INSERT INTO stats.trades (*) VALUES(
+		INSERT INTO default.trades (*) VALUES(
 			?, -- Symbol
 			?, -- Timestamp
 			?, -- BotId

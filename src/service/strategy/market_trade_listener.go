@@ -251,6 +251,10 @@ func (m *MarketTradeListener) ListenAll() {
 
 						k := m.ExchangeRepository.GetCurrentKline(t.Symbol)
 						if k != nil && k.IsPriceNotActual() {
+							k.High = math.Max(t.Price, k.High)
+							k.Low = math.Min(t.Price, k.Low)
+							k.Close = t.Price
+
 							currentInterval := model.TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute()
 							if k.Timestamp.GetPeriodToMinute() < currentInterval {
 								log.Printf(
@@ -268,9 +272,6 @@ func (m *MarketTradeListener) ListenAll() {
 
 							// todo: update timestamp and recover max, min prices...
 							k.UpdatedAt = time.Now().Unix()
-							k.Close = t.Price
-							k.High = math.Max(t.Price, k.High)
-							k.Low = math.Min(t.Price, k.Low)
 							klineChannel <- *k
 							lock.Lock()
 							updated = append(updated, k.Symbol)

@@ -55,6 +55,22 @@ services:
       - SYS_TIME
     restart: always
 
+  clickhouse:
+    image: clickhouse/clickhouse-server
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - ./.docker/data/clickhouse-server:/etc/clickhouse-server
+    ports:
+      - "8002:9000"
+      - "9123:8123"
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 262144
+        hard: 262144
+    networks:
+      - bot-net
+
 networks:
   bot-net:
     driver: bridge
@@ -62,3 +78,5 @@ networks:
 volumes:
   mysql-data:
     name: go_crypto_bot_mysql_data
+  clickhouse-data:
+    name: go_crypto_bot_clickhouse_data

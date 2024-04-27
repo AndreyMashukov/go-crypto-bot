@@ -1,6 +1,6 @@
 package model
 
 type DepthEvent struct {
-	Stream string `json:"stream"`
-	Depth  Depth  `json:"data"`
+	Stream string         `json:"stream"`
+	Depth  OrderBookModel `json:"data"`
 }

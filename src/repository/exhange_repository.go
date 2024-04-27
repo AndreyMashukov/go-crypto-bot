@@ -63,8 +63,8 @@ type ExchangeRepositoryInterface interface {
 	SaveKlineHistory(kLine model.KLine)
 	KLineList(symbol string, reverse bool, size int64) []model.KLine
 	GetPeriodMinPrice(symbol string, period int64) float64
-	SetDepth(depth model.Depth)
-	GetDepth(symbol string) model.Depth
+	SetDepth(depth model.OrderBookModel)
+	GetDepth(symbol string) model.OrderBookModel
 	AddTrade(trade model.Trade)
 	TradeList(symbol string) []model.Trade
 	SetDecision(decision model.Decision, symbol string)
@@ -77,8 +77,8 @@ type ExchangeRepositoryInterface interface {
 type ExchangePriceStorageInterface interface {
 	GetCurrentKline(symbol string) *model.KLine
 	GetPeriodMinPrice(symbol string, period int64) float64
-	GetDepth(symbol string) model.Depth
-	SetDepth(depth model.Depth)
+	GetDepth(symbol string) model.OrderBookModel
+	SetDepth(depth model.OrderBookModel)
 	GetPredict(symbol string) (float64, error)
 	GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair
 	GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair
@@ -825,15 +825,15 @@ func (e *ExchangeRepository) GetPeriodMinPrice(symbol string, period int64) floa
 	return minPrice
 }
 
-func (e *ExchangeRepository) SetDepth(depth model.Depth) {
+func (e *ExchangeRepository) SetDepth(depth model.OrderBookModel) {
 	encoded, _ := json.Marshal(depth)
 	e.RDB.Set(*e.Ctx, fmt.Sprintf("depth-%s", depth.Symbol), string(encoded), time.Second*25)
 }
 
-func (e *ExchangeRepository) GetDepth(symbol string) model.Depth {
+func (e *ExchangeRepository) GetDepth(symbol string) model.OrderBookModel {
 	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("depth-%s", symbol)).Val()
 	if len(res) == 0 {
-		return model.Depth{
+		return model.OrderBookModel{
 			Asks:      make([][2]model.Number, 0),
 			Bids:      make([][2]model.Number, 0),
 			Symbol:    symbol,
@@ -841,7 +841,7 @@ func (e *ExchangeRepository) GetDepth(symbol string) model.Depth {
 		}
 	}
 
-	var dto model.Depth
+	var dto model.OrderBookModel
 	json.Unmarshal([]byte(res), &dto)
 
 	return dto

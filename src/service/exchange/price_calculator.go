@@ -14,7 +14,7 @@ import (
 type PriceCalculatorInterface interface {
 	CalculateBuy(tradeLimit model.TradeLimit) (float64, error)
 	CalculateSell(tradeLimit model.TradeLimit, order model.Order) (float64, error)
-	GetDepth(symbol string) model.Depth
+	GetDepth(symbol string, limit int64) model.OrderBookModel
 }
 
 type PriceCalculator struct {
@@ -100,13 +100,13 @@ func (m *PriceCalculator) CalculateSell(tradeLimit model.TradeLimit, order model
 	return m.Formatter.FormatPrice(tradeLimit, minPrice), nil
 }
 
-func (m *PriceCalculator) GetDepth(symbol string) model.Depth {
+func (m *PriceCalculator) GetDepth(symbol string, limit int64) model.OrderBookModel {
 	depth := m.ExchangeRepository.GetDepth(symbol)
 
 	if len(depth.Asks) == 0 && len(depth.Bids) == 0 {
-		book, err := m.Binance.GetDepth(symbol)
-		if err == nil {
-			depth = book.ToDepth(symbol)
+		book := m.Binance.GetDepth(symbol, limit)
+		if book != nil {
+			depth = book.ToOrderBookModel(symbol)
 			m.ExchangeRepository.SetDepth(depth)
 		}
 	}
@@ -114,7 +114,7 @@ func (m *PriceCalculator) GetDepth(symbol string) model.Depth {
 	return depth
 }
 
-func (m *PriceCalculator) GetBestFrameBuy(limit model.TradeLimit, marketDepth model.Depth, frame model.Frame) ([2]float64, error) {
+func (m *PriceCalculator) GetBestFrameBuy(limit model.TradeLimit, marketDepth model.OrderBookModel, frame model.Frame) ([2]float64, error) {
 	openPrice := 0.00
 	closePrice := 0.00
 	potentialOpenPrice := 0.00
@@ -135,7 +135,7 @@ func (m *PriceCalculator) GetBestFrameBuy(limit model.TradeLimit, marketDepth mo
 
 	if openPrice == 0.00 {
 		return [2]float64{0.00, 0.00}, errors.New(fmt.Sprintf(
-			"Order Depth is out of Frame [low:%f - high:%f] [must close = %f, if open = %f]",
+			"Order OrderBookModel is out of Frame [low:%f - high:%f] [must close = %f, if open = %f]",
 			frame.AvgLow,
 			frame.AvgHigh,
 			closePrice,

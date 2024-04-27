@@ -12,7 +12,7 @@ type Frame struct {
 	AvgLow  float64 `json:"avgLow"`
 }
 
-func (f *Frame) GetBestFrameSell(marketDepth Depth) ([2]float64, error) {
+func (f *Frame) GetBestFrameSell(marketDepth OrderBookModel) ([2]float64, error) {
 	closePrice := 0.00
 
 	for _, ask := range marketDepth.GetAsksReversed() {
@@ -26,7 +26,7 @@ func (f *Frame) GetBestFrameSell(marketDepth Depth) ([2]float64, error) {
 
 	if closePrice == 0.00 {
 		return [2]float64{0.00, 0.00}, errors.New(fmt.Sprintf(
-			"Order Depth is out of Frame [low:%f - high:%f]",
+			"Order OrderBookModel is out of Frame [low:%f - high:%f]",
 			f.AvgLow,
 			f.AvgHigh,
 		))

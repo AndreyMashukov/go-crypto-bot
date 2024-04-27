@@ -139,8 +139,8 @@ type OrderBookEvent struct {
 	Depth  OrderBook `json:"data"`
 }
 
-func (o OrderBook) ToDepth(symbol string) Depth {
-	return Depth{
+func (o OrderBook) ToOrderBookModel(symbol string) OrderBookModel {
+	return OrderBookModel{
 		Symbol:    symbol,
 		Timestamp: time.Now().UnixMilli(),
 		Bids:      o.Bids,

@@ -79,7 +79,7 @@ func (m *MakerService) ProcessBuy(tradeLimit model.TradeLimit) {
 		return
 	}
 
-	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+	lastKline := m.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
 
 	if lastKline == nil {
 		log.Printf("[%s] Last price is unknown... skip!", tradeLimit.Symbol)
@@ -155,7 +155,7 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 		return
 	}
 
-	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+	lastKline := m.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
 
 	if lastKline == nil {
 		log.Printf("[%s] Last price is unknown... skip!", tradeLimit.Symbol)
@@ -219,7 +219,7 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 }
 
 func (m *MakerService) ProcessSell(tradeLimit model.TradeLimit, openedOrder model.Order) {
-	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+	lastKline := m.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
 
 	if lastKline == nil {
 		log.Printf("[%s] Last price is unknown... skip!", tradeLimit.Symbol)

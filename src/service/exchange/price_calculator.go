@@ -29,7 +29,7 @@ type PriceCalculator struct {
 }
 
 func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, error) {
-	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+	lastKline := m.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
 
 	if lastKline == nil || lastKline.IsPriceExpired() {
 		return 0.00, errors.New(fmt.Sprintf("[%s] Current price is unknown, wait...", tradeLimit.Symbol))
@@ -79,7 +79,7 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 }
 
 func (m *PriceCalculator) CalculateSell(tradeLimit model.TradeLimit, order model.Order) (float64, error) {
-	lastKline := m.ExchangeRepository.GetLastKLine(tradeLimit.Symbol)
+	lastKline := m.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
 
 	if lastKline == nil {
 		return 0.00, errors.New("price is unknown")
@@ -158,7 +158,7 @@ func (m *PriceCalculator) InterpolatePrice(symbol string) model.Interpolation {
 
 	if err == nil {
 		priceXBtc := btcPair.BuyPrice
-		lastKlineBtc := m.ExchangeRepository.GetLastKLine("BTCUSDT")
+		lastKlineBtc := m.ExchangeRepository.GetCurrentKline("BTCUSDT")
 		if lastKlineBtc != nil && !lastKlineBtc.IsPriceExpired() && !btcPair.IsPriceExpired() {
 			interpolation.BtcInterpolationUsdt = priceXBtc * lastKlineBtc.Close
 		}
@@ -168,7 +168,7 @@ func (m *PriceCalculator) InterpolatePrice(symbol string) model.Interpolation {
 
 	if err == nil {
 		priceXEth := ethPair.BuyPrice
-		lastKlineEth := m.ExchangeRepository.GetLastKLine("ETHUSDT")
+		lastKlineEth := m.ExchangeRepository.GetCurrentKline("ETHUSDT")
 		if lastKlineEth != nil && !lastKlineEth.IsPriceExpired() && !ethPair.IsPriceExpired() {
 			interpolation.EthInterpolationUsdt = priceXEth * lastKlineEth.Close
 		}

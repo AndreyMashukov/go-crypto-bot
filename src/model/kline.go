@@ -123,7 +123,9 @@ func (k *KLine) Includes(ticker MiniTicker) bool {
 	return k.OpenTime <= ticker.EventTime && ticker.EventTime < k.Timestamp
 }
 
-func (k *KLine) Update(ticker MiniTicker) {
+func (k *KLine) Update(ticker MiniTicker) KLine {
+	// WARNING!!!
+	// This is daily ticker price, we can use only `ticker.Close` for minute KLines!
 	currentInterval := TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute()
 	if k.Timestamp.GetPeriodToMinute() < currentInterval {
 		log.Printf(
@@ -132,17 +134,33 @@ func (k *KLine) Update(ticker MiniTicker) {
 			k.Timestamp.GetPeriodToMinute(),
 			currentInterval,
 		)
-		k.Timestamp = TimestampMilli(currentInterval)
-		k.Open = ticker.Open
-		k.Close = ticker.Close
-		k.High = ticker.High
-		k.Low = ticker.Low
+
+		return KLine{
+			Timestamp: TimestampMilli(currentInterval),
+			Symbol:    ticker.Symbol,
+			Open:      ticker.Close,
+			Close:     ticker.Close,
+			High:      ticker.Close,
+			Low:       ticker.Close,
+			Interval:  "1m",
+			OpenTime:  TimestampMilli(TimestampMilli(currentInterval).GetPeriodFromMinute()),
+			UpdatedAt: time.Now().Unix(),
+		}
 	}
 
-	k.UpdatedAt = time.Now().Unix()
-	k.Close = ticker.Close
-	k.High = math.Max(k.High, ticker.Close)
-	k.Low = math.Min(k.Low, ticker.Close)
+	return KLine{
+		Timestamp:        TimestampMilli(currentInterval),
+		Symbol:           ticker.Symbol,
+		Open:             k.Open,
+		Close:            ticker.Close,
+		High:             math.Max(k.High, ticker.Close),
+		Low:              math.Min(k.Low, ticker.Close),
+		Interval:         "1m",
+		OpenTime:         TimestampMilli(TimestampMilli(currentInterval).GetPeriodFromMinute()),
+		UpdatedAt:        time.Now().Unix(),
+		PriceChangeSpeed: k.PriceChangeSpeed,
+		TradeVolume:      k.TradeVolume,
+	}
 }
 
 type KlineBatch struct {

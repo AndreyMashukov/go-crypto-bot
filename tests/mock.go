@@ -197,8 +197,8 @@ func (e *ExchangePriceStorageMock) GetDepth(symbol string, limit int64) model.Or
 	args := e.Called(symbol, limit)
 	return args.Get(0).(model.OrderBookModel)
 }
-func (e *ExchangePriceStorageMock) SetDepth(depth model.OrderBookModel, limit int64) {
-	_ = e.Called(depth, limit)
+func (e *ExchangePriceStorageMock) SetDepth(depth model.OrderBookModel, limit int64, expires int64) {
+	_ = e.Called(depth, limit, expires)
 }
 func (e *ExchangePriceStorageMock) GetPredict(symbol string) (float64, error) {
 	args := e.Called(symbol)

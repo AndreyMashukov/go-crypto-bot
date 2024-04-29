@@ -64,7 +64,7 @@ func (m *MarketSwapListener) ListenAll() {
 
 				depth := event.Depth.ToOrderBookModel(strings.ToUpper(strings.ReplaceAll(event.Stream, "@depth20@1000ms", "")))
 				depth.UpdatedAt = time.Now().Unix()
-				m.ExchangeRepository.SetDepth(depth, 20)
+				m.ExchangeRepository.SetDepth(depth, 20, 25)
 				swapSymbol = depth.Symbol
 			}
 

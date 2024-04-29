@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
 )
 
@@ -180,9 +181,11 @@ func (p *PythonMLBridge) LearnModel(symbol string) error {
 	defer C.free(unsafe.Pointer(pyCodeC))
 	C.PyRun_SimpleString(pyCodeC)
 
+	time.Sleep(time.Second)
 	fileContent, err := os.ReadFile(resultPath)
+
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	text := string(fileContent)
@@ -306,7 +309,7 @@ func (p *PythonMLBridge) StartAutoLearn() {
 				wg.Done()
 				if err != nil {
 					log.Printf("[%s] %s", limit.Symbol, err.Error())
-					p.TimeService.WaitSeconds(60)
+					p.TimeService.WaitSeconds(10)
 					continue
 				}
 

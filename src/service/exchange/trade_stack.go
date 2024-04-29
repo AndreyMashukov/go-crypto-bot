@@ -11,6 +11,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
 	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
+	"log"
 	"sort"
 	"time"
 )
@@ -77,6 +78,7 @@ func (t *TradeStack) GetTradeStack(params TradeStackParams) []model.TradeStackIt
 	stack := make([]model.TradeStackItem, 0)
 
 	if err != nil {
+		log.Printf("Trade stack balance error: %s", err.Error())
 		return stack
 	}
 
@@ -159,6 +161,7 @@ func (t *TradeStack) GetTradeStack(params TradeStackParams) []model.TradeStackIt
 				TradeFiltersExtraCharge: stackItem.TradeFiltersExtraCharge,
 				PriceChangeSpeedAvg:     stackItem.PriceChangeSpeedAvg,
 				Capitalization:          stackItem.Capitalization,
+				PredictedPrice:          stackItem.PredictedPrice,
 			})
 		} else {
 			impossible = append(impossible, stackItem)
@@ -180,6 +183,7 @@ func (t *TradeStack) GetTradeStack(params TradeStackParams) []model.TradeStackIt
 				IsExtraCharge:           stackItem.IsExtraCharge,
 				IsPriceValid:            stackItem.IsPriceValid,
 				Price:                   stackItem.Price,
+				PredictedPrice:          stackItem.PredictedPrice,
 				StrategyDecisions:       stackItem.StrategyDecisions,
 				IsBuyLocked:             stackItem.IsBuyLocked,
 				IsEnabled:               stackItem.IsEnabled,
@@ -281,6 +285,11 @@ func (t *TradeStack) ProcessItem(
 
 	pricePointsDiff := int64((t.Formatter.FormatPrice(tradeLimit, buyPrice) - t.Formatter.FormatPrice(tradeLimit, lastPrice)) / tradeLimit.MinPrice)
 
+	predictedPrice, _ := t.ExchangeRepository.GetPredict(tradeLimit.Symbol)
+	if predictedPrice > 0.00 {
+		predictedPrice = t.Formatter.FormatPrice(tradeLimit, predictedPrice)
+	}
+
 	if err == nil {
 		kline := t.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
 		if kline != nil && openedOrder.CanExtraBuy(*kline, t.BotService.UseSwapCapital()) {
@@ -309,6 +318,7 @@ func (t *TradeStack) ProcessItem(
 					TradeFiltersExtraCharge: tradeLimit.TradeFiltersExtraCharge,
 					PriceChangeSpeedAvg:     priceChangeSpeedAvg,
 					Capitalization:          capitalization,
+					PredictedPrice:          predictedPrice,
 				}
 			}
 		}
@@ -340,6 +350,7 @@ func (t *TradeStack) ProcessItem(
 			TradeFiltersExtraCharge: tradeLimit.TradeFiltersExtraCharge,
 			PriceChangeSpeedAvg:     priceChangeSpeedAvg,
 			Capitalization:          capitalization,
+			PredictedPrice:          predictedPrice,
 		}
 	}
 

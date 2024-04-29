@@ -28,15 +28,23 @@ type HealthService struct {
 
 func (h *HealthService) HealthCheck() model.BotHealth {
 	updateMap := make(map[string]string)
+	orderBookMap := make(map[string]string)
 
 	for _, limit := range h.ExchangeRepository.GetTradeLimits() {
 		kLine := h.ExchangeRepository.GetCurrentKline(limit.Symbol)
-		dateString := ""
+		dateStringPrice := ""
+		dateStringOrderBook := ""
 		if kLine != nil {
-			dateString = time.Unix(kLine.UpdatedAt, 0).Format("2006-01-02 15:04:05")
+			dateStringPrice = time.Unix(kLine.UpdatedAt, 0).Format("2006-01-02 15:04:05")
 		}
 
-		updateMap[limit.Symbol] = dateString
+		orderBook := h.ExchangeRepository.GetDepth(limit.Symbol, 20)
+		if !orderBook.IsEmpty() {
+			dateStringOrderBook = time.Unix(orderBook.UpdatedAt, 0).Format("2006-01-02 15:04:05")
+		}
+
+		updateMap[limit.Symbol] = dateStringPrice
+		orderBookMap[limit.Symbol] = dateStringOrderBook
 	}
 
 	memStats, _ := sysstats.GetMemStats()
@@ -91,5 +99,6 @@ func (h *HealthService) HealthCheck() model.BotHealth {
 		Memory:        memStats,
 		LoadAvg:       loadAvg,
 		Updates:       updateMap,
+		OrderBook:     orderBookMap,
 	}
 }

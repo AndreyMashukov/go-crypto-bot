@@ -24,4 +24,5 @@ type BotHealth struct {
 	Memory        sysstats.MemStats `json:"memory"`
 	LoadAvg       sysstats.LoadAvg  `json:"loadAvg"`
 	Updates       map[string]string `json:"updates"`
+	OrderBook     map[string]string `json:"orderBook"`
 }

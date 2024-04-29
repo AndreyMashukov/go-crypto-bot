@@ -310,7 +310,7 @@ func (p *PythonMLBridge) StartAutoLearn() {
 					p.TimeService.WaitSeconds(10)
 					continue
 				}
-				p.TimeService.WaitSeconds(3600 * 6)
+				p.TimeService.WaitSeconds(3600)
 				wg.Add(1) // just to handle negative counter
 
 			}

@@ -16,7 +16,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 	"unsafe"
 )
 
@@ -181,7 +180,6 @@ func (p *PythonMLBridge) LearnModel(symbol string) error {
 	defer C.free(unsafe.Pointer(pyCodeC))
 	C.PyRun_SimpleString(pyCodeC)
 
-	time.Sleep(time.Millisecond * 100)
 	fileContent, err := os.ReadFile(resultPath)
 
 	if err != nil {

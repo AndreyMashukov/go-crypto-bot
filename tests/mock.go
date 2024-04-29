@@ -193,12 +193,12 @@ func (e *ExchangePriceStorageMock) GetPeriodMinPrice(symbol string, period int64
 	args := e.Called(symbol, period)
 	return args.Get(0).(float64)
 }
-func (e *ExchangePriceStorageMock) GetDepth(symbol string) model.OrderBookModel {
-	args := e.Called(symbol)
+func (e *ExchangePriceStorageMock) GetDepth(symbol string, limit int64) model.OrderBookModel {
+	args := e.Called(symbol, limit)
 	return args.Get(0).(model.OrderBookModel)
 }
-func (e *ExchangePriceStorageMock) SetDepth(depth model.OrderBookModel) {
-	_ = e.Called(depth)
+func (e *ExchangePriceStorageMock) SetDepth(depth model.OrderBookModel, limit int64) {
+	_ = e.Called(depth, limit)
 }
 func (e *ExchangePriceStorageMock) GetPredict(symbol string) (float64, error) {
 	args := e.Called(symbol)

@@ -42,7 +42,12 @@ func (m *MarketTradeListener) ListenAll() {
 		for {
 			symbol := <-predictChannel
 			predicted, err := m.PythonMLBridge.Predict(symbol)
-			if err == nil && predicted > 0.00 {
+			if err != nil {
+				log.Printf("[%s] predict error: %s", symbol, err.Error())
+				continue
+			}
+
+			if predicted > 0.00 {
 				kLine := m.ExchangeRepository.GetCurrentKline(symbol)
 				if kLine != nil {
 					m.ExchangeRepository.SaveKLinePredict(predicted, *kLine)
@@ -58,6 +63,10 @@ func (m *MarketTradeListener) ListenAll() {
 	go func() {
 		for {
 			kLine := <-klineChannel
+
+			go func(symbol string) {
+				predictChannel <- symbol
+			}(kLine.Symbol)
 
 			lastKline := m.ExchangeRepository.GetCurrentKline(kLine.Symbol)
 
@@ -79,10 +88,6 @@ func (m *MarketTradeListener) ListenAll() {
 				}, event.EventNewKLineReceived)
 			}
 
-			go func(symbol string) {
-				predictChannel <- symbol
-			}(kLine.Symbol)
-
 			m.ExchangeRepository.SetDecision(m.BaseKLineStrategy.Decide(kLine), kLine.Symbol)
 			m.ExchangeRepository.SetDecision(m.OrderBasedStrategy.Decide(kLine), kLine.Symbol)
 		}
@@ -93,7 +98,8 @@ func (m *MarketTradeListener) ListenAll() {
 	go func() {
 		for {
 			depth := <-depthChannel
-			m.ExchangeRepository.SetDepth(depth)
+			depth.UpdatedAt = time.Now().Unix()
+			m.ExchangeRepository.SetDepth(depth, 20)
 		}
 	}()
 
@@ -197,7 +203,7 @@ func (m *MarketTradeListener) ListenAll() {
 	lock := sync.Mutex{}
 	sWg := sync.WaitGroup{}
 
-	for index, streamBatchItem := range client.GetStreamBatch(tradeLimitCollection, []string{"@aggTrade", "@kline_1m@2000ms", "@depth20@100ms", "@miniTicker"}) {
+	for index, streamBatchItem := range client.GetStreamBatch(tradeLimitCollection, []string{"@aggTrade", "@kline_1m@2000ms", "@depth500@100ms", "@miniTicker"}) {
 		sWg.Add(1)
 		go func(sbi []string, i int) {
 			defer sWg.Done()

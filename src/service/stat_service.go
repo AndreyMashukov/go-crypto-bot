@@ -81,7 +81,7 @@ func (s *StatService) GetTradeStat(kLine model.KLine, cache bool, full bool) mod
 
 	if full {
 		if cache {
-			orderBookModel = s.ExchangeRepository.GetDepth(kLine.Symbol)
+			orderBookModel = s.ExchangeRepository.GetDepth(kLine.Symbol, 500)
 		} else {
 			if orderBookModelPointer := s.Binance.GetDepth(kLine.Symbol, 500); orderBookModelPointer != nil {
 				orderBookModel = orderBookModelPointer.ToOrderBookModel(kLine.Symbol)

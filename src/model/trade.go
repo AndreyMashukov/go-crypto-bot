@@ -109,3 +109,25 @@ type TradeStat struct {
 	Volume        float64        `json:"volume"`
 	OrderBookStat OrderBookStat  `json:"orderBookStat"`
 }
+
+type TradeLearnDataset struct {
+	OrderBookBuyFirstQty   float64
+	OrderBookSellFirstQty  float64
+	OrderBookBuyQtySum     float64
+	OrderBookSellQtySum    float64
+	OrderBookBuyVolumeSum  float64
+	OrderBookSellVolumeSum float64
+	SecondaryPrice         float64
+	PrimaryPrice           float64
+}
+
+type TradePricePredictParams struct {
+	Symbol                 string
+	OrderBookBuyFirstQty   float64
+	OrderBookSellFirstQty  float64
+	OrderBookBuyQtySum     float64
+	OrderBookSellQtySum    float64
+	OrderBookBuyVolumeSum  float64
+	OrderBookSellVolumeSum float64
+	SecondaryPrice         float64
+}

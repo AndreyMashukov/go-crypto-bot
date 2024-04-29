@@ -7,6 +7,7 @@ import (
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/exchange"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/validator"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -221,7 +222,12 @@ func (t *TradeController) GetTradeStackAction(w http.ResponseWriter, req *http.R
 		AttachDecisions: true,
 	})
 
-	encodedRes, _ := json.Marshal(stack)
+	encodedRes, err := json.Marshal(stack)
+	if err != nil {
+		log.Printf("Trade stack marshal error: %s", err.Error())
+		http.Error(w, "Something went wrong", http.StatusServiceUnavailable)
+		return
+	}
 	fmt.Fprintf(w, string(encodedRes))
 }
 

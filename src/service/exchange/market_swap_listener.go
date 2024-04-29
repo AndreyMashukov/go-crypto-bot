@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 )
 
 type MarketSwapListener struct {
@@ -62,7 +63,8 @@ func (m *MarketSwapListener) ListenAll() {
 				json.Unmarshal(swapMsg, &event)
 
 				depth := event.Depth.ToOrderBookModel(strings.ToUpper(strings.ReplaceAll(event.Stream, "@depth20@1000ms", "")))
-				m.ExchangeRepository.SetDepth(depth)
+				depth.UpdatedAt = time.Now().Unix()
+				m.ExchangeRepository.SetDepth(depth, 20)
 				swapSymbol = depth.Symbol
 			}
 

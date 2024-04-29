@@ -3,7 +3,6 @@ package exchange
 import (
 	"errors"
 	"fmt"
-	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service"
@@ -21,7 +20,6 @@ type PriceCalculator struct {
 	ExchangeRepository repository.ExchangePriceStorageInterface
 	OrderRepository    repository.OrderCachedReaderInterface
 	FrameService       FrameServiceInterface
-	Binance            client.ExchangePriceAPIInterface
 	Formatter          *utils.Formatter
 	LossSecurity       LossSecurityInterface
 	ProfitService      ProfitServiceInterface
@@ -101,17 +99,7 @@ func (m *PriceCalculator) CalculateSell(tradeLimit model.TradeLimit, order model
 }
 
 func (m *PriceCalculator) GetDepth(symbol string, limit int64) model.OrderBookModel {
-	depth := m.ExchangeRepository.GetDepth(symbol)
-
-	if len(depth.Asks) == 0 && len(depth.Bids) == 0 {
-		book := m.Binance.GetDepth(symbol, limit)
-		if book != nil {
-			depth = book.ToOrderBookModel(symbol)
-			m.ExchangeRepository.SetDepth(depth)
-		}
-	}
-
-	return depth
+	return m.ExchangeRepository.GetDepth(symbol, limit)
 }
 
 func (m *PriceCalculator) GetBestFrameBuy(limit model.TradeLimit, marketDepth model.OrderBookModel, frame model.Frame) ([2]float64, error) {

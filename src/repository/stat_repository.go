@@ -187,3 +187,49 @@ func (s *StatRepository) GetStatRange(symbol string, limit int64) *sync.Map {
 
 	return &statMap
 }
+
+func (s *StatRepository) GetMLDataset(symbol string, secondary string) []model.TradeLearnDataset {
+	list := make([]model.TradeLearnDataset, 0)
+
+	res, err := s.DB.Query(
+		`SELECT
+			t1.order_book_buy_first_qty,
+			t1.order_book_sell_first_qty,
+			t1.order_book_buy_qty_sum,
+			t1.order_book_sell_qty_sum,
+			t1.order_book_buy_volume_sum,
+			t1.order_book_sell_volume_sum,
+			t2.close as secondary_price,
+			t1.close
+		FROM default.trades t1
+	 	INNER JOIN default.trades t2 ON t1.timestamp = t2.timestamp AND t2.symbol = ?
+		WHERE t1.symbol = ? AND t1.timestamp >= (toStartOfDay(now()) - toIntervalDay(1))
+	`, secondary, symbol)
+	defer res.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for res.Next() {
+		var datasetItem model.TradeLearnDataset
+		err := res.Scan(
+			&datasetItem.OrderBookBuyFirstQty,
+			&datasetItem.OrderBookSellFirstQty,
+			&datasetItem.OrderBookBuyQtySum,
+			&datasetItem.OrderBookSellQtySum,
+			&datasetItem.OrderBookBuyVolumeSum,
+			&datasetItem.OrderBookSellVolumeSum,
+			&datasetItem.SecondaryPrice,
+			&datasetItem.PrimaryPrice,
+		)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		list = append(list, datasetItem)
+	}
+
+	return list
+}

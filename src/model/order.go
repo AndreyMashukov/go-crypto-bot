@@ -205,6 +205,8 @@ type Position struct {
 	Percent                 Percent               `json:"percent"`
 	SellPrice               float64               `json:"sellPrice"`
 	PredictedPrice          float64               `json:"predictedPrice"`
+	PriceChangeSpeedAvg     float64               `json:"priceChangeSpeedAvg"`
+	IsPriceExpired          bool                  `json:"isPriceExpired"`
 	Profit                  float64               `json:"profit"`
 	TargetProfit            float64               `json:"targetProfit"`
 	Interpolation           Interpolation         `json:"interpolation"`
@@ -213,7 +215,6 @@ type Position struct {
 	ManualOrderConfig       ManualOrderConfig     `json:"manualOrderConfig"`
 	PositionTime            PositionTime          `json:"positionTime"`
 	CloseStrategy           PositionCloseStrategy `json:"closeStrategy"`
-	IsPriceExpired          bool                  `json:"isPriceExpired"`
 	BinanceOrder            *BinanceOrder         `json:"binanceOrder"`
 	ManualOrder             *ManualOrder          `json:"manualOrder"`
 	IsEnabled               bool                  `json:"isEnabled"`
@@ -222,7 +223,6 @@ type Position struct {
 	TradeFiltersExtraCharge TradeFilters          `json:"tradeFiltersExtraCharge"`
 	CanSell                 bool                  `json:"canSell"`
 	CanExtraBuy             bool                  `json:"canExtraBuy"`
-	PriceChangeSpeedAvg     float64               `json:"priceChangeSpeedAvg"`
 	Capitalization          Capitalization        `json:"capitalization"`
 }
 

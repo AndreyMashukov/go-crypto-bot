@@ -7,8 +7,8 @@ WORKDIR /go/src/app
 
 COPY . /go/src/app
 RUN mkdir /go/src/app/models
-COPY .docker/datasets /go/src/app/datasets
 RUN mkdir /go/src/app/results
+RUN mkdir /go/src/app/datasets
 RUN apk add bash zip unzip
 
 RUN go mod download

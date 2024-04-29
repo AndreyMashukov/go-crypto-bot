@@ -15,7 +15,7 @@ type SwapUpdater struct {
 }
 
 func (s SwapUpdater) UpdateSwapPair(swapPair model.SwapPair) {
-	orderDepth := s.ExchangeRepository.GetDepth(swapPair.Symbol)
+	orderDepth := s.ExchangeRepository.GetDepth(swapPair.Symbol, 20)
 	// save support + resistance levels
 	if len(orderDepth.Asks) >= 10 && len(orderDepth.Bids) >= 10 {
 		kLines := s.Binance.GetKLinesCached(swapPair.Symbol, "1d", 1)

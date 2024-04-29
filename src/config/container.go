@@ -71,8 +71,11 @@ func InitServiceContainer() Container {
 	chErr := clickhouseDb.Ping()
 
 	if chErr != nil {
-		log.Fatal(fmt.Sprintf("[Stat DB] Clickhouse can't connect: %s", err.Error()))
+		log.Panic(fmt.Sprintf("[Stat DB] Clickhouse can't connect: %s", err.Error()))
 	}
+	clickhouseDb.SetMaxIdleConns(64)
+	clickhouseDb.SetMaxOpenConns(64)
+	clickhouseDb.SetConnMaxLifetime(time.Minute)
 
 	botRepository := repository.BotRepository{
 		DB:  db,
@@ -161,6 +164,7 @@ func InitServiceContainer() Container {
 		Ctx:        &ctx,
 		CurrentBot: currentBot,
 		Formatter:  &formatter,
+		Binance:    &binance,
 	}
 	swapRepository := repository.SwapRepository{
 		DB:         swapDb,
@@ -181,26 +185,7 @@ func InitServiceContainer() Container {
 
 	lockTradeChannel := make(chan model.Lock)
 
-	// own net: ATOM, XMR, XLM, DOT, ADA, XRP
-	btcDependent := []string{"LTC", "ZEC", "ATOM", "XMR", "DOT", "XRP", "BCH", "ADA", "ETH", "DOGE", "PERP", "NEO"}
-	etcDependent := []string{"SHIB", "LINK", "UNI", "NEAR", "XLM", "ETC", "MATIC", "SOL", "BNB", "AVAX", "TRX"}
-
 	timeService := utils.TimeHelper{}
-
-	pythonMLBridge := ml.PythonMLBridge{
-		DataSetBuilder: &ml.DataSetBuilder{
-			ExcludeDependedDataset: []string{"SHIBUSDT", "BTCUSDT"},
-			BtcDependent:           btcDependent,
-			EthDependent:           etcDependent,
-		},
-		ExchangeRepository: &exchangeRepository,
-		SwapRepository:     &swapRepository,
-		TimeService:        &timeService,
-		CurrentBot:         currentBot,
-		RDB:                rdb,
-		Ctx:                &ctx,
-		Learning:           true,
-	}
 
 	profitService := exchange.ProfitService{
 		Binance:    &binance,
@@ -218,12 +203,24 @@ func InitServiceContainer() Container {
 	priceCalculator := exchange.PriceCalculator{
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,
-		Binance:            &binance,
 		Formatter:          &formatter,
 		FrameService:       &frameService,
 		LossSecurity:       &lossSecurity,
 		ProfitService:      &profitService,
 		BotService:         &botService,
+	}
+
+	pythonMLBridge := ml.PythonMLBridge{
+		DataSetBuilder: &ml.DataSetBuilder{
+			StatRepository: &statRepository,
+		},
+		ExchangeRepository: &exchangeRepository,
+		SwapRepository:     &swapRepository,
+		TimeService:        &timeService,
+		CurrentBot:         currentBot,
+		RDB:                rdb,
+		Ctx:                &ctx,
+		Learning:           true,
 	}
 
 	statService := service.StatService{

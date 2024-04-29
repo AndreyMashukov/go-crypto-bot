@@ -58,7 +58,7 @@ func (e *ExchangeController) GetDepthAction(w http.ResponseWriter, req *http.Req
 
 	symbol := strings.TrimPrefix(req.URL.Path, "/depth/")
 
-	list := e.ExchangeRepository.GetDepth(symbol)
+	list := e.ExchangeRepository.GetDepth(symbol, 20)
 	encoded, _ := json.Marshal(list)
 	fmt.Fprintf(w, string(encoded))
 }

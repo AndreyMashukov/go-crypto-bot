@@ -31,6 +31,31 @@ type OrderBookModel struct {
 	Timestamp int64       `json:"T,int"`
 	Bids      [][2]Number `json:"b"`
 	Asks      [][2]Number `json:"a"`
+	UpdatedAt int64       `json:"updatedAt"`
+}
+
+func (d *OrderBookModel) IsEmpty() bool {
+	return len(d.Asks) == 0 && len(d.Bids) == 0
+}
+
+func (d *OrderBookModel) GetFirstBuyQty() float64 {
+	bids := d.GetBids()
+
+	if len(bids) > 0 {
+		return bids[0][1].Value
+	}
+
+	return 0.00
+}
+
+func (d *OrderBookModel) GetFirstSellQty() float64 {
+	asks := d.GetAsks()
+
+	if len(asks) > 0 {
+		return asks[0][1].Value
+	}
+
+	return 0.00
 }
 
 func (d *OrderBookModel) GetStat() OrderBookStat {
@@ -38,17 +63,13 @@ func (d *OrderBookModel) GetStat() OrderBookStat {
 	asks := d.GetAsks()
 
 	firstBuyPrice := 0.00
-	firstBuyQty := 0.00
 	if len(bids) > 0 {
 		firstBuyPrice = bids[0][0].Value
-		firstBuyQty = bids[0][1].Value
 	}
 
 	firstSellPrice := 0.00
-	firstSellQty := 0.00
 	if len(asks) > 0 {
 		firstSellPrice = asks[0][0].Value
-		firstSellQty = asks[0][1].Value
 	}
 
 	return OrderBookStat{
@@ -61,9 +82,9 @@ func (d *OrderBookModel) GetStat() OrderBookStat {
 		SellIceberg:    d.GetIcebergSell(),
 		BuyIceberg:     d.GetIcebergBuy(),
 		FirstBuyPrice:  firstBuyPrice,
-		FirstBuyQty:    firstBuyQty,
+		FirstBuyQty:    d.GetFirstBuyQty(),
 		FirstSellPrice: firstSellPrice,
-		FirstSellQty:   firstSellQty,
+		FirstSellQty:   d.GetFirstSellQty(),
 	}
 }
 

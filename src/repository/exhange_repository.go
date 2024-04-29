@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/redis/go-redis/v9"
+	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"log"
@@ -63,8 +64,8 @@ type ExchangeRepositoryInterface interface {
 	SaveKlineHistory(kLine model.KLine)
 	KLineList(symbol string, reverse bool, size int64) []model.KLine
 	GetPeriodMinPrice(symbol string, period int64) float64
-	SetDepth(depth model.OrderBookModel)
-	GetDepth(symbol string) model.OrderBookModel
+	GetDepth(symbol string, limit int64) model.OrderBookModel
+	SetDepth(depth model.OrderBookModel, limit int64)
 	AddTrade(trade model.Trade)
 	TradeList(symbol string) []model.Trade
 	SetDecision(decision model.Decision, symbol string)
@@ -72,13 +73,14 @@ type ExchangeRepositoryInterface interface {
 	GetDecisions(symbol string) []model.Decision
 	GetInterpolation(kLine model.KLine) (model.Interpolation, error)
 	GetCapitalization(symbol string, timestamp model.TimestampMilli) *model.MCObject
+	GetPredict(symbol string) (float64, error)
 }
 
 type ExchangePriceStorageInterface interface {
 	GetCurrentKline(symbol string) *model.KLine
 	GetPeriodMinPrice(symbol string, period int64) float64
-	GetDepth(symbol string) model.OrderBookModel
-	SetDepth(depth model.OrderBookModel)
+	GetDepth(symbol string, limit int64) model.OrderBookModel
+	SetDepth(depth model.OrderBookModel, limit int64)
 	GetPredict(symbol string) (float64, error)
 	GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair
 	GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair
@@ -91,6 +93,7 @@ type ExchangeRepository struct {
 	Ctx        *context.Context
 	CurrentBot *model.Bot
 	Formatter  *utils.Formatter
+	Binance    client.ExchangePriceAPIInterface
 }
 
 func (e *ExchangeRepository) GetSubscribedSymbols() []model.Symbol {
@@ -825,14 +828,23 @@ func (e *ExchangeRepository) GetPeriodMinPrice(symbol string, period int64) floa
 	return minPrice
 }
 
-func (e *ExchangeRepository) SetDepth(depth model.OrderBookModel) {
+func (e *ExchangeRepository) SetDepth(depth model.OrderBookModel, limit int64) {
 	encoded, _ := json.Marshal(depth)
-	e.RDB.Set(*e.Ctx, fmt.Sprintf("depth-%s", depth.Symbol), string(encoded), time.Second*25)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("depth-%s-%d", depth.Symbol, limit), string(encoded), time.Second*25)
 }
 
-func (e *ExchangeRepository) GetDepth(symbol string) model.OrderBookModel {
-	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("depth-%s", symbol)).Val()
+func (e *ExchangeRepository) GetDepth(symbol string, limit int64) model.OrderBookModel {
+	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("depth-%s-%d", symbol, limit)).Val()
 	if len(res) == 0 {
+		book := e.Binance.GetDepth(symbol, limit)
+		if book != nil {
+			depth := book.ToOrderBookModel(symbol)
+			depth.UpdatedAt = time.Now().Unix()
+			e.SetDepth(depth, limit)
+
+			return depth
+		}
+
 		return model.OrderBookModel{
 			Asks:      make([][2]model.Number, 0),
 			Bids:      make([][2]model.Number, 0),
@@ -842,7 +854,24 @@ func (e *ExchangeRepository) GetDepth(symbol string) model.OrderBookModel {
 	}
 
 	var dto model.OrderBookModel
-	json.Unmarshal([]byte(res), &dto)
+	err := json.Unmarshal([]byte(res), &dto)
+	if err != nil {
+		book := e.Binance.GetDepth(symbol, limit)
+		if book != nil {
+			depth := book.ToOrderBookModel(symbol)
+			depth.UpdatedAt = time.Now().Unix()
+			e.SetDepth(depth, limit)
+
+			return depth
+		}
+
+		return model.OrderBookModel{
+			Asks:      make([][2]model.Number, 0),
+			Bids:      make([][2]model.Number, 0),
+			Symbol:    symbol,
+			Timestamp: time.Now().UnixMilli(),
+		}
+	}
 
 	return dto
 }

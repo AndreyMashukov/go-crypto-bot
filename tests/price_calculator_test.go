@@ -22,7 +22,6 @@ func TestCalculateBuyPriceByFrame1(t *testing.T) {
 	exchangeRepoMock := new(ExchangePriceStorageMock)
 	orderRepositoryMock := new(OrderCachedReaderMock)
 	frameServiceMock := new(FrameServiceMock)
-	binanceMock := new(ExchangePriceAPIMock)
 	lossSecurityMock := new(LossSecurityMock)
 	profitService := new(ProfitServiceMock)
 
@@ -31,7 +30,6 @@ func TestCalculateBuyPriceByFrame1(t *testing.T) {
 		ExchangeRepository: exchangeRepoMock,
 		OrderRepository:    orderRepositoryMock,
 		FrameService:       frameServiceMock,
-		Binance:            binanceMock,
 		Formatter:          &utils.Formatter{},
 		ProfitService:      profitService,
 	}
@@ -61,8 +59,7 @@ func TestCalculateBuyPriceByFrame1(t *testing.T) {
 		BuyPriceHistoryCheckInterval: "1d",
 		BuyPriceHistoryCheckPeriod:   14,
 	}
-	exchangeRepoMock.On("GetDepth", "ETHUSDT").Return(depth.Depth)
-	binanceMock.On("GetDepth", "ETHUSDT", int64(20)).Times(0)
+	exchangeRepoMock.On("GetDepth", "ETHUSDT", int64(20)).Return(depth.Depth)
 	exchangeRepoMock.On("GetCurrentKline", "ETHUSDT").Return(&model.KLine{
 		Close:     1474.64,
 		UpdatedAt: time.Now().Unix(),
@@ -94,7 +91,6 @@ func TestCalculateBuyPriceByFrame2(t *testing.T) {
 	exchangeRepoMock := new(ExchangePriceStorageMock)
 	orderRepositoryMock := new(OrderCachedReaderMock)
 	frameServiceMock := new(FrameServiceMock)
-	binanceMock := new(ExchangePriceAPIMock)
 	lossSecurityMock := new(LossSecurityMock)
 	profitService := new(ProfitServiceMock)
 
@@ -103,7 +99,6 @@ func TestCalculateBuyPriceByFrame2(t *testing.T) {
 		ExchangeRepository: exchangeRepoMock,
 		OrderRepository:    orderRepositoryMock,
 		FrameService:       frameServiceMock,
-		Binance:            binanceMock,
 		Formatter:          &utils.Formatter{},
 		ProfitService:      profitService,
 	}
@@ -133,8 +128,7 @@ func TestCalculateBuyPriceByFrame2(t *testing.T) {
 		BuyPriceHistoryCheckInterval: "1d",
 		BuyPriceHistoryCheckPeriod:   14,
 	}
-	exchangeRepoMock.On("GetDepth", "ETHUSDT").Return(depth.Depth)
-	binanceMock.On("GetDepth", "ETHUSDT", int64(20)).Times(0)
+	exchangeRepoMock.On("GetDepth", "ETHUSDT", int64(20)).Return(depth.Depth)
 	exchangeRepoMock.On("GetCurrentKline", "ETHUSDT").Return(&model.KLine{
 		Close:     1474.64,
 		UpdatedAt: time.Now().Unix(),
@@ -166,7 +160,6 @@ func TestCalculateBuyPriceByFrame3(t *testing.T) {
 	exchangeRepoMock := new(ExchangePriceStorageMock)
 	orderRepositoryMock := new(OrderCachedReaderMock)
 	frameServiceMock := new(FrameServiceMock)
-	binanceMock := new(ExchangePriceAPIMock)
 	lossSecurityMock := new(LossSecurityMock)
 	profitService := new(ProfitServiceMock)
 
@@ -175,7 +168,6 @@ func TestCalculateBuyPriceByFrame3(t *testing.T) {
 		ExchangeRepository: exchangeRepoMock,
 		OrderRepository:    orderRepositoryMock,
 		FrameService:       frameServiceMock,
-		Binance:            binanceMock,
 		Formatter:          &utils.Formatter{},
 		ProfitService:      profitService,
 	}
@@ -205,8 +197,7 @@ func TestCalculateBuyPriceByFrame3(t *testing.T) {
 		BuyPriceHistoryCheckInterval: "1d",
 		BuyPriceHistoryCheckPeriod:   14,
 	}
-	exchangeRepoMock.On("GetDepth", "ETHUSDT").Return(depth.Depth)
-	binanceMock.On("GetDepth", "ETHUSDT", int64(20)).Times(0)
+	exchangeRepoMock.On("GetDepth", "ETHUSDT", int64(20)).Return(depth.Depth)
 	exchangeRepoMock.On("GetCurrentKline", "ETHUSDT").Return(&model.KLine{
 		Close:     1474.64,
 		UpdatedAt: time.Now().Unix(),
@@ -235,7 +226,6 @@ func TestCalculateSell(t *testing.T) {
 	exchangeRepoMock := new(ExchangePriceStorageMock)
 	orderRepositoryMock := new(OrderCachedReaderMock)
 	frameServiceMock := new(FrameServiceMock)
-	binanceMock := new(ExchangePriceAPIMock)
 	lossSecurityMock := new(LossSecurityMock)
 	profitService := new(ProfitServiceMock)
 
@@ -244,7 +234,6 @@ func TestCalculateSell(t *testing.T) {
 		ExchangeRepository: exchangeRepoMock,
 		OrderRepository:    orderRepositoryMock,
 		FrameService:       frameServiceMock,
-		Binance:            binanceMock,
 		Formatter:          &utils.Formatter{},
 		ProfitService:      profitService,
 	}

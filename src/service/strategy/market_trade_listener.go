@@ -99,7 +99,7 @@ func (m *MarketTradeListener) ListenAll() {
 		for {
 			depth := <-depthChannel
 			depth.UpdatedAt = time.Now().Unix()
-			m.ExchangeRepository.SetDepth(depth, 20)
+			m.ExchangeRepository.SetDepth(depth, 20, 25)
 		}
 	}()
 

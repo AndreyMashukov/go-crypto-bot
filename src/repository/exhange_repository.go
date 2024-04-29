@@ -65,7 +65,7 @@ type ExchangeRepositoryInterface interface {
 	KLineList(symbol string, reverse bool, size int64) []model.KLine
 	GetPeriodMinPrice(symbol string, period int64) float64
 	GetDepth(symbol string, limit int64) model.OrderBookModel
-	SetDepth(depth model.OrderBookModel, limit int64)
+	SetDepth(depth model.OrderBookModel, limit int64, expires int64)
 	AddTrade(trade model.Trade)
 	TradeList(symbol string) []model.Trade
 	SetDecision(decision model.Decision, symbol string)
@@ -80,7 +80,7 @@ type ExchangePriceStorageInterface interface {
 	GetCurrentKline(symbol string) *model.KLine
 	GetPeriodMinPrice(symbol string, period int64) float64
 	GetDepth(symbol string, limit int64) model.OrderBookModel
-	SetDepth(depth model.OrderBookModel, limit int64)
+	SetDepth(depth model.OrderBookModel, limit int64, expires int64)
 	GetPredict(symbol string) (float64, error)
 	GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair
 	GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair
@@ -828,19 +828,25 @@ func (e *ExchangeRepository) GetPeriodMinPrice(symbol string, period int64) floa
 	return minPrice
 }
 
-func (e *ExchangeRepository) SetDepth(depth model.OrderBookModel, limit int64) {
+func (e *ExchangeRepository) SetDepth(depth model.OrderBookModel, limit int64, expires int64) {
 	encoded, _ := json.Marshal(depth)
-	e.RDB.Set(*e.Ctx, fmt.Sprintf("depth-%s-%d", depth.Symbol, limit), string(encoded), time.Second*25)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("depth-%s-%d", depth.Symbol, limit), string(encoded), time.Second*time.Duration(expires))
 }
 
 func (e *ExchangeRepository) GetDepth(symbol string, limit int64) model.OrderBookModel {
+	expiresSec := int64(25)
+
+	if limit >= 500 {
+		expiresSec = 15
+	}
+
 	res := e.RDB.Get(*e.Ctx, fmt.Sprintf("depth-%s-%d", symbol, limit)).Val()
 	if len(res) == 0 {
 		book := e.Binance.GetDepth(symbol, limit)
 		if book != nil {
 			depth := book.ToOrderBookModel(symbol)
 			depth.UpdatedAt = time.Now().Unix()
-			e.SetDepth(depth, limit)
+			e.SetDepth(depth, limit, expiresSec)
 
 			return depth
 		}
@@ -860,7 +866,7 @@ func (e *ExchangeRepository) GetDepth(symbol string, limit int64) model.OrderBoo
 		if book != nil {
 			depth := book.ToOrderBookModel(symbol)
 			depth.UpdatedAt = time.Now().Unix()
-			e.SetDepth(depth, limit)
+			e.SetDepth(depth, limit, expiresSec)
 
 			return depth
 		}

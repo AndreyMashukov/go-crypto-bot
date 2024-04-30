@@ -203,7 +203,7 @@ func (m *MarketTradeListener) ListenAll() {
 	lock := sync.Mutex{}
 	sWg := sync.WaitGroup{}
 
-	for index, streamBatchItem := range client.GetStreamBatch(tradeLimitCollection, []string{"@aggTrade", "@kline_1m@2000ms", "@depth500@100ms", "@miniTicker"}) {
+	for index, streamBatchItem := range client.GetStreamBatch(tradeLimitCollection, []string{"@aggTrade", "@kline_1m@2000ms", "@depth20@100ms", "@miniTicker"}) {
 		sWg.Add(1)
 		go func(sbi []string, i int) {
 			defer sWg.Done()

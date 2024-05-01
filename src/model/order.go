@@ -89,6 +89,7 @@ type Order struct {
 	ProfitOptions      ProfitOptions      `json:"profitOptions"`
 	ExtraChargeOptions ExtraChargeOptions `json:"extraChargeOptions"`
 	SwapQuantity       *float64           `json:"swapQuantity"`
+	ExtraOrdersCount   *int64             `json:"extraOrdersCount"`
 }
 
 func (o *Order) CanExtraBuy(kLine KLine, withSwap bool) bool {

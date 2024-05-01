@@ -34,10 +34,10 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 	}
 
 	minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, tradeLimit.MinPriceMinutesPeriod)
-	order, err := m.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
+	order := m.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
 
 	// Extra charge by current price
-	if err == nil && order.GetProfitPercent(lastKline.Close, m.BotService.UseSwapCapital()).Lte(tradeLimit.GetBuyOnFallPercent(order, *lastKline, m.BotService.UseSwapCapital())) {
+	if order != nil && order.GetProfitPercent(lastKline.Close, m.BotService.UseSwapCapital()).Lte(tradeLimit.GetBuyOnFallPercent(*order, *lastKline, m.BotService.UseSwapCapital())) {
 		return m.LossSecurity.BuyPriceCorrection(lastKline.Close, tradeLimit), nil
 	}
 

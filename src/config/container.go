@@ -247,6 +247,7 @@ func InitServiceContainer() Container {
 	}
 
 	tradeFilterService := exchange.TradeFilterService{
+		OrderRepository:   &orderRepository,
 		ExchangeTradeInfo: &exchangeRepository,
 		ExchangePriceAPI:  &binance,
 		Formatter:         &formatter,

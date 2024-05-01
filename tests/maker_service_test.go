@@ -78,7 +78,7 @@ func TestProcessSwap(t *testing.T) {
 	order := model.Order{
 		Symbol: "BTCUSDT",
 	}
-	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(order, nil)
+	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&order)
 	orderExecutor.On("ProcessSwap", order).Return(true)
 
 	maker.Make("BTCUSDT")
@@ -121,7 +121,7 @@ func TestHoldDecision(t *testing.T) {
 	order := model.Order{
 		Symbol: "BTCUSDT",
 	}
-	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(order, nil)
+	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&order)
 	orderExecutor.On("ProcessSwap", order).Return(false)
 
 	maker.Make("BTCUSDT")
@@ -162,6 +162,7 @@ func TestSellOperation(t *testing.T) {
 	tradeLimit := model.TradeLimit{
 		Symbol: "BTCUSDT",
 	}
+	orderRepository.On("GetBinanceOrder", "BTCUSDT", "SELL").Return(nil)
 	tradeFilterService.On("CanSell", tradeLimit).Return(true)
 	strategyFacade.On("Decide", "BTCUSDT").Return(model.FacadeResponse{
 		Hold: 40.00,
@@ -173,7 +174,7 @@ func TestSellOperation(t *testing.T) {
 		Price:    50000.00,
 		Quantity: 1.00,
 	}
-	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(order, nil)
+	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&order)
 	orderExecutor.On("ProcessSwap", order).Return(false)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	kline := model.KLine{
@@ -262,7 +263,8 @@ func TestBuyOperation(t *testing.T) {
 		Sell: 40.00,
 		Buy:  50.00,
 	}, nil)
-	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(model.Order{}, errors.New("No order!"))
+	orderRepository.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
+	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(nil)
 	tradeLimit := model.TradeLimit{
 		Symbol:      "BTCUSDT",
 		IsEnabled:   true,
@@ -373,7 +375,8 @@ func TestExtraBuyOperation(t *testing.T) {
 			},
 		},
 	}
-	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(order, nil)
+	orderRepository.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
+	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&order)
 	orderExecutor.On("ProcessSwap", order).Return(false)
 	tradeLimit := model.TradeLimit{
 		Symbol:      "BTCUSDT",

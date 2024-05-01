@@ -248,10 +248,10 @@ func (t *TradeStack) ProcessItem(
 		decisions = t.ExchangeRepository.GetDecisions(tradeLimit.Symbol)
 	}
 
-	openedOrder, err := t.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
+	openedOrder := t.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
 
 	isFiltered := false
-	if err != nil {
+	if openedOrder == nil {
 		isFiltered = !t.TradeFilterService.CanBuy(tradeLimit)
 	} else {
 		isFiltered = !t.TradeFilterService.CanExtraBuy(tradeLimit)
@@ -290,13 +290,13 @@ func (t *TradeStack) ProcessItem(
 		predictedPrice = t.Formatter.FormatPrice(tradeLimit, predictedPrice)
 	}
 
-	if err == nil {
+	if openedOrder != nil {
 		kline := t.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
 		if kline != nil && openedOrder.CanExtraBuy(*kline, t.BotService.UseSwapCapital()) {
 			// todo: Add filter configuration (in TradeLimit database table) for profitPercent, example: profitPercent < 0
 			// todo: Allow user to trade only after reaching specific daily price fall (or make it multi-step)
 			profitPercent := openedOrder.GetProfitPercent(kline.Close, t.BotService.UseSwapCapital())
-			if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(openedOrder, *kline, t.BotService.UseSwapCapital())) {
+			if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(*openedOrder, *kline, t.BotService.UseSwapCapital())) {
 				return &model.TradeStackItem{
 					Index:                   index,
 					Symbol:                  tradeLimit.Symbol,

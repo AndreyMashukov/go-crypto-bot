@@ -42,9 +42,9 @@ func (k *BaseKLineStrategy) Decide(kLine model.KLine) model.Decision {
 
 	if kLine.IsNegative() {
 		if k.MlEnabled && isPositivePredict {
-			_, orderErr := k.OrderRepository.GetOpenedOrderCached(kLine.Symbol, "BUY")
+			openedOrder := k.OrderRepository.GetOpenedOrderCached(kLine.Symbol, "BUY")
 
-			if orderErr != nil {
+			if openedOrder == nil {
 				tradeLimit, err := k.ExchangeRepository.GetTradeLimit(kLine.Symbol)
 
 				if err == nil {

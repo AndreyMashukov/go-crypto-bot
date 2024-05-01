@@ -11,6 +11,8 @@ const TradeFilterConditionTypeOr = "or"
 
 const TradeFilterParameterPrice = "price"
 const TradeFilterParameterDailyPercent = "daily_percent"
+const TradeFilterParameterPositionTimeMinutes = "position_time_minutes"
+const TradeFilterParameterExtraOrdersToday = "extra_orders_today"
 
 const TradeFilterConditionLt = "lt"
 const TradeFilterConditionLte = "lte"

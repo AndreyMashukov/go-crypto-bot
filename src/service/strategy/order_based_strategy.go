@@ -41,8 +41,8 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 		}
 	}
 
-	order, err := o.OrderRepository.GetOpenedOrderCached(kLine.Symbol, "BUY")
-	hasBuyOrder := err == nil
+	order := o.OrderRepository.GetOpenedOrderCached(kLine.Symbol, "BUY")
+	hasBuyOrder := order != nil
 
 	if !hasBuyOrder {
 		manualOrder := o.OrderRepository.GetManualOrder(tradeLimit.Symbol)
@@ -81,7 +81,7 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 	}
 
 	profitPercent := order.GetProfitPercent(kLine.Close, o.BotService.UseSwapCapital())
-	extraChargePercent := tradeLimit.GetBuyOnFallPercent(order, kLine, o.BotService.UseSwapCapital())
+	extraChargePercent := tradeLimit.GetBuyOnFallPercent(*order, kLine, o.BotService.UseSwapCapital())
 
 	// ATTENTION: We can not do extra buy if CanBuy() is false
 	// It can be the reason of active SELL orders, cancel SELL order when extra buy is possible
@@ -98,7 +98,7 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 
 	manualOrder := o.OrderRepository.GetManualOrder(tradeLimit.Symbol)
 
-	if manualOrder != nil && manualOrder.IsSell() && manualOrder.CanSell(order, o.BotService.UseSwapCapital()) {
+	if manualOrder != nil && manualOrder.IsSell() && manualOrder.CanSell(*order, o.BotService.UseSwapCapital()) {
 		return model.Decision{
 			StrategyName: model.OrderBasedStrategyName,
 			Score:        model.DecisionHighestPriorityScore,

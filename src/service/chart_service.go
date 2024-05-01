@@ -260,8 +260,8 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 			}
 		}
 
-		openedBuyOrder, err := e.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
-		if err == nil && openedBuyOrder.IsOpened() {
+		openedBuyOrder := e.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
+		if openedBuyOrder != nil && openedBuyOrder.IsOpened() {
 			date, _ := time.Parse("2006-01-02 15:04:05", openedBuyOrder.CreatedAt)
 			openedOrderTimestamp := date.UnixMilli() // convert date to timestamp
 			if openedOrderTimestamp <= kLine.Timestamp.GetPeriodToMinute() {

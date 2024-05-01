@@ -9,6 +9,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"log"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -17,7 +18,7 @@ type OrderUpdaterInterface interface {
 }
 
 type OrderCachedReaderInterface interface {
-	GetOpenedOrderCached(symbol string, operation string) (model.Order, error)
+	GetOpenedOrderCached(symbol string, operation string) *model.Order
 }
 
 type OrderStorageInterface interface {
@@ -27,12 +28,13 @@ type OrderStorageInterface interface {
 	Find(id int64) (model.Order, error)
 	GetClosesOrderList(buyOrder model.Order) []model.Order
 	DeleteBinanceOrder(order model.BinanceOrder)
-	GetOpenedOrderCached(symbol string, operation string) (model.Order, error)
+	GetOpenedOrderCached(symbol string, operation string) *model.Order
 	GetManualOrder(symbol string) *model.ManualOrder
 	SetBinanceOrder(order model.BinanceOrder)
 	GetBinanceOrder(symbol string, operation string) *model.BinanceOrder
 	LockBuy(symbol string, seconds int64)
 	HasBuyLock(symbol string) bool
+	GetTodayExtraOrderMap() *sync.Map
 }
 
 type OrderRepository struct {
@@ -51,26 +53,26 @@ func (repo *OrderRepository) getOpenedOrderCacheKey(symbol string, operation str
 	)
 }
 
-func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation string) (model.Order, error) {
+func (repo *OrderRepository) GetOpenedOrderCached(symbol string, operation string) *model.Order {
 	res := repo.RDB.Get(*repo.Ctx, repo.getOpenedOrderCacheKey(symbol, operation)).Val()
 	if len(res) > 0 {
 		var dto model.Order
 		err := json.Unmarshal([]byte(res), &dto)
 
 		if err == nil && dto.GetPositionQuantityWithSwap() > 0 && dto.IsOpened() {
-			return dto, nil
+			return &dto
 		}
 	}
 
 	order, err := repo.GetOpenedOrder(symbol, operation)
 
 	if err != nil {
-		return order, err
+		return nil
 	}
 
 	repo.SaveOrderCache(order)
 
-	return order, nil
+	return &order
 }
 
 func (repo *OrderRepository) SaveOrderCache(order model.Order) {
@@ -112,9 +114,11 @@ func (repo *OrderRepository) GetOpenedOrder(symbol string, operation string) (mo
 			o.swap as Swap,
 			o.extra_charge_options as ExtraChargeOptions,
 			o.profit_options as ProfitOptions,
-    		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity
+    		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity,
+    		COUNT(extra.id) as ExtraOrdersCount
 		FROM orders o
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
+     	LEFT JOIN orders extra ON o.id = extra.closes_order AND extra.operation = 'BUY'
 		LEFT JOIN swap_action sa on o.id = sa.order_id AND sa.status = ?
 		WHERE o.status = ? AND o.symbol = ? AND o.operation = ? AND o.bot_id = ?
 		GROUP BY o.id`,
@@ -145,6 +149,7 @@ func (repo *OrderRepository) GetOpenedOrder(symbol string, operation string) (mo
 		&order.ExtraChargeOptions,
 		&order.ProfitOptions,
 		&order.SwapQuantity,
+		&order.ExtraOrdersCount,
 	)
 
 	if err != nil {
@@ -287,9 +292,11 @@ func (repo *OrderRepository) Find(id int64) (model.Order, error) {
 			o.swap as Swap,
 			o.extra_charge_options as ExtraChargeOptions,
 			o.profit_options as ProfitOptions,
-    		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity
+    		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity,
+    		COUNT(extra.id) as ExtraOrdersCount
 		FROM orders o
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
+     	LEFT JOIN orders extra ON o.id = extra.closes_order AND extra.operation = 'BUY'
 		LEFT JOIN swap_action sa on o.id = sa.order_id AND sa.status = ?
 		WHERE o.id = ? AND o.bot_id = ?
 		GROUP BY o.id`, "success", id, repo.CurrentBot.Id,
@@ -315,6 +322,7 @@ func (repo *OrderRepository) Find(id int64) (model.Order, error) {
 		&order.ExtraChargeOptions,
 		&order.ProfitOptions,
 		&order.SwapQuantity,
+		&order.ExtraOrdersCount,
 	)
 
 	if err != nil {
@@ -402,9 +410,11 @@ func (repo *OrderRepository) GetList() []model.Order {
 			o.swap as Swap,
 			o.extra_charge_options as ExtraChargeOptions,
 			o.profit_options as ProfitOptions,
-    		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity
+    		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity,
+    		COUNT(extra.id) as ExtraOrdersCount
 		FROM orders o 
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
+     	LEFT JOIN orders extra ON o.id = extra.closes_order AND extra.operation = 'BUY'
 		LEFT JOIN swap_action sa on o.id = sa.order_id AND sa.status = ?
 		WHERE o.bot_id = ?
 		GROUP BY o.id
@@ -441,6 +451,7 @@ func (repo *OrderRepository) GetList() []model.Order {
 			&order.ExtraChargeOptions,
 			&order.ProfitOptions,
 			&order.SwapQuantity,
+			&order.ExtraOrdersCount,
 		)
 
 		if err != nil {
@@ -476,9 +487,11 @@ func (repo *OrderRepository) GetClosesOrderList(buyOrder model.Order) []model.Or
 			o.swap as Swap,
 			o.extra_charge_options as ExtraChargeOptions,
 			o.profit_options as ProfitOptions,
-    		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity
+    		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity,
+    		COUNT(extra.id) as ExtraOrdersCount
 		FROM orders o 
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
+     	LEFT JOIN orders extra ON o.id = extra.closes_order AND extra.operation = 'BUY'
 		LEFT JOIN swap_action sa on o.id = sa.order_id AND sa.status = ?
 		WHERE o.bot_id = ? AND o.closes_order = ? AND o.operation = ?
 		GROUP BY o.id
@@ -515,6 +528,7 @@ func (repo *OrderRepository) GetClosesOrderList(buyOrder model.Order) []model.Or
 			&order.ExtraChargeOptions,
 			&order.ProfitOptions,
 			&order.SwapQuantity,
+			&order.ExtraOrdersCount,
 		)
 
 		if err != nil {
@@ -620,4 +634,40 @@ func (repo *OrderRepository) LockBuy(symbol string, seconds int64) {
 		strings.ToLower(symbol),
 		repo.CurrentBot.Id,
 	), "lock", time.Second*time.Duration(seconds))
+}
+
+func (repo *OrderRepository) GetTodayExtraOrderMap() *sync.Map {
+	res, err := repo.DB.Query(`
+		SELECT
+			origin.symbol as OriginSymbol,
+			COUNT(DISTINCT extra.id) as Extras
+		FROM orders extra
+		INNER JOIN orders origin ON origin.id = extra.closes_order and origin.status = 'opened' AND origin.operation = 'BUY'
+		WHERE extra.operation = 'BUY' AND extra.bot_id = ? AND extra.created_at >= CURDATE()
+		GROUP BY origin.symbol
+		ORDER BY Extras DESC
+	`, repo.CurrentBot.Id)
+	defer res.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	extraOrderMap := sync.Map{}
+
+	for res.Next() {
+		var symbol string
+		var count float64
+		err := res.Scan(
+			&symbol,
+			&count,
+		)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		extraOrderMap.Store(symbol, count)
+	}
+
+	return &extraOrderMap
 }

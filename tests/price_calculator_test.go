@@ -2,7 +2,6 @@ package tests
 
 import (
 	"encoding/json"
-	"errors"
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/service/exchange"
@@ -65,7 +64,7 @@ func TestCalculateBuyPriceByFrame1(t *testing.T) {
 		UpdatedAt: time.Now().Unix(),
 	})
 	exchangeRepoMock.On("GetPeriodMinPrice", "ETHUSDT", int64(200)).Return(900.00)
-	orderRepositoryMock.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(model.Order{}, errors.New("Order is not found"))
+	orderRepositoryMock.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(nil)
 	frameServiceMock.On("GetFrame", "ETHUSDT", "2h", int64(20)).Return(model.Frame{
 		High:    1480.00,
 		Low:     1250.30,
@@ -134,7 +133,7 @@ func TestCalculateBuyPriceByFrame2(t *testing.T) {
 		UpdatedAt: time.Now().Unix(),
 	})
 	exchangeRepoMock.On("GetPeriodMinPrice", "ETHUSDT", int64(200)).Return(1300.00)
-	orderRepositoryMock.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(model.Order{}, errors.New("Order is not found"))
+	orderRepositoryMock.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(nil)
 	frameServiceMock.On("GetFrame", "ETHUSDT", "2h", int64(20)).Return(model.Frame{
 		High:    1480.00,
 		Low:     1250.30,
@@ -203,7 +202,7 @@ func TestCalculateBuyPriceByFrame3(t *testing.T) {
 		UpdatedAt: time.Now().Unix(),
 	})
 	exchangeRepoMock.On("GetPeriodMinPrice", "ETHUSDT", int64(200)).Return(1400.00)
-	orderRepositoryMock.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(model.Order{}, errors.New("Order is not found"))
+	orderRepositoryMock.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(nil)
 	frameServiceMock.On("GetFrame", "ETHUSDT", "2h", int64(20)).Return(model.Frame{
 		High:    1480.00,
 		Low:     1250.30,

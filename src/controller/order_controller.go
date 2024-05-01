@@ -88,8 +88,8 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 	positions := make([]model.Position, 0)
 
 	for _, limit := range o.ExchangeRepository.GetTradeLimits() {
-		openedOrder, err := o.OrderRepository.GetOpenedOrderCached(limit.Symbol, "BUY")
-		if err != nil {
+		openedOrder := o.OrderRepository.GetOpenedOrderCached(limit.Symbol, "BUY")
+		if openedOrder == nil {
 			continue
 		}
 
@@ -112,10 +112,10 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			origQty = binanceOrder.OrigQty
 			executedQty = binanceOrder.ExecutedQty
 		} else {
-			sellPrice, _ = o.PriceCalculator.CalculateSell(limit, openedOrder)
+			sellPrice, _ = o.PriceCalculator.CalculateSell(limit, *openedOrder)
 		}
 
-		predictedPrice, err := o.ExchangeRepository.GetPredict(limit.Symbol)
+		predictedPrice, _ := o.ExchangeRepository.GetPredict(limit.Symbol)
 		if predictedPrice > 0.00 {
 			predictedPrice = o.Formatter.FormatPrice(limit, predictedPrice)
 		}
@@ -143,7 +143,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 
 		positions = append(positions, model.Position{
 			Symbol:         limit.Symbol,
-			Order:          openedOrder,
+			Order:          *openedOrder,
 			KLine:          *kLine,
 			Percent:        openedOrder.GetProfitPercent(kLine.Close, o.BotService.UseSwapCapital()),
 			SellPrice:      sellPrice,
@@ -520,8 +520,8 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 		return
 	}
 
-	opened, err := o.OrderRepository.GetOpenedOrderCached(manual.Symbol, "BUY")
-	if err == nil && manual.Operation == "SELL" {
+	opened := o.OrderRepository.GetOpenedOrderCached(manual.Symbol, "BUY")
+	if opened != nil && manual.Operation == "SELL" {
 		if opened.Swap {
 			http.Error(w, "Can not sell position when SWAP is processing", http.StatusBadRequest)
 

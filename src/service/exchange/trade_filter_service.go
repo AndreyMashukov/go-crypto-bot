@@ -15,6 +15,7 @@ type TradeFilterServiceInterface interface {
 }
 
 type TradeFilterService struct {
+	OrderRepository   repository.OrderStorageInterface
 	ExchangeTradeInfo repository.ExchangeTradeInfoInterface
 	ExchangePriceAPI  client.ExchangePriceAPIInterface
 	Formatter         *utils.Formatter
@@ -85,6 +86,19 @@ func (t *TradeFilterService) IsValueMatched(filter model.TradeFilter) bool {
 		kline := t.ExchangeTradeInfo.GetCurrentKline(filter.Symbol)
 		if kline != nil {
 			matched = t.CompareFloat(kline.Close, filter)
+		}
+		break
+	case model.TradeFilterParameterPositionTimeMinutes:
+		opened := t.OrderRepository.GetOpenedOrderCached(filter.Symbol, "BUY")
+		if opened != nil {
+			matched = t.CompareFloat(opened.GetPositionTime().GetMinutes(), filter)
+		}
+		break
+	case model.TradeFilterParameterExtraOrdersToday:
+		extraMap := t.OrderRepository.GetTodayExtraOrderMap()
+		rawValue, _ := extraMap.LoadOrStore(filter.Symbol, float64(0.00))
+		if value, ok := rawValue.(float64); ok {
+			matched = t.CompareFloat(value, filter)
 		}
 		break
 	case model.TradeFilterParameterDailyPercent:

@@ -3,6 +3,7 @@ package tests
 import (
 	"github.com/stretchr/testify/mock"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
+	"sync"
 )
 
 type ExchangeRepositoryMock struct {
@@ -209,9 +210,15 @@ type OrderCachedReaderMock struct {
 	mock.Mock
 }
 
-func (o *OrderCachedReaderMock) GetOpenedOrderCached(symbol string, operation string) (model.Order, error) {
+func (o *OrderCachedReaderMock) GetOpenedOrderCached(symbol string, operation string) *model.Order {
 	args := o.Called(symbol, operation)
-	return args.Get(0).(model.Order), args.Error(1)
+	order := args.Get(0)
+
+	if order == nil {
+		return nil
+	}
+
+	return order.(*model.Order)
 }
 
 type FrameServiceMock struct {
@@ -284,9 +291,19 @@ func (e *OrderStorageMock) GetClosesOrderList(buyOrder model.Order) []model.Orde
 func (e *OrderStorageMock) DeleteBinanceOrder(order model.BinanceOrder) {
 	_ = e.Called(order)
 }
-func (e *OrderStorageMock) GetOpenedOrderCached(symbol string, operation string) (model.Order, error) {
+func (e *OrderStorageMock) GetTodayExtraOrderMap() *sync.Map {
+	args := e.Called()
+	return args.Get(0).(*sync.Map)
+}
+func (e *OrderStorageMock) GetOpenedOrderCached(symbol string, operation string) *model.Order {
 	args := e.Called(symbol, operation)
-	return args.Get(0).(model.Order), args.Error(1)
+	order := args.Get(0)
+
+	if order == nil {
+		return nil
+	}
+
+	return order.(*model.Order)
 }
 func (e *OrderStorageMock) GetManualOrder(symbol string) *model.ManualOrder {
 	args := e.Called(symbol)

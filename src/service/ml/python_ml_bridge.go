@@ -149,7 +149,7 @@ with open(model_file_path, 'wb') as f:
 
 lr2 = joblib.load(model_file_path)
 
-y_train_predict = lr2.predict(X_train.loc[[1]])
+y_train_predict = lr2.predict(X_train.loc[[X_train.index[1]]])
 print(y_train_predict)
 
 result_path = '%s'

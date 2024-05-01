@@ -120,7 +120,7 @@ X = pd.DataFrame(
     ])
 Y = price_dataset['close']
 
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = 0.5, random_state=5)
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = 0.3, random_state=5)
 
 lin_model = LinearRegression()
 lin_model.fit(X_train, Y_train)
@@ -149,7 +149,7 @@ with open(model_file_path, 'wb') as f:
 
 lr2 = joblib.load(model_file_path)
 
-y_train_predict = lr2.predict(X_train.loc[[X_train.index[1]]])
+y_train_predict = lr2.predict(X_train.loc[[X_train.index[0]]])
 print(y_train_predict)
 
 result_path = '%s'

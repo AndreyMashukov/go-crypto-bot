@@ -152,7 +152,7 @@ func TestSellAction(t *testing.T) {
 		ExecutedQuantity: 0.009,
 	}
 	orderRepository.On("Find", int64(8889)).Return(openedOrder, nil)
-	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(openedOrder, nil)
+	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(&openedOrder)
 	orderRepository.On("GetManualOrder", "ETHUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
 	binance.On("QueryOrder", "ETHUSDT", int64(999)).Return(model.BinanceOrder{
@@ -331,7 +331,7 @@ func TestSellFoundFilled(t *testing.T) {
 		ExecutedQuantity: 0.009,
 	}
 	orderRepository.On("Find", int64(9998)).Return(openedOrder, nil)
-	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(openedOrder, nil)
+	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(&openedOrder)
 	orderRepository.On("GetManualOrder", "ETHUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Unset()
 	binance.On("QueryOrder", "ETHUSDT", int64(999)).Unset()
@@ -499,7 +499,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 		ExecutedQuantity: 0.009,
 	}
 	orderRepository.On("Find", int64(8877)).Return(openedOrder, nil)
-	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(openedOrder, nil)
+	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(&openedOrder)
 	orderRepository.On("GetManualOrder", "ETHUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
 	binance.On("QueryOrder", "ETHUSDT", int64(999)).Return(model.BinanceOrder{
@@ -663,7 +663,7 @@ func TestSellQueryFail(t *testing.T) {
 		ExecutedQuantity: 0.009,
 	}
 	orderRepository.On("Find", int64(88811)).Return(openedOrder, nil)
-	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(openedOrder, nil)
+	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(&openedOrder)
 	orderRepository.On("GetManualOrder", "ETHUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
 	binance.On("QueryOrder", "ETHUSDT", int64(999)).Return(model.BinanceOrder{}, errors.New("Order was canceled or expired"))
@@ -818,7 +818,7 @@ func TestSellClosingAction(t *testing.T) {
 		ExecutedQuantity: 0.00047,
 	}
 	orderRepository.On("Find", int64(11122)).Return(openedOrder, nil)
-	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(openedOrder, nil)
+	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&openedOrder)
 	orderRepository.On("GetManualOrder", "BTCUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
 	binance.On("QueryOrder", "BTCUSDT", int64(999)).Return(model.BinanceOrder{
@@ -996,7 +996,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 		ExecutedQuantity: 382.5,
 	}
 	orderRepository.On("Find", int64(22235)).Return(openedOrder, nil)
-	orderRepository.On("GetOpenedOrderCached", "TRXUSDT", "BUY").Return(openedOrder, nil)
+	orderRepository.On("GetOpenedOrderCached", "TRXUSDT", "BUY").Return(&openedOrder)
 	orderRepository.On("GetManualOrder", "TRXUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
 	binance.On("QueryOrder", "TRXUSDT", int64(999)).Return(model.BinanceOrder{
@@ -1297,7 +1297,7 @@ func TestCheckIsTimeToCancel(t *testing.T) {
 	})
 
 	orderRepository.On("GetManualOrder", "SOLUSDT").Return(nil)
-	orderRepository.On("GetOpenedOrderCached", "SOLUSDT", "BUY").Return(openedPosition, nil)
+	orderRepository.On("GetOpenedOrderCached", "SOLUSDT", "BUY").Return(&openedPosition)
 	priceCalculator.On("CalculateSell", limit, openedPosition).Return(99.00, nil)
 
 	assertion.True(orderExecutor.CheckIsTimeToCancel(limit, &binanceOrder, orderManageChannel, control))
@@ -1368,7 +1368,7 @@ func TestCheckIsTimeToCancelSamePrice(t *testing.T) {
 		Close:  95.00,
 	})
 
-	orderRepository.On("GetOpenedOrderCached", "SOLUSDT", "BUY").Return(openedPosition, nil)
+	orderRepository.On("GetOpenedOrderCached", "SOLUSDT", "BUY").Return(&openedPosition)
 	priceCalculator.On("CalculateSell", limit, openedPosition).Return(100.00, nil)
 
 	assertion.False(orderExecutor.CheckIsTimeToCancel(limit, &binanceOrder, orderManageChannel, control))
@@ -1438,7 +1438,7 @@ func TestCheckIsTimeToCancelPriceIsMoreThanOrder(t *testing.T) {
 		Close:  101.00,
 	})
 
-	orderRepository.On("GetOpenedOrderCached", "SOLUSDT", "BUY").Return(openedPosition, nil)
+	orderRepository.On("GetOpenedOrderCached", "SOLUSDT", "BUY").Return(&openedPosition)
 
 	assertion.False(orderExecutor.CheckIsTimeToCancel(limit, &binanceOrder, orderManageChannel, control))
 }

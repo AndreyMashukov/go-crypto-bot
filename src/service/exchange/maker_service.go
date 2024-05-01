@@ -35,9 +35,9 @@ func (m *MakerService) Make(symbol string) {
 		return
 	}
 
-	openedOrder, buyOrderErr := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
+	openedOrder := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 
-	if buyOrderErr == nil && m.OrderExecutor.ProcessSwap(openedOrder) {
+	if openedOrder != nil && m.OrderExecutor.ProcessSwap(*openedOrder) {
 		return
 	}
 
@@ -54,18 +54,18 @@ func (m *MakerService) Make(symbol string) {
 	}
 
 	if decision.Sell > decision.Buy {
-		if buyOrderErr == nil {
-			m.ProcessSell(tradeLimit, openedOrder)
+		if openedOrder != nil {
+			m.ProcessSell(tradeLimit, *openedOrder)
 		}
 
 		return
 	}
 
 	if decision.Buy > decision.Sell {
-		if buyOrderErr != nil {
+		if openedOrder == nil {
 			m.ProcessBuy(tradeLimit)
 		} else {
-			m.ProcessExtraBuy(tradeLimit, openedOrder)
+			m.ProcessExtraBuy(tradeLimit, *openedOrder)
 		}
 	}
 }
@@ -75,7 +75,10 @@ func (m *MakerService) ProcessBuy(tradeLimit model.TradeLimit) {
 		return
 	}
 
-	if !m.TradeStack.CanBuy(tradeLimit) {
+	// allow process already opened order
+	limitBuy := m.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
+
+	if !m.TradeStack.CanBuy(tradeLimit) && limitBuy == nil {
 		return
 	}
 
@@ -149,7 +152,10 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 		return
 	}
 
-	if !m.TradeStack.CanBuy(tradeLimit) {
+	// allow process already opened order
+	limitBuy := m.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
+
+	if !m.TradeStack.CanBuy(tradeLimit) && limitBuy == nil {
 		log.Printf("[%s] Trade Stack check is not passed, wait order.", tradeLimit.Symbol)
 
 		return
@@ -227,7 +233,10 @@ func (m *MakerService) ProcessSell(tradeLimit model.TradeLimit, openedOrder mode
 		return
 	}
 
-	if !m.TradeFilterService.CanSell(tradeLimit) {
+	// allow process already opened order
+	limitSell := m.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "SELL")
+
+	if !m.TradeFilterService.CanSell(tradeLimit) && limitSell == nil {
 		log.Printf("[%s] Can't sell, trade filter conditions is not matched", tradeLimit.Symbol)
 
 		return

@@ -97,7 +97,7 @@ func TestNoOrderAndCanBuyHasManualBuy(t *testing.T) {
 
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
-	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(model.Order{}, errors.New("Test!!!"))
+	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetManualOrder", "BTCUSDT").Return(&model.ManualOrder{
 		Operation: "BUY",
 		Price:     40002.00,
@@ -135,7 +135,7 @@ func TestNoOrderAndCanBuyNoManual(t *testing.T) {
 
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
-	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(model.Order{}, errors.New("Test!!!"))
+	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetManualOrder", "BTCUSDT").Return(nil)
 
 	decision := orderBasedStrategy.Decide(kline)
@@ -174,9 +174,9 @@ func TestHasOrderAndHasBinanceSellOrder(t *testing.T) {
 		Side:  "SELL",
 		Price: 40005.00,
 	})
-	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(model.Order{
+	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&model.Order{
 		Price: 38000.00,
-	}, nil)
+	})
 
 	decision := orderBasedStrategy.Decide(kline)
 	assertion.Equal(999.99, decision.Score)
@@ -212,10 +212,10 @@ func TestHasOrderAndHasManualSell(t *testing.T) {
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "SELL").Return(nil)
 	botService.On("UseSwapCapital").Return(false)
-	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(model.Order{
+	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&model.Order{
 		Price:            38000.00,
 		ExecutedQuantity: 1.00,
-	}, nil)
+	})
 	orderStorage.On("GetManualOrder", "BTCUSDT").Return(&model.ManualOrder{
 		Price:     40003.00,
 		Operation: "SELL",
@@ -254,7 +254,7 @@ func TestHasOrderAndTimeToExtraBuy(t *testing.T) {
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "SELL").Return(nil)
-	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(model.Order{
+	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&model.Order{
 		Price:            100.00,
 		ExecutedQuantity: 1,
 		ExtraChargeOptions: []model.ExtraChargeOption{
@@ -264,7 +264,7 @@ func TestHasOrderAndTimeToExtraBuy(t *testing.T) {
 				AmountUsdt: 50,
 			},
 		},
-	}, nil)
+	})
 	botService.On("UseSwapCapital").Return(false)
 
 	decision := orderBasedStrategy.Decide(kline)
@@ -321,8 +321,8 @@ func TestHasOrderAndProfitPercentReached(t *testing.T) {
 			},
 		},
 	}
-	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(order, nil)
-	profitService.On("GetMinProfitPercent", order).Return(model.Percent(2.00))
+	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&order)
+	profitService.On("GetMinProfitPercent", &order).Return(model.Percent(2.00))
 	orderStorage.On("GetManualOrder", "BTCUSDT").Return(nil)
 	botService.On("UseSwapCapital").Return(false)
 
@@ -379,10 +379,10 @@ func TestHasOrderAndHalfOfProfitPercentReached(t *testing.T) {
 			},
 		},
 	}
-	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(order, nil)
+	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&order)
 	orderStorage.On("GetManualOrder", "BTCUSDT").Return(nil)
 	botService.On("UseSwapCapital").Return(false)
-	profitService.On("GetMinProfitPercent", order).Return(model.Percent(2.00))
+	profitService.On("GetMinProfitPercent", &order).Return(model.Percent(2.00))
 
 	decision := orderBasedStrategy.Decide(kline)
 	assertion.Equal(50.00, decision.Score)
@@ -437,11 +437,11 @@ func TestHasOrderAndCurrentPriceIsGreaterThenOrderPrice(t *testing.T) {
 			},
 		},
 	}
-	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(order, nil)
+	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&order)
 	orderStorage.On("GetManualOrder", "BTCUSDT").Return(nil)
 	botService.On("UseSwapCapital").Return(false)
-	profitService.On("GetMinProfitPercent", order).Return(model.Percent(2.00))
-	profitService.On("GetMinClosePrice", order, 100.00).Return(100.02)
+	profitService.On("GetMinProfitPercent", &order).Return(model.Percent(2.00))
+	profitService.On("GetMinClosePrice", &order, 100.00).Return(100.02)
 
 	decision := orderBasedStrategy.Decide(kline)
 	assertion.Equal(30.00, decision.Score)
@@ -498,10 +498,10 @@ func TestHasOrderAndCurrentPriceIsLessOrEqualOrderPrice(t *testing.T) {
 			},
 		},
 	}
-	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(order, nil)
+	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&order)
 	orderStorage.On("GetManualOrder", "BTCUSDT").Return(nil)
 	botService.On("UseSwapCapital").Return(false)
-	profitService.On("GetMinProfitPercent", order).Return(model.Percent(2.00))
+	profitService.On("GetMinProfitPercent", &order).Return(model.Percent(2.00))
 
 	decision := orderBasedStrategy.Decide(kline)
 	assertion.Equal(99.99, decision.Score)

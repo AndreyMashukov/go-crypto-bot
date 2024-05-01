@@ -4,7 +4,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/service/exchange"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestTradeFilterNoFiltersForBuy(t *testing.T) {
@@ -283,4 +285,89 @@ func TestTradeFilterMatchingChildrenFalse(t *testing.T) {
 		},
 	}
 	assertion.False(filterService.CanBuy(tradeLimit))
+}
+
+func TestTradeFilterMatchingPositionTimeMinutes(t *testing.T) {
+	assertion := assert.New(t)
+
+	orderStorageMock := new(OrderStorageMock)
+
+	filterService := exchange.TradeFilterService{
+		OrderRepository: orderStorageMock,
+	}
+	orderStorageMock.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&model.Order{
+		CreatedAt: time.Now().Add(time.Minute * 5).Format("2006-01-02 15:04:05"),
+	})
+	tradeLimit := model.TradeLimit{
+		TradeFiltersBuy: model.TradeFilters{
+			{
+				Symbol:    "BTCUSDT",
+				Parameter: model.TradeFilterParameterPositionTimeMinutes,
+				Condition: model.TradeFilterConditionLt,
+				Value:     "7",
+				Type:      model.TradeFilterConditionTypeAnd,
+				Children:  make(model.TradeFilters, 0),
+			},
+			{
+				Symbol:    "BTCUSDT",
+				Parameter: model.TradeFilterParameterPositionTimeMinutes,
+				Condition: model.TradeFilterConditionGt,
+				Value:     "4",
+				Type:      model.TradeFilterConditionTypeAnd,
+				Children:  make(model.TradeFilters, 0),
+			},
+		},
+	}
+	assertion.True(filterService.CanBuy(tradeLimit))
+}
+
+func TestTradeFilterMatchingExtraOrdersCountToday(t *testing.T) {
+	assertion := assert.New(t)
+
+	orderStorageMock := new(OrderStorageMock)
+
+	filterService := exchange.TradeFilterService{
+		OrderRepository: orderStorageMock,
+	}
+	orderMap := sync.Map{}
+	orderMap.Store("BTCUSDT", float64(5.00)) // attention, must be float64
+	orderStorageMock.On("GetTodayExtraOrderMap").Return(&orderMap)
+	tradeLimit := model.TradeLimit{
+		TradeFiltersBuy: model.TradeFilters{
+			{
+				Symbol:    "BTCUSDT",
+				Parameter: model.TradeFilterParameterExtraOrdersToday,
+				Condition: model.TradeFilterConditionEq,
+				Value:     "5",
+				Type:      model.TradeFilterConditionTypeOr,
+				Children:  make(model.TradeFilters, 0),
+			},
+		},
+	}
+	assertion.True(filterService.CanBuy(tradeLimit))
+}
+
+func TestTradeFilterMatchingExtraOrdersCountTodayEmptyMap(t *testing.T) {
+	assertion := assert.New(t)
+
+	orderStorageMock := new(OrderStorageMock)
+
+	filterService := exchange.TradeFilterService{
+		OrderRepository: orderStorageMock,
+	}
+	orderMap := sync.Map{}
+	orderStorageMock.On("GetTodayExtraOrderMap").Return(&orderMap)
+	tradeLimit := model.TradeLimit{
+		TradeFiltersBuy: model.TradeFilters{
+			{
+				Symbol:    "BTCUSDT",
+				Parameter: model.TradeFilterParameterExtraOrdersToday,
+				Condition: model.TradeFilterConditionEq,
+				Value:     "0",
+				Type:      model.TradeFilterConditionTypeAnd,
+				Children:  make(model.TradeFilters, 0),
+			},
+		},
+	}
+	assertion.True(filterService.CanBuy(tradeLimit))
 }

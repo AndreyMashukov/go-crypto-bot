@@ -897,8 +897,8 @@ func (m *OrderExecutor) CheckIsSellExpired(
 		return false
 	}
 
-	openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
-	if err == nil {
+	openedBuyPosition := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
+	if openedBuyPosition != nil {
 		profitPercent := openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital())
 		if profitPercent.Lte(0.00) {
 			log.Printf(
@@ -929,12 +929,13 @@ func (m *OrderExecutor) CheckIsSellExpired(
 			)
 		}
 	} else {
+		// todo: redundant case???
 		log.Printf(
 			"[%s] %s Order [%d] %s",
 			binanceOrder.Symbol,
 			binanceOrder.Side,
 			binanceOrder.OrderId,
-			err.Error(),
+			"Is not found",
 		)
 		if m.TryCancel(binanceOrder, orderManageChannel, control, func() {}, false) {
 			return true
@@ -961,8 +962,8 @@ func (m *OrderExecutor) CheckIsTimeToExtraBuy(
 	}
 
 	if binanceOrder.IsNew() || binanceOrder.IsPartiallyFilled() {
-		openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
-		if err == nil && openedBuyPosition.CanExtraBuy(*kline, m.BotService.UseSwapCapital()) && m.TradeStack.CanBuy(tradeLimit) && openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital()).Lte(tradeLimit.GetBuyOnFallPercent(openedBuyPosition, *kline, m.BotService.UseSwapCapital())) {
+		openedBuyPosition := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
+		if openedBuyPosition != nil && openedBuyPosition.CanExtraBuy(*kline, m.BotService.UseSwapCapital()) && m.TradeStack.CanBuy(tradeLimit) && openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital()).Lte(tradeLimit.GetBuyOnFallPercent(*openedBuyPosition, *kline, m.BotService.UseSwapCapital())) {
 			log.Printf(
 				"[%s] Extra Charge percent reached, current profit is: %.2f, SELL order is cancelled",
 				binanceOrder.Symbol,
@@ -993,10 +994,12 @@ func (m *OrderExecutor) CheckIsTimeToCancel(
 		}
 	}
 
-	if binanceOrder.IsSell() && binanceOrder.IsNew() {
-		openedBuyPosition, err := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
+	// todo: add filter conditions: CanSell() + CanBuy()
 
-		if err == nil {
+	if binanceOrder.IsSell() && binanceOrder.IsNew() {
+		openedBuyPosition := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
+
+		if openedBuyPosition != nil {
 			kline := m.ExchangeRepository.GetCurrentKline(binanceOrder.Symbol)
 
 			if kline == nil {
@@ -1014,7 +1017,7 @@ func (m *OrderExecutor) CheckIsTimeToCancel(
 			}
 
 			// Check is sell price changed
-			newSellPrice, priceErr := m.PriceCalculator.CalculateSell(tradeLimit, openedBuyPosition)
+			newSellPrice, priceErr := m.PriceCalculator.CalculateSell(tradeLimit, *openedBuyPosition)
 			if priceErr == nil {
 				priceDiff := math.Abs(newSellPrice - m.Formatter.FormatPrice(tradeLimit, binanceOrder.Price))
 
@@ -1074,10 +1077,10 @@ func (m *OrderExecutor) CheckIsTimeToSell(
 		return false
 	}
 
-	openedBuyPosition, openedBuyPositionErr := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
+	openedBuyPosition := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
 
 	// [BUY] Check is it time to sell (maybe we have already partially filled)
-	if openedBuyPositionErr == nil && binanceOrder.IsPartiallyFilled() && binanceOrder.GetProfitPercent(kline.Close).Gte(m.ProfitService.GetMinProfitPercent(openedBuyPosition)) {
+	if openedBuyPosition != nil && binanceOrder.IsPartiallyFilled() && binanceOrder.GetProfitPercent(kline.Close).Gte(m.ProfitService.GetMinProfitPercent(openedBuyPosition)) {
 		log.Printf(
 			"[%s] Max profit percent reached, current profit is: %.2f, %s [%d] order is cancelled",
 			binanceOrder.Symbol,
@@ -1109,10 +1112,10 @@ func (m *OrderExecutor) CheckIsTimeToSwap(
 	}
 
 	if binanceOrder.IsSell() && binanceOrder.IsNew() {
-		openedBuyPosition, openedBuyPositionErr := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
+		openedBuyPosition := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
 
 		// Try arbitrage for long orders >= 4 hours and with profit < -1.00%
-		if openedBuyPositionErr == nil {
+		if openedBuyPosition != nil {
 			swapChain := m.SwapRepository.GetSwapChainCache(openedBuyPosition.GetBaseAsset())
 			if swapChain != nil {
 				possibleSwaps := m.SwapRepository.GetSwapChains(openedBuyPosition.GetBaseAsset())
@@ -1129,7 +1132,7 @@ func (m *OrderExecutor) CheckIsTimeToSwap(
 						break
 					}
 
-					violation := m.SwapValidator.Validate(possibleSwap, openedBuyPosition)
+					violation := m.SwapValidator.Validate(possibleSwap, *openedBuyPosition)
 
 					if violation == nil {
 						chainCurrentPercent := m.SwapValidator.CalculatePercent(possibleSwap)
@@ -1143,7 +1146,7 @@ func (m *OrderExecutor) CheckIsTimeToSwap(
 						)
 
 						swapCallback := func() {
-							m.MakeSwap(openedBuyPosition, possibleSwap)
+							m.MakeSwap(*openedBuyPosition, possibleSwap)
 						}
 						if m.TryCancel(binanceOrder, orderManageChannel, control, swapCallback, true) {
 							return true
@@ -1427,10 +1430,10 @@ func (m *OrderExecutor) CheckBalance(symbol string, priceUsdt float64, quantity 
 }
 
 func (m *OrderExecutor) CheckMinBalance(limit model.TradeLimit, kLine model.KLine) error {
-	opened, err := m.OrderRepository.GetOpenedOrderCached(limit.Symbol, "BUY")
+	opened := m.OrderRepository.GetOpenedOrderCached(limit.Symbol, "BUY")
 	limitUsdt := limit.USDTLimit
 
-	if err == nil {
+	if opened != nil {
 		limitUsdt = opened.GetAvailableExtraBudget(kLine, m.BotService.UseSwapCapital())
 	}
 

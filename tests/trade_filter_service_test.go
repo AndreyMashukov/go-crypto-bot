@@ -296,7 +296,7 @@ func TestTradeFilterMatchingPositionTimeMinutes(t *testing.T) {
 		OrderRepository: orderStorageMock,
 	}
 	orderStorageMock.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&model.Order{
-		CreatedAt: time.Now().Add(time.Minute * 5).Format("2006-01-02 15:04:05"),
+		CreatedAt: time.Now().Add(time.Minute * -5).Format("2006-01-02 15:04:05"),
 	})
 	tradeLimit := model.TradeLimit{
 		TradeFiltersBuy: model.TradeFilters{

@@ -156,8 +156,6 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 	limitBuy := m.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
 
 	if !m.TradeStack.CanBuy(tradeLimit) && limitBuy == nil {
-		log.Printf("[%s] Trade Stack check is not passed, wait order.", tradeLimit.Symbol)
-
 		return
 	}
 

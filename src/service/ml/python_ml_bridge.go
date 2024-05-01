@@ -308,6 +308,7 @@ func (p *PythonMLBridge) StartAutoLearn() {
 				if err != nil {
 					log.Printf("[%s] %s", limit.Symbol, err.Error())
 					p.TimeService.WaitSeconds(10)
+					wg.Add(1) // just to handle negative counter
 					continue
 				}
 				p.TimeService.WaitSeconds(3600)

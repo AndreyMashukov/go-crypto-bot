@@ -143,7 +143,7 @@ func (o *Order) GetBaseAsset() string {
 func (o Order) GetPositionTime() PositionTime {
 	date, _ := time.Parse("2006-01-02 15:04:05", o.CreatedAt)
 
-	return PositionTime(date.Unix() - time.Now().Unix())
+	return PositionTime(time.Now().Unix() - date.Unix())
 }
 
 func (o *Order) GetProfitPercent(currentPrice float64, withSwap bool) Percent {

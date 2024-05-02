@@ -2,7 +2,7 @@
 ### Go Multithreading Crypto Trading Bot
 ![Go Multithreading Crypto Trading Bot](.github/images/orders.png)
 
-- Join our Discord server: [Autotrade.cloud - Discord Traders Community](https://discord.gg/6DZZFQsT)
+- Join our Discord server: [Autotrade.cloud - Discord Traders Community](https://discord.gg/eS6tCBCcQ2)
 - Try cloud crypto bot: [Autotrade.cloud](https://autotrade.cloud)
 > Register and get 10$ for free trial
 

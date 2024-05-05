@@ -11,7 +11,7 @@ import (
 )
 
 type PriceCalculatorInterface interface {
-	CalculateBuy(tradeLimit model.TradeLimit) (float64, error)
+	CalculateBuy(tradeLimit model.TradeLimit) model.BuyPrice
 	CalculateSell(tradeLimit model.TradeLimit, order model.Order) (float64, error)
 	GetDepth(symbol string, limit int64) model.OrderBookModel
 }
@@ -24,23 +24,44 @@ type PriceCalculator struct {
 	LossSecurity       LossSecurityInterface
 	ProfitService      ProfitServiceInterface
 	BotService         service.BotServiceInterface
+	SignalStorage      repository.SignalStorageInterface
 }
 
-func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, error) {
+func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) model.BuyPrice {
 	lastKline := m.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
 
 	if lastKline == nil || lastKline.IsPriceExpired() {
-		return 0.00, errors.New(fmt.Sprintf("[%s] Current price is unknown, wait...", tradeLimit.Symbol))
+		return model.BuyPrice{
+			Price:  0.00,
+			Signal: nil,
+			Error:  errors.New(fmt.Sprintf("[%s] Current price is unknown, wait...", tradeLimit.Symbol)),
+		}
 	}
 
-	minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, tradeLimit.MinPriceMinutesPeriod)
 	order := m.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
 
 	// Extra charge by current price
 	if order != nil && order.GetProfitPercent(lastKline.Close, m.BotService.UseSwapCapital()).Lte(tradeLimit.GetBuyOnFallPercent(*order, *lastKline, m.BotService.UseSwapCapital())) {
-		return m.LossSecurity.BuyPriceCorrection(lastKline.Close, tradeLimit), nil
+		return model.BuyPrice{
+			Price:  m.LossSecurity.BuyPriceCorrection(lastKline.Close, tradeLimit),
+			Signal: nil,
+			Error:  nil,
+		}
 	}
 
+	signal := m.SignalStorage.GetSignal(tradeLimit.Symbol)
+
+	if signal != nil && !signal.IsExpired() {
+		return model.BuyPrice{
+			Price:  m.LossSecurity.BuyPriceCorrection(signal.BuyPrice, tradeLimit),
+			Signal: signal,
+			Error:  nil,
+		}
+	}
+
+	minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, tradeLimit.MinPriceMinutesPeriod)
+
+	// todo: Refactor required for buy price calculation, use collected data from ClickHouse
 	frame := m.FrameService.GetFrame(tradeLimit.Symbol, tradeLimit.FrameInterval, tradeLimit.FramePeriod)
 	buyPrice := minPrice
 
@@ -73,7 +94,11 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) (float64, er
 
 	buyPrice = m.LossSecurity.CheckBuyPriceOnHistory(tradeLimit, buyPrice)
 
-	return m.LossSecurity.BuyPriceCorrection(buyPrice, tradeLimit), nil
+	return model.BuyPrice{
+		Price:  m.LossSecurity.BuyPriceCorrection(buyPrice, tradeLimit),
+		Signal: nil,
+		Error:  nil,
+	}
 }
 
 func (m *PriceCalculator) CalculateSell(tradeLimit model.TradeLimit, order model.Order) (float64, error) {
@@ -134,8 +159,8 @@ func (m *PriceCalculator) GetBestFrameBuy(limit model.TradeLimit, marketDepth mo
 	return [2]float64{frame.AvgLow, openPrice}, nil
 }
 
-func (m *PriceCalculator) InterpolatePrice(symbol string) model.Interpolation {
-	asset := strings.ReplaceAll(symbol, "USDT", "")
+func (m *PriceCalculator) InterpolatePrice(limit model.TradeLimit) model.Interpolation {
+	asset := strings.ReplaceAll(limit.Symbol, "USDT", "")
 	btcPair, err := m.ExchangeRepository.GetSwapPairsByAssets("BTC", asset)
 
 	interpolation := model.Interpolation{
@@ -148,7 +173,7 @@ func (m *PriceCalculator) InterpolatePrice(symbol string) model.Interpolation {
 		priceXBtc := btcPair.BuyPrice
 		lastKlineBtc := m.ExchangeRepository.GetCurrentKline("BTCUSDT")
 		if lastKlineBtc != nil && !lastKlineBtc.IsPriceExpired() && !btcPair.IsPriceExpired() {
-			interpolation.BtcInterpolationUsdt = priceXBtc * lastKlineBtc.Close
+			interpolation.BtcInterpolationUsdt = m.Formatter.FormatPrice(limit, priceXBtc*lastKlineBtc.Close)
 		}
 	}
 
@@ -158,7 +183,7 @@ func (m *PriceCalculator) InterpolatePrice(symbol string) model.Interpolation {
 		priceXEth := ethPair.BuyPrice
 		lastKlineEth := m.ExchangeRepository.GetCurrentKline("ETHUSDT")
 		if lastKlineEth != nil && !lastKlineEth.IsPriceExpired() && !ethPair.IsPriceExpired() {
-			interpolation.EthInterpolationUsdt = priceXEth * lastKlineEth.Close
+			interpolation.EthInterpolationUsdt = m.Formatter.FormatPrice(limit, priceXEth*lastKlineEth.Close)
 		}
 	}
 

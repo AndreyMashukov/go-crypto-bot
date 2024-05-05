@@ -5,6 +5,8 @@ type TradeStackItem struct {
 	Price                   float64        `json:"price"`
 	IsPriceValid            bool           `json:"isPriceValid"`
 	PredictedPrice          float64        `json:"predictedPrice"`
+	Interpolation           Interpolation  `json:"interpolation"`
+	LowPrice                float64        `json:"lowPrice"`
 	BuyPrice                float64        `json:"buyPrice"`
 	PricePointsDiff         int64          `json:"pricePointsDiff"`
 	PriceChangeSpeedAvg     float64        `json:"priceChangeSpeedAvg"`
@@ -23,4 +25,5 @@ type TradeStackItem struct {
 	TradeFiltersSell        TradeFilters   `json:"tradeFiltersSell"`
 	TradeFiltersExtraCharge TradeFilters   `json:"tradeFiltersExtraCharge"`
 	Capitalization          Capitalization `json:"capitalization"`
+	Signal                  *Signal        `json:"signal"`
 }

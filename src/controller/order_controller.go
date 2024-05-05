@@ -120,13 +120,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 			predictedPrice = o.Formatter.FormatPrice(limit, predictedPrice)
 		}
 
-		interpolation := o.PriceCalculator.InterpolatePrice(limit.Symbol)
-		if interpolation.BtcInterpolationUsdt > 0.00 {
-			interpolation.BtcInterpolationUsdt = o.Formatter.FormatPrice(limit, interpolation.BtcInterpolationUsdt)
-		}
-		if interpolation.EthInterpolationUsdt > 0.00 {
-			interpolation.EthInterpolationUsdt = o.Formatter.FormatPrice(limit, interpolation.EthInterpolationUsdt)
-		}
+		interpolation := o.PriceCalculator.InterpolatePrice(limit)
 
 		capitalization := model.Capitalization{
 			Capitalization: 0.00,
@@ -390,14 +384,7 @@ func (o *OrderController) GetPendingOrderListAction(w http.ResponseWriter, req *
 			predictedPrice = o.Formatter.FormatPrice(limit, predictedPrice)
 		}
 
-		interpolation := o.PriceCalculator.InterpolatePrice(limit.Symbol)
-		if interpolation.BtcInterpolationUsdt > 0.00 {
-			interpolation.BtcInterpolationUsdt = o.Formatter.FormatPrice(limit, interpolation.BtcInterpolationUsdt)
-		}
-		if interpolation.EthInterpolationUsdt > 0.00 {
-			interpolation.EthInterpolationUsdt = o.Formatter.FormatPrice(limit, interpolation.EthInterpolationUsdt)
-		}
-
+		interpolation := o.PriceCalculator.InterpolatePrice(limit)
 		pending = append(pending, model.PendingOrder{
 			Symbol:         limit.Symbol,
 			BinanceOrder:   *binanceOrder,
@@ -548,16 +535,16 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 		return
 	}
 
-	minPrice, buyError := o.PriceCalculator.CalculateBuy(tradeLimit)
+	priceModel := o.PriceCalculator.CalculateBuy(tradeLimit)
 
-	if buyError != nil {
-		http.Error(w, fmt.Sprintf("Ошибка: %s", buyError.Error()), http.StatusBadRequest)
+	if priceModel.Error != nil {
+		http.Error(w, fmt.Sprintf("Ошибка: %s", priceModel.Error.Error()), http.StatusBadRequest)
 
 		return
 	}
 
-	if err != nil && manual.Operation == "BUY" && minPrice < manual.Price {
-		http.Error(w, fmt.Sprintf("Price can not be greather then %f", minPrice), http.StatusBadRequest)
+	if err != nil && manual.Operation == "BUY" && priceModel.Price < manual.Price {
+		http.Error(w, fmt.Sprintf("Price can not be greather then %f", priceModel.Price), http.StatusBadRequest)
 
 		return
 	}

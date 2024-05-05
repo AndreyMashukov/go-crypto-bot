@@ -13,6 +13,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"log"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -31,6 +32,7 @@ type TradeStack struct {
 	RDB                *redis.Client
 	Ctx                *context.Context
 	TradeFilterService TradeFilterServiceInterface
+	SignalStorage      repository.SignalStorageInterface
 }
 
 type TradeStackParams struct {
@@ -162,6 +164,9 @@ func (t *TradeStack) GetTradeStack(params TradeStackParams) []model.TradeStackIt
 				PriceChangeSpeedAvg:     stackItem.PriceChangeSpeedAvg,
 				Capitalization:          stackItem.Capitalization,
 				PredictedPrice:          stackItem.PredictedPrice,
+				Signal:                  stackItem.Signal,
+				Interpolation:           stackItem.Interpolation,
+				LowPrice:                stackItem.LowPrice,
 			})
 		} else {
 			impossible = append(impossible, stackItem)
@@ -195,6 +200,9 @@ func (t *TradeStack) GetTradeStack(params TradeStackParams) []model.TradeStackIt
 				TradeFiltersExtraCharge: stackItem.TradeFiltersExtraCharge,
 				PriceChangeSpeedAvg:     stackItem.PriceChangeSpeedAvg,
 				Capitalization:          stackItem.Capitalization,
+				Signal:                  stackItem.Signal,
+				Interpolation:           stackItem.Interpolation,
+				LowPrice:                stackItem.LowPrice,
 			})
 		}
 	}
@@ -228,8 +236,11 @@ func (t *TradeStack) ProcessItem(
 		isPriceValid = true
 	}
 
+	lowPrice := 0.00
+
 	if lastKLine != nil {
 		lastPrice = lastKLine.Close
+		lowPrice = lastKLine.Low
 		priceChangeSpeedAvg = t.Formatter.ToFixed(lastKLine.GetPriceChangeSpeedAvg(), 2)
 	}
 
@@ -290,6 +301,9 @@ func (t *TradeStack) ProcessItem(
 		predictedPrice = t.Formatter.FormatPrice(tradeLimit, predictedPrice)
 	}
 
+	signal := t.SignalStorage.GetSignal(tradeLimit.Symbol)
+	interpolation, _ := t.ExchangeRepository.GetInterpolation(*lastKLine)
+
 	if openedOrder != nil {
 		kline := t.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
 		if kline != nil && openedOrder.CanExtraBuy(*kline, t.BotService.UseSwapCapital()) {
@@ -319,6 +333,9 @@ func (t *TradeStack) ProcessItem(
 					PriceChangeSpeedAvg:     priceChangeSpeedAvg,
 					Capitalization:          capitalization,
 					PredictedPrice:          predictedPrice,
+					Signal:                  signal,
+					Interpolation:           interpolation,
+					LowPrice:                lowPrice,
 				}
 			}
 		}
@@ -351,17 +368,24 @@ func (t *TradeStack) ProcessItem(
 			PriceChangeSpeedAvg:     priceChangeSpeedAvg,
 			Capitalization:          capitalization,
 			PredictedPrice:          predictedPrice,
+			Signal:                  signal,
+			Interpolation:           interpolation,
+			LowPrice:                lowPrice,
 		}
 	}
 
 	return nil
 }
 
+func (t *TradeStack) InvalidateBuyPriceCache(symbol string) {
+	cacheKey := fmt.Sprintf("buy-price-cached-%s-%d", strings.ToUpper(symbol), t.BotService.GetBot().Id)
+	t.RDB.Del(*t.Ctx, cacheKey).Val()
+}
+
 func (t *TradeStack) GetBuyPriceCached(limit model.TradeLimit) float64 {
 	var ticker model.WSTickerPrice
 
-	// todo: invalidate on limit changes...
-	cacheKey := fmt.Sprintf("buy-price-cached-%s-%d", limit.Symbol, t.BotService.GetBot().Id)
+	cacheKey := fmt.Sprintf("buy-price-cached-%s-%d", strings.ToUpper(limit.Symbol), t.BotService.GetBot().Id)
 	buyPriceCached := t.RDB.Get(*t.Ctx, cacheKey).Val()
 
 	if len(buyPriceCached) > 0 {
@@ -371,11 +395,11 @@ func (t *TradeStack) GetBuyPriceCached(limit model.TradeLimit) float64 {
 		}
 	}
 
-	buyPriceCalc, buyPriceErr := t.PriceCalculator.CalculateBuy(limit)
-	if buyPriceErr == nil {
+	buyPriceModel := t.PriceCalculator.CalculateBuy(limit)
+	if buyPriceModel.Error == nil {
 		ticker = model.WSTickerPrice{
 			Symbol: limit.Symbol,
-			Price:  buyPriceCalc,
+			Price:  buyPriceModel.Price,
 		}
 
 		encoded, err := json.Marshal(ticker)

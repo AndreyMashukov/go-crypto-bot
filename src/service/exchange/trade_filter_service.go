@@ -19,6 +19,7 @@ type TradeFilterService struct {
 	ExchangeTradeInfo repository.ExchangeTradeInfoInterface
 	ExchangePriceAPI  client.ExchangePriceAPIInterface
 	Formatter         *utils.Formatter
+	SignalStorage     repository.SignalStorageInterface
 }
 
 func (t *TradeFilterService) CanBuy(limit model.TradeLimit) bool {
@@ -82,6 +83,13 @@ func (t *TradeFilterService) IsValueMatched(filter model.TradeFilter) bool {
 	matched := false
 
 	switch filter.Parameter {
+	case model.TradeFilterParameterHasSignal:
+		signal := t.SignalStorage.GetSignal(filter.Symbol)
+		matched = t.CompareBool(
+			signal != nil && !signal.IsExpired(),
+			filter,
+		)
+		break
 	case model.TradeFilterParameterPrice:
 		kline := t.ExchangeTradeInfo.GetCurrentKline(filter.Symbol)
 		if kline != nil {
@@ -137,6 +145,24 @@ func (t *TradeFilterService) CompareFloat(parameterValue float64, filter model.T
 			break
 		case model.TradeFilterConditionLte:
 			matched = parameterValue <= value
+			break
+		}
+	}
+
+	return matched
+}
+
+func (t *TradeFilterService) CompareBool(parameterValue bool, filter model.TradeFilter) bool {
+	matched := false
+
+	boolValue, err := strconv.ParseBool(filter.Value)
+	if err == nil {
+		switch filter.Condition {
+		case model.TradeFilterConditionEq:
+			matched = parameterValue == boolValue
+			break
+		case model.TradeFilterConditionNeq:
+			matched = parameterValue != boolValue
 			break
 		}
 	}

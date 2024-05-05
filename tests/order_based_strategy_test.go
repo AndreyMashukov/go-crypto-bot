@@ -16,12 +16,14 @@ func TestNoTradeLimit(t *testing.T) {
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
 	botService := new(BotServiceMock)
+	signalStorage := new(SignalStorageMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
 		BotService:         botService,
+		SignalStorage:      signalStorage,
 	}
 
 	kline := model.KLine{
@@ -29,6 +31,7 @@ func TestNoTradeLimit(t *testing.T) {
 		Close:  40000.00,
 	}
 
+	signalStorage.On("GetSignal", "BTCUSDT").Times(0)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(model.TradeLimit{}, errors.New("Test!!!"))
 
 	decision := orderBasedStrategy.Decide(kline)
@@ -45,12 +48,14 @@ func TestHasBinanceBuyOrder(t *testing.T) {
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
 	botService := new(BotServiceMock)
+	signalStorage := new(SignalStorageMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
 		BotService:         botService,
+		SignalStorage:      signalStorage,
 	}
 
 	kline := model.KLine{
@@ -58,6 +63,7 @@ func TestHasBinanceBuyOrder(t *testing.T) {
 		Close:  40000.00,
 	}
 
+	signalStorage.On("GetSignal", "BTCUSDT").Times(0)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(model.TradeLimit{
 		Symbol: "BTCUSDT",
 	}, nil)
@@ -79,12 +85,14 @@ func TestNoOrderAndCanBuyHasManualBuy(t *testing.T) {
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
 	botService := new(BotServiceMock)
+	signalStorage := new(SignalStorageMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
 		BotService:         botService,
+		SignalStorage:      signalStorage,
 	}
 
 	kline := model.KLine{
@@ -95,6 +103,7 @@ func TestNoOrderAndCanBuyHasManualBuy(t *testing.T) {
 		Symbol: "BTCUSDT",
 	}
 
+	signalStorage.On("GetSignal", "BTCUSDT").Times(0)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(nil)
@@ -117,12 +126,14 @@ func TestNoOrderAndCanBuyNoManual(t *testing.T) {
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
 	botService := new(BotServiceMock)
+	signalStorage := new(SignalStorageMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
 		BotService:         botService,
+		SignalStorage:      signalStorage,
 	}
 
 	kline := model.KLine{
@@ -133,6 +144,7 @@ func TestNoOrderAndCanBuyNoManual(t *testing.T) {
 		Symbol: "BTCUSDT",
 	}
 
+	signalStorage.On("GetSignal", "BTCUSDT").Return(nil).Times(1)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(nil)
@@ -145,6 +157,49 @@ func TestNoOrderAndCanBuyNoManual(t *testing.T) {
 	assertion.Equal(40000.00, decision.Price)
 }
 
+func TestNoOrderAndCanBuyNoManualHasSignal(t *testing.T) {
+	assertion := assert.New(t)
+
+	exchangeRepository := new(ExchangeTradeInfoMock)
+	orderStorage := new(OrderStorageMock)
+	profitService := new(ProfitServiceMock)
+	botService := new(BotServiceMock)
+	signalStorage := new(SignalStorageMock)
+
+	orderBasedStrategy := strategy.OrderBasedStrategy{
+		ExchangeRepository: exchangeRepository,
+		OrderRepository:    orderStorage,
+		ProfitService:      profitService,
+		BotService:         botService,
+		SignalStorage:      signalStorage,
+	}
+
+	kline := model.KLine{
+		Symbol: "BTCUSDT",
+		Close:  40000.00,
+	}
+	tradeLimit := model.TradeLimit{
+		Symbol: "BTCUSDT",
+	}
+	signal := model.Signal{
+		Symbol:          "BTCUSDT",
+		BuyPrice:        39000.00,
+		ExpireTimestamp: time.Now().Add(time.Minute).UnixMilli(),
+	}
+
+	signalStorage.On("GetSignal", "BTCUSDT").Return(&signal).Times(1)
+	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
+	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
+	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(nil)
+	orderStorage.On("GetManualOrder", "BTCUSDT").Return(nil)
+
+	decision := orderBasedStrategy.Decide(kline)
+	assertion.Equal(999.99, decision.Score)
+	assertion.Equal("BUY", decision.Operation)
+	assertion.Equal(model.OrderBasedStrategyName, decision.StrategyName)
+	assertion.Equal(39000.00, decision.Price)
+}
+
 func TestHasOrderAndHasBinanceSellOrder(t *testing.T) {
 	assertion := assert.New(t)
 
@@ -152,12 +207,14 @@ func TestHasOrderAndHasBinanceSellOrder(t *testing.T) {
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
 	botService := new(BotServiceMock)
+	signalStorage := new(SignalStorageMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
 		BotService:         botService,
+		SignalStorage:      signalStorage,
 	}
 
 	kline := model.KLine{
@@ -168,6 +225,7 @@ func TestHasOrderAndHasBinanceSellOrder(t *testing.T) {
 		Symbol: "BTCUSDT",
 	}
 
+	signalStorage.On("GetSignal", "BTCUSDT").Times(0)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "SELL").Return(&model.BinanceOrder{
@@ -192,12 +250,14 @@ func TestHasOrderAndHasManualSell(t *testing.T) {
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
 	botService := new(BotServiceMock)
+	signalStorage := new(SignalStorageMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
 		BotService:         botService,
+		SignalStorage:      signalStorage,
 	}
 
 	kline := model.KLine{
@@ -208,6 +268,7 @@ func TestHasOrderAndHasManualSell(t *testing.T) {
 		Symbol: "BTCUSDT",
 	}
 
+	signalStorage.On("GetSignal", "BTCUSDT").Times(0)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "SELL").Return(nil)
@@ -235,12 +296,14 @@ func TestHasOrderAndTimeToExtraBuy(t *testing.T) {
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
 	botService := new(BotServiceMock)
+	signalStorage := new(SignalStorageMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
 		BotService:         botService,
+		SignalStorage:      signalStorage,
 	}
 
 	kline := model.KLine{
@@ -251,6 +314,7 @@ func TestHasOrderAndTimeToExtraBuy(t *testing.T) {
 		Symbol: "BTCUSDT",
 	}
 
+	signalStorage.On("GetSignal", "BTCUSDT").Times(0)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "SELL").Return(nil)
@@ -282,12 +346,14 @@ func TestHasOrderAndProfitPercentReached(t *testing.T) {
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
 	botService := new(BotServiceMock)
+	signalStorage := new(SignalStorageMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
 		BotService:         botService,
+		SignalStorage:      signalStorage,
 	}
 
 	kline := model.KLine{
@@ -298,6 +364,7 @@ func TestHasOrderAndProfitPercentReached(t *testing.T) {
 		Symbol: "BTCUSDT",
 	}
 
+	signalStorage.On("GetSignal", "BTCUSDT").Times(0)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "SELL").Return(nil)
@@ -340,12 +407,14 @@ func TestHasOrderAndHalfOfProfitPercentReached(t *testing.T) {
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
 	botService := new(BotServiceMock)
+	signalStorage := new(SignalStorageMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
 		BotService:         botService,
+		SignalStorage:      signalStorage,
 	}
 
 	kline := model.KLine{
@@ -356,6 +425,7 @@ func TestHasOrderAndHalfOfProfitPercentReached(t *testing.T) {
 		Symbol: "BTCUSDT",
 	}
 
+	signalStorage.On("GetSignal", "BTCUSDT").Times(0)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "SELL").Return(nil)
@@ -398,12 +468,14 @@ func TestHasOrderAndCurrentPriceIsGreaterThenOrderPrice(t *testing.T) {
 	orderStorage := new(OrderStorageMock)
 	profitService := new(ProfitServiceMock)
 	botService := new(BotServiceMock)
+	signalStorage := new(SignalStorageMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
 		BotService:         botService,
+		SignalStorage:      signalStorage,
 	}
 
 	kline := model.KLine{
@@ -414,6 +486,7 @@ func TestHasOrderAndCurrentPriceIsGreaterThenOrderPrice(t *testing.T) {
 		Symbol: "BTCUSDT",
 	}
 
+	signalStorage.On("GetSignal", "BTCUSDT").Times(0)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "SELL").Return(nil)
@@ -458,12 +531,14 @@ func TestHasOrderAndCurrentPriceIsLessOrEqualOrderPrice(t *testing.T) {
 	profitService := new(ProfitServiceMock)
 	tradeStack := new(BuyOrderStackMock)
 	botService := new(BotServiceMock)
+	signalStorage := new(SignalStorageMock)
 
 	orderBasedStrategy := strategy.OrderBasedStrategy{
 		ExchangeRepository: exchangeRepository,
 		OrderRepository:    orderStorage,
 		ProfitService:      profitService,
 		BotService:         botService,
+		SignalStorage:      signalStorage,
 	}
 
 	kline := model.KLine{
@@ -474,6 +549,7 @@ func TestHasOrderAndCurrentPriceIsLessOrEqualOrderPrice(t *testing.T) {
 		Symbol: "BTCUSDT",
 	}
 
+	signalStorage.On("GetSignal", "BTCUSDT").Times(0)
 	tradeStack.On("CanBuy", tradeLimit).Return(true)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)

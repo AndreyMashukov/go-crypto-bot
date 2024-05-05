@@ -106,13 +106,15 @@ func (m *MakerService) ProcessBuy(tradeLimit model.TradeLimit) {
 		return
 	}
 
-	price, err := m.PriceCalculator.CalculateBuy(tradeLimit)
+	priceModel := m.PriceCalculator.CalculateBuy(tradeLimit)
 
-	if err != nil {
-		log.Printf("[%s] Price error: %s", tradeLimit.Symbol, err.Error())
+	if priceModel.Error != nil {
+		log.Printf("[%s] Price error: %s", tradeLimit.Symbol, priceModel.Error.Error())
 
 		return
 	}
+
+	price := priceModel.Price
 
 	if manualOrder != nil && manualOrder.IsBuy() {
 		price = m.Formatter.FormatPrice(tradeLimit, manualOrder.Price)
@@ -132,7 +134,7 @@ func (m *MakerService) ProcessBuy(tradeLimit model.TradeLimit) {
 			return
 		}
 
-		err = m.OrderExecutor.Buy(tradeLimit, price, quantity)
+		err := m.OrderExecutor.Buy(tradeLimit, price, quantity, priceModel.Signal)
 		if err != nil {
 			log.Printf("[%s] %s", tradeLimit.Symbol, err)
 
@@ -188,12 +190,14 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 		return
 	}
 
-	price, err := m.PriceCalculator.CalculateBuy(tradeLimit)
-	if err != nil {
-		log.Printf("[%s] Price error: %s", tradeLimit.Symbol, err.Error())
+	priceModel := m.PriceCalculator.CalculateBuy(tradeLimit)
+	if priceModel.Error != nil {
+		log.Printf("[%s] Price error: %s", tradeLimit.Symbol, priceModel.Error.Error())
 
 		return
 	}
+
+	price := priceModel.Price
 
 	profit := openedOrder.GetProfitPercent(lastKline.Close, m.BotService.UseSwapCapital())
 	extraChargePercent := tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline, m.BotService.UseSwapCapital())
@@ -204,7 +208,7 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 			price = m.Formatter.FormatPrice(tradeLimit, lastKline.Close)
 		}
 
-		err = m.OrderExecutor.BuyExtra(tradeLimit, openedOrder, price)
+		err := m.OrderExecutor.BuyExtra(tradeLimit, openedOrder, price)
 		if err != nil {
 			log.Printf("[%s] %s", tradeLimit.Symbol, err)
 

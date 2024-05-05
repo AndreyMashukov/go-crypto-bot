@@ -52,8 +52,11 @@ func (m *MarketTradeListener) ListenAll() {
 				if kLine != nil {
 					m.ExchangeRepository.SaveKLinePredict(predicted, *kLine)
 					// todo: write only master bot???
-					interpolation := m.PriceCalculator.InterpolatePrice(kLine.Symbol)
-					m.ExchangeRepository.SaveInterpolation(interpolation, *kLine)
+					limit := m.ExchangeRepository.GetTradeLimitCached(kLine.Symbol)
+					if limit != nil {
+						interpolation := m.PriceCalculator.InterpolatePrice(*limit)
+						m.ExchangeRepository.SaveInterpolation(interpolation, *kLine)
+					}
 				}
 				m.ExchangeRepository.SavePredict(predicted, symbol)
 			}

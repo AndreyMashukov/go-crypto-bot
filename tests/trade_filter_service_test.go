@@ -371,3 +371,49 @@ func TestTradeFilterMatchingExtraOrdersCountTodayEmptyMap(t *testing.T) {
 	}
 	assertion.True(filterService.CanBuy(tradeLimit))
 }
+
+func TestTradeFilterMatchingHasSignal(t *testing.T) {
+	assertion := assert.New(t)
+
+	orderStorageMock := new(OrderStorageMock)
+	signalStorage := new(SignalStorageMock)
+
+	filterService := exchange.TradeFilterService{
+		OrderRepository: orderStorageMock,
+		SignalStorage:   signalStorage,
+	}
+
+	signalStorage.On("GetSignal", "BTCUSDT").Return(&model.Signal{
+		Symbol:          "BTCUSDT",
+		ExpireTimestamp: time.Now().Add(time.Minute).UnixMilli(),
+	})
+	tradeLimit := model.TradeLimit{
+		TradeFiltersBuy: model.TradeFilters{
+			{
+				Symbol:    "BTCUSDT",
+				Parameter: model.TradeFilterParameterHasSignal,
+				Condition: model.TradeFilterConditionEq,
+				Value:     "1",
+				Type:      model.TradeFilterConditionTypeAnd,
+				Children:  make(model.TradeFilters, 0),
+			},
+			{
+				Symbol:    "BTCUSDT",
+				Parameter: model.TradeFilterParameterHasSignal,
+				Condition: model.TradeFilterConditionEq,
+				Value:     "true",
+				Type:      model.TradeFilterConditionTypeAnd,
+				Children:  make(model.TradeFilters, 0),
+			},
+			{
+				Symbol:    "BTCUSDT",
+				Parameter: model.TradeFilterParameterHasSignal,
+				Condition: model.TradeFilterConditionNeq,
+				Value:     "false",
+				Type:      model.TradeFilterConditionTypeAnd,
+				Children:  make(model.TradeFilters, 0),
+			},
+		},
+	}
+	assertion.True(filterService.CanBuy(tradeLimit))
+}

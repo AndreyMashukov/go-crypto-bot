@@ -98,6 +98,7 @@ func (l *LossSecurity) BuyPriceCorrection(price float64, limit model.TradeLimit)
 
 	if l.MlEnabled {
 		predict, predictErr := l.ExchangeRepository.GetPredict(limit.Symbol)
+		// todo: in the future is should be `predict.Min` value for current time interval
 		if predictErr == nil && price > predict {
 			price = predict
 		}

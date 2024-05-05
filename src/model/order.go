@@ -199,6 +199,12 @@ func (o Order) GetSymbol() string {
 	return o.Symbol
 }
 
+type BuyPrice struct {
+	Signal *Signal
+	Error  error
+	Price  float64
+}
+
 type Position struct {
 	Symbol                  string                `json:"symbol"`
 	KLine                   KLine                 `json:"kLine"`

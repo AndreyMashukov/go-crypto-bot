@@ -1,0 +1,32 @@
+{
+  "symbol": "PERPUSDT",
+  "buyPrice": 0.8379493056,
+  "percent": 6.35,
+  "profitOptions": [
+    {
+      "index": 0,
+      "isTriggerOption": true,
+      "optionValue": 12,
+      "optionUnit": "h",
+      "optionPercent": 6.35,
+      "sellPrice": 1.0567520833
+    },
+    {
+      "index": 1,
+      "isTriggerOption": false,
+      "optionValue": 24,
+      "optionUnit": "h",
+      "optionPercent": 3.18,
+      "sellPrice": 0.8645960935
+    }
+  ],
+  "extraChargeOptions": [
+    {
+      "index": 0,
+      "buyPrice": 0.7590982759,
+      "percent": -9.41,
+      "budgetPercentage": 80
+    }
+  ],
+  "expireTimestamp": 1714754067823
+}

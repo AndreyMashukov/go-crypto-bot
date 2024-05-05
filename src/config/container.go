@@ -71,7 +71,7 @@ func InitServiceContainer() Container {
 	chErr := clickhouseDb.Ping()
 
 	if chErr != nil {
-		log.Panic(fmt.Sprintf("[Stat DB] Clickhouse can't connect: %s", err.Error()))
+		log.Panic(fmt.Sprintf("[Stat DB] Clickhouse can't connect: %s", chErr.Error()))
 	}
 	clickhouseDb.SetMaxIdleConns(64)
 	clickhouseDb.SetMaxOpenConns(64)
@@ -200,6 +200,12 @@ func InitServiceContainer() Container {
 		ProfitService:        &profitService,
 	}
 
+	signalRepository := repository.SignalRepository{
+		RDB:        rdb,
+		Ctx:        &ctx,
+		CurrentBot: currentBot,
+	}
+
 	priceCalculator := exchange.PriceCalculator{
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,
@@ -208,6 +214,7 @@ func InitServiceContainer() Container {
 		LossSecurity:       &lossSecurity,
 		ProfitService:      &profitService,
 		BotService:         &botService,
+		SignalStorage:      &signalRepository,
 	}
 
 	pythonMLBridge := ml.PythonMLBridge{
@@ -251,6 +258,7 @@ func InitServiceContainer() Container {
 		ExchangeTradeInfo: &exchangeRepository,
 		ExchangePriceAPI:  &binance,
 		Formatter:         &formatter,
+		SignalStorage:     &signalRepository,
 	}
 
 	tradeStack := exchange.TradeStack{
@@ -264,6 +272,7 @@ func InitServiceContainer() Container {
 		RDB:                rdb,
 		Ctx:                &ctx,
 		TradeFilterService: &tradeFilterService,
+		SignalStorage:      &signalRepository,
 	}
 
 	orderExecutor := exchange.OrderExecutor{
@@ -345,6 +354,7 @@ func InitServiceContainer() Container {
 		ExchangeRepository:  &exchangeRepository,
 		TradeStack:          &tradeStack,
 		TradeLimitValidator: &tradeLimitValidator,
+		SignalRepository:    &signalRepository,
 	}
 
 	swapManager := exchange.SwapManager{
@@ -377,6 +387,7 @@ func InitServiceContainer() Container {
 		OrderRepository:    &orderRepository,
 		ProfitService:      &profitService,
 		BotService:         &botService,
+		SignalStorage:      &signalRepository,
 	}
 	marketDepthStrategy := strategy.MarketDepthStrategy{}
 	smaStrategy := strategy.SmaTradeStrategy{
@@ -537,6 +548,7 @@ func (c *Container) StartHttpServer() {
 	http.HandleFunc("/order/trade/list", c.OrderController.GetOrderTradeListAction)
 	http.HandleFunc("/trade/limit/list", c.TradeController.GetTradeLimitsAction)
 	http.HandleFunc("/trade/stack", c.TradeController.GetTradeStackAction)
+	http.HandleFunc("/trade/signal", c.TradeController.PostSignalAction)
 	http.HandleFunc("/trade/limit/create", c.TradeController.CreateTradeLimitAction)
 	http.HandleFunc("/trade/limit/update", c.TradeController.UpdateTradeLimitAction)
 	http.HandleFunc("/trade/limit/switch/", c.TradeController.SwitchTradeLimitAction)

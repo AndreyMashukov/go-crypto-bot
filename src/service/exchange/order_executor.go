@@ -17,7 +17,7 @@ import (
 
 type OrderExecutorInterface interface {
 	BuyExtra(tradeLimit model.TradeLimit, order model.Order, price float64) error
-	Buy(tradeLimit model.TradeLimit, price float64, quantity float64) error
+	Buy(tradeLimit model.TradeLimit, price float64, quantity float64, signal *model.Signal) error
 	Sell(tradeLimit model.TradeLimit, opened model.Order, price float64, quantity float64, isManual bool) error
 	ProcessSwap(order model.Order) bool
 	TrySwap(order model.Order)
@@ -203,7 +203,7 @@ func (m *OrderExecutor) BuyExtra(tradeLimit model.TradeLimit, order model.Order,
 	return nil
 }
 
-func (m *OrderExecutor) Buy(tradeLimit model.TradeLimit, price float64, quantity float64) error {
+func (m *OrderExecutor) Buy(tradeLimit model.TradeLimit, price float64, quantity float64, signal *model.Signal) error {
 	if m.isTradeLocked(tradeLimit.Symbol) {
 		return errors.New(fmt.Sprintf("Operation Buy is Locked %s", tradeLimit.Symbol))
 	}
@@ -235,6 +235,14 @@ func (m *OrderExecutor) Buy(tradeLimit model.TradeLimit, price float64, quantity
 
 	// todo: check min quantity
 
+	profitOptions := tradeLimit.ProfitOptions
+	extraChargeOptions := tradeLimit.ExtraChargeOptions
+
+	if signal != nil {
+		profitOptions = signal.GetProfitOptions()
+		extraChargeOptions = signal.GetProfitExtraChargeOptions(tradeLimit)
+	}
+
 	var order = model.Order{
 		Symbol:             tradeLimit.Symbol,
 		Quantity:           quantity,
@@ -247,8 +255,8 @@ func (m *OrderExecutor) Buy(tradeLimit model.TradeLimit, price float64, quantity
 		Operation:          "buy",
 		ExternalId:         nil,
 		ClosesOrder:        nil,
-		ExtraChargeOptions: tradeLimit.ExtraChargeOptions,
-		ProfitOptions:      tradeLimit.ProfitOptions,
+		ProfitOptions:      profitOptions,
+		ExtraChargeOptions: extraChargeOptions,
 		// todo: add commission???
 	}
 

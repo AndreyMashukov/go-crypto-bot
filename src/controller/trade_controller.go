@@ -17,6 +17,7 @@ type TradeController struct {
 	ExchangeRepository  *repository.ExchangeRepository
 	TradeStack          *exchange.TradeStack
 	TradeLimitValidator *validator.TradeLimitValidator
+	SignalRepository    *repository.SignalRepository
 }
 
 func (t *TradeController) UpdateTradeLimitAction(w http.ResponseWriter, req *http.Request) {
@@ -77,6 +78,7 @@ func (t *TradeController) UpdateTradeLimitAction(w http.ResponseWriter, req *htt
 
 		return
 	}
+	t.TradeStack.InvalidateBuyPriceCache(tradeLimit.Symbol)
 
 	entity, err = t.ExchangeRepository.GetTradeLimit(tradeLimit.Symbol)
 	if err != nil {
@@ -186,6 +188,46 @@ func (t *TradeController) GetTradeLimitsAction(w http.ResponseWriter, req *http.
 
 	encodedRes, _ := json.Marshal(limits)
 	fmt.Fprintf(w, string(encodedRes))
+}
+
+func (t *TradeController) PostSignalAction(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if req.Method == "OPTIONS" {
+		fmt.Fprintf(w, "OK")
+		return
+	}
+
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != t.CurrentBot.BotUuid {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
+
+	if req.Method != "POST" {
+		http.Error(w, "Only POST method are allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	var signal model.Signal
+
+	// Try to decode the request body into the struct. If there is an error,
+	// respond to the client with the error message and a 400 status code.
+	err := json.NewDecoder(req.Body).Decode(&signal)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+
+		return
+	}
+
+	t.SignalRepository.SaveSignal(signal)
+	t.TradeStack.InvalidateBuyPriceCache(signal.Symbol)
+	fmt.Fprintf(w, "OK")
 }
 
 func (t *TradeController) GetTradeStackAction(w http.ResponseWriter, req *http.Request) {

@@ -13,6 +13,7 @@ type OrderBasedStrategy struct {
 	OrderRepository    repository.OrderStorageInterface
 	ProfitService      exchange.ProfitServiceInterface
 	BotService         service.BotServiceInterface
+	SignalStorage      repository.SignalStorageInterface
 }
 
 func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
@@ -54,6 +55,19 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 				Operation:    "BUY",
 				Timestamp:    time.Now().Unix(),
 				Price:        manualOrder.Price,
+				Params:       [3]float64{0, 0, 0},
+			}
+		}
+
+		signal := o.SignalStorage.GetSignal(tradeLimit.Symbol)
+
+		if signal != nil && !signal.IsExpired() {
+			return model.Decision{
+				StrategyName: model.OrderBasedStrategyName,
+				Score:        model.DecisionHighestPriorityScore,
+				Operation:    "BUY",
+				Timestamp:    time.Now().Unix(),
+				Price:        signal.BuyPrice,
 				Params:       [3]float64{0, 0, 0},
 			}
 		}

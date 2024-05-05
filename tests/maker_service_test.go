@@ -319,8 +319,13 @@ func TestBuyOperation(t *testing.T) {
 			},
 		},
 	})
-	priceCalculator.On("CalculateBuy", tradeLimit).Return(45000.00, nil)
-	orderExecutor.On("Buy", tradeLimit, 45000.00, 0.002).Return(nil)
+	var signal model.Signal
+	priceCalculator.On("CalculateBuy", tradeLimit).Return(model.BuyPrice{
+		Price:  45000.00,
+		Error:  nil,
+		Signal: &signal,
+	})
+	orderExecutor.On("Buy", tradeLimit, 45000.00, 0.002, &signal).Return(nil)
 
 	maker.Make("BTCUSDT")
 	orderExecutor.AssertNumberOfCalls(t, "Sell", 0)
@@ -432,7 +437,10 @@ func TestExtraBuyOperation(t *testing.T) {
 			},
 		},
 	})
-	priceCalculator.On("CalculateBuy", tradeLimit).Return(40000.00, nil)
+	priceCalculator.On("CalculateBuy", tradeLimit).Return(model.BuyPrice{
+		Price: 40000.00,
+		Error: nil,
+	})
 	botService.On("UseSwapCapital").Return(false)
 	orderExecutor.On("BuyExtra", tradeLimit, order, 40000.00).Return(nil)
 

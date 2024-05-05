@@ -371,9 +371,9 @@ type PriceCalculatorMock struct {
 	mock.Mock
 }
 
-func (p *PriceCalculatorMock) CalculateBuy(tradeLimit model.TradeLimit) (float64, error) {
+func (p *PriceCalculatorMock) CalculateBuy(tradeLimit model.TradeLimit) model.BuyPrice {
 	args := p.Called(tradeLimit)
-	return args.Get(0).(float64), args.Error(1)
+	return args.Get(0).(model.BuyPrice)
 }
 func (p *PriceCalculatorMock) CalculateSell(tradeLimit model.TradeLimit, order model.Order) (float64, error) {
 	args := p.Called(tradeLimit, order)
@@ -434,6 +434,24 @@ func (l *LossSecurityMock) BuyPriceCorrection(price float64, limit model.TradeLi
 func (l *LossSecurityMock) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice float64) float64 {
 	args := l.Called(limit, buyPrice)
 	return args.Get(0).(float64)
+}
+
+type SignalStorageMock struct {
+	mock.Mock
+}
+
+func (s *SignalStorageMock) SaveSignal(signal model.Signal) {
+	_ = s.Called(signal)
+}
+func (s *SignalStorageMock) GetSignal(symbol string) *model.Signal {
+	args := s.Called(symbol)
+	value := args.Get(0)
+
+	if value == nil {
+		return nil
+	}
+
+	return value.(*model.Signal)
 }
 
 type ProfitServiceMock struct {
@@ -556,8 +574,8 @@ func (o *OrderExecutorMock) BuyExtra(tradeLimit model.TradeLimit, order model.Or
 	args := o.Called(tradeLimit, order, price)
 	return args.Error(0)
 }
-func (o *OrderExecutorMock) Buy(tradeLimit model.TradeLimit, price float64, quantity float64) error {
-	args := o.Called(tradeLimit, price, quantity)
+func (o *OrderExecutorMock) Buy(tradeLimit model.TradeLimit, price float64, quantity float64, signal *model.Signal) error {
+	args := o.Called(tradeLimit, price, quantity, signal)
 	return args.Error(0)
 }
 func (o *OrderExecutorMock) Sell(tradeLimit model.TradeLimit, opened model.Order, price float64, quantity float64, isManual bool) error {

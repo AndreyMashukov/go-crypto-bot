@@ -9,7 +9,7 @@ import (
 )
 
 type SwapUpdater struct {
-	Binance            *client.Binance
+	Binance            client.ExchangeAPIInterface
 	ExchangeRepository *repository.ExchangeRepository
 	Formatter          *utils.Formatter
 }

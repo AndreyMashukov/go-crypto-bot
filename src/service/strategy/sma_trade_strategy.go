@@ -8,7 +8,7 @@ import (
 )
 
 type SmaTradeStrategy struct {
-	ExchangeRepository repository.ExchangeRepository
+	ExchangeRepository *repository.ExchangeRepository
 }
 
 func (s *SmaTradeStrategy) Decide(trade model.Trade) model.Decision {

@@ -1061,8 +1061,10 @@ func (e *ExchangeRepository) GetInterpolation(kLine model.KLine) (model.Interpol
 	interpolationCached := e.RDB.Get(*e.Ctx, cacheKey).Val()
 
 	if len(interpolationCached) > 0 {
-		_ = json.Unmarshal([]byte(interpolationCached), &interpolation)
-		return interpolation, nil
+		err := json.Unmarshal([]byte(interpolationCached), &interpolation)
+		if err == nil {
+			return interpolation, nil
+		}
 	}
 
 	return model.Interpolation{

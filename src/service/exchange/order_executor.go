@@ -774,7 +774,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 		if retryErr == nil {
 			binanceOrder = queryOrder
 			control <- "stop"
-			log.Printf("[%s] Order [%d] is recovered [%s]", binanceOrder.Symbol, binanceOrder.OrderId, binanceOrder.Status)
+			log.Printf("[%s] Order [%s] is recovered [%s]", binanceOrder.Symbol, binanceOrder.OrderId, binanceOrder.Status)
 
 			if binanceOrder.IsFilled() {
 				return binanceOrder, nil
@@ -783,7 +783,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 			// Just in case of bug...
 			if binanceOrder.IsPartiallyFilled() {
 				log.Printf(
-					"[%s] Order [%d] status is [%s], try again waitExecution...",
+					"[%s] Order [%s] status is [%s], try again waitExecution...",
 					binanceOrder.Symbol,
 					binanceOrder.OrderId,
 					binanceOrder.Status,
@@ -795,7 +795,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 			// Just in case of bug...
 			if binanceOrder.IsNew() {
 				log.Printf(
-					"[%s] Order [%d] status is [%s], try again waitExecution...",
+					"[%s] Order [%s] status is [%s], try again waitExecution...",
 					binanceOrder.Symbol,
 					binanceOrder.OrderId,
 					binanceOrder.Status,
@@ -806,7 +806,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 
 			if binanceOrder.HasExecutedQuantity() {
 				log.Printf(
-					"Order [%d] is [%s], ExecutedQty = %.8f",
+					"Order [%s] is [%s], ExecutedQty = %.8f",
 					binanceOrder.OrderId,
 					binanceOrder.Status,
 					binanceOrder.GetExecutedQuantity(),
@@ -814,7 +814,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 
 				return binanceOrder, nil
 			} else {
-				return binanceOrder, errors.New(fmt.Sprintf("Order %d was CANCELED", binanceOrder.OrderId))
+				return binanceOrder, errors.New(fmt.Sprintf("Order %s was CANCELED", binanceOrder.OrderId))
 			}
 		} else {
 			// todo: loop??? timeout + loop???
@@ -830,7 +830,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 
 	if binanceOrder.HasExecutedQuantity() {
 		log.Printf(
-			"Order [%d] is [%s], ExecutedQty = %.8f",
+			"Order [%s] is [%s], ExecutedQty = %.8f",
 			binanceOrder.OrderId,
 			binanceOrder.Status,
 			binanceOrder.GetExecutedQuantity(),
@@ -839,9 +839,9 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 		return binanceOrder, nil
 	}
 
-	log.Printf("Order [%d] is [%s]", binanceOrder.OrderId, binanceOrder.Status)
+	log.Printf("Order [%s] is [%s]", binanceOrder.OrderId, binanceOrder.Status)
 
-	return binanceOrder, errors.New(fmt.Sprintf("Order %d was CANCELED", binanceOrder.OrderId))
+	return binanceOrder, errors.New(fmt.Sprintf("Order %s was CANCELED", binanceOrder.OrderId))
 }
 
 func (m *OrderExecutor) CheckIsBuyExpired(
@@ -862,7 +862,7 @@ func (m *OrderExecutor) CheckIsBuyExpired(
 	positionPercentage := m.Formatter.ComparePercentage(binanceOrder.Price, kline.Close)
 	if positionPercentage.Gte(101.00) {
 		log.Printf(
-			"[%s] %s Order [%d] status [%s] ttl reached, current price is [%.8f], order price [%.8f], diff percent: %.2f",
+			"[%s] %s Order [%s] status [%s] ttl reached, current price is [%.8f], order price [%.8f], diff percent: %.2f",
 			binanceOrder.Symbol,
 			binanceOrder.Side,
 			binanceOrder.OrderId,
@@ -876,7 +876,7 @@ func (m *OrderExecutor) CheckIsBuyExpired(
 		}
 	} else {
 		log.Printf(
-			"[%s] %s Order [%d] status [%s] ttl ignored, current price is [%.8f], order price [%.8f], diff percent: %.2f",
+			"[%s] %s Order [%s] status [%s] ttl ignored, current price is [%.8f], order price [%.8f], diff percent: %.2f",
 			binanceOrder.Symbol,
 			binanceOrder.Side,
 			binanceOrder.OrderId,
@@ -910,7 +910,7 @@ func (m *OrderExecutor) CheckIsSellExpired(
 		profitPercent := openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital())
 		if profitPercent.Lte(0.00) {
 			log.Printf(
-				"[%s] %s Order [%d] status [%s] ttl reached, current price is [%.8f], order price [%.8f], open [%.8f], profit: %.2f",
+				"[%s] %s Order [%s] status [%s] ttl reached, current price is [%.8f], order price [%.8f], open [%.8f], profit: %.2f",
 				binanceOrder.Symbol,
 				binanceOrder.Side,
 				binanceOrder.OrderId,
@@ -925,7 +925,7 @@ func (m *OrderExecutor) CheckIsSellExpired(
 			}
 		} else {
 			log.Printf(
-				"[%s] %s Order [%d] status [%s] ttl ignored, current price is [%.8f], order price [%.8f], open [%.8f], profit: %.2f",
+				"[%s] %s Order [%s] status [%s] ttl ignored, current price is [%.8f], order price [%.8f], open [%.8f], profit: %.2f",
 				binanceOrder.Symbol,
 				binanceOrder.Side,
 				binanceOrder.OrderId,
@@ -939,7 +939,7 @@ func (m *OrderExecutor) CheckIsSellExpired(
 	} else {
 		// todo: redundant case???
 		log.Printf(
-			"[%s] %s Order [%d] %s",
+			"[%s] %s Order [%s] %s",
 			binanceOrder.Symbol,
 			binanceOrder.Side,
 			binanceOrder.OrderId,
@@ -1090,7 +1090,7 @@ func (m *OrderExecutor) CheckIsTimeToSell(
 	// [BUY] Check is it time to sell (maybe we have already partially filled)
 	if openedBuyPosition != nil && binanceOrder.IsPartiallyFilled() && binanceOrder.GetProfitPercent(kline.Close).Gte(m.ProfitService.GetMinProfitPercent(openedBuyPosition)) {
 		log.Printf(
-			"[%s] Max profit percent reached, current profit is: %.2f, %s [%d] order is cancelled",
+			"[%s] Max profit percent reached, current profit is: %.2f, %s [%s] order is cancelled",
 			binanceOrder.Symbol,
 			binanceOrder.GetProfitPercent(kline.Close).Value(),
 			binanceOrder.Side,
@@ -1375,7 +1375,7 @@ func (m *OrderExecutor) findOrCreateOrder(order model.Order, operation string) (
 		return binanceOrder, err
 	}
 
-	log.Printf("[%s] %s Order created %d, Price: %.6f", order.Symbol, operation, binanceOrder.OrderId, binanceOrder.Price)
+	log.Printf("[%s] %s Order created %s, Price: %.6f", order.Symbol, operation, binanceOrder.OrderId, binanceOrder.Price)
 	m.OrderRepository.SetBinanceOrder(binanceOrder)
 	if order.IsBuy() {
 		m.BalanceService.InvalidateBalanceCache("USDT")

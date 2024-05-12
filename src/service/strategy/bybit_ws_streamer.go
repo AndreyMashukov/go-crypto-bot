@@ -1,0 +1,106 @@
+package strategy
+
+import (
+	"encoding/json"
+	"github.com/gorilla/websocket"
+	"gitlab.com/open-soft/go-crypto-bot/src/client"
+	"gitlab.com/open-soft/go-crypto-bot/src/model"
+	"gitlab.com/open-soft/go-crypto-bot/src/repository"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
+	"log"
+	"os"
+	"strings"
+	"sync"
+	"time"
+)
+
+type ByBitWsStreamer struct {
+	ExchangeRepository  *repository.ExchangeRepository
+	SmaTradeStrategy    *SmaTradeStrategy
+	MarketDepthStrategy *MarketDepthStrategy
+	Formatter           *utils.Formatter
+}
+
+func (b *ByBitWsStreamer) StartStream(
+	tradeLimitCollection []model.SymbolInterface,
+	klineChannel chan model.KLine,
+	depthChannel chan model.OrderBookModel,
+) {
+	eventChannel := make(chan []byte)
+
+	go func() {
+		for {
+			message := <-eventChannel
+
+			switch true {
+			case strings.Contains(string(message), "tickers."):
+				var tickerEvent model.ByBitWsTickerEvent
+				json.Unmarshal(message, &tickerEvent)
+				tickerData := tickerEvent.Data
+				ticker := tickerData.ToBinanceMiniTicker(tickerEvent.Ts)
+				kLine := b.ExchangeRepository.GetCurrentKline(ticker.Symbol)
+
+				if kLine != nil && kLine.Includes(ticker) {
+					klineChannel <- kLine.Update(ticker)
+				}
+
+				break
+			case strings.Contains(string(message), "publicTrade."):
+				var tradeEvent model.ByBitWsPublicTradeEvent
+				json.Unmarshal(message, &tradeEvent)
+
+				for _, byBitTrade := range tradeEvent.Data {
+					trade := byBitTrade.ToBinanceTrade()
+
+					b.ExchangeRepository.AddTrade(trade)
+					smaDecision := b.SmaTradeStrategy.Decide(trade)
+					b.ExchangeRepository.SetDecision(smaDecision, trade.Symbol)
+				}
+
+				break
+			case strings.Contains(string(message), "kline.1."):
+				var event model.ByBitWsKLineEvent
+				json.Unmarshal(message, &event)
+				symbol := strings.ReplaceAll(event.Topic, "kline.1.", "")
+
+				if len(event.Data) > 0 {
+					byBitKline := event.Data[0]
+					kLine := byBitKline.ToBinanceKline(symbol, b.Formatter.ByBitIntervalToBinanceInterval(byBitKline.Interval))
+					kLine.UpdatedAt = time.Now().Unix()
+
+					klineChannel <- kLine
+				}
+
+				break
+			case strings.Contains(string(message), "orderbook.50."):
+				var event model.ByBitWsOrderBookEvent
+				json.Unmarshal(message, &event)
+
+				depth := event.Data.ToOrderBookModel()
+				depthDecision := b.MarketDepthStrategy.Decide(depth)
+				b.ExchangeRepository.SetDecision(depthDecision, depth.Symbol)
+				go func() {
+					depthChannel <- depth
+				}()
+				break
+			}
+		}
+	}()
+	websockets := make([]*websocket.Conn, 0)
+
+	lock := sync.Mutex{}
+	sWg := sync.WaitGroup{}
+
+	for index, streamBatchItem := range client.GetStreamBatchByBit(tradeLimitCollection, []string{"publicTrade.", "kline.1.", "orderbook.50.", "tickers."}) {
+		sWg.Add(1)
+		go func(sbi []string, i int) {
+			defer sWg.Done()
+			lock.Lock()
+			websockets = append(websockets, client.ListenByBit(os.Getenv("BYBIT_STREAM_DSN"), eventChannel, sbi, int64(i)))
+			lock.Unlock()
+			log.Printf("Batch %d websocket: %d connected", i, len(sbi))
+		}(streamBatchItem, index)
+	}
+
+	sWg.Wait()
+}

@@ -419,7 +419,7 @@ func (m *MakerService) UpdateLimits() {
 		}
 
 		log.Printf(
-			"[%s] Trade Limit Updated, MIN_LOT = %f, MIN_PRICE = %f",
+			"[%s] Trade Limit Updated, MIN_LOT = %.10f, MIN_PRICE = %.10f",
 			tradeLimit.Symbol,
 			tradeLimit.MinQuantity,
 			tradeLimit.MinPrice,

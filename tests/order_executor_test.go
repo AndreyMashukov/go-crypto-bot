@@ -94,7 +94,7 @@ func TestSellAction(t *testing.T) {
 	}(&orderExecutor)
 
 	initialBinanceOrder := model.BinanceOrder{
-		OrderId:     999,
+		OrderId:     "999",
 		Symbol:      "ETHUSDT",
 		Side:        "SELL",
 		ExecutedQty: 0.00,
@@ -140,7 +140,7 @@ func TestSellAction(t *testing.T) {
 		Symbol: "ETHUSDT",
 		Close:  2281.52,
 	})
-	openedExternalId := int64(988)
+	openedExternalId := "988"
 	openedOrder := model.Order{
 		Id:               8889,
 		ExternalId:       &openedExternalId,
@@ -155,8 +155,8 @@ func TestSellAction(t *testing.T) {
 	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(&openedOrder)
 	orderRepository.On("GetManualOrder", "ETHUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
-	binance.On("QueryOrder", "ETHUSDT", int64(999)).Return(model.BinanceOrder{
-		OrderId:             999,
+	binance.On("QueryOrder", "ETHUSDT", "999").Return(model.BinanceOrder{
+		OrderId:             "999",
 		Symbol:              "ETHUSDT",
 		Side:                "SELL",
 		ExecutedQty:         0.0089,
@@ -272,7 +272,7 @@ func TestSellFoundFilled(t *testing.T) {
 	}(&orderExecutor)
 
 	initialBinanceOrder := model.BinanceOrder{
-		OrderId:             999,
+		OrderId:             "999",
 		Symbol:              "ETHUSDT",
 		Side:                "SELL",
 		ExecutedQty:         0.0089,
@@ -319,7 +319,7 @@ func TestSellFoundFilled(t *testing.T) {
 		Symbol: "ETHUSDT",
 		Close:  2281.52,
 	})
-	openedExternalId := int64(988)
+	openedExternalId := "988"
 	openedOrder := model.Order{
 		Id:               9998,
 		ExternalId:       &openedExternalId,
@@ -334,7 +334,7 @@ func TestSellFoundFilled(t *testing.T) {
 	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(&openedOrder)
 	orderRepository.On("GetManualOrder", "ETHUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Unset()
-	binance.On("QueryOrder", "ETHUSDT", int64(999)).Unset()
+	binance.On("QueryOrder", "ETHUSDT", "999").Unset()
 	orderRepository.On("DeleteBinanceOrder", initialBinanceOrder).Times(1)
 	orderId := int64(100)
 	orderRepository.On("Create", mock.Anything).Return(&orderId, nil)
@@ -441,7 +441,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 	}(&orderExecutor)
 
 	initialBinanceOrder := model.BinanceOrder{
-		OrderId:     999,
+		OrderId:     "999",
 		Symbol:      "ETHUSDT",
 		Side:        "SELL",
 		ExecutedQty: 0.00,
@@ -487,7 +487,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 		Symbol: "ETHUSDT",
 		Close:  2281.52,
 	})
-	openedExternalId := int64(988)
+	openedExternalId := "988"
 	openedOrder := model.Order{
 		Id:               8877,
 		ExternalId:       &openedExternalId,
@@ -502,8 +502,8 @@ func TestSellCancelledInProcess(t *testing.T) {
 	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(&openedOrder)
 	orderRepository.On("GetManualOrder", "ETHUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
-	binance.On("QueryOrder", "ETHUSDT", int64(999)).Return(model.BinanceOrder{
-		OrderId:             999,
+	binance.On("QueryOrder", "ETHUSDT", "999").Return(model.BinanceOrder{
+		OrderId:             "999",
 		Symbol:              "ETHUSDT",
 		Side:                "SELL",
 		ExecutedQty:         0.0000,
@@ -605,7 +605,7 @@ func TestSellQueryFail(t *testing.T) {
 	}(&orderExecutor)
 
 	initialBinanceOrder := model.BinanceOrder{
-		OrderId:     999,
+		OrderId:     "999",
 		Symbol:      "ETHUSDT",
 		Side:        "SELL",
 		ExecutedQty: 0.00,
@@ -651,7 +651,7 @@ func TestSellQueryFail(t *testing.T) {
 		Symbol: "ETHUSDT",
 		Close:  2281.52,
 	})
-	openedExternalId := int64(988)
+	openedExternalId := "988"
 	openedOrder := model.Order{
 		Id:               88811,
 		ExternalId:       &openedExternalId,
@@ -666,7 +666,7 @@ func TestSellQueryFail(t *testing.T) {
 	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(&openedOrder)
 	orderRepository.On("GetManualOrder", "ETHUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
-	binance.On("QueryOrder", "ETHUSDT", int64(999)).Return(model.BinanceOrder{}, errors.New("Order was canceled or expired"))
+	binance.On("QueryOrder", "ETHUSDT", "999").Return(model.BinanceOrder{}, errors.New("Order was canceled or expired"))
 	orderRepository.On("DeleteBinanceOrder", initialBinanceOrder).Times(1)
 	orderId := int64(100)
 	orderRepository.On("Create", mock.Anything).Return(&orderId, nil).Unset()
@@ -760,7 +760,7 @@ func TestSellClosingAction(t *testing.T) {
 	}(&orderExecutor)
 
 	initialBinanceOrder := model.BinanceOrder{
-		OrderId:     999,
+		OrderId:     "999",
 		Symbol:      "BTCUSDT",
 		Side:        "SELL",
 		ExecutedQty: 0.00,
@@ -806,7 +806,7 @@ func TestSellClosingAction(t *testing.T) {
 		Symbol: "BTCUSDT",
 		Close:  43496.99,
 	})
-	openedExternalId := int64(988)
+	openedExternalId := "988"
 	openedOrder := model.Order{
 		Id:               11122,
 		ExternalId:       &openedExternalId,
@@ -821,8 +821,8 @@ func TestSellClosingAction(t *testing.T) {
 	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&openedOrder)
 	orderRepository.On("GetManualOrder", "BTCUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
-	binance.On("QueryOrder", "BTCUSDT", int64(999)).Return(model.BinanceOrder{
-		OrderId:             999,
+	binance.On("QueryOrder", "BTCUSDT", "999").Return(model.BinanceOrder{
+		OrderId:             "999",
 		Symbol:              "BTCUSDT",
 		Side:                "SELL",
 		ExecutedQty:         0.00046,
@@ -938,7 +938,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 	}(&orderExecutor)
 
 	initialBinanceOrder := model.BinanceOrder{
-		OrderId:     999,
+		OrderId:     "999",
 		Symbol:      "TRXUSDT",
 		Side:        "SELL",
 		ExecutedQty: 0.00,
@@ -984,7 +984,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 		Symbol: "TRXUSDT",
 		Close:  0.10692,
 	})
-	openedExternalId := int64(988)
+	openedExternalId := "988"
 	openedOrder := model.Order{
 		Id:               22235,
 		ExternalId:       &openedExternalId,
@@ -999,8 +999,8 @@ func TestSellClosingTrxAction(t *testing.T) {
 	orderRepository.On("GetOpenedOrderCached", "TRXUSDT", "BUY").Return(&openedOrder)
 	orderRepository.On("GetManualOrder", "TRXUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
-	binance.On("QueryOrder", "TRXUSDT", int64(999)).Return(model.BinanceOrder{
-		OrderId:             999,
+	binance.On("QueryOrder", "TRXUSDT", "999").Return(model.BinanceOrder{
+		OrderId:             "999",
 		Symbol:              "TRXUSDT",
 		Side:                "SELL",
 		ExecutedQty:         382.1,

@@ -19,6 +19,11 @@ type SocketStreamsRequest struct {
 	Params []string `json:"params"`
 }
 
+type ByBitSocketStreamsRequest struct {
+	Operation string   `json:"op"`
+	Arguments []string `json:"args"`
+}
+
 type Error struct {
 	Code    int64  `json:"code"`
 	Message string `json:"msg"`
@@ -67,6 +72,10 @@ type RateLimit struct {
 	IntervalNum   int64  `json:"intervalNum"`
 	Limit         int64  `json:"limit"`
 }
+
+const BinanceExchangeFilterTypePrice = "PRICE_FILTER"
+const BinanceExchangeFilterTypeLotSize = "LOT_SIZE"
+const BinanceExchangeFilterTypeNotional = "NOTIONAL"
 
 type ExchangeFilter struct {
 	FilterType  string   `json:"filterType"`

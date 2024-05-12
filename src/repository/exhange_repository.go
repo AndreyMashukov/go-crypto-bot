@@ -282,7 +282,8 @@ func (e *ExchangeRepository) CreateSwapPair(swapPair model.SwapPair) (*int64, er
 		    min_price = ?,
 		    sell_volume = ?,
 		    buy_volume = ?,
-		    daily_percent = ?
+		    daily_percent = ?,
+		    exchange = ?
 	`,
 		swapPair.SourceSymbol,
 		swapPair.Symbol,
@@ -297,6 +298,7 @@ func (e *ExchangeRepository) CreateSwapPair(swapPair model.SwapPair) (*int64, er
 		swapPair.SellVolume,
 		swapPair.BuyVolume,
 		swapPair.DailyPercent,
+		e.CurrentBot.Exchange,
 	)
 
 	if err != nil {
@@ -324,8 +326,9 @@ func (e *ExchangeRepository) UpdateSwapPair(swapPair model.SwapPair) error {
 		    sp.min_price = ?,
 		    sp.sell_volume = ?,
 		    sp.buy_volume = ?,
-		    sp.daily_percent = ?
-		WHERE sp.id = ?
+		    sp.daily_percent = ?,
+		    sp.exchange = ?
+		WHERE sp.id = ? AND sp.exchange = ?
 	`,
 		swapPair.SourceSymbol,
 		swapPair.Symbol,
@@ -340,7 +343,9 @@ func (e *ExchangeRepository) UpdateSwapPair(swapPair model.SwapPair) error {
 		swapPair.SellVolume,
 		swapPair.BuyVolume,
 		swapPair.DailyPercent,
+		swapPair.Exchange,
 		swapPair.Id,
+		e.CurrentBot.Exchange,
 	)
 
 	if err != nil {
@@ -367,9 +372,10 @@ func (e *ExchangeRepository) GetSwapPairs() []model.SwapPair {
 		    sp.min_price as MinPrice,
 		    sp.sell_volume as SellVolume,
 		    sp.buy_volume as BuyVolume,
-		    sp.daily_percent as DailyPercent
-		FROM swap_pair sp
-	`)
+		    sp.daily_percent as DailyPercent,
+		    sp.exchange as Exchange
+		FROM swap_pair sp WHERE sp.exchange = ?
+	`, e.CurrentBot.Exchange)
 	defer res.Close()
 
 	if err != nil {
@@ -395,6 +401,7 @@ func (e *ExchangeRepository) GetSwapPairs() []model.SwapPair {
 			&swapPair.SellVolume,
 			&swapPair.BuyVolume,
 			&swapPair.DailyPercent,
+			&swapPair.Exchange,
 		)
 
 		if err != nil {
@@ -423,10 +430,11 @@ func (e *ExchangeRepository) GetSwapPairsByBaseAsset(baseAsset string) []model.S
 		    sp.min_price as MinPrice,
 		    sp.sell_volume as SellVolume,
 		    sp.buy_volume as BuyVolume,
-		    sp.daily_percent as DailyPercent
+		    sp.daily_percent as DailyPercent,
+		    sp.exchange as Exchange
 		FROM swap_pair sp 
-		WHERE sp.base_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price
-	`, baseAsset)
+		WHERE sp.base_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price AND sp.exchange = ?
+	`, baseAsset, e.CurrentBot.Exchange)
 	defer res.Close()
 
 	if err != nil {
@@ -452,6 +460,7 @@ func (e *ExchangeRepository) GetSwapPairsByBaseAsset(baseAsset string) []model.S
 			&swapPair.SellVolume,
 			&swapPair.BuyVolume,
 			&swapPair.DailyPercent,
+			&swapPair.Exchange,
 		)
 
 		if err != nil {
@@ -480,10 +489,11 @@ func (e *ExchangeRepository) GetSwapPairsByQuoteAsset(quoteAsset string) []model
 		    sp.min_price as MinPrice,
 		    sp.sell_volume as SellVolume,
 		    sp.buy_volume as BuyVolume,
-		    sp.daily_percent as DailyPercent
+		    sp.daily_percent as DailyPercent,
+		    sp.exchange as Exchange
 		FROM swap_pair sp 
-		WHERE sp.quote_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price
-	`, quoteAsset)
+		WHERE sp.quote_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price AND sp.exchange = ?
+	`, quoteAsset, e.CurrentBot.Exchange)
 	defer res.Close()
 
 	if err != nil {
@@ -509,6 +519,7 @@ func (e *ExchangeRepository) GetSwapPairsByQuoteAsset(quoteAsset string) []model
 			&swapPair.SellVolume,
 			&swapPair.BuyVolume,
 			&swapPair.DailyPercent,
+			&swapPair.Exchange,
 		)
 
 		if err != nil {
@@ -540,10 +551,11 @@ func (e *ExchangeRepository) GetSwapPairsByAssets(quoteAsset string, baseAsset s
 		    sp.min_price as MinPrice,
 		    sp.sell_volume as SellVolume,
 		    sp.buy_volume as BuyVolume,
-		    sp.daily_percent as DailyPercent
+		    sp.daily_percent as DailyPercent,
+		    sp.exchange as Exchange
 		FROM swap_pair sp 
-		WHERE sp.quote_asset = ? AND sp.base_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price
-	`, quoteAsset, baseAsset).Scan(
+		WHERE sp.quote_asset = ? AND sp.base_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price AND sp.exchange = ?
+	`, quoteAsset, baseAsset, e.CurrentBot.Exchange).Scan(
 		&swapPair.Id,
 		&swapPair.SourceSymbol,
 		&swapPair.Symbol,
@@ -558,6 +570,7 @@ func (e *ExchangeRepository) GetSwapPairsByAssets(quoteAsset string, baseAsset s
 		&swapPair.SellVolume,
 		&swapPair.BuyVolume,
 		&swapPair.DailyPercent,
+		&swapPair.Exchange,
 	)
 
 	if err != nil {
@@ -584,11 +597,12 @@ func (e *ExchangeRepository) GetSwapPair(symbol string) (model.SwapPair, error) 
 		    sp.min_price as MinPrice,
 		    sp.sell_volume as SellVolume,
 		    sp.buy_volume as BuyVolume,
-		    sp.daily_percent as DailyPercent
+		    sp.daily_percent as DailyPercent,
+		    sp.exchange as Exchange
 		FROM swap_pair sp
-		WHERE sp.symbol = ?
+		WHERE sp.symbol = ? AND sp.exchange = ?
 	`,
-		symbol,
+		symbol, e.CurrentBot.Exchange,
 	).Scan(
 		&swapPair.Id,
 		&swapPair.SourceSymbol,
@@ -604,6 +618,7 @@ func (e *ExchangeRepository) GetSwapPair(symbol string) (model.SwapPair, error) 
 		&swapPair.SellVolume,
 		&swapPair.BuyVolume,
 		&swapPair.DailyPercent,
+		&swapPair.Exchange,
 	)
 
 	if err != nil {
@@ -829,8 +844,34 @@ func (e *ExchangeRepository) GetPeriodMinPrice(symbol string, period int64) floa
 }
 
 func (e *ExchangeRepository) SetDepth(depth model.OrderBookModel, limit int64, expires int64) {
-	encoded, _ := json.Marshal(depth)
-	e.RDB.Set(*e.Ctx, fmt.Sprintf("depth-%s-%d", depth.Symbol, limit), string(encoded), time.Second*time.Duration(expires))
+	if len(depth.Asks) == 0 || len(depth.Bids) == 0 {
+		// Recover from cache
+		res := e.RDB.Get(*e.Ctx, fmt.Sprintf("depth-%s-%d", depth.Symbol, limit)).Val()
+
+		if len(res) > 0 {
+			var prevDepth model.OrderBookModel
+			err := json.Unmarshal([]byte(res), &prevDepth)
+			if err == nil {
+				// Recover empty Asks
+				if len(depth.Asks) == 0 && len(prevDepth.Asks) > 0 {
+					depth.Asks = prevDepth.Asks
+				}
+				// Recover empty Bids
+				if len(depth.Bids) == 0 && len(prevDepth.Bids) > 0 {
+					depth.Bids = prevDepth.Bids
+				}
+			} else {
+				log.Printf("[%s] SetDepth recover error: %s", depth.Symbol, err.Error())
+			}
+		}
+	}
+
+	encoded, err := json.Marshal(depth)
+	if err == nil {
+		e.RDB.Set(*e.Ctx, fmt.Sprintf("depth-%s-%d", depth.Symbol, limit), string(encoded), time.Second*time.Duration(expires))
+	} else {
+		log.Printf("[%s] SetDepth save error: %s", depth.Symbol, err.Error())
+	}
 }
 
 func (e *ExchangeRepository) GetDepth(symbol string, limit int64) model.OrderBookModel {
@@ -862,6 +903,7 @@ func (e *ExchangeRepository) GetDepth(symbol string, limit int64) model.OrderBoo
 	var dto model.OrderBookModel
 	err := json.Unmarshal([]byte(res), &dto)
 	if err != nil {
+		log.Printf("[%s] GetDepth error: %s", symbol, err.Error())
 		book := e.Binance.GetDepth(symbol, limit)
 		if book != nil {
 			depth := book.ToOrderBookModel(symbol)
@@ -986,7 +1028,7 @@ func (e *ExchangeRepository) GetTradeLimitCached(symbol string) *model.TradeLimi
 
 func (e *ExchangeRepository) SetDecision(decision model.Decision, symbol string) {
 	encoded, _ := json.Marshal(decision)
-	e.RDB.Set(*e.Ctx, fmt.Sprintf("decision-%s-%s-bot-%d", decision.StrategyName, symbol, e.CurrentBot.Id), string(encoded), time.Second*model.PriceValidSeconds)
+	e.RDB.Set(*e.Ctx, fmt.Sprintf("decision-%s-%s-bot-%d", decision.StrategyName, symbol, e.CurrentBot.Id), string(encoded), time.Second*model.PriceValidSeconds*2)
 }
 
 func (e *ExchangeRepository) DeleteDecision(strategy string, symbol string) {
@@ -1000,9 +1042,13 @@ func (e *ExchangeRepository) GetDecision(strategy string, symbol string) *model.
 	}
 
 	var dto model.Decision
-	json.Unmarshal([]byte(res), &dto)
+	err := json.Unmarshal([]byte(res), &dto)
 
-	return &dto
+	if err == nil {
+		return &dto
+	}
+
+	return nil
 }
 
 func (e *ExchangeRepository) getPredictedCacheKey(symbol string) string {
@@ -1016,8 +1062,10 @@ func (e *ExchangeRepository) GetPredict(symbol string) (float64, error) {
 	predictedPriceCached := e.RDB.Get(*e.Ctx, predictedPriceCacheKey).Val()
 
 	if len(predictedPriceCached) > 0 {
-		_ = json.Unmarshal([]byte(predictedPriceCached), &predictedPrice)
-		return predictedPrice, nil
+		err := json.Unmarshal([]byte(predictedPriceCached), &predictedPrice)
+		if err == nil {
+			return predictedPrice, nil
+		}
 	}
 
 	return 0.00, errors.New("predict is not found")
@@ -1026,8 +1074,10 @@ func (e *ExchangeRepository) GetPredict(symbol string) (float64, error) {
 func (e *ExchangeRepository) SavePredict(predicted float64, symbol string) {
 	predictedPriceCacheKey := e.getPredictedCacheKey(symbol)
 
-	encoded, _ := json.Marshal(predicted)
-	e.RDB.Set(*e.Ctx, predictedPriceCacheKey, string(encoded), time.Minute)
+	encoded, err := json.Marshal(predicted)
+	if err == nil {
+		e.RDB.Set(*e.Ctx, predictedPriceCacheKey, string(encoded), time.Minute)
+	}
 }
 
 func (e *ExchangeRepository) GetKLinePredict(kLine model.KLine) (float64, error) {
@@ -1037,8 +1087,10 @@ func (e *ExchangeRepository) GetKLinePredict(kLine model.KLine) (float64, error)
 	predictedPriceCached := e.RDB.Get(*e.Ctx, predictedPriceCacheKey).Val()
 
 	if len(predictedPriceCached) > 0 {
-		_ = json.Unmarshal([]byte(predictedPriceCached), &predictedPrice)
-		return predictedPrice, nil
+		err := json.Unmarshal([]byte(predictedPriceCached), &predictedPrice)
+		if err == nil {
+			return predictedPrice, nil
+		}
 	}
 
 	return 0.00, errors.New("predict is not found")
@@ -1047,8 +1099,10 @@ func (e *ExchangeRepository) GetKLinePredict(kLine model.KLine) (float64, error)
 func (e *ExchangeRepository) SaveKLinePredict(predicted float64, kLine model.KLine) {
 	predictedPriceCacheKey := fmt.Sprintf("%s-%d", e.getPredictedCacheKey(kLine.Symbol), kLine.Timestamp.GetPeriodToMinute())
 
-	encoded, _ := json.Marshal(predicted)
-	e.RDB.Set(*e.Ctx, predictedPriceCacheKey, string(encoded), time.Minute*600)
+	encoded, err := json.Marshal(predicted)
+	if err == nil {
+		e.RDB.Set(*e.Ctx, predictedPriceCacheKey, string(encoded), time.Minute*600)
+	}
 }
 
 func (e *ExchangeRepository) getInterpolationCacheKey(symbol string) string {
@@ -1077,8 +1131,10 @@ func (e *ExchangeRepository) GetInterpolation(kLine model.KLine) (model.Interpol
 func (e *ExchangeRepository) SaveInterpolation(interpolation model.Interpolation, kLine model.KLine) {
 	cacheKey := fmt.Sprintf("%s-%d", e.getInterpolationCacheKey(kLine.Symbol), kLine.Timestamp.GetPeriodToMinute())
 
-	encoded, _ := json.Marshal(interpolation)
-	e.RDB.Set(*e.Ctx, cacheKey, string(encoded), time.Minute*600)
+	encoded, err := json.Marshal(interpolation)
+	if err == nil {
+		e.RDB.Set(*e.Ctx, cacheKey, string(encoded), time.Minute*600)
+	}
 }
 
 func (e *ExchangeRepository) GetDecisions(symbol string) []model.Decision {

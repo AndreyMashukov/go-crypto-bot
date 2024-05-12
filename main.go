@@ -51,11 +51,8 @@ func main() {
 	log.Printf("API Key permission check passed, balance is: %.2f", usdtBalance)
 	container.PythonMLBridge.StartAutoLearn()
 
-	isSwapSupported := false
-
 	if binance, ok := container.Binance.(*client.Binance); ok {
 		binance.APIKeyCheckCompleted = true
-		isSwapSupported = true
 	}
 	if binance, ok := container.Binance.(*client.ByBit); ok {
 		binance.APIKeyCheckCompleted = true
@@ -64,13 +61,10 @@ func main() {
 	container.MakerService.RecoverOrders()
 
 	if container.IsMasterBot {
-		// todo: Add SWAP support for ByBit
-		if isSwapSupported {
-			container.MakerService.UpdateSwapPairs()
-			go func() {
-				container.MarketSwapListener.ListenAll()
-			}()
-		}
+		container.MakerService.UpdateSwapPairs()
+		go func() {
+			container.MarketSwapListener.ListenAll()
+		}()
 
 		go func() {
 			container.MCListener.ListenAll()

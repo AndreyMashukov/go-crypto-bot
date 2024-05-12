@@ -46,8 +46,8 @@ func (b *ByBit) IsAPIKeyCheckCompleted() bool {
 
 func (b *ByBit) QueryOrder(symbol string, orderId string) (model.BinanceOrder, error) {
 	var order model.BinanceOrder
-	queryString := fmt.Sprintf("category=spot&limit=1&orderId=%s&symbol=%s", orderId, symbol)
-	url := fmt.Sprintf("%s/v5/order/history?%s", b.DSN, queryString)
+	queryString := fmt.Sprintf("category=spot&limit=1&orderId=%s&symbol=%s&openOnly=0", orderId, symbol)
+	url := fmt.Sprintf("%s/v5/order/realtime?%s", b.DSN, queryString)
 	result, err := b.HttpClient.Get(url, b.GetHeaders(queryString))
 
 	if err != nil {
@@ -66,11 +66,13 @@ func (b *ByBit) QueryOrder(symbol string, orderId string) (model.BinanceOrder, e
 		return order, errors.New(orderHistoryResponse.Message)
 	}
 
-	if len(orderHistoryResponse.Result.List) != 1 {
-		return order, errors.New("order history must contain one element")
+	for _, byBitOrder := range orderHistoryResponse.Result.List {
+		if byBitOrder.OrderId == orderId {
+			return b.Formatter.ByBitOrderToBinanceOrder(orderHistoryResponse.Result.List[0]), nil
+		}
 	}
 
-	return b.Formatter.ByBitOrderToBinanceOrder(orderHistoryResponse.Result.List[0]), nil
+	return order, errors.New(fmt.Sprintf("[%s] order %s is not found", symbol, orderId))
 }
 
 func (b *ByBit) CancelOrder(symbol string, orderId string) (model.BinanceOrder, error) {
@@ -160,7 +162,10 @@ func (b *ByBit) GetOpenedOrders() ([]model.BinanceOrder, error) {
 	}
 
 	for _, byBitOrder := range openedOrdersResponse.Result.List {
-		orders = append(orders, b.Formatter.ByBitOrderToBinanceOrder(byBitOrder))
+		order := b.Formatter.ByBitOrderToBinanceOrder(byBitOrder)
+		if order.IsNew() || order.IsPartiallyFilled() {
+			orders = append(orders, order)
+		}
 	}
 
 	return orders, nil

@@ -39,32 +39,21 @@ func (m *MarketTradeListener) ListenAll() {
 	go func() {
 		for {
 			symbol := <-predictChannel
-			predicted, err := m.PythonMLBridge.Predict(symbol)
-			if err != nil {
-				log.Printf("[%s] predict error: %s", symbol, err.Error())
-				continue
-			}
+			predicted, _ := m.PythonMLBridge.Predict(symbol)
 
+			kLine := m.ExchangeRepository.GetCurrentKline(symbol)
 			if predicted > 0.00 {
-				kLine := m.ExchangeRepository.GetCurrentKline(symbol)
 				if kLine != nil {
 					m.ExchangeRepository.SaveKLinePredict(predicted, *kLine)
-					// todo: write only master bot???
-					limit := m.ExchangeRepository.GetTradeLimitCached(kLine.Symbol)
-					if limit != nil {
-						interpolation := m.PriceCalculator.InterpolatePrice(*limit)
-						m.ExchangeRepository.SaveInterpolation(interpolation, *kLine)
-					}
 				}
 				m.ExchangeRepository.SavePredict(predicted, symbol)
-			} else {
-				kLine := m.ExchangeRepository.GetCurrentKline(symbol)
-				if kLine != nil {
-					limit := m.ExchangeRepository.GetTradeLimitCached(kLine.Symbol)
-					if limit != nil {
-						interpolation := m.PriceCalculator.InterpolatePrice(*limit)
-						m.ExchangeRepository.SaveInterpolation(interpolation, *kLine)
-					}
+			}
+
+			if kLine != nil {
+				limit := m.ExchangeRepository.GetTradeLimitCached(kLine.Symbol)
+				if limit != nil {
+					interpolation := m.PriceCalculator.InterpolatePrice(*limit)
+					m.ExchangeRepository.SaveInterpolation(interpolation, *kLine)
 				}
 			}
 		}
@@ -233,6 +222,8 @@ func (m *MarketTradeListener) ListenAll() {
 		}
 	}()
 	log.Printf("Price recovery watcher started")
+
+	// todo: order book recovery watcher is needed!
 
 	runChannel := make(chan string)
 	// just to keep running

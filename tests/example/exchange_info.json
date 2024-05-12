@@ -1,0 +1,34 @@
+{
+  "retCode": 0,
+  "retMsg": "OK",
+  "result": {
+    "category": "spot",
+    "list": [
+      {
+        "symbol": "SOLUSDT",
+        "baseCoin": "SOL",
+        "quoteCoin": "USDT",
+        "innovation": "0",
+        "status": "Trading",
+        "marginTrading": "utaOnly",
+        "lotSizeFilter": {
+          "basePrecision": "0.01",
+          "quotePrecision": "0.00001",
+          "minOrderQty": "0.06",
+          "maxOrderQty": "50000",
+          "minOrderAmt": "10",
+          "maxOrderAmt": "1000000"
+        },
+        "priceFilter": {
+          "tickSize": "0.0001"
+        },
+        "riskParameters": {
+          "limitParameter": "0.01",
+          "marketParameter": "0.2"
+        }
+      }
+    ]
+  },
+  "retExtInfo": {},
+  "time": 1715585311974
+}

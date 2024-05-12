@@ -94,8 +94,8 @@ type ExchangeSymbol struct {
 	Status             string           `json:"status"`
 	BaseAsset          string           `json:"baseAsset"`
 	QuoteAsset         string           `json:"quoteAsset"`
-	BaseAssetPrecision int              `json:"baseAssetPrecision"`
-	QuotePrecision     int              `json:"quotePrecision"`
+	BaseAssetPrecision float64          `json:"baseAssetPrecision"`
+	QuotePrecision     float64          `json:"quotePrecision"`
 	Filters            []ExchangeFilter `json:"filters"`
 }
 

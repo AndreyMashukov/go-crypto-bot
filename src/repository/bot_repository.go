@@ -94,6 +94,12 @@ func (b *BotRepository) GetCurrentBot() *model.Bot {
 		return nil
 	}
 
+	cacheKey := b.GetCacheKey(botUuid)
+	botEncoded, err := json.Marshal(bot)
+	if err == nil {
+		b.RDB.Set(*b.Ctx, cacheKey, string(botEncoded), time.Minute)
+	}
+
 	return &bot
 }
 

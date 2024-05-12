@@ -173,13 +173,49 @@ func InitServiceContainer() Container {
 		ExchangeRepository: &exchangeRepository,
 	}
 
+	var swapStreamListener exchange.SwapStreamListenerInterface
+	swapUpdater := exchange.SwapUpdater{
+		ExchangeRepository: &exchangeRepository,
+		Formatter:          &formatter,
+		Binance:            exchangeApi,
+	}
+	swapRepository := repository.SwapRepository{
+		DB:         swapDb,
+		RDB:        rdb,
+		Ctx:        &ctx,
+		CurrentBot: currentBot,
+	}
+
+	swapManager := exchange.SwapManager{
+		SwapChainBuilder: &exchange.SwapChainBuilder{},
+		SwapRepository:   &swapRepository,
+		Formatter:        &formatter,
+		SBSSwapFinder: &exchange.SBSSwapFinder{
+			ExchangeRepository: &exchangeRepository,
+			Formatter:          &formatter,
+		},
+		SSBSwapFinder: &exchange.SSBSwapFinder{
+			ExchangeRepository: &exchangeRepository,
+			Formatter:          &formatter,
+		},
+		SBBSwapFinder: &exchange.SBBSwapFinder{
+			ExchangeRepository: &exchangeRepository,
+			Formatter:          &formatter,
+		},
+	}
+
 	switch botExchange {
 	case BotExchangeBinance:
-		// todo: choose by exchange: Binance, ByBit
 		exchangeWSStreamer = &strategy.BinanceWSStreamer{
 			SmaTradeStrategy:    &smaStrategy,
 			MarketDepthStrategy: &marketDepthStrategy,
 			ExchangeRepository:  &exchangeRepository,
+		}
+		swapStreamListener = &exchange.BinanceSwapStreamListener{
+			ExchangeRepository: &exchangeRepository,
+			SwapUpdater:        &swapUpdater,
+			SwapRepository:     &swapRepository,
+			SwapManager:        &swapManager,
 		}
 		break
 	case BotExchangeByBit:
@@ -188,6 +224,13 @@ func InitServiceContainer() Container {
 			SmaTradeStrategy:    &smaStrategy,
 			MarketDepthStrategy: &marketDepthStrategy,
 			Formatter:           &formatter,
+		}
+		swapStreamListener = &exchange.BybitSwapStreamListener{
+			ExchangeRepository: &exchangeRepository,
+			SwapUpdater:        &swapUpdater,
+			SwapRepository:     &swapRepository,
+			SwapManager:        &swapManager,
+			Formatter:          &formatter,
 		}
 		break
 	default:
@@ -219,12 +262,6 @@ func InitServiceContainer() Container {
 
 	orderRepository := repository.OrderRepository{
 		DB:         db,
-		RDB:        rdb,
-		Ctx:        &ctx,
-		CurrentBot: currentBot,
-	}
-	swapRepository := repository.SwapRepository{
-		DB:         swapDb,
 		RDB:        rdb,
 		Ctx:        &ctx,
 		CurrentBot: currentBot,
@@ -352,6 +389,7 @@ func InitServiceContainer() Container {
 			Binance:         exchangeApi,
 			Formatter:       &formatter,
 			TimeService:     &timeService,
+			CurrentBot:      currentBot,
 		},
 		SwapValidator:          &swapValidator,
 		Formatter:              &formatter,
@@ -377,7 +415,7 @@ func InitServiceContainer() Container {
 		PriceCalculator:    &priceCalculator,
 		BotService:         &botService,
 		StrategyFacade: &exchange.StrategyFacade{
-			MinDecisions:        4.00,
+			MinDecisions:        3.00,
 			OrderRepository:     &orderRepository,
 			DecisionReadStorage: &exchangeRepository,
 			ExchangeRepository:  &exchangeRepository,
@@ -414,24 +452,6 @@ func InitServiceContainer() Container {
 		SignalRepository:    &signalRepository,
 	}
 
-	swapManager := exchange.SwapManager{
-		SwapChainBuilder: &exchange.SwapChainBuilder{},
-		SwapRepository:   &swapRepository,
-		Formatter:        &formatter,
-		SBSSwapFinder: &exchange.SBSSwapFinder{
-			ExchangeRepository: &exchangeRepository,
-			Formatter:          &formatter,
-		},
-		SSBSwapFinder: &exchange.SSBSwapFinder{
-			ExchangeRepository: &exchangeRepository,
-			Formatter:          &formatter,
-		},
-		SBBSwapFinder: &exchange.SBBSwapFinder{
-			ExchangeRepository: &exchangeRepository,
-			Formatter:          &formatter,
-		},
-	}
-
 	baseKLineStrategy := strategy.BaseKLineStrategy{
 		OrderRepository:    &orderRepository,
 		TradeStack:         &tradeStack,
@@ -445,12 +465,6 @@ func InitServiceContainer() Container {
 		ProfitService:      &profitService,
 		BotService:         &botService,
 		SignalStorage:      &signalRepository,
-	}
-
-	swapUpdater := exchange.SwapUpdater{
-		ExchangeRepository: &exchangeRepository,
-		Formatter:          &formatter,
-		Binance:            exchangeApi,
 	}
 
 	go func() {
@@ -543,8 +557,7 @@ func InitServiceContainer() Container {
 			ExchangeRepository: &exchangeRepository,
 			TimeService:        &timeService,
 			SwapManager:        &swapManager,
-			SwapUpdater:        &swapUpdater,
-			SwapRepository:     &swapRepository,
+			SwapStreamListener: swapStreamListener,
 		},
 		MCListener:      &mcListener,
 		EventDispatcher: &eventDispatcher,

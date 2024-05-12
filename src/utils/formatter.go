@@ -70,16 +70,41 @@ func (m *Formatter) Floor(num float64) int64 {
 }
 
 func (m *Formatter) BinanceIntervalToByBitInterval(interval string) string {
-	// todo: add full support
+	// ByBit:
+	// 1 3 5 15 30 60 120 240 360 720 minute
+	// D day
+	// W week
+	// M month
+	// Binance:
+	// 1m 3m 5m 15m 30m 1h 2h 4h 6h 8h 12h
+	// 1d 3d 1w 1M
 	switch interval {
 	case "1m":
 		return "1"
+	case "3m":
+		return "3"
+	case "5m":
+		return "5"
+	case "15m":
+		return "15"
+	case "30m":
+		return "30"
 	case "1h":
 		return "60"
 	case "2h":
 		return "120"
+	case "4h":
+		return "240"
+	case "6h":
+		return "360"
+	case "12h":
+		return "720"
 	case "1d":
 		return "D"
+	case "1w":
+		return "W"
+	case "1M":
+		return "M"
 	default:
 		log.Panicf("Interval %s is not supported by ByBitIntervalToBinanceInterval", interval)
 	}
@@ -88,16 +113,41 @@ func (m *Formatter) BinanceIntervalToByBitInterval(interval string) string {
 }
 
 func (m *Formatter) ByBitIntervalToBinanceInterval(interval string) string {
-	// todo: add full support
+	// ByBit:
+	// 1 3 5 15 30 60 120 240 360 720 minute
+	// D day
+	// W week
+	// M month
+	// Binance:
+	// 1m 3m 5m 15m 30m 1h 2h 4h 6h 8h 12h
+	// 1d 3d 1w 1M
 	switch interval {
 	case "1":
 		return "1m"
+	case "3":
+		return "3m"
+	case "5":
+		return "5m"
+	case "15":
+		return "15m"
+	case "30":
+		return "30m"
 	case "60":
 		return "1h"
 	case "120":
 		return "2h"
+	case "240":
+		return "4h"
+	case "360":
+		return "6h"
+	case "720":
+		return "12h"
 	case "D":
 		return "1d"
+	case "W":
+		return "1w"
+	case "M":
+		return "1M"
 	default:
 		log.Panicf("Interval %s is not supported by ByBitIntervalToBinanceInterval", interval)
 	}
@@ -106,17 +156,35 @@ func (m *Formatter) ByBitIntervalToBinanceInterval(interval string) string {
 }
 
 func (m *Formatter) ByBitStatusToBinanceStatus(status string) string {
+	// ByBit:
+	// - New
+	// - PartiallyFilled
+	// - Untriggered
+	// - Rejected
+	// - PartiallyFilledCanceled
+	// - Filled
+	// - Cancelled
+	// - Triggered
+	// - Deactivated
+	// Binance:
+	// - NEW
+	// - PARTIALLY_FILLED
+	// - FILLED
+	// - CANCELED
+	// - PENDING_CANCEL
+	// - REJECTED
+	// - EXPIRED
 	switch status {
 	case "New":
 		return "NEW"
 	case "PartiallyFilled":
+	case "PartiallyFilledCanceled":
 		return "PARTIALLY_FILLED"
 	case "Rejected":
-		return "EXPIRED"
-	case "PartiallyFilledCanceled":
-		return "CANCELED"
+		return "REJECTED"
 	case "Filled":
 		return "FILLED"
+	case "Canceled":
 	case "Cancelled":
 		return "CANCELED"
 	default:
@@ -215,7 +283,7 @@ func (m *Formatter) ByBitSymbolStatusToBinanceSymbolStatus(status string) string
 func (m *Formatter) ByBitTickerToBinanceTicker(ticker model.ByBitTicker) model.WSTickerPrice {
 	return model.WSTickerPrice{
 		Symbol: ticker.Symbol,
-		Price:  ticker.UsdIndexPrice,
+		Price:  ticker.LastPrice,
 	}
 }
 
@@ -246,7 +314,8 @@ func (m *Formatter) ByBitExchangeSymbolToBinanceExchangeSymbol(symbol model.ByBi
 		Status:             m.ByBitSymbolStatusToBinanceSymbolStatus(symbol.Status),
 		BaseAsset:          symbol.BaseCoin,
 		QuoteAsset:         symbol.QuoteCoin,
-		BaseAssetPrecision: 0,
-		QuotePrecision:     0,
+		BaseAssetPrecision: symbol.LotSizeFilter.BasePrecision,
+		QuotePrecision:     symbol.LotSizeFilter.QuotePrecision,
+		Filters:            filters,
 	}
 }

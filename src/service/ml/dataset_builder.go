@@ -27,7 +27,7 @@ func (d *DataSetBuilder) PrepareDataset(symbol string) (string, error) {
 	dataset := d.StatRepository.GetMLDataset(symbol, d.GetSecondarySymbol(symbol))
 	log.Printf("[%s] ML dataset length is %d", symbol, len(dataset))
 
-	if len(dataset) < 50 {
+	if len(dataset) < 30 {
 		return "", errors.New("not enough dataset length")
 	}
 

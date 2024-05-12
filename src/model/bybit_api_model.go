@@ -96,8 +96,8 @@ type ByBitTrade struct {
 }
 
 type ByBitExchangeLotSizeFilter struct {
-	BasePrecision  string  `json:"basePrecision"`
-	QuotePrecision string  `json:"quotePrecision"`
+	BasePrecision  float64 `json:"basePrecision,string"`
+	QuotePrecision float64 `json:"quotePrecision,string"`
 	MinOrderQty    float64 `json:"minOrderQty,string"`
 	MaxOrderQty    float64 `json:"maxOrderQty,string"`
 	MinOrderAmt    float64 `json:"minOrderAmt,string"`
@@ -197,38 +197,36 @@ type ByBitTickerResponse struct {
 }
 
 type ByBitTicker struct {
-	Symbol        string  `json:"symbol"`
-	Bid1Price     string  `json:"bid1Price"`
-	Bid1Size      string  `json:"bid1Size"`
-	Ask1Price     string  `json:"ask1Price"`
-	Ask1Size      string  `json:"ask1Size"`
-	LastPrice     string  `json:"lastPrice"`
-	PrevPrice24H  string  `json:"prevPrice24h"`
-	Price24HPcnt  string  `json:"price24hPcnt"`
-	HighPrice24H  string  `json:"highPrice24h"`
-	LowPrice24H   string  `json:"lowPrice24h"`
-	Turnover24H   string  `json:"turnover24h"`
-	Volume24H     string  `json:"volume24h"`
-	UsdIndexPrice float64 `json:"usdIndexPrice,string"`
+	Symbol       string  `json:"symbol"`
+	Bid1Price    string  `json:"bid1Price"`
+	Bid1Size     string  `json:"bid1Size"`
+	Ask1Price    string  `json:"ask1Price"`
+	Ask1Size     string  `json:"ask1Size"`
+	LastPrice    float64 `json:"lastPrice,string"`
+	PrevPrice24H string  `json:"prevPrice24h"`
+	Price24HPcnt string  `json:"price24hPcnt"`
+	HighPrice24H string  `json:"highPrice24h"`
+	LowPrice24H  string  `json:"lowPrice24h"`
+	Turnover24H  string  `json:"turnover24h"`
+	Volume24H    string  `json:"volume24h"`
 }
 
 type ByBitWsTicker struct {
-	Symbol        string  `json:"symbol"`
-	LastPrice     string  `json:"lastPrice"`
-	HighPrice24H  string  `json:"highPrice24h"`
-	LowPrice24H   string  `json:"lowPrice24h"`
-	PrevPrice24H  string  `json:"prevPrice24h"`
-	Volume24H     float64 `json:"volume24h,string"`
-	Turnover24H   float64 `json:"turnover24h,string"`
-	Price24HPcnt  string  `json:"price24hPcnt"`
-	UsdIndexPrice float64 `json:"usdIndexPrice,string"`
+	Symbol       string  `json:"symbol"`
+	LastPrice    float64 `json:"lastPrice,string"`
+	HighPrice24H string  `json:"highPrice24h"`
+	LowPrice24H  string  `json:"lowPrice24h"`
+	PrevPrice24H string  `json:"prevPrice24h"`
+	Volume24H    float64 `json:"volume24h,string"`
+	Turnover24H  float64 `json:"turnover24h,string"`
+	Price24HPcnt string  `json:"price24hPcnt"`
 }
 
 func (t *ByBitWsTicker) ToBinanceMiniTicker(time TimestampMilli) MiniTicker {
 	return MiniTicker{
 		EventTime:        time,
 		Symbol:           t.Symbol,
-		Close:            t.UsdIndexPrice,
+		Close:            t.LastPrice,
 		TotalVolumeQuote: t.Volume24H,
 		TotalVolumeAsset: t.Turnover24H,
 	}

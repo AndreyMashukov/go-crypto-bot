@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 )
 
 type HttpClient struct {
@@ -22,7 +23,9 @@ func (h *HttpClient) Post(url string, message []byte, headers map[string]string)
 		req.Header.Set(name, value)
 	}
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 20 * time.Second,
+	}
 
 	res, err := client.Do(req)
 
@@ -54,7 +57,9 @@ func (h *HttpClient) Get(url string, headers map[string]string) ([]byte, error) 
 		req.Header.Set(name, value)
 	}
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 20 * time.Second,
+	}
 
 	res, err := client.Do(req)
 

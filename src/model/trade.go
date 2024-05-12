@@ -89,6 +89,7 @@ type TradeVolume struct {
 type TradeStat struct {
 	Symbol        string         `json:"symbol"`
 	BotId         uuid.UUID      `json:"botId"`
+	Exchange      string         `json:"exchange"`
 	Timestamp     TimestampMilli `json:"timestamp"`
 	Price         float64        `json:"price"`
 	BuyQty        float64        `json:"buyQty"`

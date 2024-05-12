@@ -13,7 +13,7 @@ type ByBitOrder struct {
 	Status      string  `json:"orderStatus"`
 	Type        string  `json:"orderType"`
 	Side        string  `json:"side"`
-	Timestamp   int64   `json:"createdTime"`
+	Timestamp   int64   `json:"createdTime,string"`
 }
 
 func (b ByBitOrder) GetOrderId() string {
@@ -25,7 +25,7 @@ type ExchangeOrderInterface interface {
 }
 
 type BinanceOrder struct {
-	OrderId             string  `json:"orderId,int"`
+	OrderId             string  `json:"orderId"`
 	Symbol              string  `json:"symbol"`
 	TransactTime        int64   `json:"transactTime"`
 	Price               float64 `json:"price,string"`

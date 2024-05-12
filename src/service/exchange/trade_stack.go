@@ -14,6 +14,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -84,34 +85,23 @@ func (t *TradeStack) GetTradeStack(params TradeStackParams) []model.TradeStackIt
 		return stack
 	}
 
-	resultChannel := make(chan *model.TradeStackItem)
-	defer close(resultChannel)
-	count := 0
+	wg := sync.WaitGroup{}
+	lock := sync.Mutex{}
 
 	for index, tradeLimit := range t.ExchangeRepository.GetTradeLimits() {
-		go func(limit model.TradeLimit, index int64, params TradeStackParams) {
-			resultChannel <- t.ProcessItem(
-				index,
-				limit,
-				params,
-			)
+		wg.Add(1)
+		go func(l model.TradeLimit, i int64, p TradeStackParams) {
+			defer wg.Done()
+			stackItem := t.ProcessItem(i, l, p)
+			lock.Lock()
+			if stackItem != nil {
+				stack = append(stack, *stackItem)
+			}
+			lock.Unlock()
 		}(tradeLimit, int64(index), params)
-		count++
 	}
 
-	processed := 0
-
-	for {
-		stackItem := <-resultChannel
-		if stackItem != nil {
-			stack = append(stack, *stackItem)
-		}
-		processed++
-
-		if processed == count {
-			break
-		}
-	}
+	wg.Wait()
 
 	switch t.BotService.GetTradeStackSorting() {
 	case model.TradeStackSortingLessPercent:

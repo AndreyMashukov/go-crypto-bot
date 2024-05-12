@@ -13,6 +13,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"log"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -297,18 +298,27 @@ func (p *PythonMLBridge) Predict(symbol string) (float64, error) {
 }
 
 func (p *PythonMLBridge) StartAutoLearn() {
-	// todo: learn for BTC and ETH even user do not have model...
+	symbols := make([]string, 0)
+	for _, tradeLimit := range p.ExchangeRepository.GetTradeLimits() {
+		symbols = append(symbols, tradeLimit.Symbol)
+	}
+	if !slices.Contains(symbols, "BTCUSDT") {
+		symbols = append(symbols, "BTCUSDT")
+	}
+	if !slices.Contains(symbols, "ETHUSDT") {
+		symbols = append(symbols, "ETHUSDT")
+	}
 
 	wg := sync.WaitGroup{}
-	for _, tradeLimit := range p.ExchangeRepository.GetTradeLimits() {
+	for _, symbol := range symbols {
 		wg.Add(1)
-		go func(limit model.TradeLimit) {
+		go func(s string) {
 			for {
 				// todo: write to database and read from database
-				err := p.LearnModel(limit.Symbol)
+				err := p.LearnModel(s)
 				wg.Done()
 				if err != nil {
-					log.Printf("[%s] %s", limit.Symbol, err.Error())
+					log.Printf("[%s] %s", s, err.Error())
 					p.TimeService.WaitSeconds(60)
 					wg.Add(1) // just to handle negative counter
 					continue
@@ -316,7 +326,7 @@ func (p *PythonMLBridge) StartAutoLearn() {
 				p.TimeService.WaitSeconds(3600)
 				wg.Add(1) // just to handle negative counter
 			}
-		}(tradeLimit)
+		}(symbol)
 	}
 
 	wg.Wait()

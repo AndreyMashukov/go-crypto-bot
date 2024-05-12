@@ -80,6 +80,7 @@ type Order struct {
 	Operation          string             `json:"operation"`
 	Status             string             `json:"status"`
 	ExternalId         *string            `json:"externalId"`
+	Exchange           string             `json:"exchange"`
 	ClosesOrder        *int64             `json:"closesOrder"` // sell order here
 	UsedExtraBudget    float64            `json:"usedExtraBudget"`
 	Commission         *float64           `json:"commission"`

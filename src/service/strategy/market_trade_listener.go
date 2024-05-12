@@ -47,6 +47,15 @@ func (m *MarketTradeListener) ListenAll() {
 					m.ExchangeRepository.SaveKLinePredict(predicted, *kLine)
 				}
 				m.ExchangeRepository.SavePredict(predicted, symbol)
+			} else {
+				kLine := m.ExchangeRepository.GetCurrentKline(symbol)
+				if kLine != nil {
+					limit := m.ExchangeRepository.GetTradeLimitCached(kLine.Symbol)
+					if limit != nil {
+						interpolation := m.PriceCalculator.InterpolatePrice(*limit)
+						m.ExchangeRepository.SaveInterpolation(interpolation, *kLine)
+					}
+				}
 			}
 
 			if kLine != nil {

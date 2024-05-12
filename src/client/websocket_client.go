@@ -42,10 +42,10 @@ func GetStreamBatchByBit(tradeLimits []model.SymbolInterface, events []string) [
 	for _, tradeLimit := range tradeLimits {
 		for i := 0; i < len(events); i++ {
 			event := events[i]
-			streams = append(streams, fmt.Sprintf("%s%s", event, strings.ToLower(tradeLimit.GetSymbol())))
+			streams = append(streams, fmt.Sprintf("%s%s", event, strings.ToUpper(tradeLimit.GetSymbol())))
 		}
 
-		if len(streams) >= 24 {
+		if len(streams) >= 8 {
 			streamBatch = append(streamBatch, streams)
 			streams = make([]string, 0)
 		}

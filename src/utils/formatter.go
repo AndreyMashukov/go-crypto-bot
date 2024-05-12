@@ -70,11 +70,14 @@ func (m *Formatter) Floor(num float64) int64 {
 }
 
 func (m *Formatter) BinanceIntervalToByBitInterval(interval string) string {
+	// todo: add full support
 	switch interval {
 	case "1m":
 		return "1"
 	case "1h":
 		return "60"
+	case "2h":
+		return "120"
 	case "1d":
 		return "D"
 	default:
@@ -85,9 +88,16 @@ func (m *Formatter) BinanceIntervalToByBitInterval(interval string) string {
 }
 
 func (m *Formatter) ByBitIntervalToBinanceInterval(interval string) string {
+	// todo: add full support
 	switch interval {
 	case "1":
 		return "1m"
+	case "60":
+		return "1h"
+	case "120":
+		return "2h"
+	case "D":
+		return "1d"
 	default:
 		log.Panicf("Interval %s is not supported by ByBitIntervalToBinanceInterval", interval)
 	}

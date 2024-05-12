@@ -35,53 +35,67 @@ func (b *ByBitWsStreamer) StartStream(
 			switch true {
 			case strings.Contains(string(message), "tickers."):
 				var tickerEvent model.ByBitWsTickerEvent
-				json.Unmarshal(message, &tickerEvent)
-				tickerData := tickerEvent.Data
-				ticker := tickerData.ToBinanceMiniTicker(tickerEvent.Ts)
-				kLine := b.ExchangeRepository.GetCurrentKline(ticker.Symbol)
+				err := json.Unmarshal(message, &tickerEvent)
+				if err == nil {
+					tickerData := tickerEvent.Data
+					ticker := tickerData.ToBinanceMiniTicker(tickerEvent.Ts)
+					kLine := b.ExchangeRepository.GetCurrentKline(ticker.Symbol)
 
-				if kLine != nil && kLine.Includes(ticker) {
-					klineChannel <- kLine.Update(ticker)
+					if kLine != nil && kLine.Includes(ticker) {
+						klineChannel <- kLine.Update(ticker)
+					}
+				} else {
+					log.Printf("Ticker error bybit: %s", err.Error())
 				}
 
 				break
 			case strings.Contains(string(message), "publicTrade."):
 				var tradeEvent model.ByBitWsPublicTradeEvent
-				json.Unmarshal(message, &tradeEvent)
+				err := json.Unmarshal(message, &tradeEvent)
+				if err == nil {
+					for _, byBitTrade := range tradeEvent.Data {
+						trade := byBitTrade.ToBinanceTrade()
 
-				for _, byBitTrade := range tradeEvent.Data {
-					trade := byBitTrade.ToBinanceTrade()
-
-					b.ExchangeRepository.AddTrade(trade)
-					smaDecision := b.SmaTradeStrategy.Decide(trade)
-					b.ExchangeRepository.SetDecision(smaDecision, trade.Symbol)
+						b.ExchangeRepository.AddTrade(trade)
+						smaDecision := b.SmaTradeStrategy.Decide(trade)
+						b.ExchangeRepository.SetDecision(smaDecision, trade.Symbol)
+					}
+				} else {
+					log.Printf("Public trade error bybit: %s", err.Error())
 				}
 
 				break
 			case strings.Contains(string(message), "kline.1."):
 				var event model.ByBitWsKLineEvent
-				json.Unmarshal(message, &event)
-				symbol := strings.ReplaceAll(event.Topic, "kline.1.", "")
+				err := json.Unmarshal(message, &event)
+				if err == nil {
+					symbol := strings.ReplaceAll(event.Topic, "kline.1.", "")
 
-				if len(event.Data) > 0 {
-					byBitKline := event.Data[0]
-					kLine := byBitKline.ToBinanceKline(symbol, b.Formatter.ByBitIntervalToBinanceInterval(byBitKline.Interval))
-					kLine.UpdatedAt = time.Now().Unix()
+					if len(event.Data) > 0 {
+						byBitKline := event.Data[0]
+						kLine := byBitKline.ToBinanceKline(symbol, b.Formatter.ByBitIntervalToBinanceInterval(byBitKline.Interval))
+						kLine.UpdatedAt = time.Now().Unix()
 
-					klineChannel <- kLine
+						klineChannel <- kLine
+					}
+				} else {
+					log.Printf("Kline error bybit: %s", err.Error())
 				}
 
 				break
 			case strings.Contains(string(message), "orderbook.50."):
 				var event model.ByBitWsOrderBookEvent
-				json.Unmarshal(message, &event)
-
-				depth := event.Data.ToOrderBookModel()
-				depthDecision := b.MarketDepthStrategy.Decide(depth)
-				b.ExchangeRepository.SetDecision(depthDecision, depth.Symbol)
-				go func() {
-					depthChannel <- depth
-				}()
+				err := json.Unmarshal(message, &event)
+				if err == nil {
+					depth := event.Data.ToOrderBookModel()
+					depthDecision := b.MarketDepthStrategy.Decide(depth)
+					b.ExchangeRepository.SetDecision(depthDecision, depth.Symbol)
+					go func() {
+						depthChannel <- depth
+					}()
+				} else {
+					log.Printf("Order book error bybit: %s", err.Error())
+				}
 				break
 			}
 		}

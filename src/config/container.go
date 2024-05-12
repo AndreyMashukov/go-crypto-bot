@@ -120,9 +120,7 @@ func InitServiceContainer() Container {
 		}
 	}
 
-	httpClient := http.Client{}
 	formatter := utils.Formatter{}
-
 	var exchangeApi client.ExchangeAPIInterface
 	var exchangeWSStreamer strategy.ExchangeWSStreamer
 
@@ -132,7 +130,6 @@ func InitServiceContainer() Container {
 			CurrentBot:           currentBot,
 			ApiKey:               os.Getenv("BINANCE_API_KEY"),
 			ApiSecret:            os.Getenv("BINANCE_API_SECRET"),
-			HttpClient:           &httpClient,
 			Channel:              make(chan []byte),
 			SocketWriter:         make(chan []byte),
 			RDB:                  rdb,

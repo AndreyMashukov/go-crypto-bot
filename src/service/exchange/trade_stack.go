@@ -302,7 +302,14 @@ func (t *TradeStack) ProcessItem(
 	}
 
 	signal := t.SignalStorage.GetSignal(tradeLimit.Symbol)
-	interpolation, _ := t.ExchangeRepository.GetInterpolation(*lastKLine)
+	interpolation := model.Interpolation{
+		Asset:                strings.ReplaceAll(tradeLimit.Symbol, "USDT", ""),
+		EthInterpolationUsdt: 0.00,
+		BtcInterpolationUsdt: 0.00,
+	}
+	if lastKLine != nil {
+		interpolation, _ = t.ExchangeRepository.GetInterpolation(*lastKLine)
+	}
 
 	if openedOrder != nil {
 		kline := t.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)

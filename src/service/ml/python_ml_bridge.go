@@ -297,6 +297,8 @@ func (p *PythonMLBridge) Predict(symbol string) (float64, error) {
 }
 
 func (p *PythonMLBridge) StartAutoLearn() {
+	// todo: learn for BTC and ETH even user do not have model...
+
 	wg := sync.WaitGroup{}
 	for _, tradeLimit := range p.ExchangeRepository.GetTradeLimits() {
 		wg.Add(1)

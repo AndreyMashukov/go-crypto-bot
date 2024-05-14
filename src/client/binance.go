@@ -218,7 +218,7 @@ func (b *Binance) QueryOrder(symbol string, orderId string) (model.BinanceOrder,
 		return model.BinanceOrder{}, errors.New(response.Error.GetMessage())
 	}
 
-	return response.Result, nil
+	return response.Result.ToModern(), nil
 }
 
 func (b *Binance) CancelOrder(symbol string, orderId string) (model.BinanceOrder, error) {
@@ -247,7 +247,7 @@ func (b *Binance) CancelOrder(symbol string, orderId string) (model.BinanceOrder
 		return model.BinanceOrder{}, errors.New(response.Error.GetMessage())
 	}
 
-	return response.Result, nil
+	return response.Result.ToModern(), nil
 }
 
 func (b *Binance) UserDataStreamStart() (model.UserDataStreamStart, error) {
@@ -594,7 +594,7 @@ func (b *Binance) LimitOrder(symbol string, quantity float64, price float64, ope
 		return model.BinanceOrder{}, errors.New(response.Error.GetMessage())
 	}
 
-	return response.Result, nil
+	return response.Result.ToModern(), nil
 }
 
 func (b *Binance) signature(params map[string]any) string {

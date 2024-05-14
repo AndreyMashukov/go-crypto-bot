@@ -2,6 +2,7 @@ package model
 
 import (
 	"math"
+	"strconv"
 )
 
 type ByBitOrder struct {
@@ -24,8 +25,42 @@ type ExchangeOrderInterface interface {
 	GetOrderId() string
 }
 
+type BinanceOrderLegacy struct {
+	OrderId             int64   `json:"orderId"`
+	Symbol              string  `json:"symbol"`
+	TransactTime        int64   `json:"transactTime"`
+	Price               float64 `json:"price,string"`
+	OrigQty             float64 `json:"origQty,string"`
+	ExecutedQty         float64 `json:"executedQty,string"`
+	CummulativeQuoteQty float64 `json:"cummulativeQuoteQty,string"`
+	Status              string  `json:"status"`
+	Type                string  `json:"type"`
+	Side                string  `json:"side"`
+	WorkingTime         int64   `json:"workingTime"`
+	Timestamp           int64   `json:"time"`
+}
+
+func (b *BinanceOrderLegacy) ToModern() BinanceOrder {
+	orderIdString := strconv.FormatInt(b.OrderId, 10)
+
+	return BinanceOrder{
+		OrderId:             orderIdString,
+		Symbol:              b.Symbol,
+		TransactTime:        b.TransactTime,
+		Price:               b.Price,
+		OrigQty:             b.OrigQty,
+		ExecutedQty:         b.ExecutedQty,
+		CummulativeQuoteQty: b.CummulativeQuoteQty,
+		Status:              b.Status,
+		Type:                b.Type,
+		Side:                b.Side,
+		WorkingTime:         b.WorkingTime,
+		Timestamp:           b.Timestamp,
+	}
+}
+
 type BinanceOrder struct {
-	OrderId             string  `json:"orderId,int"`
+	OrderId             string  `json:"orderId"`
 	Symbol              string  `json:"symbol"`
 	TransactTime        int64   `json:"transactTime"`
 	Price               float64 `json:"price,string"`

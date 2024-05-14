@@ -19,6 +19,11 @@ type SocketStreamsRequest struct {
 	Params []string `json:"params"`
 }
 
+type ByBitSocketStreamsRequest struct {
+	Operation string   `json:"op"`
+	Arguments []string `json:"args"`
+}
+
 type Error struct {
 	Code    int64  `json:"code"`
 	Message string `json:"msg"`
@@ -68,6 +73,10 @@ type RateLimit struct {
 	Limit         int64  `json:"limit"`
 }
 
+const BinanceExchangeFilterTypePrice = "PRICE_FILTER"
+const BinanceExchangeFilterTypeLotSize = "LOT_SIZE"
+const BinanceExchangeFilterTypeNotional = "NOTIONAL"
+
 type ExchangeFilter struct {
 	FilterType  string   `json:"filterType"`
 	MinPrice    *float64 `json:"minPrice,string"`
@@ -85,8 +94,8 @@ type ExchangeSymbol struct {
 	Status             string           `json:"status"`
 	BaseAsset          string           `json:"baseAsset"`
 	QuoteAsset         string           `json:"quoteAsset"`
-	BaseAssetPrecision int              `json:"baseAssetPrecision"`
-	QuotePrecision     int              `json:"quotePrecision"`
+	BaseAssetPrecision float64          `json:"baseAssetPrecision"`
+	QuotePrecision     float64          `json:"quotePrecision"`
 	Filters            []ExchangeFilter `json:"filters"`
 }
 

@@ -6,6 +6,7 @@ services:
     container_name: go_crypto_bot
     environment:
         BOT_UUID: '{BOT_UUID_4_HERE}'
+        BOT_EXCHANGE: 'binance'
         CLICKHOUSE_DSN: 'clickhouse:8123'
         CLICKHOUSE_PASSWORD: '123456' # .docker/data/clickhouse-server/users.xml:63
         DATABASE_DSN: 'root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot'
@@ -16,6 +17,10 @@ services:
         BINANCE_API_DSN: 'https://testnet.binance.vision'
         BINANCE_WS_DSN: 'wss://testnet.binance.vision/ws-api/v3'
         BINANCE_STREAM_DSN: 'wss://stream.binance.com' #'wss://stream.binancefuture.com'
+        BYBIT_API_KEY: ''
+        BYBIT_API_SECRET: ''
+        BYBIT_API_DSN: ''
+        BYBIT_STREAM_DSN: ''
         MC_DSN: "it should be your own capitalization service here"
     networks:
       - bot-net

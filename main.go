@@ -4,6 +4,7 @@ import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
+	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/config"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"log"
@@ -30,8 +31,6 @@ func main() {
 	container.StartHttpServer()
 	log.Printf("Bot [%s] is initialized successfully", container.CurrentBot.BotUuid)
 
-	container.Binance.Connect(os.Getenv("BINANCE_WS_DSN"))
-
 	usdtBalance, err := container.BalanceService.GetAssetBalance("USDT", false)
 	if err != nil {
 		log.Printf("Balance check error: %s", err.Error())
@@ -51,7 +50,13 @@ func main() {
 	}
 	log.Printf("API Key permission check passed, balance is: %.2f", usdtBalance)
 	container.PythonMLBridge.StartAutoLearn()
-	container.Binance.APIKeyCheckCompleted = true
+
+	if binance, ok := container.Binance.(*client.Binance); ok {
+		binance.APIKeyCheckCompleted = true
+	}
+	if binance, ok := container.Binance.(*client.ByBit); ok {
+		binance.APIKeyCheckCompleted = true
+	}
 
 	container.MakerService.RecoverOrders()
 
@@ -60,6 +65,7 @@ func main() {
 		go func() {
 			container.MarketSwapListener.ListenAll()
 		}()
+
 		go func() {
 			container.MCListener.ListenAll()
 		}()

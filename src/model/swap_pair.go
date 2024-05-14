@@ -17,6 +17,7 @@ type SwapPair struct {
 	BuyVolume      float64 `json:"buyVolume"`
 	SellVolume     float64 `json:"sellVolume"`
 	DailyPercent   float64 `json:"dailyPercent"`
+	Exchange       string  `json:"exchange"`
 }
 
 func (s SwapPair) IsGainer() bool {

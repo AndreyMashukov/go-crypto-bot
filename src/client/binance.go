@@ -22,8 +22,8 @@ import (
 
 type ExchangeOrderAPIInterface interface {
 	LimitOrder(symbol string, quantity float64, price float64, operation string, timeInForce string) (model.BinanceOrder, error)
-	QueryOrder(symbol string, orderId int64) (model.BinanceOrder, error)
-	CancelOrder(symbol string, orderId int64) (model.BinanceOrder, error)
+	QueryOrder(symbol string, orderId string) (model.BinanceOrder, error)
+	CancelOrder(symbol string, orderId string) (model.BinanceOrder, error)
 	GetOpenedOrders() ([]model.BinanceOrder, error)
 }
 
@@ -33,6 +33,23 @@ type ExchangePriceAPIInterface interface {
 	GetKLines(symbol string, interval string, limit int64) []model.KLineHistory
 	GetKLinesCached(symbol string, interval string, limit int64) []model.KLine
 	GetExchangeData(symbols []string) (*model.ExchangeInfo, error)
+}
+
+type ExchangeAPIInterface interface {
+	QueryOrder(symbol string, orderId string) (model.BinanceOrder, error)
+	CancelOrder(symbol string, orderId string) (model.BinanceOrder, error)
+	GetDepth(symbol string, limit int64) *model.OrderBook
+	GetOpenedOrders() ([]model.BinanceOrder, error)
+	GetKLines(symbol string, interval string, limit int64) []model.KLineHistory
+	TradesAggregate(symbol string, limit int64, startTime int64, endTime int64) []model.Trade
+	GetKLinesCached(symbol string, interval string, limit int64) []model.KLine
+	GetExchangeData(symbols []string) (*model.ExchangeInfo, error)
+	GetAccountStatus() (*model.AccountStatus, error)
+	GetTickers(symbols []string) []model.WSTickerPrice
+	LimitOrder(symbol string, quantity float64, price float64, operation string, timeInForce string) (model.BinanceOrder, error)
+	IsConnected() bool
+	IsWaitMode() bool
+	IsAPIKeyCheckCompleted() bool
 }
 
 type Binance struct {
@@ -51,6 +68,18 @@ type Binance struct {
 	Connected            bool
 	APIKeyCheckCompleted bool
 	Lock                 *sync.Mutex
+}
+
+func (b *Binance) IsConnected() bool {
+	return b.Connected
+}
+
+func (b *Binance) IsWaitMode() bool {
+	return b.IsWaitingMode()
+}
+
+func (b *Binance) IsAPIKeyCheckCompleted() bool {
+	return b.APIKeyCheckCompleted
 }
 
 func (b *Binance) IsWaitingMode() bool {
@@ -163,7 +192,7 @@ func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {
 	b.SocketWriter <- serialized
 }
 
-func (b *Binance) QueryOrder(symbol string, orderId int64) (model.BinanceOrder, error) {
+func (b *Binance) QueryOrder(symbol string, orderId string) (model.BinanceOrder, error) {
 	b.CheckWait()
 
 	channel := make(chan []byte)
@@ -192,7 +221,7 @@ func (b *Binance) QueryOrder(symbol string, orderId int64) (model.BinanceOrder, 
 	return response.Result, nil
 }
 
-func (b *Binance) CancelOrder(symbol string, orderId int64) (model.BinanceOrder, error) {
+func (b *Binance) CancelOrder(symbol string, orderId string) (model.BinanceOrder, error) {
 	b.CheckWait()
 
 	channel := make(chan []byte)

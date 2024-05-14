@@ -30,22 +30,22 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 		}
 	}
 
-	binanceBuyOrder := o.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
-	if binanceBuyOrder != nil {
-		return model.Decision{
-			StrategyName: model.OrderBasedStrategyName,
-			Score:        model.DecisionHighestPriorityScore,
-			Operation:    "BUY",
-			Timestamp:    time.Now().Unix(),
-			Price:        binanceBuyOrder.Price,
-			Params:       [3]float64{0, 0, 0},
-		}
-	}
-
 	order := o.OrderRepository.GetOpenedOrderCached(kLine.Symbol, "BUY")
 	hasBuyOrder := order != nil
 
 	if !hasBuyOrder {
+		binanceBuyOrder := o.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
+		if binanceBuyOrder != nil {
+			return model.Decision{
+				StrategyName: model.OrderBasedStrategyName,
+				Score:        model.DecisionHighestPriorityScore,
+				Operation:    "BUY",
+				Timestamp:    time.Now().Unix(),
+				Price:        binanceBuyOrder.Price,
+				Params:       [3]float64{0, 0, 0},
+			}
+		}
+
 		manualOrder := o.OrderRepository.GetManualOrder(tradeLimit.Symbol)
 
 		if manualOrder != nil && manualOrder.IsBuy() {

@@ -2,6 +2,7 @@ package ml
 
 import (
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
 	"log"
@@ -25,6 +26,10 @@ func (d *DataSetBuilder) PrepareDataset(symbol string) (string, error) {
 	log.Printf("[%s] Fetching ML dataset...", symbol)
 	dataset := d.StatRepository.GetMLDataset(symbol, d.GetSecondarySymbol(symbol))
 	log.Printf("[%s] ML dataset length is %d", symbol, len(dataset))
+
+	if len(dataset) < 30 {
+		return "", errors.New("not enough dataset length")
+	}
 
 	for _, record := range dataset {
 		row := []string{

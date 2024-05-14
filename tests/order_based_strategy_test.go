@@ -41,7 +41,7 @@ func TestNoTradeLimit(t *testing.T) {
 	assertion.Equal(40000.00, decision.Price)
 }
 
-func TestHasBinanceBuyOrder(t *testing.T) {
+func TestHasOpenedBuyOrder(t *testing.T) {
 	assertion := assert.New(t)
 
 	exchangeRepository := new(ExchangeTradeInfoMock)
@@ -67,6 +67,7 @@ func TestHasBinanceBuyOrder(t *testing.T) {
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(model.TradeLimit{
 		Symbol: "BTCUSDT",
 	}, nil)
+	orderStorage.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(nil)
 	orderStorage.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(&model.BinanceOrder{
 		Price: 40001.00,
 	})

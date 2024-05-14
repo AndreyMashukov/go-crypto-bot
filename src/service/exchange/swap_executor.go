@@ -23,6 +23,7 @@ type SwapExecutor struct {
 	Binance         client.ExchangeOrderAPIInterface
 	TimeService     utils.TimeServiceInterface
 	Formatter       *utils.Formatter
+	CurrentBot      *model.Bot
 }
 
 func (s *SwapExecutor) Execute(order model.Order) {
@@ -171,7 +172,12 @@ func (s *SwapExecutor) ExecuteSwapOne(swapAction *model.SwapAction, order model.
 		for {
 			binanceOrder, err := s.Binance.QueryOrder(swapOneOrder.Symbol, swapOneOrder.OrderId)
 			if err != nil {
-				log.Printf("[%s] Swap Binance error: %s", order.Symbol, err.Error())
+				log.Printf(
+					"[%s] Swap %s error: %s",
+					order.Symbol,
+					s.CurrentBot.Exchange,
+					err.Error(),
+				)
 
 				continue
 			}
@@ -345,7 +351,12 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 		for {
 			binanceOrder, err := s.Binance.QueryOrder(swapTwoOrder.Symbol, swapTwoOrder.OrderId)
 			if err != nil {
-				log.Printf("[%s] Swap Binance error: %s", swapAction.SwapTwoSymbol, err.Error())
+				log.Printf(
+					"[%s] Swap %s error: %s",
+					swapAction.SwapTwoSymbol,
+					s.CurrentBot.Exchange,
+					err.Error(),
+				)
 
 				continue
 			}
@@ -506,7 +517,12 @@ func (s *SwapExecutor) ExecuteSwapThree(
 		for {
 			binanceOrder, err := s.Binance.QueryOrder(swapThreeOrder.Symbol, swapThreeOrder.OrderId)
 			if err != nil {
-				log.Printf("[%s] Swap Binance error: %s", swapChain.SwapThree.Symbol, err.Error())
+				log.Printf(
+					"[%s] Swap %s error: %s",
+					swapChain.SwapThree.Symbol,
+					s.CurrentBot.Exchange,
+					err.Error(),
+				)
 
 				continue
 			}

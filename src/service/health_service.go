@@ -22,7 +22,7 @@ type HealthService struct {
 	SwapDb             *sql.DB
 	RDB                *redis.Client
 	Ctx                *context.Context
-	Binance            *client.Binance
+	Binance            client.ExchangeAPIInterface
 	CurrentBot         *model.Bot
 }
 
@@ -51,13 +51,13 @@ func (h *HealthService) HealthCheck() model.BotHealth {
 	loadAvg, _ := sysstats.GetLoadAvg()
 
 	binanceStatus := model.BinanceStatusOk
-	if !h.Binance.Connected {
+	if !h.Binance.IsConnected() {
 		binanceStatus = model.BinanceStatusDisconnected
 	}
-	if h.Binance.WaitMode {
+	if h.Binance.IsWaitMode() {
 		binanceStatus = model.BinanceStatusBan
 	}
-	if !h.Binance.APIKeyCheckCompleted {
+	if !h.Binance.IsAPIKeyCheckCompleted() {
 		binanceStatus = model.BinanceStatusApiKeyCheck
 	}
 

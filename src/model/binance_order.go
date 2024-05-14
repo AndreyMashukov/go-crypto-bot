@@ -1,9 +1,31 @@
 package model
 
-import "math"
+import (
+	"math"
+)
+
+type ByBitOrder struct {
+	OrderId     string  `json:"orderId"`
+	Symbol      string  `json:"symbol"`
+	Price       float64 `json:"price,string"`
+	OrigQty     float64 `json:"qty,string"`
+	ExecutedQty float64 `json:"cumExecQty,string"`
+	Status      string  `json:"orderStatus"`
+	Type        string  `json:"orderType"`
+	Side        string  `json:"side"`
+	Timestamp   int64   `json:"createdTime,string"`
+}
+
+func (b ByBitOrder) GetOrderId() string {
+	return b.OrderId
+}
+
+type ExchangeOrderInterface interface {
+	GetOrderId() string
+}
 
 type BinanceOrder struct {
-	OrderId             int64   `json:"orderId"`
+	OrderId             string  `json:"orderId"`
 	Symbol              string  `json:"symbol"`
 	TransactTime        int64   `json:"transactTime"`
 	Price               float64 `json:"price,string"`

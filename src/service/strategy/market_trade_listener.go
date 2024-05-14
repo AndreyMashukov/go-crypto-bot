@@ -1,9 +1,6 @@
 package strategy
 
 import (
-	"encoding/json"
-	"fmt"
-	"github.com/gorilla/websocket"
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/event"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
@@ -14,7 +11,6 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"log"
 	"math"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -27,10 +23,12 @@ type MarketTradeListener struct {
 	MarketDepthStrategy *MarketDepthStrategy
 	ExchangeRepository  *repository.ExchangeRepository
 	TimeService         *utils.TimeHelper
-	Binance             *client.Binance
+	Binance             client.ExchangeAPIInterface
 	PythonMLBridge      *ml.PythonMLBridge
 	PriceCalculator     *exchange.PriceCalculator
 	EventDispatcher     *service.EventDispatcher
+
+	ExchangeWSStreamer ExchangeWSStreamer
 }
 
 func (m *MarketTradeListener) ListenAll() {
@@ -41,24 +39,22 @@ func (m *MarketTradeListener) ListenAll() {
 	go func() {
 		for {
 			symbol := <-predictChannel
-			predicted, err := m.PythonMLBridge.Predict(symbol)
-			if err != nil {
-				log.Printf("[%s] predict error: %s", symbol, err.Error())
-				continue
-			}
+			predicted, _ := m.PythonMLBridge.Predict(symbol)
 
+			kLine := m.ExchangeRepository.GetCurrentKline(symbol)
 			if predicted > 0.00 {
-				kLine := m.ExchangeRepository.GetCurrentKline(symbol)
 				if kLine != nil {
 					m.ExchangeRepository.SaveKLinePredict(predicted, *kLine)
-					// todo: write only master bot???
-					limit := m.ExchangeRepository.GetTradeLimitCached(kLine.Symbol)
-					if limit != nil {
-						interpolation := m.PriceCalculator.InterpolatePrice(*limit)
-						m.ExchangeRepository.SaveInterpolation(interpolation, *kLine)
-					}
 				}
 				m.ExchangeRepository.SavePredict(predicted, symbol)
+			}
+
+			if kLine != nil {
+				limit := m.ExchangeRepository.GetTradeLimitCached(kLine.Symbol)
+				if limit != nil {
+					interpolation := m.PriceCalculator.InterpolatePrice(*limit)
+					m.ExchangeRepository.SaveInterpolation(interpolation, *kLine)
+				}
 			}
 		}
 	}()
@@ -96,8 +92,6 @@ func (m *MarketTradeListener) ListenAll() {
 		}
 	}()
 
-	eventChannel := make(chan []byte)
-
 	go func() {
 		for {
 			depth := <-depthChannel
@@ -105,57 +99,6 @@ func (m *MarketTradeListener) ListenAll() {
 			m.ExchangeRepository.SetDepth(depth, 20, 25)
 		}
 	}()
-
-	go func() {
-		for {
-			message := <-eventChannel
-
-			switch true {
-			case strings.Contains(string(message), "miniTicker"):
-				var tickerEvent model.MiniTickerEvent
-				json.Unmarshal(message, &tickerEvent)
-				ticker := tickerEvent.MiniTicker
-				kLine := m.ExchangeRepository.GetCurrentKline(ticker.Symbol)
-
-				if kLine != nil && kLine.Includes(ticker) {
-					klineChannel <- kLine.Update(ticker)
-				}
-
-				break
-			case strings.Contains(string(message), "aggTrade"):
-				var tradeEvent model.TradeEvent
-				json.Unmarshal(message, &tradeEvent)
-
-				m.ExchangeRepository.AddTrade(tradeEvent.Trade)
-				smaDecision := m.SmaTradeStrategy.Decide(tradeEvent.Trade)
-				m.ExchangeRepository.SetDecision(smaDecision, tradeEvent.Trade.Symbol)
-
-				break
-			case strings.Contains(string(message), "kline"):
-				var event model.KlineEvent
-				json.Unmarshal(message, &event)
-				kLine := event.KlineData.Kline
-				kLine.UpdatedAt = time.Now().Unix()
-
-				klineChannel <- kLine
-
-				break
-			case strings.Contains(string(message), "depth20"):
-				var event model.OrderBookEvent
-				json.Unmarshal(message, &event)
-
-				depth := event.Depth.ToOrderBookModel(strings.ToUpper(strings.ReplaceAll(event.Stream, "@depth20@100ms", "")))
-				depthDecision := m.MarketDepthStrategy.Decide(depth)
-				m.ExchangeRepository.SetDecision(depthDecision, depth.Symbol)
-				go func() {
-					depthChannel <- depth
-				}()
-				break
-			}
-		}
-	}()
-
-	websockets := make([]*websocket.Conn, 0)
 
 	tradeLimitCollection := make([]model.SymbolInterface, 0)
 	hasBtcUsdt := false
@@ -203,25 +146,7 @@ func (m *MarketTradeListener) ListenAll() {
 		tradeLimitCollection = append(tradeLimitCollection, model.DummySymbol{Symbol: "ETHUSDT"})
 	}
 
-	lock := sync.Mutex{}
-	sWg := sync.WaitGroup{}
-
-	for index, streamBatchItem := range client.GetStreamBatch(tradeLimitCollection, []string{"@aggTrade", "@kline_1m@2000ms", "@depth20@100ms", "@miniTicker"}) {
-		sWg.Add(1)
-		go func(sbi []string, i int) {
-			defer sWg.Done()
-			lock.Lock()
-			websockets = append(websockets, client.Listen(fmt.Sprintf(
-				"%s/stream?streams=%s",
-				os.Getenv("BINANCE_STREAM_DSN"),
-				strings.Join(sbi, "/"),
-			), eventChannel, []string{}, int64(i)))
-			lock.Unlock()
-			log.Printf("Batch %d websocket: %d connected", i, len(sbi))
-		}(streamBatchItem, index)
-	}
-
-	sWg.Wait()
+	m.ExchangeWSStreamer.StartStream(tradeLimitCollection, klineChannel, depthChannel)
 	log.Printf("WS Price stream started.")
 
 	// Price recovery watcher
@@ -297,6 +222,8 @@ func (m *MarketTradeListener) ListenAll() {
 		}
 	}()
 	log.Printf("Price recovery watcher started")
+
+	// todo: order book recovery watcher is needed!
 
 	runChannel := make(chan string)
 	// just to keep running

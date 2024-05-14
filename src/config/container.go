@@ -24,6 +24,9 @@ import (
 	"time"
 )
 
+const BotExchangeBinance = "binance"
+const BotExchangeByBit = "bybit"
+
 func InitServiceContainer() Container {
 	db, err := sql.Open("mysql", os.Getenv("DATABASE_DSN"))
 
@@ -83,11 +86,17 @@ func InitServiceContainer() Container {
 		Ctx: &ctx,
 	}
 
+	botExchange := os.Getenv("BOT_EXCHANGE")
+	if botExchange == "" {
+		botExchange = BotExchangeBinance
+	}
+
 	currentBot := botRepository.GetCurrentBot()
 	if currentBot == nil {
 		botUuid := os.Getenv("BOT_UUID")
 		currentBot := &model.Bot{
 			BotUuid:           botUuid,
+			Exchange:          botExchange,
 			IsMasterBot:       false,
 			IsSwapEnabled:     false,
 			TradeStackSorting: model.TradeStackSortingLessPriceDiff,
@@ -111,21 +120,121 @@ func InitServiceContainer() Container {
 		}
 	}
 
-	httpClient := http.Client{}
+	formatter := utils.Formatter{}
+	var exchangeApi client.ExchangeAPIInterface
+	var exchangeWSStreamer strategy.ExchangeWSStreamer
 
-	binance := client.Binance{
-		CurrentBot:           currentBot,
-		ApiKey:               os.Getenv("BINANCE_API_KEY"),
-		ApiSecret:            os.Getenv("BINANCE_API_SECRET"),
-		HttpClient:           &httpClient,
-		Channel:              make(chan []byte),
-		SocketWriter:         make(chan []byte),
-		RDB:                  rdb,
-		Ctx:                  &ctx,
-		WaitMode:             false,
-		APIKeyCheckCompleted: false,
-		Connected:            false,
-		Lock:                 &sync.Mutex{},
+	switch botExchange {
+	case BotExchangeBinance:
+		binanceExchange := client.Binance{
+			CurrentBot:           currentBot,
+			ApiKey:               os.Getenv("BINANCE_API_KEY"),
+			ApiSecret:            os.Getenv("BINANCE_API_SECRET"),
+			Channel:              make(chan []byte),
+			SocketWriter:         make(chan []byte),
+			RDB:                  rdb,
+			Ctx:                  &ctx,
+			WaitMode:             false,
+			APIKeyCheckCompleted: false,
+			Connected:            false,
+			Lock:                 &sync.Mutex{},
+		}
+		binanceExchange.Connect(os.Getenv("BINANCE_WS_DSN"))
+		exchangeApi = &binanceExchange
+		break
+	case BotExchangeByBit:
+		exchangeApi = &client.ByBit{
+			CurrentBot:           currentBot,
+			HttpClient:           &client.HttpClient{},
+			ApiKey:               os.Getenv("BYBIT_API_KEY"),
+			ApiSecret:            os.Getenv("BYBIT_API_SECRET"),
+			DSN:                  os.Getenv("BYBIT_API_DSN"),
+			Formatter:            &formatter,
+			RDB:                  rdb,
+			Ctx:                  &ctx,
+			APIKeyCheckCompleted: false,
+		}
+		break
+	default:
+		log.Panic(fmt.Sprintf("Unsupported exchange: %s", botExchange))
+	}
+
+	exchangeRepository := repository.ExchangeRepository{
+		DB:         db,
+		RDB:        rdb,
+		Ctx:        &ctx,
+		CurrentBot: currentBot,
+		Formatter:  &formatter,
+		Binance:    exchangeApi,
+	}
+
+	marketDepthStrategy := strategy.MarketDepthStrategy{}
+	smaStrategy := strategy.SmaTradeStrategy{
+		ExchangeRepository: &exchangeRepository,
+	}
+
+	var swapStreamListener exchange.SwapStreamListenerInterface
+	swapUpdater := exchange.SwapUpdater{
+		ExchangeRepository: &exchangeRepository,
+		Formatter:          &formatter,
+		Binance:            exchangeApi,
+	}
+	swapRepository := repository.SwapRepository{
+		DB:         swapDb,
+		RDB:        rdb,
+		Ctx:        &ctx,
+		CurrentBot: currentBot,
+	}
+
+	swapManager := exchange.SwapManager{
+		SwapChainBuilder: &exchange.SwapChainBuilder{},
+		SwapRepository:   &swapRepository,
+		Formatter:        &formatter,
+		SBSSwapFinder: &exchange.SBSSwapFinder{
+			ExchangeRepository: &exchangeRepository,
+			Formatter:          &formatter,
+		},
+		SSBSwapFinder: &exchange.SSBSwapFinder{
+			ExchangeRepository: &exchangeRepository,
+			Formatter:          &formatter,
+		},
+		SBBSwapFinder: &exchange.SBBSwapFinder{
+			ExchangeRepository: &exchangeRepository,
+			Formatter:          &formatter,
+		},
+	}
+
+	switch botExchange {
+	case BotExchangeBinance:
+		exchangeWSStreamer = &strategy.BinanceWSStreamer{
+			SmaTradeStrategy:    &smaStrategy,
+			MarketDepthStrategy: &marketDepthStrategy,
+			ExchangeRepository:  &exchangeRepository,
+		}
+		swapStreamListener = &exchange.BinanceSwapStreamListener{
+			ExchangeRepository: &exchangeRepository,
+			SwapUpdater:        &swapUpdater,
+			SwapRepository:     &swapRepository,
+			SwapManager:        &swapManager,
+		}
+		break
+	case BotExchangeByBit:
+		exchangeWSStreamer = &strategy.ByBitWsStreamer{
+			ExchangeRepository:  &exchangeRepository,
+			SmaTradeStrategy:    &smaStrategy,
+			MarketDepthStrategy: &marketDepthStrategy,
+			Formatter:           &formatter,
+		}
+		swapStreamListener = &exchange.BybitSwapStreamListener{
+			ExchangeRepository: &exchangeRepository,
+			SwapUpdater:        &swapUpdater,
+			SwapRepository:     &swapRepository,
+			SwapManager:        &swapManager,
+			Formatter:          &formatter,
+		}
+		break
+	default:
+		log.Panic(fmt.Sprintf("Unsupported exchange: %s", botExchange))
 	}
 
 	statRepository := repository.StatRepository{
@@ -137,11 +246,11 @@ func InitServiceContainer() Container {
 		CurrentBot: currentBot,
 		RDB:        rdb,
 		Ctx:        &ctx,
-		Binance:    &binance,
+		Binance:    exchangeApi,
 	}
 
 	balanceService := exchange.BalanceService{
-		Binance:    &binance,
+		Binance:    exchangeApi,
 		RDB:        rdb,
 		Ctx:        &ctx,
 		CurrentBot: currentBot,
@@ -151,23 +260,8 @@ func InitServiceContainer() Container {
 		AutoTradeHost: "https://api.autotrade.cloud",
 	}
 
-	formatter := utils.Formatter{}
 	orderRepository := repository.OrderRepository{
 		DB:         db,
-		RDB:        rdb,
-		Ctx:        &ctx,
-		CurrentBot: currentBot,
-	}
-	exchangeRepository := repository.ExchangeRepository{
-		DB:         db,
-		RDB:        rdb,
-		Ctx:        &ctx,
-		CurrentBot: currentBot,
-		Formatter:  &formatter,
-		Binance:    &binance,
-	}
-	swapRepository := repository.SwapRepository{
-		DB:         swapDb,
 		RDB:        rdb,
 		Ctx:        &ctx,
 		CurrentBot: currentBot,
@@ -177,7 +271,7 @@ func InitServiceContainer() Container {
 		BotRepository: &botRepository,
 	}
 	swapValidator := validator.SwapValidator{
-		Binance:        &binance,
+		Binance:        exchangeApi,
 		SwapRepository: &swapRepository,
 		Formatter:      &formatter,
 		BotService:     &botService,
@@ -188,7 +282,7 @@ func InitServiceContainer() Container {
 	timeService := utils.TimeHelper{}
 
 	profitService := exchange.ProfitService{
-		Binance:    &binance,
+		Binance:    exchangeApi,
 		BotService: &botService,
 	}
 
@@ -231,7 +325,7 @@ func InitServiceContainer() Container {
 	}
 
 	statService := service.StatService{
-		Binance:            &binance,
+		Binance:            exchangeApi,
 		ExchangeRepository: &exchangeRepository,
 	}
 
@@ -256,14 +350,14 @@ func InitServiceContainer() Container {
 	tradeFilterService := exchange.TradeFilterService{
 		OrderRepository:   &orderRepository,
 		ExchangeTradeInfo: &exchangeRepository,
-		ExchangePriceAPI:  &binance,
+		ExchangePriceAPI:  exchangeApi,
 		Formatter:         &formatter,
 		SignalStorage:     &signalRepository,
 	}
 
 	tradeStack := exchange.TradeStack{
 		OrderRepository:    &orderRepository,
-		Binance:            &binance,
+		Binance:            exchangeApi,
 		ExchangeRepository: &exchangeRepository,
 		BalanceService:     &balanceService,
 		Formatter:          &formatter,
@@ -281,7 +375,7 @@ func InitServiceContainer() Container {
 		CurrentBot:         currentBot,
 		TimeService:        &timeService,
 		BalanceService:     &balanceService,
-		Binance:            &binance,
+		Binance:            exchangeApi,
 		OrderRepository:    &orderRepository,
 		ExchangeRepository: &exchangeRepository,
 		PriceCalculator:    &priceCalculator,
@@ -292,9 +386,10 @@ func InitServiceContainer() Container {
 			BalanceService:  &balanceService,
 			SwapRepository:  &swapRepository,
 			OrderRepository: &orderRepository,
-			Binance:         &binance,
+			Binance:         exchangeApi,
 			Formatter:       &formatter,
 			TimeService:     &timeService,
+			CurrentBot:      currentBot,
 		},
 		SwapValidator:          &swapValidator,
 		Formatter:              &formatter,
@@ -308,8 +403,8 @@ func InitServiceContainer() Container {
 
 	makerService := exchange.MakerService{
 		TradeFilterService: &tradeFilterService,
-		ExchangeApi:        &binance,
-		Binance:            &binance,
+		ExchangeApi:        exchangeApi,
+		Binance:            exchangeApi,
 		TradeStack:         &tradeStack,
 		OrderExecutor:      &orderExecutor,
 		OrderRepository:    &orderRepository,
@@ -320,7 +415,7 @@ func InitServiceContainer() Container {
 		PriceCalculator:    &priceCalculator,
 		BotService:         &botService,
 		StrategyFacade: &exchange.StrategyFacade{
-			MinDecisions:        4.00,
+			MinDecisions:        3.00,
 			OrderRepository:     &orderRepository,
 			DecisionReadStorage: &exchangeRepository,
 			ExchangeRepository:  &exchangeRepository,
@@ -357,24 +452,6 @@ func InitServiceContainer() Container {
 		SignalRepository:    &signalRepository,
 	}
 
-	swapManager := exchange.SwapManager{
-		SwapChainBuilder: &exchange.SwapChainBuilder{},
-		SwapRepository:   &swapRepository,
-		Formatter:        &formatter,
-		SBSSwapFinder: &exchange.SBSSwapFinder{
-			ExchangeRepository: &exchangeRepository,
-			Formatter:          &formatter,
-		},
-		SSBSwapFinder: &exchange.SSBSwapFinder{
-			ExchangeRepository: &exchangeRepository,
-			Formatter:          &formatter,
-		},
-		SBBSwapFinder: &exchange.SBBSwapFinder{
-			ExchangeRepository: &exchangeRepository,
-			Formatter:          &formatter,
-		},
-	}
-
 	baseKLineStrategy := strategy.BaseKLineStrategy{
 		OrderRepository:    &orderRepository,
 		TradeStack:         &tradeStack,
@@ -388,16 +465,6 @@ func InitServiceContainer() Container {
 		ProfitService:      &profitService,
 		BotService:         &botService,
 		SignalStorage:      &signalRepository,
-	}
-	marketDepthStrategy := strategy.MarketDepthStrategy{}
-	smaStrategy := strategy.SmaTradeStrategy{
-		ExchangeRepository: exchangeRepository,
-	}
-
-	swapUpdater := exchange.SwapUpdater{
-		ExchangeRepository: &exchangeRepository,
-		Formatter:          &formatter,
-		Binance:            &binance,
 	}
 
 	go func() {
@@ -413,7 +480,7 @@ func InitServiceContainer() Container {
 		BotRepository:      &botRepository,
 		ExchangeRepository: &exchangeRepository,
 		PythonMLBridge:     &pythonMLBridge,
-		Binance:            &binance,
+		Binance:            exchangeApi,
 		CurrentBot:         currentBot,
 		DB:                 db,
 		SwapDb:             swapDb,
@@ -456,7 +523,7 @@ func InitServiceContainer() Container {
 		CallbackManager:     &callbackManager,
 		BalanceService:      &balanceService,
 		TimeService:         &timeService,
-		Binance:             &binance,
+		Binance:             exchangeApi,
 		PythonMLBridge:      &pythonMLBridge,
 		SwapRepository:      &swapRepository,
 		ExchangeRepository:  &exchangeRepository,
@@ -480,17 +547,17 @@ func InitServiceContainer() Container {
 			BaseKLineStrategy:   &baseKLineStrategy,
 			ExchangeRepository:  &exchangeRepository,
 			TimeService:         &timeService,
-			Binance:             &binance,
+			Binance:             exchangeApi,
 			PythonMLBridge:      &pythonMLBridge,
 			PriceCalculator:     &priceCalculator,
 			EventDispatcher:     &eventDispatcher,
+			ExchangeWSStreamer:  exchangeWSStreamer,
 		},
 		MarketSwapListener: &exchange.MarketSwapListener{
 			ExchangeRepository: &exchangeRepository,
 			TimeService:        &timeService,
 			SwapManager:        &swapManager,
-			SwapUpdater:        &swapUpdater,
-			SwapRepository:     &swapRepository,
+			SwapStreamListener: swapStreamListener,
 		},
 		MCListener:      &mcListener,
 		EventDispatcher: &eventDispatcher,
@@ -509,7 +576,7 @@ type Container struct {
 	CallbackManager     *service.CallbackManager
 	BalanceService      *exchange.BalanceService
 	TimeService         *utils.TimeHelper
-	Binance             *client.Binance
+	Binance             client.ExchangeAPIInterface
 	PythonMLBridge      *ml.PythonMLBridge
 	SwapRepository      *repository.SwapRepository
 	ExchangeRepository  *repository.ExchangeRepository

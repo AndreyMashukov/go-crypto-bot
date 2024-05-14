@@ -115,18 +115,20 @@ func (repo *OrderRepository) GetOpenedOrder(symbol string, operation string) (mo
 			o.extra_charge_options as ExtraChargeOptions,
 			o.profit_options as ProfitOptions,
     		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity,
-    		COUNT(extra.id) as ExtraOrdersCount
+    		COUNT(extra.id) as ExtraOrdersCount,
+    		o.exchange as Exchange
 		FROM orders o
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
      	LEFT JOIN orders extra ON o.id = extra.closes_order AND extra.operation = 'BUY'
 		LEFT JOIN swap_action sa on o.id = sa.order_id AND sa.status = ?
-		WHERE o.status = ? AND o.symbol = ? AND o.operation = ? AND o.bot_id = ?
+		WHERE o.status = ? AND o.symbol = ? AND o.operation = ? AND o.bot_id = ? AND o.exchange = ?
 		GROUP BY o.id`,
 		"success",
 		"opened",
 		symbol,
 		operation,
 		repo.CurrentBot.Id,
+		repo.CurrentBot.Exchange,
 	).Scan(
 		&order.Id,
 		&order.Symbol,
@@ -150,6 +152,7 @@ func (repo *OrderRepository) GetOpenedOrder(symbol string, operation string) (mo
 		&order.ProfitOptions,
 		&order.SwapQuantity,
 		&order.ExtraOrdersCount,
+		&order.Exchange,
 	)
 
 	if err != nil {
@@ -179,7 +182,8 @@ func (repo *OrderRepository) Create(order model.Order) (*int64, error) {
 			commission_asset = ?,
 			extra_charge_options = ?,
 			profit_options = ?,
-			bot_id = ?
+			bot_id = ?,
+			exchange = ?
 	`,
 		order.Symbol,
 		order.Quantity,
@@ -199,6 +203,7 @@ func (repo *OrderRepository) Create(order model.Order) (*int64, error) {
 		order.ExtraChargeOptions,
 		order.ProfitOptions,
 		repo.CurrentBot.Id,
+		repo.CurrentBot.Exchange,
 	)
 
 	if err != nil {
@@ -235,7 +240,7 @@ func (repo *OrderRepository) Update(order model.Order) error {
 			o.swap = ?,
 			o.extra_charge_options = ?,
 			o.profit_options = ?
-		WHERE o.id = ? AND o.bot_id = ?
+		WHERE o.id = ? AND o.bot_id = ? AND exchange = ?
 	`,
 		order.Symbol,
 		order.Quantity,
@@ -257,6 +262,7 @@ func (repo *OrderRepository) Update(order model.Order) error {
 		order.ProfitOptions,
 		order.Id,
 		repo.CurrentBot.Id,
+		repo.CurrentBot.Exchange,
 	)
 
 	if err != nil {
@@ -293,13 +299,14 @@ func (repo *OrderRepository) Find(id int64) (model.Order, error) {
 			o.extra_charge_options as ExtraChargeOptions,
 			o.profit_options as ProfitOptions,
     		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity,
-    		COUNT(extra.id) as ExtraOrdersCount
+    		COUNT(extra.id) as ExtraOrdersCount,
+    		o.exchange as Exchange
 		FROM orders o
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
      	LEFT JOIN orders extra ON o.id = extra.closes_order AND extra.operation = 'BUY'
 		LEFT JOIN swap_action sa on o.id = sa.order_id AND sa.status = ?
-		WHERE o.id = ? AND o.bot_id = ?
-		GROUP BY o.id`, "success", id, repo.CurrentBot.Id,
+		WHERE o.id = ? AND o.bot_id = ? AND o.exchange = ?
+		GROUP BY o.id`, "success", id, repo.CurrentBot.Id, repo.CurrentBot.Exchange,
 	).Scan(
 		&order.Id,
 		&order.Symbol,
@@ -323,6 +330,7 @@ func (repo *OrderRepository) Find(id int64) (model.Order, error) {
 		&order.ProfitOptions,
 		&order.SwapQuantity,
 		&order.ExtraOrdersCount,
+		&order.Exchange,
 	)
 
 	if err != nil {
@@ -349,9 +357,9 @@ func (repo *OrderRepository) GetTrades() []model.OrderTrade {
 			((trade.price * trade.executed_quantity) - (initial.price * trade.executed_quantity)) * 100 / (initial.price * trade.quantity) as Percent
 		FROM orders trade
 		INNER JOIN orders initial ON initial.id = trade.closes_order AND initial.operation = 'buy' AND initial.bot_id = ?
-		WHERE trade.operation = 'sell' and trade.status = 'closed' AND trade.bot_id = ?
+		WHERE trade.operation = 'sell' and trade.status = 'closed' AND trade.bot_id = ? AND trade.exchange = ?
 		ORDER BY Close DESC
-	`, repo.CurrentBot.Id, repo.CurrentBot.Id)
+	`, repo.CurrentBot.Id, repo.CurrentBot.Id, repo.CurrentBot.Exchange)
 	defer res.Close()
 
 	if err != nil {
@@ -411,14 +419,15 @@ func (repo *OrderRepository) GetList() []model.Order {
 			o.extra_charge_options as ExtraChargeOptions,
 			o.profit_options as ProfitOptions,
     		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity,
-    		COUNT(extra.id) as ExtraOrdersCount
+    		COUNT(extra.id) as ExtraOrdersCount,
+    		o.exchange as Exchange
 		FROM orders o 
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
      	LEFT JOIN orders extra ON o.id = extra.closes_order AND extra.operation = 'BUY'
 		LEFT JOIN swap_action sa on o.id = sa.order_id AND sa.status = ?
-		WHERE o.bot_id = ?
+		WHERE o.bot_id = ? AND o.exchange = ?
 		GROUP BY o.id
-	`, "success", repo.CurrentBot.Id)
+	`, "success", repo.CurrentBot.Id, repo.CurrentBot.Exchange)
 	defer res.Close()
 
 	if err != nil {
@@ -452,6 +461,7 @@ func (repo *OrderRepository) GetList() []model.Order {
 			&order.ProfitOptions,
 			&order.SwapQuantity,
 			&order.ExtraOrdersCount,
+			&order.Exchange,
 		)
 
 		if err != nil {
@@ -488,14 +498,15 @@ func (repo *OrderRepository) GetClosesOrderList(buyOrder model.Order) []model.Or
 			o.extra_charge_options as ExtraChargeOptions,
 			o.profit_options as ProfitOptions,
     		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity,
-    		COUNT(extra.id) as ExtraOrdersCount
+    		COUNT(extra.id) as ExtraOrdersCount,
+    		o.exchange as Exchange
 		FROM orders o 
 		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
      	LEFT JOIN orders extra ON o.id = extra.closes_order AND extra.operation = 'BUY'
 		LEFT JOIN swap_action sa on o.id = sa.order_id AND sa.status = ?
-		WHERE o.bot_id = ? AND o.closes_order = ? AND o.operation = ?
+		WHERE o.bot_id = ? AND o.closes_order = ? AND o.operation = ? AND o.exchange = ?
 		GROUP BY o.id
-	`, "success", repo.CurrentBot.Id, buyOrder.Id, "SELL")
+	`, "success", repo.CurrentBot.Id, buyOrder.Id, "SELL", repo.CurrentBot.Exchange)
 	defer res.Close()
 
 	if err != nil {
@@ -529,6 +540,7 @@ func (repo *OrderRepository) GetClosesOrderList(buyOrder model.Order) []model.Or
 			&order.ProfitOptions,
 			&order.SwapQuantity,
 			&order.ExtraOrdersCount,
+			&order.Exchange,
 		)
 
 		if err != nil {
@@ -643,10 +655,10 @@ func (repo *OrderRepository) GetTodayExtraOrderMap() *sync.Map {
 			COUNT(DISTINCT extra.id) as Extras
 		FROM orders extra
 		INNER JOIN orders origin ON origin.id = extra.closes_order and origin.status = 'opened' AND origin.operation = 'BUY'
-		WHERE extra.operation = 'BUY' AND extra.bot_id = ? AND extra.created_at >= CURDATE()
+		WHERE extra.operation = 'BUY' AND extra.bot_id = ? AND extra.created_at >= CURDATE() AND extra.exchange = ?
 		GROUP BY origin.symbol
 		ORDER BY Extras DESC
-	`, repo.CurrentBot.Id)
+	`, repo.CurrentBot.Id, repo.CurrentBot.Exchange)
 	defer res.Close()
 
 	if err != nil {

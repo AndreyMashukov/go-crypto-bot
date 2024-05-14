@@ -8,7 +8,7 @@ import (
 
 type StatService struct {
 	ExchangeRepository *repository.ExchangeRepository
-	Binance            *client.Binance
+	Binance            client.ExchangeAPIInterface
 }
 
 func (s *StatService) GetTradeStat(kLine model.KLine, cache bool, full bool) model.TradeStat {

@@ -581,6 +581,10 @@ func (repo *OrderRepository) GetBinanceOrder(symbol string, operation string) *m
 		return nil
 	}
 
+	if len(dto.OrderId) == 0 {
+		return nil
+	}
+
 	return &dto
 }
 

@@ -87,14 +87,15 @@ func (repo *SwapRepository) GetAvailableSwapChains() []model.SwapChainEntity {
 		    three.operation as ThreeOperation,
 		    three.quantity as ThreeQuantity,
 		    three.price as ThreePrice,
-		    three.level as ThreeLevel
+		    three.level as ThreeLevel,
+		    sc.exchange as Exchange
 		FROM swap_chain sc
 		INNER JOIN swap_transition one ON one.id = sc.swap_one
 		INNER JOIN swap_transition two ON two.id = sc.swap_two
 		INNER JOIN swap_transition three ON three.id = sc.swap_three
-		WHERE sc.timestamp > ?
+		WHERE sc.timestamp > ? AND sc.exchange = ?
 		ORDER BY sc.percent DESC
-	`, time.Now().Unix()-20)
+	`, time.Now().Unix()-20, repo.CurrentBot.Exchange)
 	defer res.Close()
 
 	if err != nil {
@@ -145,6 +146,7 @@ func (repo *SwapRepository) GetAvailableSwapChains() []model.SwapChainEntity {
 			&swapChain.SwapThree.Quantity,
 			&swapChain.SwapThree.Price,
 			&swapChain.SwapThree.Level,
+			&swapChain.Exchange,
 		)
 
 		if err != nil {
@@ -194,14 +196,15 @@ func (repo *SwapRepository) GetSwapChains(baseAsset string) []model.SwapChainEnt
 		    three.operation as ThreeOperation,
 		    three.quantity as ThreeQuantity,
 		    three.price as ThreePrice,
-		    three.level as ThreeLevel
+		    three.level as ThreeLevel,
+		    sc.exchange as Exchange
 		FROM swap_chain sc
 		INNER JOIN swap_transition one ON one.id = sc.swap_one
 		INNER JOIN swap_transition two ON two.id = sc.swap_two
 		INNER JOIN swap_transition three ON three.id = sc.swap_three
-		WHERE one.base_asset = ? AND sc.timestamp > ?
+		WHERE one.base_asset = ? AND sc.timestamp > ? AND sc.exchange = ?
 		ORDER BY sc.percent DESC
-	`, baseAsset, time.Now().Unix()-20)
+	`, baseAsset, time.Now().Unix()-20, repo.CurrentBot.Exchange)
 	defer res.Close()
 
 	if err != nil {
@@ -252,6 +255,7 @@ func (repo *SwapRepository) GetSwapChains(baseAsset string) []model.SwapChainEnt
 			&swapChain.SwapThree.Quantity,
 			&swapChain.SwapThree.Price,
 			&swapChain.SwapThree.Level,
+			&swapChain.Exchange,
 		)
 
 		if err != nil {
@@ -306,7 +310,8 @@ func (s *SwapRepository) GetSwapChainById(id int64) (model.SwapChainEntity, erro
 		    three.operation as ThreeOperation,
 		    three.quantity as ThreeQuantity,
 		    three.price as ThreePrice,
-		    three.level as ThreeLevel
+		    three.level as ThreeLevel,
+		    sc.exchange as Exchange
 		FROM swap_chain sc
 		INNER JOIN swap_transition one ON one.id = sc.swap_one
 		INNER JOIN swap_transition two ON two.id = sc.swap_two
@@ -350,6 +355,7 @@ func (s *SwapRepository) GetSwapChainById(id int64) (model.SwapChainEntity, erro
 		&swapChain.SwapThree.Quantity,
 		&swapChain.SwapThree.Price,
 		&swapChain.SwapThree.Level,
+		&swapChain.Exchange,
 	)
 	if err != nil {
 		return swapChain, err
@@ -400,14 +406,16 @@ func (s *SwapRepository) GetSwapChain(hash string) (model.SwapChainEntity, error
 		    three.operation as ThreeOperation,
 		    three.quantity as ThreeQuantity,
 		    three.price as ThreePrice,
-		    three.level as ThreeLevel
+		    three.level as ThreeLevel,
+		    sc.exchange as Exchange
 		FROM swap_chain sc
 		INNER JOIN swap_transition one ON one.id = sc.swap_one
 		INNER JOIN swap_transition two ON two.id = sc.swap_two
 		INNER JOIN swap_transition three ON three.id = sc.swap_three
-		WHERE sc.hash = ?
+		WHERE sc.hash = ? AND sc.exchange = ?
 	`,
 		hash,
+		s.CurrentBot.Exchange,
 	).Scan(
 		&swapChain.Id,
 		&swapChain.Title,
@@ -444,6 +452,7 @@ func (s *SwapRepository) GetSwapChain(hash string) (model.SwapChainEntity, error
 		&swapChain.SwapThree.Quantity,
 		&swapChain.SwapThree.Price,
 		&swapChain.SwapThree.Level,
+		&swapChain.Exchange,
 	)
 	if err != nil {
 		return swapChain, err
@@ -501,7 +510,8 @@ func (s *SwapRepository) CreateSwapChain(swapChain model.SwapChainEntity) (*int6
 		    timestamp = ?,
 		    swap_one = ?,
 		    swap_two = ?,
-		    swap_three = ?
+		    swap_three = ?,
+		    exchange = ?
 	`,
 		swapChain.Title,
 		swapChain.Type,
@@ -513,6 +523,7 @@ func (s *SwapRepository) CreateSwapChain(swapChain model.SwapChainEntity) (*int6
 		swapIdOne,
 		swapIdTwo,
 		swapIdThree,
+		s.CurrentBot.Exchange,
 	)
 
 	if err != nil {
@@ -542,7 +553,8 @@ func (s *SwapRepository) UpdateSwapChain(swapChain model.SwapChainEntity) error 
 		    percent = ?,
 		    max_percent = ?,
 		    max_percent_timestamp = ?,
-		    timestamp = ?
+		    timestamp = ?,
+		    exchange = ?
 		WHERE id = ?
 	`,
 		swapChain.Title,
@@ -552,6 +564,7 @@ func (s *SwapRepository) UpdateSwapChain(swapChain model.SwapChainEntity) error 
 		swapChain.MaxPercent,
 		swapChain.MaxPercentTimestamp,
 		swapChain.Timestamp,
+		s.CurrentBot.Exchange,
 		swapChain.Id,
 	)
 
@@ -838,10 +851,11 @@ func (e *SwapRepository) GetSwapPairBySymbol(symbol string) (model.SwapPair, err
 		    sp.min_price as MinPrice,
 		    sp.sell_volume as SellVolume,
 		    sp.buy_volume as BuyVolume,
-		    sp.daily_percent as DailyPercent
+		    sp.daily_percent as DailyPercent,
+		    sp.exchange as Exchange
 		FROM swap_pair sp 
-		WHERE sp.symbol = ?
-	`, symbol).Scan(
+		WHERE sp.symbol = ? AND sp.exchange = ?
+	`, symbol, e.CurrentBot.Exchange).Scan(
 		&swapPair.Id,
 		&swapPair.SourceSymbol,
 		&swapPair.Symbol,
@@ -856,6 +870,7 @@ func (e *SwapRepository) GetSwapPairBySymbol(symbol string) (model.SwapPair, err
 		&swapPair.SellVolume,
 		&swapPair.BuyVolume,
 		&swapPair.DailyPercent,
+		&swapPair.Exchange,
 	)
 
 	if err != nil {

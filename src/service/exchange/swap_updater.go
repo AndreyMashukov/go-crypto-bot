@@ -9,7 +9,7 @@ import (
 )
 
 type SwapUpdater struct {
-	Binance            *client.Binance
+	Binance            client.ExchangeAPIInterface
 	ExchangeRepository *repository.ExchangeRepository
 	Formatter          *utils.Formatter
 }
@@ -17,7 +17,7 @@ type SwapUpdater struct {
 func (s SwapUpdater) UpdateSwapPair(swapPair model.SwapPair) {
 	orderDepth := s.ExchangeRepository.GetDepth(swapPair.Symbol, 20)
 	// save support + resistance levels
-	if len(orderDepth.Asks) >= 10 && len(orderDepth.Bids) >= 10 {
+	if len(orderDepth.Asks) > 0 && len(orderDepth.Bids) > 0 {
 		kLines := s.Binance.GetKLinesCached(swapPair.Symbol, "1d", 1)
 		if len(kLines) > 0 {
 			kline := kLines[0]

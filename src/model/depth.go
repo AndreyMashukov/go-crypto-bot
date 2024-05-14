@@ -385,3 +385,12 @@ func (d *OrderBookModel) GetQtySumBid() float64 {
 
 	return qty
 }
+
+type ByBitOrderBookModel struct {
+	Symbol    string      `json:"s"`
+	Bids      [][2]Number `json:"b"`
+	Asks      [][2]Number `json:"a"`
+	Timestamp int64       `json:"ts"`
+	UpdateId  int         `json:"u"`
+	Seq       int64       `json:"seq"`
+}

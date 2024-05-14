@@ -101,7 +101,7 @@ func (m *MakerService) ProcessBuy(tradeLimit model.TradeLimit) {
 	marketDepth := m.PriceCalculator.GetDepth(tradeLimit.Symbol, 20)
 	manualOrder := m.OrderRepository.GetManualOrder(tradeLimit.Symbol)
 
-	if len(marketDepth.Bids) < 3 && manualOrder == nil {
+	if len(marketDepth.Bids) == 0 && manualOrder == nil && limitBuy == nil {
 		log.Printf("[%s] Too small BIDs amount: %d\n", tradeLimit.Symbol, len(marketDepth.Bids))
 		return
 	}
@@ -185,7 +185,7 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 	marketDepth := m.PriceCalculator.GetDepth(tradeLimit.Symbol, 20)
 	manualOrder := m.OrderRepository.GetManualOrder(tradeLimit.Symbol)
 
-	if len(marketDepth.Bids) < 3 && manualOrder == nil {
+	if len(marketDepth.Bids) == 0 && manualOrder == nil && limitBuy == nil {
 		log.Printf("[%s] Too small BIDs amount: %d\n", tradeLimit.Symbol, len(marketDepth.Bids))
 		return
 	}
@@ -247,7 +247,7 @@ func (m *MakerService) ProcessSell(tradeLimit model.TradeLimit, openedOrder mode
 	manualOrder := m.OrderRepository.GetManualOrder(tradeLimit.Symbol)
 	marketDepth := m.PriceCalculator.GetDepth(tradeLimit.Symbol, 20)
 
-	if len(marketDepth.Asks) < 3 && manualOrder == nil {
+	if len(marketDepth.Asks) == 0 && manualOrder == nil {
 		log.Printf("[%s] Too small ASKs amount: %d\n", tradeLimit.Symbol, len(marketDepth.Asks))
 		return
 	}
@@ -303,6 +303,8 @@ func (m *MakerService) UpdateSwapPairs() {
 	exchangeInfo, _ := m.Binance.GetExchangeData(make([]string, 0))
 	tradeLimits := m.ExchangeRepository.GetTradeLimits()
 
+	log.Printf("Update swap pairs for %d symbols", len(exchangeInfo.Symbols))
+
 	supportedQuoteAssets := []string{"BTC", "ETH", "BNB", "TRX", "XRP", "EUR", "DAI", "TUSD", "USDC", "AUD", "TRY", "BRL"}
 
 	for _, tradeLimit := range tradeLimits {
@@ -348,6 +350,7 @@ func (m *MakerService) UpdateSwapPairs() {
 					BuyPrice:       0.00,
 					SellPrice:      0.00,
 					PriceTimestamp: 0,
+					Exchange:       m.CurrentBot.Exchange,
 				}
 
 				for _, filter := range exchangeItem.Filters {
@@ -419,7 +422,7 @@ func (m *MakerService) UpdateLimits() {
 		}
 
 		log.Printf(
-			"[%s] Trade Limit Updated, MIN_LOT = %f, MIN_PRICE = %f",
+			"[%s] Trade Limit Updated, MIN_LOT = %.10f, MIN_PRICE = %.10f",
 			tradeLimit.Symbol,
 			tradeLimit.MinQuantity,
 			tradeLimit.MinPrice,
@@ -473,13 +476,17 @@ func (m *MakerService) RecoverOrders() {
 	binanceOrders, err := m.Binance.GetOpenedOrders()
 	if err == nil {
 		for _, binanceOrder := range binanceOrders {
+			if binanceOrder.IsCanceled() || binanceOrder.IsExpired() {
+				continue
+			}
+
 			if !slices.Contains(symbols, binanceOrder.Symbol) {
-				log.Printf("[%s] binance order %d skipped", binanceOrder.Symbol, binanceOrder.OrderId)
+				log.Printf("[%s] %s order %s skipped", binanceOrder.Symbol, m.CurrentBot.Exchange, binanceOrder.OrderId)
 
 				continue
 			}
 
-			log.Printf("[%s] loaded binance order %d", binanceOrder.Symbol, binanceOrder.OrderId)
+			log.Printf("[%s] loaded %s order %s, status = %s", binanceOrder.Symbol, m.CurrentBot.Exchange, binanceOrder.OrderId, binanceOrder.Status)
 			m.OrderRepository.SetBinanceOrder(binanceOrder)
 		}
 	}

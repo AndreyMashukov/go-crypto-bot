@@ -35,6 +35,12 @@ func (p *ProfitService) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice 
 
 	priceBefore := buyPrice
 
+	// todo: bybit (testnet) sends strange numbers...
+	if buyPrice >= 900000000 {
+		return 0.00
+	}
+
+	// todo: refactoring required, too slow algorithm !!!!!!!
 	for {
 		closePrice := p.GetMinClosePrice(limit, buyPrice)
 		var closePriceMetTimes int64 = 0

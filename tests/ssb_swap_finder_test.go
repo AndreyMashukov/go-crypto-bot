@@ -212,7 +212,7 @@ func TestSwapSellSellBuy(t *testing.T) {
 
 	binanceMock.On("LimitOrder", "SOLETH", 100.00, 0.03372, "SELL", "GTC").Return(model.BinanceOrder{
 		Status:              "NEW",
-		OrderId:             int64(16),
+		OrderId:             "16",
 		Symbol:              "SOLETH",
 		ExecutedQty:         0.00,
 		OrigQty:             100.00,
@@ -220,9 +220,9 @@ func TestSwapSellSellBuy(t *testing.T) {
 		Side:                "SELL",
 		CummulativeQuoteQty: 00.00,
 	}, nil)
-	binanceMock.On("QueryOrder", "SOLETH", int64(16)).Times(1).Return(model.BinanceOrder{
+	binanceMock.On("QueryOrder", "SOLETH", "16").Times(1).Return(model.BinanceOrder{
 		Status:              "PARTIALLY_FILLED",
-		OrderId:             int64(16),
+		OrderId:             "16",
 		ExecutedQty:         80.00,
 		OrigQty:             100.00,
 		Symbol:              "SOLETH",
@@ -230,9 +230,9 @@ func TestSwapSellSellBuy(t *testing.T) {
 		Side:                "SELL",
 		CummulativeQuoteQty: 80 * 0.03372,
 	}, nil)
-	binanceMock.On("QueryOrder", "SOLETH", int64(16)).Times(2).Return(model.BinanceOrder{
+	binanceMock.On("QueryOrder", "SOLETH", "16").Times(2).Return(model.BinanceOrder{
 		Status:              "FILLED",
-		OrderId:             int64(16),
+		OrderId:             "16",
 		ExecutedQty:         100.00,
 		OrigQty:             100.00,
 		Symbol:              "SOLETH",
@@ -246,7 +246,7 @@ func TestSwapSellSellBuy(t *testing.T) {
 
 	binanceMock.On("LimitOrder", "ETHGBP", 3.372, 1783.06, "SELL", "GTC").Return(model.BinanceOrder{
 		Status:              "NEW",
-		OrderId:             int64(17),
+		OrderId:             "17",
 		Symbol:              "ETHGBP",
 		ExecutedQty:         0.00,
 		OrigQty:             3.372,
@@ -254,9 +254,9 @@ func TestSwapSellSellBuy(t *testing.T) {
 		Side:                "SELL",
 		CummulativeQuoteQty: 0.00,
 	}, nil)
-	binanceMock.On("QueryOrder", "ETHGBP", int64(17)).Times(1).Return(model.BinanceOrder{
+	binanceMock.On("QueryOrder", "ETHGBP", "17").Times(1).Return(model.BinanceOrder{
 		Status:              "PARTIALLY_FILLED",
-		OrderId:             int64(17),
+		OrderId:             "17",
 		Symbol:              "ETHGBP",
 		ExecutedQty:         1.272,
 		OrigQty:             3.372,
@@ -264,9 +264,9 @@ func TestSwapSellSellBuy(t *testing.T) {
 		Side:                "SELL",
 		CummulativeQuoteQty: 1.272 * 1783.06,
 	}, nil)
-	binanceMock.On("QueryOrder", "ETHGBP", int64(17)).Times(2).Return(model.BinanceOrder{
+	binanceMock.On("QueryOrder", "ETHGBP", "17").Times(2).Return(model.BinanceOrder{
 		Status:              "FILLED",
-		OrderId:             int64(17),
+		OrderId:             "17",
 		Symbol:              "ETHGBP",
 		ExecutedQty:         3.372,
 		OrigQty:             3.372,
@@ -279,7 +279,7 @@ func TestSwapSellSellBuy(t *testing.T) {
 
 	binanceMock.On("LimitOrder", "SOLGBP", 114.56, 52.48, "BUY", "GTC").Return(model.BinanceOrder{
 		Status:              "NEW",
-		OrderId:             int64(18),
+		OrderId:             "18",
 		Symbol:              "SOLGBP",
 		ExecutedQty:         0.00,
 		OrigQty:             114.56,
@@ -287,9 +287,9 @@ func TestSwapSellSellBuy(t *testing.T) {
 		Side:                "BUY",
 		CummulativeQuoteQty: 0.00,
 	}, nil)
-	binanceMock.On("QueryOrder", "SOLGBP", int64(18)).Times(1).Return(model.BinanceOrder{
+	binanceMock.On("QueryOrder", "SOLGBP", "18").Times(1).Return(model.BinanceOrder{
 		Status:              "PARTIALLY_FILLED",
-		OrderId:             int64(18),
+		OrderId:             "18",
 		Symbol:              "SOLGBP",
 		ExecutedQty:         12.00,
 		OrigQty:             114.56,
@@ -297,9 +297,9 @@ func TestSwapSellSellBuy(t *testing.T) {
 		Side:                "BUY",
 		CummulativeQuoteQty: 12.00 * 52.48,
 	}, nil)
-	binanceMock.On("QueryOrder", "SOLGBP", int64(18)).Times(2).Return(model.BinanceOrder{
+	binanceMock.On("QueryOrder", "SOLGBP", "18").Times(2).Return(model.BinanceOrder{
 		Status:              "FILLED",
-		OrderId:             int64(18),
+		OrderId:             "18",
 		Symbol:              "SOLGBP",
 		ExecutedQty:         114.56,
 		OrigQty:             114.56,
@@ -331,13 +331,13 @@ func TestSwapSellSellBuy(t *testing.T) {
 	executor.Execute(order)
 
 	assertion.Equal(114.56, *swapRepoMock.swapAction.EndQuantity)
-	assertion.Equal(int64(16), *swapRepoMock.swapAction.SwapOneExternalId)
+	assertion.Equal("16", *swapRepoMock.swapAction.SwapOneExternalId)
 	assertion.Equal("SOLETH", swapRepoMock.swapAction.SwapOneSymbol)
 	assertion.Equal("FILLED", *swapRepoMock.swapAction.SwapOneExternalStatus)
-	assertion.Equal(int64(17), *swapRepoMock.swapAction.SwapTwoExternalId)
+	assertion.Equal("17", *swapRepoMock.swapAction.SwapTwoExternalId)
 	assertion.Equal("ETHGBP", swapRepoMock.swapAction.SwapTwoSymbol)
 	assertion.Equal("FILLED", *swapRepoMock.swapAction.SwapTwoExternalStatus)
-	assertion.Equal(int64(18), *swapRepoMock.swapAction.SwapThreeExternalId)
+	assertion.Equal("18", *swapRepoMock.swapAction.SwapThreeExternalId)
 	assertion.Equal("SOLGBP", swapRepoMock.swapAction.SwapThreeSymbol)
 	assertion.Equal("FILLED", *swapRepoMock.swapAction.SwapThreeExternalStatus)
 }

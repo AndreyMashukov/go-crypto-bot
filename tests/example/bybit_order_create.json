@@ -1,0 +1,11 @@
+{
+  "category": "spot",
+  "isLeverage": 0,
+  "orderFilter": "Order",
+  "orderType": "Limit",
+  "price": "152.02",
+  "qty": "0.328",
+  "side": "Buy",
+  "symbol": "SOLUSDT",
+  "timeInForce": "GTC"
+}

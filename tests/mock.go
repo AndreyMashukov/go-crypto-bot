@@ -132,11 +132,11 @@ func (b *ExchangeOrderAPIMock) LimitOrder(symbol string, quantity float64, price
 	args := b.Called(symbol, quantity, price, operation, timeInForce)
 	return args.Get(0).(model.BinanceOrder), args.Error(1)
 }
-func (b *ExchangeOrderAPIMock) QueryOrder(symbol string, orderId int64) (model.BinanceOrder, error) {
+func (b *ExchangeOrderAPIMock) QueryOrder(symbol string, orderId string) (model.BinanceOrder, error) {
 	args := b.Called(symbol, orderId)
 	return args.Get(0).(model.BinanceOrder), args.Error(1)
 }
-func (b *ExchangeOrderAPIMock) CancelOrder(symbol string, orderId int64) (model.BinanceOrder, error) {
+func (b *ExchangeOrderAPIMock) CancelOrder(symbol string, orderId string) (model.BinanceOrder, error) {
 	args := b.Called(symbol, orderId)
 	return args.Get(0).(model.BinanceOrder), args.Error(1)
 }

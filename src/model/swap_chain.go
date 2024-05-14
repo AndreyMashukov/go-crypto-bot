@@ -46,6 +46,7 @@ type SwapChainEntity struct {
 	Timestamp           int64                 `json:"timestamp"`
 	MaxPercent          Percent               `json:"maxPercent"`
 	MaxPercentTimestamp *int64                `json:"maxPercentTimestamp"`
+	Exchange            string                `json:"exchange"`
 }
 
 func (s SwapChainEntity) IsSSB() bool {

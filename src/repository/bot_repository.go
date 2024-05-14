@@ -60,6 +60,7 @@ func (b *BotRepository) GetCurrentBotCached(botId int64) model.Bot {
 
 func (b *BotRepository) GetCurrentBot() *model.Bot {
 	botUuid := os.Getenv("BOT_UUID")
+	botExchange := os.Getenv("BOT_EXCHANGE")
 
 	if len(botUuid) == 0 {
 		panic("'BOT_UUID' variable must be set!")
@@ -70,15 +71,17 @@ func (b *BotRepository) GetCurrentBot() *model.Bot {
 	err := b.DB.QueryRow(`
 		SELECT 
 			b.id as Id, 
+			b.exchange as Exchange, 
 			b.uuid as Uuid,
 			b.is_master_bot as IsMasterBot,
 			b.is_swap_enabled as IsSwapEnabled,
 			b.swap_config as SwapConfig,
 			b.trade_stack_sorting as TradeStackSorting
 		FROM bots b
-		WHERE b.uuid = ?`, botUuid,
+		WHERE b.uuid = ? AND b.exchange = ?`, botUuid, botExchange,
 	).Scan(
 		&bot.Id,
+		&bot.Exchange,
 		&bot.BotUuid,
 		&bot.IsMasterBot,
 		&bot.IsSwapEnabled,
@@ -91,6 +94,12 @@ func (b *BotRepository) GetCurrentBot() *model.Bot {
 		return nil
 	}
 
+	cacheKey := b.GetCacheKey(botUuid)
+	botEncoded, err := json.Marshal(bot)
+	if err == nil {
+		b.RDB.Set(*b.Ctx, cacheKey, string(botEncoded), time.Minute)
+	}
+
 	return &bot
 }
 
@@ -98,12 +107,14 @@ func (b *BotRepository) Create(bot model.Bot) error {
 	_, err := b.DB.Exec(`
 		INSERT INTO bots SET 
 			uuid = ?,
+			exchange = ?,
 			is_swap_enabled = ?,
 			is_master_bot = ?,
 			swap_config = ?,
 			trade_stack_sorting = ?
 	`,
 		bot.BotUuid,
+		bot.Exchange,
 		bot.IsSwapEnabled,
 		bot.IsMasterBot,
 		bot.SwapConfig,

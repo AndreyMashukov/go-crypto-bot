@@ -8,9 +8,10 @@ import (
 )
 
 type SmaTradeStrategy struct {
-	ExchangeRepository repository.ExchangeRepository
+	ExchangeRepository *repository.ExchangeRepository
 }
 
+// Decide todo: Refactoring is required
 func (s *SmaTradeStrategy) Decide(trade model.Trade) model.Decision {
 	sellPeriod := 15
 	buyPeriod := 60
@@ -66,7 +67,7 @@ func (s *SmaTradeStrategy) Decide(trade model.Trade) model.Decision {
 
 	return model.Decision{
 		StrategyName: model.SmaTradeStrategyName,
-		Score:        50.00,
+		Score:        25.00,
 		Operation:    "HOLD",
 		Timestamp:    time.Now().Unix(),
 		Price:        trade.Price,

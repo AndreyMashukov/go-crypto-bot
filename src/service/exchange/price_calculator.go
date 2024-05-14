@@ -60,33 +60,7 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) model.BuyPri
 	}
 
 	minPrice := m.ExchangeRepository.GetPeriodMinPrice(tradeLimit.Symbol, tradeLimit.MinPriceMinutesPeriod)
-
-	// todo: Refactor required for buy price calculation, use collected data from ClickHouse
-	frame := m.FrameService.GetFrame(tradeLimit.Symbol, tradeLimit.FrameInterval, tradeLimit.FramePeriod)
 	buyPrice := minPrice
-
-	potentialOpenPrice := lastKline.Close
-	for {
-		closePrice := m.ProfitService.GetMinClosePrice(tradeLimit, potentialOpenPrice)
-
-		if closePrice <= frame.AvgHigh {
-			break
-		}
-
-		step := tradeLimit.MinPrice * potentialOpenPrice
-		if step < tradeLimit.MinPrice {
-			step = tradeLimit.MinPrice
-		}
-
-		potentialOpenPrice -= step
-		if potentialOpenPrice < 0.00 {
-			break
-		}
-	}
-
-	if potentialOpenPrice > 0.00 && buyPrice > potentialOpenPrice {
-		buyPrice = potentialOpenPrice
-	}
 
 	if buyPrice > lastKline.Close {
 		buyPrice = lastKline.Close

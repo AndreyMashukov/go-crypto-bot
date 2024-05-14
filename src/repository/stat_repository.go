@@ -44,7 +44,8 @@ func (s *StatRepository) WriteTradeStat(stat model.TradeStat) error {
 			?, -- First Buy Qty
 			?, -- First Buy Price
 			?, -- First Sell Qty
-			? -- First Sell Price
+			?, -- First Sell Price
+			? -- Exchange
 		)
 	`,
 		stat.Symbol,
@@ -77,6 +78,7 @@ func (s *StatRepository) WriteTradeStat(stat model.TradeStat) error {
 		stat.OrderBookStat.FirstBuyPrice,
 		stat.OrderBookStat.FirstSellQty,
 		stat.OrderBookStat.FirstSellPrice,
+		s.CurrentBot.Exchange,
 	)
 
 	if err != nil {
@@ -97,6 +99,7 @@ func (s *StatRepository) GetStatRange(symbol string, limit int64) *sync.Map {
 		    symbol as Symbol,
 			toUnixTimestamp64Milli(timestamp) as DateTime,
 			bot_id as BotId,
+			exchange as Exchange,
 			price as Price,
 			buy_qty as BuyQty,
 			sell_qty as SellQty,
@@ -125,9 +128,9 @@ func (s *StatRepository) GetStatRange(symbol string, limit int64) *sync.Map {
 			order_book_sell_first_qty as OrderBookSellFirstQty,
 			order_book_sell_first_price as OrderBookSellFirstPrice
 		FROM default.trades
-		WHERE symbol = ?
+		WHERE symbol = ? AND exchange = ?
 		ORDER BY timestamp DESC LIMIT ?
-	`, symbol, limit)
+	`, symbol, s.CurrentBot.Exchange, limit)
 	defer res.Close()
 
 	if err != nil {
@@ -149,6 +152,7 @@ func (s *StatRepository) GetStatRange(symbol string, limit int64) *sync.Map {
 			&tradeStat.Symbol,
 			&tradeStat.Timestamp,
 			&tradeStat.BotId,
+			&tradeStat.Exchange,
 			&tradeStat.Price,
 			&tradeStat.BuyQty,
 			&tradeStat.SellQty,
@@ -202,9 +206,9 @@ func (s *StatRepository) GetMLDataset(symbol string, secondary string) []model.T
 			t2.close as secondary_price,
 			t1.close
 		FROM default.trades t1
-	 	INNER JOIN default.trades t2 ON t1.timestamp = t2.timestamp AND t2.symbol = ?
-		WHERE t1.symbol = ? AND t1.timestamp >= (toStartOfDay(now()) - toIntervalDay(1))
-	`, secondary, symbol)
+	 	INNER JOIN default.trades t2 ON t1.timestamp = t2.timestamp AND t2.symbol = ? AND t2.exchange = t1.exchange
+		WHERE t1.symbol = ? AND t1.timestamp >= (toStartOfDay(now()) - toIntervalDay(1)) AND t1.exchange = ?
+	`, secondary, symbol, s.CurrentBot.Exchange)
 	defer res.Close()
 
 	if err != nil {

@@ -119,6 +119,7 @@ func (m *OrderExecutor) BuyExtra(tradeLimit model.TradeLimit, order model.Order,
 		ExtraChargeOptions: make(model.ExtraChargeOptions, 0),
 		ProfitOptions:      make(model.ProfitOptions, 0),
 		// todo: add commission???
+		Exchange: m.CurrentBot.Exchange,
 	}
 
 	balanceBefore, balanceErr := m.BalanceService.GetAssetBalance(order.GetBaseAsset(), true)
@@ -258,6 +259,7 @@ func (m *OrderExecutor) Buy(tradeLimit model.TradeLimit, price float64, quantity
 		ProfitOptions:      profitOptions,
 		ExtraChargeOptions: extraChargeOptions,
 		// todo: add commission???
+		Exchange: m.CurrentBot.Exchange,
 	}
 
 	balanceBefore, balanceErr := m.BalanceService.GetAssetBalance(order.GetBaseAsset(), true)
@@ -371,6 +373,7 @@ func (m *OrderExecutor) Sell(tradeLimit model.TradeLimit, opened model.Order, pr
 		ExtraChargeOptions: make(model.ExtraChargeOptions, 0),
 		ProfitOptions:      make(model.ProfitOptions, 0),
 		// todo: add commission???
+		Exchange: m.CurrentBot.Exchange,
 	}
 
 	binanceOrder, err := m.tryLimitOrder(order, "SELL", 480)
@@ -508,7 +511,7 @@ func (m *OrderExecutor) tryLimitOrder(order model.Order, operation string, ttl i
 	if (binanceOrder.IsCanceled() || binanceOrder.IsExpired()) && binanceOrder.ExecutedQty == 0 {
 		m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 
-		return binanceOrder, errors.New(fmt.Sprintf("binance order [%d] is cancelled or expired", binanceOrder.OrderId))
+		return binanceOrder, errors.New(fmt.Sprintf("%s order [%s] is cancelled or expired", m.CurrentBot.Exchange, binanceOrder.OrderId))
 	}
 
 	if binanceOrder.IsFilled() {
@@ -611,7 +614,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 				orderManageChannel <- "status"
 				action := <-control
 				log.Printf(
-					"[%s] %s Order [%d] status [%s] wait handler (%s), current price is [%.8f], order price [%.8f], ExecutedQty: %.6f of %.6f\"",
+					"[%s] %s Order [%s] status [%s] wait handler (%s), current price is [%.10f], order price [%.10f], ExecutedQty: %.6f of %.6f\"",
 					binanceOrder.Symbol,
 					binanceOrder.Side,
 					binanceOrder.OrderId,
@@ -669,7 +672,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 
 		if action == "cancel" {
 			log.Printf(
-				"[%s] %s Order %d, cancel signal has received",
+				"[%s] %s Order %s, cancel signal has received",
 				binanceOrder.Symbol,
 				binanceOrder.Side,
 				binanceOrder.OrderId,
@@ -734,7 +737,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 		}
 
 		if binanceOrder.IsFilled() {
-			log.Printf("[%s] Order [%d] is executed [%s]", binanceOrder.Symbol, binanceOrder.OrderId, binanceOrder.Status)
+			log.Printf("[%s] Order [%s] is executed [%s]", binanceOrder.Symbol, binanceOrder.OrderId, binanceOrder.Status)
 
 			control <- "stop"
 			return binanceOrder, nil
@@ -774,7 +777,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 		if retryErr == nil {
 			binanceOrder = queryOrder
 			control <- "stop"
-			log.Printf("[%s] Order [%d] is recovered [%s]", binanceOrder.Symbol, binanceOrder.OrderId, binanceOrder.Status)
+			log.Printf("[%s] Order [%s] is recovered [%s]", binanceOrder.Symbol, binanceOrder.OrderId, binanceOrder.Status)
 
 			if binanceOrder.IsFilled() {
 				return binanceOrder, nil
@@ -783,7 +786,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 			// Just in case of bug...
 			if binanceOrder.IsPartiallyFilled() {
 				log.Printf(
-					"[%s] Order [%d] status is [%s], try again waitExecution...",
+					"[%s] Order [%s] status is [%s], try again waitExecution...",
 					binanceOrder.Symbol,
 					binanceOrder.OrderId,
 					binanceOrder.Status,
@@ -795,7 +798,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 			// Just in case of bug...
 			if binanceOrder.IsNew() {
 				log.Printf(
-					"[%s] Order [%d] status is [%s], try again waitExecution...",
+					"[%s] Order [%s] status is [%s], try again waitExecution...",
 					binanceOrder.Symbol,
 					binanceOrder.OrderId,
 					binanceOrder.Status,
@@ -806,7 +809,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 
 			if binanceOrder.HasExecutedQuantity() {
 				log.Printf(
-					"Order [%d] is [%s], ExecutedQty = %.8f",
+					"Order [%s] is [%s], ExecutedQty = %.8f",
 					binanceOrder.OrderId,
 					binanceOrder.Status,
 					binanceOrder.GetExecutedQuantity(),
@@ -814,7 +817,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 
 				return binanceOrder, nil
 			} else {
-				return binanceOrder, errors.New(fmt.Sprintf("Order %d was CANCELED", binanceOrder.OrderId))
+				return binanceOrder, errors.New(fmt.Sprintf("Order %s was CANCELED", binanceOrder.OrderId))
 			}
 		} else {
 			// todo: loop??? timeout + loop???
@@ -830,7 +833,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 
 	if binanceOrder.HasExecutedQuantity() {
 		log.Printf(
-			"Order [%d] is [%s], ExecutedQty = %.8f",
+			"Order [%s] is [%s], ExecutedQty = %.8f",
 			binanceOrder.OrderId,
 			binanceOrder.Status,
 			binanceOrder.GetExecutedQuantity(),
@@ -839,9 +842,9 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 		return binanceOrder, nil
 	}
 
-	log.Printf("Order [%d] is [%s]", binanceOrder.OrderId, binanceOrder.Status)
+	log.Printf("Order [%s] is [%s]", binanceOrder.OrderId, binanceOrder.Status)
 
-	return binanceOrder, errors.New(fmt.Sprintf("Order %d was CANCELED", binanceOrder.OrderId))
+	return binanceOrder, errors.New(fmt.Sprintf("Order %s was CANCELED", binanceOrder.OrderId))
 }
 
 func (m *OrderExecutor) CheckIsBuyExpired(
@@ -862,7 +865,7 @@ func (m *OrderExecutor) CheckIsBuyExpired(
 	positionPercentage := m.Formatter.ComparePercentage(binanceOrder.Price, kline.Close)
 	if positionPercentage.Gte(101.00) {
 		log.Printf(
-			"[%s] %s Order [%d] status [%s] ttl reached, current price is [%.8f], order price [%.8f], diff percent: %.2f",
+			"[%s] %s Order [%s] status [%s] ttl reached, current price is [%.10f], order price [%.10f], diff percent: %.2f",
 			binanceOrder.Symbol,
 			binanceOrder.Side,
 			binanceOrder.OrderId,
@@ -876,7 +879,7 @@ func (m *OrderExecutor) CheckIsBuyExpired(
 		}
 	} else {
 		log.Printf(
-			"[%s] %s Order [%d] status [%s] ttl ignored, current price is [%.8f], order price [%.8f], diff percent: %.2f",
+			"[%s] %s Order [%s] status [%s] ttl ignored, current price is [%.10f], order price [%.10f], diff percent: %.2f",
 			binanceOrder.Symbol,
 			binanceOrder.Side,
 			binanceOrder.OrderId,
@@ -910,7 +913,7 @@ func (m *OrderExecutor) CheckIsSellExpired(
 		profitPercent := openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital())
 		if profitPercent.Lte(0.00) {
 			log.Printf(
-				"[%s] %s Order [%d] status [%s] ttl reached, current price is [%.8f], order price [%.8f], open [%.8f], profit: %.2f",
+				"[%s] %s Order [%s] status [%s] ttl reached, current price is [%.10f], order price [%.10f], open [%.10f], profit: %.2f",
 				binanceOrder.Symbol,
 				binanceOrder.Side,
 				binanceOrder.OrderId,
@@ -925,7 +928,7 @@ func (m *OrderExecutor) CheckIsSellExpired(
 			}
 		} else {
 			log.Printf(
-				"[%s] %s Order [%d] status [%s] ttl ignored, current price is [%.8f], order price [%.8f], open [%.8f], profit: %.2f",
+				"[%s] %s Order [%s] status [%s] ttl ignored, current price is [%.10f], order price [%.10f], open [%.10f], profit: %.2f",
 				binanceOrder.Symbol,
 				binanceOrder.Side,
 				binanceOrder.OrderId,
@@ -939,7 +942,7 @@ func (m *OrderExecutor) CheckIsSellExpired(
 	} else {
 		// todo: redundant case???
 		log.Printf(
-			"[%s] %s Order [%d] %s",
+			"[%s] %s Order [%s] %s",
 			binanceOrder.Symbol,
 			binanceOrder.Side,
 			binanceOrder.OrderId,
@@ -1090,7 +1093,7 @@ func (m *OrderExecutor) CheckIsTimeToSell(
 	// [BUY] Check is it time to sell (maybe we have already partially filled)
 	if openedBuyPosition != nil && binanceOrder.IsPartiallyFilled() && binanceOrder.GetProfitPercent(kline.Close).Gte(m.ProfitService.GetMinProfitPercent(openedBuyPosition)) {
 		log.Printf(
-			"[%s] Max profit percent reached, current profit is: %.2f, %s [%d] order is cancelled",
+			"[%s] Max profit percent reached, current profit is: %.2f, %s [%s] order is cancelled",
 			binanceOrder.Symbol,
 			binanceOrder.GetProfitPercent(kline.Close).Value(),
 			binanceOrder.Side,
@@ -1330,13 +1333,13 @@ func (m *OrderExecutor) findBinanceOrder(symbol string, operation string, cached
 	cached := m.OrderRepository.GetBinanceOrder(symbol, operation)
 
 	if cached != nil {
-		log.Printf("[%s] Found cached %s order %d in binance", symbol, operation, cached.OrderId)
+		log.Printf("[%s] findBinanceOrder: Found cached %s order %s in %s, status = %s", symbol, operation, cached.OrderId, m.CurrentBot.Exchange, cached.Status)
 
 		return cached, nil
 	}
 
 	if cachedOnly {
-		return nil, errors.New(fmt.Sprintf("[%s] Cached binance order is not found", symbol))
+		return nil, errors.New(fmt.Sprintf("[%s] Cached %s order is not found", symbol, m.CurrentBot.Exchange))
 	}
 
 	openedOrders, err := m.Binance.GetOpenedOrders()
@@ -1348,14 +1351,14 @@ func (m *OrderExecutor) findBinanceOrder(symbol string, operation string, cached
 
 	for _, opened := range openedOrders {
 		if opened.Side == operation && opened.Symbol == symbol {
-			log.Printf("[%s] Found opened %s order %d in binance", symbol, operation, opened.OrderId)
+			log.Printf("[%s] Found opened %s order %s in %s, status = %s", symbol, operation, opened.OrderId, m.CurrentBot.Exchange, opened.Status)
 			m.OrderRepository.SetBinanceOrder(opened)
 
 			return &opened, nil
 		}
 	}
 
-	return nil, errors.New(fmt.Sprintf("[%s] Binance order is not found", symbol))
+	return nil, errors.New(fmt.Sprintf("[%s] %s order is not found", symbol, m.CurrentBot.Exchange))
 }
 
 func (m *OrderExecutor) findOrCreateOrder(order model.Order, operation string) (model.BinanceOrder, error) {
@@ -1363,7 +1366,7 @@ func (m *OrderExecutor) findOrCreateOrder(order model.Order, operation string) (
 	cached, err := m.findBinanceOrder(order.Symbol, operation, false)
 
 	if cached != nil {
-		log.Printf("[%s] Found cached %s order %d in binance", order.Symbol, operation, cached.OrderId)
+		log.Printf("[%s] findOrCreateOrder Found cached %s order %s in %s, status = %s", order.Symbol, operation, cached.OrderId, m.CurrentBot.Exchange, cached.Status)
 
 		return *cached, nil
 	}
@@ -1375,7 +1378,7 @@ func (m *OrderExecutor) findOrCreateOrder(order model.Order, operation string) (
 		return binanceOrder, err
 	}
 
-	log.Printf("[%s] %s Order created %d, Price: %.6f", order.Symbol, operation, binanceOrder.OrderId, binanceOrder.Price)
+	log.Printf("[%s] %s Order created %s, Price: %.6f", order.Symbol, operation, binanceOrder.OrderId, binanceOrder.Price)
 	m.OrderRepository.SetBinanceOrder(binanceOrder)
 	if order.IsBuy() {
 		m.BalanceService.InvalidateBalanceCache("USDT")

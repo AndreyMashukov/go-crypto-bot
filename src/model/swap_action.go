@@ -18,17 +18,17 @@ type SwapAction struct {
 	EndQuantity             *float64 `json:"endQuantity"`
 	SwapOneSymbol           string   `json:"swapOneSymbol"`
 	SwapOnePrice            float64  `json:"swapOnePrice"`
-	SwapOneExternalId       *int64   `json:"swapOneExternalId"`
+	SwapOneExternalId       *string  `json:"swapOneExternalId"`
 	SwapOneExternalStatus   *string  `json:"swapOneExternalStatus"`
 	SwapOneTimestamp        *int64   `json:"swapOneTimestamp"`
 	SwapTwoSymbol           string   `json:"swapTwoSymbol"`
 	SwapTwoPrice            float64  `json:"swapTwoPrice"`
-	SwapTwoExternalId       *int64   `json:"swapTwoExternalId"`
+	SwapTwoExternalId       *string  `json:"swapTwoExternalId"`
 	SwapTwoExternalStatus   *string  `json:"swapTwoExternalStatus"`
 	SwapTwoTimestamp        *int64   `json:"swapTwoTimestamp"`
 	SwapThreeSymbol         string   `json:"swapThreeSymbol"`
 	SwapThreePrice          float64  `json:"swapThreePrice"`
-	SwapThreeExternalId     *int64   `json:"swapThreeExternalId"`
+	SwapThreeExternalId     *string  `json:"swapThreeExternalId"`
 	SwapThreeExternalStatus *string  `json:"swapThreeExternalStatus"`
 	SwapThreeTimestamp      *int64   `json:"swapThreeTimestamp"`
 }

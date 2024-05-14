@@ -16,7 +16,7 @@ type FrameServiceInterface interface {
 
 type FrameService struct {
 	CurrentBot *model.Bot
-	Binance    *client.Binance
+	Binance    client.ExchangeAPIInterface
 	RDB        *redis.Client
 	Ctx        *context.Context
 }

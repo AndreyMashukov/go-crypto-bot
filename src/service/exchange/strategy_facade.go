@@ -26,11 +26,11 @@ func (s *StrategyFacade) Decide(symbol string) (model.FacadeResponse, error) {
 	buyScore := 0.00
 	sellScore := 0.00
 	holdScore := 0.00
-	amount := 0.00
+	decisionAmount := 0.00
 	priceSum := 0.00
 
 	for _, decision := range decisions {
-		amount = amount + 1.00
+		decisionAmount = decisionAmount + 1.00
 		switch decision.Operation {
 		case "BUY":
 			buyScore += decision.Score
@@ -47,12 +47,12 @@ func (s *StrategyFacade) Decide(symbol string) (model.FacadeResponse, error) {
 
 	manualOrder := s.OrderRepository.GetManualOrder(symbol)
 
-	if amount != s.MinDecisions && manualOrder == nil {
+	if decisionAmount < s.MinDecisions && manualOrder == nil {
 		return model.FacadeResponse{
 			Hold: model.DecisionHighestPriorityScore,
 			Buy:  0.00,
 			Sell: 0.00,
-		}, errors.New(fmt.Sprintf("[%s] Not enough decision amount %d of %d", symbol, int64(amount), int64(s.MinDecisions)))
+		}, errors.New(fmt.Sprintf("[%s] Not enough decision amount %d of %d", symbol, int64(decisionAmount), int64(s.MinDecisions)))
 	}
 
 	tradeLimit, err := s.ExchangeRepository.GetTradeLimit(symbol)

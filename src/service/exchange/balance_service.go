@@ -20,7 +20,7 @@ type BalanceService struct {
 	RDB        *redis.Client
 	Ctx        *context.Context
 	CurrentBot *model.Bot
-	Binance    *client.Binance
+	Binance    client.ExchangeAPIInterface
 }
 
 func (b *BalanceService) InvalidateBalanceCache(asset string) {

@@ -25,7 +25,7 @@ type ExchangeOrderInterface interface {
 }
 
 type BinanceOrder struct {
-	OrderId             string  `json:"orderId"`
+	OrderId             string  `json:"orderId,int"`
 	Symbol              string  `json:"symbol"`
 	TransactTime        int64   `json:"transactTime"`
 	Price               float64 `json:"price,string"`

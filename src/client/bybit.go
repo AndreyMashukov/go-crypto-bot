@@ -339,7 +339,7 @@ func (b *ByBit) GetAccountStatus() (*model.AccountStatus, error) {
 			for _, coin := range byBitBalance.Coin {
 				balances = append(balances, model.Balance{
 					Asset:  coin.Coin,
-					Free:   coin.Equity,
+					Free:   coin.AvailableToWithdraw,
 					Locked: coin.Locked,
 				})
 			}

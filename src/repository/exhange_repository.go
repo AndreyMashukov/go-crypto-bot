@@ -765,6 +765,8 @@ func (e *ExchangeRepository) SaveKlineHistory(kLine model.KLine) {
 	if err == nil {
 		e.RDB.LPush(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id), string(encoded))
 		e.RDB.LTrim(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id), 0, 2880)
+	} else {
+		log.Printf("[%s] KLine history save error: %s", kLine.Symbol, err.Error())
 	}
 }
 

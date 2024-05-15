@@ -204,6 +204,9 @@ func (b *ByBit) GetKLines(symbol string, interval string, limit int64) []model.K
 		kLines = append(kLines, b.Formatter.ByBitHistoryKlineToBinanceHistoryKline(byBitKLine))
 	}
 
+	// Reverse list (Doc: Sort in reverse by startTime)
+	slices.Reverse(kLines)
+
 	return kLines
 }
 

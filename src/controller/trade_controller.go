@@ -225,6 +225,12 @@ func (t *TradeController) PostSignalAction(w http.ResponseWriter, req *http.Requ
 		return
 	}
 
+	if t.CurrentBot.Exchange != signal.Exchange {
+		http.Error(w, fmt.Sprintf("Wrong exchange '%s', expected: %s", signal.Exchange, t.CurrentBot.Exchange), http.StatusBadRequest)
+
+		return
+	}
+
 	t.SignalRepository.SaveSignal(signal)
 	t.TradeStack.InvalidateBuyPriceCache(signal.Symbol)
 	fmt.Fprintf(w, "OK")

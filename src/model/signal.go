@@ -28,6 +28,7 @@ type Signal struct {
 	ProfitOptions      []SignalProfitOption      `json:"profitOptions"`
 	ExtraChargeOptions []SignalExtraChargeOption `json:"extraChargeOptions"`
 	ExpireTimestamp    int64                     `json:"expireTimestamp"`
+	Exchange           string                    `json:"exchange"`
 }
 
 func (s *Signal) GetTTLMilli() time.Duration {

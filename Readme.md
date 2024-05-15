@@ -15,7 +15,7 @@ This is production ready crypto trading bot, supports:
 
 Supported crypto exchange:
 - Binance (ready, well tested)
-- ByBit (under development) branch [bybit-api](https://github.com/AndreyMashukov/go-crypto-bot/tree/bybit_implementation)
+- ByBit (ready, beta version, can have some bugs)
 
 ### Setup 
 | Variable  | Description                                                   | Example                                                                                                                                                    |

@@ -43,14 +43,14 @@ func (p Percent) Lt(percent Percent) bool {
 }
 
 type ErrorNotification struct {
-	BotId        int64  `json:"bot"`
+	BotUuid      string `json:"botUuid"`
 	Stop         bool   `json:"stop"`
 	ErrorCode    string `json:"errorCode"`
 	ErrorMessage string `json:"errorMessage"`
 }
 
 type TgOrderNotification struct {
-	BotId     int64   `json:"bot"`
+	BotUuid   string  `json:"botUuid"`
 	Price     float64 `json:"price"`
 	Quantity  float64 `json:"amount"`
 	Symbol    string  `json:"symbol"`

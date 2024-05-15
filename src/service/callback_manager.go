@@ -24,7 +24,7 @@ type CallbackManager struct {
 
 func (t *CallbackManager) Error(bot model.Bot, code string, message string, stop bool) {
 	encoded, _ := json.Marshal(model.ErrorNotification{
-		BotId:        bot.Id,
+		BotUuid:      bot.BotUuid,
 		Stop:         stop,
 		ErrorCode:    code,
 		ErrorMessage: message,
@@ -39,7 +39,7 @@ func (t *CallbackManager) Error(bot model.Bot, code string, message string, stop
 
 func (t *CallbackManager) SellOrder(order model.Order, bot model.Bot, details string) {
 	encoded, _ := json.Marshal(model.TgOrderNotification{
-		BotId:     bot.Id,
+		BotUuid:   bot.BotUuid,
 		Price:     order.Price,
 		Quantity:  order.Quantity,
 		Symbol:    order.Symbol,
@@ -57,7 +57,7 @@ func (t *CallbackManager) SellOrder(order model.Order, bot model.Bot, details st
 
 func (t *CallbackManager) BuyOrder(order model.Order, bot model.Bot, details string) {
 	encoded, _ := json.Marshal(model.TgOrderNotification{
-		BotId:     bot.Id,
+		BotUuid:   bot.BotUuid,
 		Price:     order.Price,
 		Quantity:  order.Quantity,
 		Symbol:    order.Symbol,

@@ -446,6 +446,7 @@ func (m *OrderExecutor) Sell(tradeLimit model.TradeLimit, opened model.Order, pr
 			fmt.Sprintf("Profit is: %f USDT", m.Formatter.ToFixed(profit, 2)),
 		)
 	}(order, profit)
+	m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 
 	return nil
 }

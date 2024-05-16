@@ -38,10 +38,11 @@ type OrderStorageInterface interface {
 }
 
 type OrderRepository struct {
-	DB         *sql.DB
-	RDB        *redis.Client
-	Ctx        *context.Context
-	CurrentBot *model.Bot
+	DB               *sql.DB
+	CurrentBot       *model.Bot
+	RDB              *redis.Client
+	Ctx              *context.Context
+	ObjectRepository *ObjectRepository
 }
 
 func (repo *OrderRepository) getOpenedOrderCacheKey(symbol string, operation string) string {
@@ -554,28 +555,50 @@ func (repo *OrderRepository) GetClosesOrderList(buyOrder model.Order) []model.Or
 }
 
 func (repo *OrderRepository) SetBinanceOrder(order model.BinanceOrder) {
-	encoded, _ := json.Marshal(order)
-	repo.RDB.Set(*repo.Ctx, fmt.Sprintf(
+	storageKey := fmt.Sprintf(
 		"binance-order-%s-%s-bot-%d",
 		order.Symbol,
 		strings.ToLower(order.Side),
 		repo.CurrentBot.Id,
-	), string(encoded), time.Hour*24*90)
+	)
+	err := repo.ObjectRepository.SaveObject(storageKey, order)
+
+	if err == nil {
+		repo.RDB.Del(*repo.Ctx, storageKey).Val()
+
+		return
+	} else {
+		log.Printf("[%s] storage order save error: %s", order.Symbol, err.Error())
+	}
 }
 
 func (repo *OrderRepository) GetBinanceOrder(symbol string, operation string) *model.BinanceOrder {
-	res := repo.RDB.Get(*repo.Ctx, fmt.Sprintf(
+	var dto model.BinanceOrder
+	storageKey := fmt.Sprintf(
 		"binance-order-%s-%s-bot-%d",
 		symbol,
 		strings.ToLower(operation),
 		repo.CurrentBot.Id,
-	)).Val()
+	)
+
+	err := repo.ObjectRepository.LoadObject(storageKey, &dto)
+	if err == nil {
+		repo.RDB.Del(*repo.Ctx, storageKey).Val() // todo: remove in next release
+
+		return &dto
+	} else {
+		if !strings.Contains(err.Error(), "no rows in result set") {
+			log.Printf("[%s] storage order load error: %s", symbol, err.Error())
+		}
+	}
+
+	// todo: remove in next release
+	res := repo.RDB.Get(*repo.Ctx, storageKey).Val()
 	if len(res) == 0 {
 		return nil
 	}
 
-	var dto model.BinanceOrder
-	err := json.Unmarshal([]byte(res), &dto)
+	err = json.Unmarshal([]byte(res), &dto)
 
 	if err != nil {
 		return nil
@@ -585,16 +608,28 @@ func (repo *OrderRepository) GetBinanceOrder(symbol string, operation string) *m
 		return nil
 	}
 
+	_ = repo.ObjectRepository.SaveObject(storageKey, dto)
+
 	return &dto
 }
 
 func (repo *OrderRepository) DeleteBinanceOrder(order model.BinanceOrder) {
-	repo.RDB.Del(*repo.Ctx, fmt.Sprintf(
+	storageKey := fmt.Sprintf(
 		"binance-order-%s-%s-bot-%d",
 		order.Symbol,
 		strings.ToLower(order.Side),
 		repo.CurrentBot.Id,
-	)).Val()
+	)
+
+	err := repo.ObjectRepository.DeleteObject(storageKey)
+	if err != nil {
+		if !strings.Contains(err.Error(), "no rows in result set") {
+			log.Printf("[%s] storage order delete error: %s", order.Symbol, err.Error())
+		}
+	}
+
+	// todo: remove in next release
+	repo.RDB.Del(*repo.Ctx, storageKey).Val()
 }
 
 func (repo *OrderRepository) GetManualOrder(symbol string) *model.ManualOrder {

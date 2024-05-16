@@ -502,7 +502,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(&openedOrder)
 	orderRepository.On("GetManualOrder", "ETHUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
-	binance.On("QueryOrder", "ETHUSDT", "999").Return(model.BinanceOrder{
+	canceled := model.BinanceOrder{
 		OrderId:             "999",
 		Symbol:              "ETHUSDT",
 		Side:                "SELL",
@@ -511,8 +511,9 @@ func TestSellCancelledInProcess(t *testing.T) {
 		Status:              "CANCELED",
 		Price:               2212.92,
 		CummulativeQuoteQty: 0.00,
-	}, nil)
-	orderRepository.On("DeleteBinanceOrder", initialBinanceOrder).Times(1)
+	}
+	binance.On("QueryOrder", "ETHUSDT", "999").Return(canceled, nil)
+	orderRepository.On("DeleteBinanceOrder", canceled).Times(1)
 	orderId := int64(100)
 	orderRepository.On("Create", mock.Anything).Return(&orderId, nil).Unset()
 	orderRepository.On("DeleteManualOrder", "ETHUSDT").Unset()
@@ -523,7 +524,7 @@ func TestSellCancelledInProcess(t *testing.T) {
 	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52, nil)
 
 	err := orderExecutor.Sell(tradeLimit, openedOrder, 2281.52, 0.0089, false)
-	assertion.Error(errors.New("Order is cancelled"), err)
+	assertion.Error(errors.New("Order was CANCELED"), err)
 }
 
 func TestSellQueryFail(t *testing.T) {
@@ -678,7 +679,7 @@ func TestSellQueryFail(t *testing.T) {
 	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52, nil)
 
 	err := orderExecutor.Sell(tradeLimit, openedOrder, 2281.52, 0.0089, false)
-	assertion.Equal(errors.New("Order was canceled or expired"), err)
+	assertion.Equal(errors.New("Order 999 was CANCELED or EXPIRED"), err)
 }
 
 func TestSellClosingAction(t *testing.T) {

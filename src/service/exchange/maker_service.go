@@ -453,24 +453,6 @@ func (m *MakerService) RecoverOrders() {
 	symbols := make([]string, 0)
 	for _, limit := range tradeLimits {
 		symbols = append(symbols, limit.Symbol)
-
-		sellBinance := m.OrderRepository.GetBinanceOrder(limit.Symbol, "SELL")
-		if sellBinance != nil {
-			_, err := m.ExchangeApi.QueryOrder(sellBinance.Symbol, sellBinance.OrderId)
-			// todo: Delete already registered???
-			if err != nil {
-				m.OrderRepository.DeleteBinanceOrder(*sellBinance)
-			}
-		}
-
-		buyBinance := m.OrderRepository.GetBinanceOrder(limit.Symbol, "BUY")
-		if buyBinance != nil {
-			_, err := m.ExchangeApi.QueryOrder(buyBinance.Symbol, buyBinance.OrderId)
-			// todo: Delete already registered???
-			if err != nil {
-				m.OrderRepository.DeleteBinanceOrder(*buyBinance)
-			}
-		}
 	}
 
 	binanceOrders, err := m.Binance.GetOpenedOrders()

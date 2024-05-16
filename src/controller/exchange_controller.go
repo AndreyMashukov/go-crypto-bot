@@ -96,12 +96,6 @@ func (e *ExchangeController) GetSwapListAction(w http.ResponseWriter, req *http.
 		return
 	}
 
-	if !e.BotService.IsSwapEnabled() {
-		http.Error(w, "Swap is disabled", http.StatusForbidden)
-
-		return
-	}
-
 	list := e.SwapRepository.GetAvailableSwapChains()
 	encoded, _ := json.Marshal(list)
 	fmt.Fprintf(w, string(encoded))

@@ -155,7 +155,7 @@ func TestSellAction(t *testing.T) {
 	orderRepository.On("GetOpenedOrderCached", "ETHUSDT", "BUY").Return(&openedOrder)
 	orderRepository.On("GetManualOrder", "ETHUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
-	binance.On("QueryOrder", "ETHUSDT", "999").Return(model.BinanceOrder{
+	filledOrder := model.BinanceOrder{
 		OrderId:             "999",
 		Symbol:              "ETHUSDT",
 		Side:                "SELL",
@@ -164,8 +164,8 @@ func TestSellAction(t *testing.T) {
 		Status:              "FILLED",
 		Price:               2212.92,
 		CummulativeQuoteQty: 0.009 * 2212.92,
-	}, nil)
-	orderRepository.On("DeleteBinanceOrder", initialBinanceOrder).Times(1)
+	}
+	binance.On("QueryOrder", "ETHUSDT", "999").Return(filledOrder, nil)
 	orderId := int64(100)
 	orderRepository.On("Create", mock.Anything).Return(&orderId, nil)
 	orderRepository.On("DeleteManualOrder", "ETHUSDT").Times(1)
@@ -185,6 +185,7 @@ func TestSellAction(t *testing.T) {
 
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
 	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(2281.52, nil)
+	orderRepository.On("DeleteBinanceOrder", filledOrder).Times(1)
 
 	err := orderExecutor.Sell(tradeLimit, openedOrder, 2281.52, 0.0089, false)
 	assertion.Nil(err)
@@ -822,7 +823,7 @@ func TestSellClosingAction(t *testing.T) {
 	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&openedOrder)
 	orderRepository.On("GetManualOrder", "BTCUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
-	binance.On("QueryOrder", "BTCUSDT", "999").Return(model.BinanceOrder{
+	filledOrder := model.BinanceOrder{
 		OrderId:             "999",
 		Symbol:              "BTCUSDT",
 		Side:                "SELL",
@@ -831,8 +832,8 @@ func TestSellClosingAction(t *testing.T) {
 		Status:              "FILLED",
 		Price:               43496.99,
 		CummulativeQuoteQty: 0.00046 * 43496.99,
-	}, nil)
-	orderRepository.On("DeleteBinanceOrder", initialBinanceOrder).Times(1)
+	}
+	binance.On("QueryOrder", "BTCUSDT", "999").Return(filledOrder, nil)
 	orderId := int64(100)
 	orderRepository.On("Create", mock.Anything).Return(&orderId, nil)
 	orderRepository.On("DeleteManualOrder", "BTCUSDT").Times(1)
@@ -852,6 +853,7 @@ func TestSellClosingAction(t *testing.T) {
 
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 3.1) / 100)
 	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(43496.99, nil)
+	orderRepository.On("DeleteBinanceOrder", filledOrder).Times(1)
 
 	err := orderExecutor.Sell(tradeLimit, openedOrder, 43496.99, 0.00046, false)
 	assertion.Nil(err)
@@ -1000,7 +1002,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 	orderRepository.On("GetOpenedOrderCached", "TRXUSDT", "BUY").Return(&openedOrder)
 	orderRepository.On("GetManualOrder", "TRXUSDT").Return(nil)
 	timeService.On("WaitMilliseconds", int64(20)).Maybe()
-	binance.On("QueryOrder", "TRXUSDT", "999").Return(model.BinanceOrder{
+	filledOrder := model.BinanceOrder{
 		OrderId:             "999",
 		Symbol:              "TRXUSDT",
 		Side:                "SELL",
@@ -1009,8 +1011,8 @@ func TestSellClosingTrxAction(t *testing.T) {
 		Price:               0.10692, // 0.10457
 		Status:              "FILLED",
 		CummulativeQuoteQty: 382.1 * 0.10692,
-	}, nil)
-	orderRepository.On("DeleteBinanceOrder", initialBinanceOrder).Times(1)
+	}
+	binance.On("QueryOrder", "TRXUSDT", "999").Return(filledOrder, nil)
 	orderId := int64(100)
 	orderRepository.On("Create", mock.Anything).Return(&orderId, nil)
 	orderRepository.On("DeleteManualOrder", "TRXUSDT").Times(1)
@@ -1030,6 +1032,7 @@ func TestSellClosingTrxAction(t *testing.T) {
 
 	profitServiceMock.On("GetMinClosePrice", openedOrder, openedOrder.Price).Return(openedOrder.Price * (100 + 2.25) / 100)
 	priceCalculator.On("CalculateSell", tradeLimit, openedOrder).Return(0.10692, nil)
+	orderRepository.On("DeleteBinanceOrder", filledOrder).Times(1)
 
 	err := orderExecutor.Sell(tradeLimit, openedOrder, 0.10692, 382.1, false)
 	assertion.Nil(err)

@@ -533,8 +533,6 @@ func (m *OrderExecutor) tryLimitOrder(order model.Order, operation string, ttl i
 }
 
 func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds int64) (model.BinanceOrder, error) {
-	defer m.OrderRepository.DeleteBinanceOrder(binanceOrder)
-
 	if binanceOrder.IsFilled() {
 		return binanceOrder, nil
 	}
@@ -687,11 +685,17 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 
 			if strings.Contains(err.Error(), "Order was canceled or expired") {
 				control <- "stop"
-				return binanceOrder, err
+
+				// todo: refactor in next release, must be on the top level
+				m.OrderRepository.DeleteBinanceOrder(binanceOrder)
+				return binanceOrder, errors.New(fmt.Sprintf("Order %s was CANCELED or EXPIRED", binanceOrder.OrderId))
 			}
 
 			if strings.Contains(err.Error(), "Order does not exist") {
 				control <- "stop"
+
+				// todo: refactor in next release, must be on the top level
+				m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 				return binanceOrder, err
 			}
 
@@ -723,7 +727,9 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 				return binanceOrder, nil
 			}
 
-			return binanceOrder, errors.New("Order is expired")
+			// todo: refactor in next release, must be on the top level
+			m.OrderRepository.DeleteBinanceOrder(binanceOrder)
+			return binanceOrder, errors.New(fmt.Sprintf("Order %s was EXPIRED", binanceOrder.OrderId))
 		}
 
 		if binanceOrder.IsCanceled() {
@@ -733,7 +739,9 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 			}
 
 			control <- "stop"
-			return binanceOrder, errors.New("Order is cancelled")
+			// todo: refactor in next release, must be on the top level
+			m.OrderRepository.DeleteBinanceOrder(binanceOrder)
+			return binanceOrder, errors.New(fmt.Sprintf("Order %s was CANCELED", binanceOrder.OrderId))
 		}
 
 		if binanceOrder.IsFilled() {
@@ -817,6 +825,8 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 
 				return binanceOrder, nil
 			} else {
+				// todo: refactor in next release, must be on the top level
+				m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 				return binanceOrder, errors.New(fmt.Sprintf("Order %s was CANCELED", binanceOrder.OrderId))
 			}
 		} else {
@@ -827,6 +837,7 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 	}
 
 	binanceOrder = cancelOrder
+	m.OrderRepository.SetBinanceOrder(binanceOrder)
 	control <- "stop"
 
 	// handle cancel error and get again
@@ -844,6 +855,8 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 
 	log.Printf("Order [%s] is [%s]", binanceOrder.OrderId, binanceOrder.Status)
 
+	// todo: refactor in next release, must be on the top level
+	m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 	return binanceOrder, errors.New(fmt.Sprintf("Order %s was CANCELED", binanceOrder.OrderId))
 }
 

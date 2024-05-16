@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/redis/go-redis/v9"
+	"gitlab.com/open-soft/go-crypto-bot/src/client"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
 	"gitlab.com/open-soft/go-crypto-bot/src/service"
@@ -30,6 +31,7 @@ type OrderController struct {
 	BotService             service.BotServiceInterface
 	ProfitService          exchange.ProfitServiceInterface
 	TradeFilterService     exchange.TradeFilterServiceInterface
+	ExchangeAPI            client.ExchangeAPIInterface
 }
 
 func (o *OrderController) GetOrderTradeListAction(w http.ResponseWriter, req *http.Request) {
@@ -38,7 +40,7 @@ func (o *OrderController) GetOrderTradeListAction(w http.ResponseWriter, req *ht
 	w.Header().Set("Content-Type", "application/json")
 
 	if req.Method == "OPTIONS" {
-		fmt.Fprintf(w, "OK")
+		_, _ = fmt.Fprintf(w, "OK")
 		return
 	}
 
@@ -58,7 +60,7 @@ func (o *OrderController) GetOrderTradeListAction(w http.ResponseWriter, req *ht
 
 	list := o.OrderRepository.GetTrades()
 	encoded, _ := json.Marshal(list)
-	fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprintf(w, string(encoded))
 }
 
 func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http.Request) {
@@ -67,7 +69,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 	w.Header().Set("Content-Type", "application/json")
 
 	if req.Method == "OPTIONS" {
-		fmt.Fprintf(w, "OK")
+		_, _ = fmt.Fprintf(w, "OK")
 		return
 	}
 
@@ -171,7 +173,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 	}
 
 	encoded, _ := json.Marshal(positions)
-	fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprintf(w, string(encoded))
 }
 
 func (o *OrderController) UpdateExtraChargeAction(w http.ResponseWriter, req *http.Request) {
@@ -180,7 +182,7 @@ func (o *OrderController) UpdateExtraChargeAction(w http.ResponseWriter, req *ht
 	w.Header().Set("Content-Type", "application/json")
 
 	if req.Method == "OPTIONS" {
-		fmt.Fprintf(w, "OK")
+		_, _ = fmt.Fprintf(w, "OK")
 		return
 	}
 
@@ -248,7 +250,7 @@ func (o *OrderController) UpdateExtraChargeAction(w http.ResponseWriter, req *ht
 	o.OrderExecutor.SetCancelRequest(entity.Symbol)
 	o.ExchangeRepository.DeleteDecision(model.OrderBasedStrategyName, entity.Symbol)
 	encodedRes, _ := json.Marshal(entity)
-	fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprintf(w, string(encodedRes))
 }
 
 func (o *OrderController) UpdateProfitOptionsAction(w http.ResponseWriter, req *http.Request) {
@@ -257,7 +259,7 @@ func (o *OrderController) UpdateProfitOptionsAction(w http.ResponseWriter, req *
 	w.Header().Set("Content-Type", "application/json")
 
 	if req.Method == "OPTIONS" {
-		fmt.Fprintf(w, "OK")
+		_, _ = fmt.Fprintf(w, "OK")
 		return
 	}
 
@@ -339,7 +341,7 @@ func (o *OrderController) UpdateProfitOptionsAction(w http.ResponseWriter, req *
 	o.OrderExecutor.SetCancelRequest(entity.Symbol)
 	o.ExchangeRepository.DeleteDecision(model.OrderBasedStrategyName, entity.Symbol)
 	encodedRes, _ := json.Marshal(entity)
-	fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprintf(w, string(encodedRes))
 }
 
 func (o *OrderController) GetPendingOrderListAction(w http.ResponseWriter, req *http.Request) {
@@ -348,7 +350,7 @@ func (o *OrderController) GetPendingOrderListAction(w http.ResponseWriter, req *
 	w.Header().Set("Content-Type", "application/json")
 
 	if req.Method == "OPTIONS" {
-		fmt.Fprintf(w, "OK")
+		_, _ = fmt.Fprintf(w, "OK")
 		return
 	}
 
@@ -396,7 +398,7 @@ func (o *OrderController) GetPendingOrderListAction(w http.ResponseWriter, req *
 	}
 
 	encoded, _ := json.Marshal(pending)
-	fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprintf(w, string(encoded))
 }
 
 func (o *OrderController) GetOrderListAction(w http.ResponseWriter, req *http.Request) {
@@ -405,7 +407,7 @@ func (o *OrderController) GetOrderListAction(w http.ResponseWriter, req *http.Re
 	w.Header().Set("Content-Type", "application/json")
 
 	if req.Method == "OPTIONS" {
-		fmt.Fprintf(w, "OK")
+		_, _ = fmt.Fprintf(w, "OK")
 		return
 	}
 
@@ -419,7 +421,81 @@ func (o *OrderController) GetOrderListAction(w http.ResponseWriter, req *http.Re
 
 	list := o.OrderRepository.GetList()
 	encoded, _ := json.Marshal(list)
-	fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprintf(w, string(encoded))
+}
+
+func (o *OrderController) DeleteCancelExchangeOrderAction(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	if req.Method == "OPTIONS" {
+		_, _ = fmt.Fprintf(w, "OK")
+		return
+	}
+
+	botUuid := req.URL.Query().Get("botUuid")
+
+	if botUuid != o.CurrentBot.BotUuid {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+
+		return
+	}
+
+	if req.Method != "DELETE" {
+		http.Error(w, "Only DELETE method is allowed", http.StatusMethodNotAllowed)
+
+		return
+	}
+
+	var symbol string
+	var operation string
+	pathSuffix := strings.TrimPrefix(req.URL.Path, "/order/cancel/")
+	switch true {
+	case strings.Contains(pathSuffix, "sell/"):
+		symbol = strings.ToUpper(strings.TrimPrefix(pathSuffix, "sell/"))
+		operation = "SELL"
+		break
+	case strings.Contains(pathSuffix, "buy/"):
+		symbol = strings.ToUpper(strings.TrimPrefix(pathSuffix, "buy/"))
+		operation = "BUY"
+		break
+	default:
+		http.Error(w, "Not found", http.StatusNotFound)
+
+		return
+	}
+
+	exchangeOrder := o.OrderRepository.GetBinanceOrder(symbol, operation)
+
+	if exchangeOrder == nil {
+		http.Error(w, "Order is not found", http.StatusNotFound)
+
+		return
+	}
+
+	exchangeOrderApi, err := o.ExchangeAPI.QueryOrder(exchangeOrder.Symbol, exchangeOrder.OrderId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	if !exchangeOrderApi.IsNew() {
+		http.Error(w, fmt.Sprintf("Can't cancel order in status: %s", exchangeOrderApi.Status), http.StatusConflict)
+
+		return
+	}
+
+	canceledOrder, err := o.ExchangeAPI.CancelOrder(exchangeOrderApi.Symbol, exchangeOrderApi.OrderId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+	o.OrderRepository.SetBinanceOrder(canceledOrder)
+
+	_, _ = fmt.Fprintf(w, "OK")
 }
 
 func (o *OrderController) DeleteManualOrderAction(w http.ResponseWriter, req *http.Request) {
@@ -428,7 +504,7 @@ func (o *OrderController) DeleteManualOrderAction(w http.ResponseWriter, req *ht
 	w.Header().Set("Content-Type", "application/json")
 
 	if req.Method == "OPTIONS" {
-		fmt.Fprintf(w, "OK")
+		_, _ = fmt.Fprintf(w, "OK")
 		return
 	}
 
@@ -449,7 +525,7 @@ func (o *OrderController) DeleteManualOrderAction(w http.ResponseWriter, req *ht
 	symbol := strings.TrimPrefix(req.URL.Path, "/order/")
 	o.OrderRepository.DeleteManualOrder(symbol)
 
-	fmt.Fprintf(w, "OK")
+	_, _ = fmt.Fprintf(w, "OK")
 }
 
 func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http.Request) {
@@ -458,7 +534,7 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 	w.Header().Set("Content-Type", "application/json")
 
 	if req.Method == "OPTIONS" {
-		fmt.Fprintf(w, "OK")
+		_, _ = fmt.Fprintf(w, "OK")
 		return
 	}
 
@@ -562,5 +638,5 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 	o.OrderExecutor.SetCancelRequest(tradeLimit.Symbol)
 
 	encoded, _ := json.Marshal(manual)
-	fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprintf(w, string(encoded))
 }

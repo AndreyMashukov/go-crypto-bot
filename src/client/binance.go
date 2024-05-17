@@ -327,7 +327,12 @@ func (b *Binance) GetOpenedOrders() ([]model.BinanceOrder, error) {
 		return list, errors.New(response.Error.GetMessage())
 	}
 
-	return response.Result, nil
+	list := make([]model.BinanceOrder, 0)
+	for _, orderLegacy := range response.Result {
+		list = append(list, orderLegacy.ToModern())
+	}
+
+	return list, nil
 }
 
 func (b *Binance) GetKLines(symbol string, interval string, limit int64) []model.KLineHistory {

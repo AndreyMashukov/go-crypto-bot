@@ -60,10 +60,10 @@ type BinanceOrderResponse struct {
 }
 
 type BinanceOrderListResponse struct {
-	Id     string         `json:"id"`
-	Status int64          `json:"status"`
-	Result []BinanceOrder `json:"result"`
-	Error  *Error         `json:"error"`
+	Id     string               `json:"id"`
+	Status int64                `json:"status"`
+	Result []BinanceOrderLegacy `json:"result"`
+	Error  *Error               `json:"error"`
 }
 
 type RateLimit struct {

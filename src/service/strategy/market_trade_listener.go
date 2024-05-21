@@ -175,8 +175,9 @@ func (m *MarketTradeListener) ListenAll() {
 				log.Printf("Price is invalid for: %s", strings.Join(invalidPriceSymbols, ", "))
 				tickers := m.Binance.GetTickers(invalidPriceSymbols)
 				updated := make([]string, 0)
-				wg = sync.WaitGroup{}
 
+				wg = sync.WaitGroup{}
+				wg.Add(1)
 				for _, ticker := range tickers {
 					wg.Add(1)
 					go func(t model.WSTickerPrice) {
@@ -212,6 +213,7 @@ func (m *MarketTradeListener) ListenAll() {
 						}
 					}(ticker)
 				}
+				wg.Done()
 				wg.Wait()
 
 				if len(updated) > 0 {

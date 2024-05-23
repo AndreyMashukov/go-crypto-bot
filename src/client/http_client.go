@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+type HttpClientInterface interface {
+	Post(url string, message []byte, headers map[string]string) ([]byte, error)
+	Get(url string, headers map[string]string) ([]byte, error)
+}
+
 type HttpClient struct {
 }
 

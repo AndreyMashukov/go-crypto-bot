@@ -6,6 +6,19 @@ import (
 	"sync"
 )
 
+type HttpClientMock struct {
+	mock.Mock
+}
+
+func (h *HttpClientMock) Post(url string, message []byte, headers map[string]string) ([]byte, error) {
+	args := h.Called(url, message, headers)
+	return args.Get(0).([]byte), args.Error(1)
+}
+func (h *HttpClientMock) Get(url string, headers map[string]string) ([]byte, error) {
+	args := h.Called(url, headers)
+	return args.Get(0).([]byte), args.Error(1)
+}
+
 type ExchangeRepositoryMock struct {
 	mock.Mock
 }

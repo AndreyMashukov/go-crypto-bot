@@ -19,8 +19,7 @@ import (
 
 type ByBit struct {
 	CurrentBot *model.Bot
-
-	HttpClient *HttpClient
+	HttpClient HttpClientInterface
 	DSN        string
 	ApiKey     string
 	ApiSecret  string
@@ -419,7 +418,25 @@ func (b *ByBit) LimitOrder(symbol string, quantity float64, price float64, opera
 	}
 
 	if orderId, ok := orderIdRaw.(string); ok {
-		return b.QueryOrder(symbol, orderId)
+		exchangeOrder, err := b.QueryOrder(symbol, orderId)
+		if err == nil {
+			return exchangeOrder, nil
+		}
+
+		return model.BinanceOrder{
+			OrderId:             orderId,
+			Symbol:              symbol,
+			TransactTime:        0,
+			Price:               price,
+			OrigQty:             quantity,
+			ExecutedQty:         0.00,
+			CummulativeQuoteQty: price * quantity,
+			Status:              model.ExchangeOrderStatusNew,
+			Type:                "LIMIT",
+			Side:                operation,
+			WorkingTime:         0,
+			Timestamp:           time.Now().UnixMilli(),
+		}, nil
 	}
 
 	return model.BinanceOrder{}, errors.New("orderId is not string")

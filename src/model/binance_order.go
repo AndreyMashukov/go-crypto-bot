@@ -59,6 +59,8 @@ func (b *BinanceOrderLegacy) ToModern() BinanceOrder {
 	}
 }
 
+const ExchangeOrderStatusNew = "NEW"
+
 type BinanceOrder struct {
 	OrderId             string  `json:"orderId"`
 	Symbol              string  `json:"symbol"`
@@ -87,7 +89,7 @@ func (b *BinanceOrder) GetProfitPercent(currentPrice float64) Percent {
 }
 
 func (b *BinanceOrder) IsNew() bool {
-	return b.Status == "NEW"
+	return b.Status == ExchangeOrderStatusNew
 }
 
 func (b *BinanceOrder) IsExpired() bool {

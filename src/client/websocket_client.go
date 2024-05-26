@@ -95,6 +95,7 @@ func Listen(address string, tradeChannel chan<- []byte, streams []string, connec
 		serialized, _ := json.Marshal(socketRequest)
 		_ = connection.WriteMessage(websocket.TextMessage, serialized)
 	}
+	connection.SetPingHandler(nil)
 
 	return connection
 }
@@ -135,6 +136,7 @@ func ListenByBit(address string, tradeChannel chan<- []byte, streams []string, c
 		serialized, _ := json.Marshal(socketRequest)
 		_ = connection.WriteMessage(websocket.TextMessage, serialized)
 	}
+	connection.SetPingHandler(nil)
 
 	return connection
 }

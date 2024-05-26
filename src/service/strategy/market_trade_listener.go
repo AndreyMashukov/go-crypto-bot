@@ -185,12 +185,27 @@ func (m *MarketTradeListener) ListenAll() {
 						defer wg.Done()
 
 						k := m.ExchangeRepository.GetCurrentKline(t.Symbol)
-						if k != nil && k.IsPriceNotActual() {
+						currentInterval := model.TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute()
+						// Recover Kline
+						if k == nil {
+							k = &model.KLine{
+								Symbol:    t.Symbol,
+								Interval:  "1m",
+								Low:       t.Price,
+								Open:      t.Price,
+								Close:     t.Price,
+								High:      t.Price,
+								Timestamp: model.TimestampMilli(0),
+								UpdatedAt: 0,
+								OpenTime:  model.TimestampMilli(model.TimestampMilli(currentInterval).GetPeriodFromMinute()),
+							}
+						}
+
+						if k.IsPriceNotActual() {
 							k.High = math.Max(t.Price, k.High)
 							k.Low = math.Min(t.Price, k.Low)
 							k.Close = t.Price
 
-							currentInterval := model.TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute()
 							if k.Timestamp.GetPeriodToMinute() < currentInterval {
 								log.Printf(
 									"[%s] New time interval reached %d -> %d, price is unknown",

@@ -161,6 +161,7 @@ func (m *MarketTradeListener) ListenAll() {
 				go func(l model.TradeLimit) {
 					defer wg.Done()
 
+					// todo: If update never received, we lost coin price
 					k := m.ExchangeRepository.GetCurrentKline(l.Symbol)
 					if k != nil && k.IsPriceNotActual() {
 						lock.Lock()

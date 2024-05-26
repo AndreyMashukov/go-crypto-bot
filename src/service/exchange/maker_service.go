@@ -386,16 +386,13 @@ func (m *MakerService) UpdateSwapPairs() {
 }
 
 func (m *MakerService) UpdateLimits() {
-	symbols := make([]string, 0)
-
 	tradeLimits := m.ExchangeRepository.GetTradeLimits()
-	limitMap := make(map[string]model.TradeLimit)
+	symbolMap := make(map[string]model.TradeLimit)
 	for _, tradeLimit := range tradeLimits {
-		symbols = append(symbols, tradeLimit.Symbol)
-		limitMap[tradeLimit.Symbol] = tradeLimit
+		symbolMap[tradeLimit.Symbol] = tradeLimit
 	}
 
-	exchangeInfo, err := m.Binance.GetExchangeData(symbols)
+	exchangeInfo, err := m.Binance.GetExchangeData([]string{})
 
 	if err != nil {
 		log.Printf("Exchange Limits: %s", err.Error())
@@ -403,7 +400,11 @@ func (m *MakerService) UpdateLimits() {
 	}
 
 	for _, exchangeSymbol := range exchangeInfo.Symbols {
-		tradeLimit := limitMap[exchangeSymbol.Symbol]
+		tradeLimit, ok := symbolMap[exchangeSymbol.Symbol]
+		if !ok {
+			continue
+		}
+
 		for _, filter := range exchangeSymbol.Filters {
 			if filter.FilterType == "PRICE_FILTER" {
 				tradeLimit.MinPrice = *filter.MinPrice

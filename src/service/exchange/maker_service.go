@@ -120,6 +120,7 @@ func (m *MakerService) ProcessBuy(tradeLimit model.TradeLimit) {
 		price = m.Formatter.FormatPrice(tradeLimit, manualOrder.Price)
 	}
 
+	// todo: exclude existing exchange order...
 	if lastKline.IsPriceExpired() {
 		log.Printf("[%s] Price is expired", tradeLimit.Symbol)
 		return
@@ -169,6 +170,7 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 		return
 	}
 
+	// todo: exclude existing exchange order...
 	if lastKline.IsPriceExpired() {
 		log.Printf("[%s] Price is expired", tradeLimit.Symbol)
 		return
@@ -229,6 +231,7 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 func (m *MakerService) ProcessSell(tradeLimit model.TradeLimit, openedOrder model.Order) {
 	lastKline := m.ExchangeRepository.GetCurrentKline(tradeLimit.Symbol)
 
+	// todo: exclude existing exchange order...
 	if lastKline == nil {
 		log.Printf("[%s] Last price is unknown... skip!", tradeLimit.Symbol)
 
@@ -252,6 +255,7 @@ func (m *MakerService) ProcessSell(tradeLimit model.TradeLimit, openedOrder mode
 		return
 	}
 
+	// todo: exclude existing exchange order...
 	if lastKline == nil {
 		log.Printf("[%s] No information about current price", tradeLimit.Symbol)
 		return
@@ -259,6 +263,7 @@ func (m *MakerService) ProcessSell(tradeLimit model.TradeLimit, openedOrder mode
 
 	price, priceErr := m.PriceCalculator.CalculateSell(tradeLimit, openedOrder)
 
+	// todo: exclude existing exchange order...
 	if priceErr != nil {
 		log.Printf("[%s] Price error: %s", tradeLimit.Symbol, priceErr.Error())
 

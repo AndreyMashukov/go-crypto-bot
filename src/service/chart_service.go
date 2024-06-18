@@ -7,6 +7,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -24,8 +25,6 @@ type ChartResult struct {
 }
 
 func (e *ChartService) GetCharts(symbolFilter []string) []map[string][]any {
-	orders := e.OrderRepository.GetList()
-	orderMap := make(map[string][]model.Order)
 	symbols := make([]string, 0)
 
 	tradeLimits := e.ExchangeRepository.GetTradeLimits()
@@ -38,23 +37,15 @@ func (e *ChartService) GetCharts(symbolFilter []string) []map[string][]any {
 		symbols = append(symbols, tradeLimit.Symbol)
 	}
 
-	for _, order := range orders {
-		_, exist := orderMap[order.Symbol]
-		if !exist {
-			orderMap[order.Symbol] = make([]model.Order, 0)
-		}
-		orderMap[order.Symbol] = append(orderMap[order.Symbol], order)
-	}
-
 	resultChannel := make(chan ChartResult)
 
 	for _, symbol := range symbols {
-		go func(symbol string, orderMap map[string][]model.Order) {
+		go func(symbol string) {
 			resultChannel <- ChartResult{
 				Symbol: symbol,
-				Charts: e.ProcessSymbol(symbol, orderMap),
+				Charts: e.ProcessSymbol(symbol),
 			}
-		}(symbol, orderMap)
+		}(symbol)
 	}
 
 	charts := make([]map[string][]any, 0)
@@ -78,10 +69,24 @@ func (e *ChartService) GetCharts(symbolFilter []string) []map[string][]any {
 	return charts
 }
 
-func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.Order) map[string][]any {
-	list := make(map[string][]any, 0)
-	symbolOrders := orderMap[symbol]
+func (e *ChartService) ProcessSymbol(symbol string) map[string][]any {
 	kLines := e.ExchangeRepository.KLineList(symbol, true, 200)
+
+	symbolOrders := make([]model.Order, 0)
+	orderMap := sync.Map{}
+
+	if len(kLines) > 1 {
+		from := time.UnixMilli(kLines[0].Timestamp.GetPeriodFromMinute())
+		to := time.UnixMilli(kLines[len(kLines)-1].Timestamp.GetPeriodToMinute())
+
+		// todo: use cache for history list
+		symbolOrders = e.OrderRepository.GetHistoryList(symbol, from, to)
+		for _, symbolOrder := range symbolOrders {
+			date, _ := time.Parse("2006-01-02 15:04:05", symbolOrder.CreatedAt)
+			orderTimestamp := model.TimestampMilli(date.UnixMilli()).GetPeriodToMinute() // convert date to timestamp
+			orderMap.Store(orderTimestamp, symbolOrder)
+		}
+	}
 
 	tradeLimit := e.ExchangeRepository.GetTradeLimitCached(symbol)
 	cummulativeTradeQuantity := 0.00
@@ -93,7 +98,9 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 		statMap.Store(cKLine.Timestamp.GetPeriodToMinute(), cStat)
 	}
 
-	for kLineIndex, kLine := range kLines {
+	list := make(map[string][]any, 0)
+
+	for _, kLine := range kLines {
 		klinePoint := model.FinancialPoint{
 			XAxis: kLine.Timestamp.GetPeriodToMinute(),
 			High:  kLine.High,
@@ -246,12 +253,8 @@ func (e *ChartService) ProcessSymbol(symbol string, orderMap map[string][]model.
 			YAxis: 0,
 		}
 
-		// todo: rewrite to sync-Map in future, increase speed and reduce cyclomatic
-		for _, symbolOrder := range symbolOrders {
-			date, _ := time.Parse("2006-01-02 15:04:05", symbolOrder.CreatedAt)
-			orderTimestamp := date.UnixMilli() // convert date to timestamp
-
-			if orderTimestamp >= kLine.Timestamp.GetPeriodToMinute() && len(kLines) > kLineIndex+1 && orderTimestamp < kLines[kLineIndex+1].Timestamp.Value() {
+		if symbolOrderRaw, ok := orderMap.Load(kLine.Timestamp.GetPeriodToMinute()); ok {
+			if symbolOrder, ok := symbolOrderRaw.(model.Order); ok {
 				if strings.ToUpper(symbolOrder.Operation) == "BUY" {
 					buyPoint.YAxis = symbolOrder.Price
 				} else {

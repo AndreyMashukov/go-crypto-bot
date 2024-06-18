@@ -396,6 +396,92 @@ func (repo *OrderRepository) GetTrades() []model.OrderTrade {
 	return list
 }
 
+func (repo *OrderRepository) GetHistoryList(symbol string, from time.Time, to time.Time) []model.Order {
+	res, err := repo.DB.Query(`
+		SELECT
+		    o.id as Id, 
+			o.symbol as Symbol, 
+			o.quantity as Quantity,
+			o.executed_quantity as ExecutedQuantity,
+			o.price as Price,
+			o.created_at as CreatedAt,
+			o.operation as Operation,
+			o.status as Status,
+			o.sell_volume as SellVolume,
+			o.buy_volume as BuyVolume,
+			o.sma_value as SmaValue,
+			o.external_id as ExternalId,
+			o.closes_order as ClosesOrder,
+			o.used_extra_budget as UsedExtraBudget,
+			o.commission as Commission,
+			o.commission_asset as CommissionAsset,
+			SUM(IFNULL(sell.executed_quantity, 0)) as SoldQuantity,
+			o.swap as Swap,
+			o.extra_charge_options as ExtraChargeOptions,
+			o.profit_options as ProfitOptions,
+    		IFNULL(SUM(sa.end_quantity - sa.start_quantity), 0) as SwapQuantity,
+    		COUNT(extra.id) as ExtraOrdersCount,
+    		o.exchange as Exchange
+		FROM orders o 
+		LEFT JOIN orders sell ON o.id = sell.closes_order AND sell.operation = 'SELL'
+     	LEFT JOIN orders extra ON o.id = extra.closes_order AND extra.operation = 'BUY'
+		LEFT JOIN swap_action sa on o.id = sa.order_id AND sa.status = ?
+		WHERE o.bot_id = ? AND o.exchange = ? AND o.symbol = ? AND o.created_at >= ? AND o.created_at <= ?
+		GROUP BY o.id
+	`,
+		"success",
+		repo.CurrentBot.Id,
+		repo.CurrentBot.Exchange,
+		symbol,
+		from.Format("2006-01-02 15:04:05"),
+		to.Format("2006-01-02 15:04:05"),
+	)
+	defer res.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	list := make([]model.Order, 0)
+
+	for res.Next() {
+		var order model.Order
+		err := res.Scan(
+			&order.Id,
+			&order.Symbol,
+			&order.Quantity,
+			&order.ExecutedQuantity,
+			&order.Price,
+			&order.CreatedAt,
+			&order.Operation,
+			&order.Status,
+			&order.SellVolume,
+			&order.BuyVolume,
+			&order.SmaValue,
+			&order.ExternalId,
+			&order.ClosesOrder,
+			&order.UsedExtraBudget,
+			&order.Commission,
+			&order.CommissionAsset,
+			&order.SoldQuantity,
+			&order.Swap,
+			&order.ExtraChargeOptions,
+			&order.ProfitOptions,
+			&order.SwapQuantity,
+			&order.ExtraOrdersCount,
+			&order.Exchange,
+		)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		list = append(list, order)
+	}
+
+	return list
+}
+
 func (repo *OrderRepository) GetList() []model.Order {
 	res, err := repo.DB.Query(`
 		SELECT

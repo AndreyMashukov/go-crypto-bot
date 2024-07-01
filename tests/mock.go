@@ -379,6 +379,15 @@ func (e *ExchangeTradeInfoMock) GetInterpolation(kLine model.KLine) (model.Inter
 	args := e.Called(kLine)
 	return args.Get(0).(model.Interpolation), args.Error(1)
 }
+func (e *ExchangeTradeInfoMock) GetTradeLimitCached(symbol string) *model.TradeLimit {
+	args := e.Called(symbol)
+	limit := args.Get(0)
+	if limit == nil {
+		return nil
+	}
+
+	return limit.(*model.TradeLimit)
+}
 
 type PriceCalculatorMock struct {
 	mock.Mock

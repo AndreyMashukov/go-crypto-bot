@@ -6,6 +6,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"strconv"
+	"strings"
 )
 
 type TradeFilterServiceInterface interface {
@@ -116,6 +117,37 @@ func (t *TradeFilterService) IsValueMatched(filter model.TradeFilter) bool {
 			percent := model.Percent(t.Formatter.ToFixed((t.Formatter.ComparePercentage(kLine.Open, kLine.Close) - 100.00).Value(), 2))
 			matched = t.CompareFloat(percent.Value(), filter)
 		}
+		break
+	case model.TradeFilterParameterSentimentScore:
+		tradeLimit := t.ExchangeTradeInfo.GetTradeLimitCached(filter.Symbol)
+		if tradeLimit != nil && tradeLimit.SentimentScore != nil {
+			score := *tradeLimit.SentimentScore
+			matched = t.CompareFloat(score, filter)
+		}
+
+		break
+	case model.TradeFilterParameterSentimentLabel:
+		tradeLimit := t.ExchangeTradeInfo.GetTradeLimitCached(filter.Symbol)
+		if tradeLimit != nil && tradeLimit.SentimentLabel != nil {
+			label := *tradeLimit.SentimentLabel
+			matched = t.CompareString(label, filter)
+		}
+		break
+	}
+
+	return matched
+}
+
+func (t *TradeFilterService) CompareString(parameterValue string, filter model.TradeFilter) bool {
+	matched := false
+
+	stringValue := strings.ToUpper(filter.Value)
+	switch filter.Condition {
+	case model.TradeFilterConditionEq:
+		matched = stringValue == strings.ToUpper(parameterValue)
+		break
+	case model.TradeFilterConditionNeq:
+		matched = stringValue != strings.ToUpper(parameterValue)
 		break
 	}
 

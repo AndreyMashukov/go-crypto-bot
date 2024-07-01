@@ -417,3 +417,43 @@ func TestTradeFilterMatchingHasSignal(t *testing.T) {
 	}
 	assertion.True(filterService.CanBuy(tradeLimit))
 }
+
+func TestTradeFilterMatchingSentimentData(t *testing.T) {
+	assertion := assert.New(t)
+
+	exchangeRepoMock := new(ExchangeTradeInfoMock)
+
+	filterService := exchange.TradeFilterService{
+		ExchangeTradeInfo: exchangeRepoMock,
+	}
+
+	sentimentScore := 0.34
+	sentimentLabel := "BULLISH"
+
+	exchangeRepoMock.On("GetTradeLimitCached", "BTCUSDT").Return(&model.TradeLimit{
+		Symbol:         "BTCUSDT",
+		SentimentScore: &sentimentScore,
+		SentimentLabel: &sentimentLabel,
+	})
+	tradeLimit := model.TradeLimit{
+		TradeFiltersBuy: model.TradeFilters{
+			{
+				Symbol:    "BTCUSDT",
+				Parameter: model.TradeFilterParameterSentimentLabel,
+				Condition: model.TradeFilterConditionEq,
+				Value:     "BULLISH",
+				Type:      model.TradeFilterConditionTypeAnd,
+				Children:  make(model.TradeFilters, 0),
+			},
+			{
+				Symbol:    "BTCUSDT",
+				Parameter: model.TradeFilterParameterSentimentScore,
+				Condition: model.TradeFilterConditionGte,
+				Value:     "0.34",
+				Type:      model.TradeFilterConditionTypeAnd,
+				Children:  make(model.TradeFilters, 0),
+			},
+		},
+	}
+	assertion.True(filterService.CanBuy(tradeLimit))
+}

@@ -9,6 +9,8 @@ import (
 const TradeFilterConditionTypeAnd = "and"
 const TradeFilterConditionTypeOr = "or"
 
+const TradeFilterParameterSentimentLabel = "sentiment_label"
+const TradeFilterParameterSentimentScore = "sentiment_score"
 const TradeFilterParameterPrice = "price"
 const TradeFilterParameterDailyPercent = "daily_percent"
 const TradeFilterParameterPositionTimeMinutes = "position_time_minutes"

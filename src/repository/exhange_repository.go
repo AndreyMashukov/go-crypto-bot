@@ -35,6 +35,7 @@ type ExchangeTradeInfoInterface interface {
 	GetPeriodMinPrice(symbol string, period int64) float64
 	GetPredict(symbol string) (float64, error)
 	GetInterpolation(kLine model.KLine) (model.Interpolation, error)
+	GetTradeLimitCached(symbol string) *model.TradeLimit
 }
 
 type BaseTradeStorageInterface interface {
@@ -122,7 +123,9 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 		    tl.profit_options as ProfitOptions,
 		    tl.trade_filters_buy as TradeFiltersBuy,
 		    tl.trade_filters_sell as TradeFiltersSell,
-		    tl.trade_filters_extra_charge as TradeFiltersExtraCharge
+		    tl.trade_filters_extra_charge as TradeFiltersExtraCharge,
+		    tl.sentiment_label as SentimentLabel,
+		    tl.sentiment_score as SentimentScore
 		FROM trade_limit tl WHERE tl.bot_id = ?
 	`, e.CurrentBot.Id)
 	defer res.Close()
@@ -153,6 +156,8 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 			&tradeLimit.TradeFiltersBuy,
 			&tradeLimit.TradeFiltersSell,
 			&tradeLimit.TradeFiltersExtraCharge,
+			&tradeLimit.SentimentLabel,
+			&tradeLimit.SentimentScore,
 		)
 
 		if err != nil {
@@ -185,7 +190,9 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		    tl.profit_options as ProfitOptions,
 		    tl.trade_filters_buy as TradeFiltersBuy,
 		    tl.trade_filters_sell as TradeFiltersSell,
-		    tl.trade_filters_extra_charge as TradeFiltersExtraCharge
+		    tl.trade_filters_extra_charge as TradeFiltersExtraCharge,
+		    tl.sentiment_label as SentimentLabel,
+		    tl.sentiment_score as SentimentScore
 		FROM trade_limit tl
 		WHERE tl.symbol = ? AND tl.bot_id = ?
 	`,
@@ -209,6 +216,8 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		&tradeLimit.TradeFiltersBuy,
 		&tradeLimit.TradeFiltersSell,
 		&tradeLimit.TradeFiltersExtraCharge,
+		&tradeLimit.SentimentLabel,
+		&tradeLimit.SentimentScore,
 	)
 	if err != nil {
 		return tradeLimit, err
@@ -236,6 +245,8 @@ func (e *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64, e
 		    trade_filters_buy = ?,
 		    trade_filters_sell = ?,
 		    trade_filters_extra_charge = ?,
+		    sentiment_label = ?,
+		    sentiment_score = ?,
 		    bot_id = ?
 	`,
 		limit.Symbol,
@@ -254,6 +265,8 @@ func (e *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64, e
 		limit.TradeFiltersBuy,
 		limit.TradeFiltersSell,
 		limit.TradeFiltersExtraCharge,
+		limit.SentimentLabel,
+		limit.SentimentScore,
 		e.CurrentBot.Id,
 	)
 
@@ -647,7 +660,9 @@ func (e *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 		    tl.profit_options = ?,
 		    tl.trade_filters_buy = ?,
 		    tl.trade_filters_sell = ?,
-		    tl.trade_filters_extra_charge = ?
+		    tl.trade_filters_extra_charge = ?,
+		    tl.sentiment_label = ?,
+		    tl.sentiment_score = ?
 		WHERE tl.id = ?
 	`,
 		limit.Symbol,
@@ -666,6 +681,8 @@ func (e *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 		limit.TradeFiltersBuy,
 		limit.TradeFiltersSell,
 		limit.TradeFiltersExtraCharge,
+		limit.SentimentLabel,
+		limit.SentimentScore,
 		limit.Id,
 	)
 

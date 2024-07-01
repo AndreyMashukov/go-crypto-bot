@@ -26,6 +26,11 @@ type TradeLimitInterface interface {
 	GetSymbol() string
 }
 
+type SentimentData struct {
+	Label *string  `json:"label"`
+	Score *float64 `json:"score"`
+}
+
 type TradeLimit struct {
 	Id                           int64              `json:"id"`
 	Symbol                       string             `json:"symbol"`
@@ -44,6 +49,8 @@ type TradeLimit struct {
 	TradeFiltersBuy              TradeFilters       `json:"tradeFiltersBuy"`
 	TradeFiltersSell             TradeFilters       `json:"tradeFiltersSell"`
 	TradeFiltersExtraCharge      TradeFilters       `json:"tradeFiltersExtraCharge"`
+	SentimentLabel               *string            `json:"sentimentLabel"`
+	SentimentScore               *float64           `json:"sentimentScore"`
 }
 
 func (t TradeLimit) GetMinPrice() float64 {

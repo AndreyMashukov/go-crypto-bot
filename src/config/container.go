@@ -625,6 +625,7 @@ func (c *Container) StartHttpServer() {
 	http.HandleFunc("/trade/limit/create", c.TradeController.CreateTradeLimitAction)
 	http.HandleFunc("/trade/limit/update", c.TradeController.UpdateTradeLimitAction)
 	http.HandleFunc("/trade/limit/switch/", c.TradeController.SwitchTradeLimitAction)
+	http.HandleFunc("/trade/limit/sentiment/", c.TradeController.PatchSentimentAction)
 	http.HandleFunc("/health/check", c.BotController.GetHealthCheckAction)
 	http.HandleFunc("/bot/update", c.BotController.PutConfigAction)
 

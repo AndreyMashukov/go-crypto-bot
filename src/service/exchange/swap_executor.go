@@ -8,9 +8,15 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"log"
+	"math"
 	"strings"
 	"time"
 )
+
+const SwapFirstAmendmentSteps = 5
+const SwapSecondAmendmentSteps = 10
+const SwapThirdAmendmentSteps = 15
+const SwapStepCommission = 0.002
 
 type SwapExecutorInterface interface {
 	Execute(order model.Order)
@@ -105,11 +111,15 @@ func (s *SwapExecutor) ExecuteSwapOne(swapAction *model.SwapAction, order model.
 	var swapOneOrder *model.BinanceOrder = nil
 
 	if swapAction.SwapOneExternalId == nil {
+		swapPrice := swapAction.SwapOnePrice
 		swapPair, err := s.SwapRepository.GetSwapPairBySymbol(swapAction.SwapOneSymbol)
+		// Price can grow before we start processing, take max price for swap
+		swapPrice = math.Max(swapPrice, swapPair.SellPrice-(swapPair.MinPrice*SwapFirstAmendmentSteps))
+
 		binanceOrder, err := s.Binance.LimitOrder(
 			swapAction.SwapOneSymbol,
 			s.Formatter.FormatQuantity(swapPair, swapAction.StartQuantity),
-			s.Formatter.FormatPrice(swapPair, swapAction.SwapOnePrice),
+			s.Formatter.FormatPrice(swapPair, swapPrice),
 			"SELL",
 			"GTC",
 		)
@@ -203,6 +213,9 @@ func (s *SwapExecutor) ExecuteSwapOne(swapAction *model.SwapAction, order model.
 			nowTimestamp := time.Now().Unix()
 			swapAction.SwapOneTimestamp = &nowTimestamp
 			swapAction.SwapOneExternalStatus = &binanceOrder.Status
+			if binanceOrder.IsFilled() {
+				swapAction.SwapOnePrice = binanceOrder.Price
+			}
 			_ = s.SwapRepository.UpdateSwapAction(*swapAction)
 
 			if binanceOrder.IsFilled() {
@@ -285,24 +298,32 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 			swapAction.SwapTwoSymbol,
 		)
 
+		swapPrice := swapAction.SwapTwoPrice
 		swapPair, err := s.SwapRepository.GetSwapPairBySymbol(swapAction.SwapTwoSymbol)
+
 		var binanceOrder model.BinanceOrder
 
 		if swapChain.IsSSB() {
+			// Price can grow before we start processing, take max price for swap
+			swapPrice = math.Max(swapPrice, swapPair.SellPrice-(swapPair.MinPrice*SwapSecondAmendmentSteps))
+
 			binanceOrder, err = s.Binance.LimitOrder(
 				swapAction.SwapTwoSymbol,
 				s.Formatter.FormatQuantity(swapPair, quantity),
-				s.Formatter.FormatPrice(swapPair, swapAction.SwapTwoPrice),
+				s.Formatter.FormatPrice(swapPair, swapPrice),
 				"SELL",
 				"GTC",
 			)
 		}
 
 		if swapChain.IsSBB() || swapChain.IsSBS() {
+			// Price can fall down before we start processing, take min price for swap
+			swapPrice = math.Min(swapPrice, swapPair.BuyPrice+(swapPair.MinPrice*SwapSecondAmendmentSteps))
+
 			binanceOrder, err = s.Binance.LimitOrder(
 				swapAction.SwapTwoSymbol,
-				s.Formatter.FormatQuantity(swapPair, quantity/swapAction.SwapTwoPrice),
-				s.Formatter.FormatPrice(swapPair, swapAction.SwapTwoPrice),
+				s.Formatter.FormatQuantity(swapPair, quantity/swapPrice),
+				s.Formatter.FormatPrice(swapPair, swapPrice),
 				"BUY",
 				"GTC",
 			)
@@ -382,6 +403,9 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 			nowTimestamp := time.Now().Unix()
 			swapAction.SwapTwoTimestamp = &nowTimestamp
 			swapAction.SwapTwoExternalStatus = &binanceOrder.Status
+			if binanceOrder.IsFilled() {
+				swapAction.SwapTwoPrice = binanceOrder.Price
+			}
 			_ = s.SwapRepository.UpdateSwapAction(*swapAction)
 
 			if binanceOrder.IsFilled() {
@@ -450,24 +474,32 @@ func (s *SwapExecutor) ExecuteSwapThree(
 			swapAction.SwapThreeSymbol,
 		)
 
+		swapPrice := swapAction.SwapThreePrice
 		swapPair, err := s.SwapRepository.GetSwapPairBySymbol(swapAction.SwapThreeSymbol)
+
 		var binanceOrder model.BinanceOrder
 
 		if swapChain.IsSSB() || swapChain.IsSBB() {
+			// Price can fall down before we start processing, take min price for swap
+			swapPrice = math.Min(swapPrice, swapPair.BuyPrice+(swapPair.MinPrice*SwapThirdAmendmentSteps))
+
 			binanceOrder, err = s.Binance.LimitOrder(
 				swapAction.SwapThreeSymbol,
-				s.Formatter.FormatQuantity(swapPair, quantity/swapAction.SwapThreePrice),
-				s.Formatter.FormatPrice(swapPair, swapAction.SwapThreePrice),
+				s.Formatter.FormatQuantity(swapPair, quantity/swapPrice),
+				s.Formatter.FormatPrice(swapPair, swapPrice),
 				"BUY",
 				"GTC",
 			)
 		}
 
 		if swapChain.IsSBS() {
+			// Price can grow before we start processing, take max price for swap
+			swapPrice = math.Max(swapPrice, swapPair.SellPrice-(swapPair.MinPrice*SwapThirdAmendmentSteps))
+
 			binanceOrder, err = s.Binance.LimitOrder(
 				swapAction.SwapThreeSymbol,
 				s.Formatter.FormatQuantity(swapPair, quantity),
-				s.Formatter.FormatPrice(swapPair, swapAction.SwapThreePrice),
+				s.Formatter.FormatPrice(swapPair, swapPrice),
 				"SELL",
 				"GTC",
 			)
@@ -548,6 +580,9 @@ func (s *SwapExecutor) ExecuteSwapThree(
 			nowTimestamp := time.Now().Unix()
 			swapAction.SwapThreeTimestamp = &nowTimestamp
 			swapAction.SwapThreeExternalStatus = &binanceOrder.Status
+			if binanceOrder.IsFilled() {
+				swapAction.SwapThreePrice = binanceOrder.Price
+			}
 			_ = s.SwapRepository.UpdateSwapAction(*swapAction)
 
 			if binanceOrder.IsFilled() {

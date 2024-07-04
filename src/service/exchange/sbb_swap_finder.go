@@ -35,7 +35,7 @@ func (s *SBBSwapFinder) Find(asset string) model.BBSArbitrageChain {
 
 		// Do not validate first order for gainer/looser and bull/bear
 
-		option0Price := option0.SellPrice - (option0.MinPrice * 2)
+		option0Price := option0.SellPrice - (option0.MinPrice * SwapFirstAmendmentSteps)
 		option0Price = s.Formatter.FormatPrice(option0, option0Price)
 		//log.Printf("[%s] formatted [3] %f -> %f", option0.Symbol, option0.SellPrice, option0Price)
 		sell0Quantity := initialBalance //s.Formatter.FormatQuantity(option0, initialBalance)
@@ -49,7 +49,7 @@ func (s *SBBSwapFinder) Find(asset string) model.BBSArbitrageChain {
 			BaseQuantity:  sell0Quantity,
 			QuoteQuantity: 0.00,
 			Price:         option0Price,
-			Balance:       (sell0Quantity * option0Price) - (sell0Quantity*option0Price)*0.002,
+			Balance:       (sell0Quantity * option0Price) - (sell0Quantity*option0Price)*SwapStepCommission,
 			Level:         0,
 			Transitions:   make([]model.SwapTransition, 0),
 		}
@@ -68,7 +68,7 @@ func (s *SBBSwapFinder) Find(asset string) model.BBSArbitrageChain {
 				continue
 			}
 
-			option1Price := option1.BuyPrice + (option1.MinPrice * 2)
+			option1Price := option1.BuyPrice + (option1.MinPrice * SwapSecondAmendmentSteps)
 			option1Price = s.Formatter.FormatPrice(option1, option1Price)
 			//log.Printf("[%s] formatted [4] %f -> %f", option1.Symbol, option1.BuyPrice, option1Price)
 			buy0Quantity := sell0.Balance //s.Formatter.FormatQuantity(option1, sell0.Balance)
@@ -82,7 +82,7 @@ func (s *SBBSwapFinder) Find(asset string) model.BBSArbitrageChain {
 				BaseQuantity:  buy0Quantity,
 				QuoteQuantity: 0.00,
 				Price:         option1Price,
-				Balance:       (buy0Quantity / option1Price) - (buy0Quantity/option1Price)*0.002,
+				Balance:       (buy0Quantity / option1Price) - (buy0Quantity/option1Price)*SwapStepCommission,
 				Level:         1,
 				Transitions:   make([]model.SwapTransition, 0),
 			}
@@ -101,12 +101,12 @@ func (s *SBBSwapFinder) Find(asset string) model.BBSArbitrageChain {
 					continue
 				}
 
-				option2Price := option2.BuyPrice + (option2.MinPrice * 10)
+				option2Price := option2.BuyPrice + (option2.MinPrice * SwapThirdAmendmentSteps)
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)
 				//log.Printf("[%s] formatted [5] %f -> %f", option2.Symbol, option2.BuyPrice, option2Price)
 				buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option2, buy0.Balance)
 
-				sellBalance := (buy1Quantity / option2Price) - (buy1Quantity/option2Price)*0.002
+				sellBalance := (buy1Quantity / option2Price) - (buy1Quantity/option2Price)*SwapStepCommission
 
 				buy1 := model.SwapTransition{
 					Symbol:        option2.Symbol,

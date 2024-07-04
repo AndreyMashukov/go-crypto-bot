@@ -53,17 +53,17 @@ func TestSwapSellBuySell(t *testing.T) {
 
 	chain := sbsFinder.Find("ETH").BestChain
 	assertion := assert.New(t)
-	assertion.Equal(3.5, chain.Percent.Value())
+	assertion.Equal(2.68, chain.Percent.Value())
 	assertion.Equal("SBS", chain.Type)
 	assertion.Equal("ETH sell-> BTC buy-> XRP sell-> ETH", chain.Title)
 	assertion.Equal("ETHBTC", chain.SwapOne.Symbol)
-	assertion.Equal(0.05358, chain.SwapOne.Price)
+	assertion.Equal(0.05355, chain.SwapOne.Price)
 	assertion.Equal("XRPBTC", chain.SwapTwo.Symbol)
-	assertion.Equal(0.00001428, chain.SwapTwo.Price)
+	assertion.Equal(0.00001436, chain.SwapTwo.Price)
 	assertion.Equal("XRPETH", chain.SwapThree.Symbol)
-	assertion.Equal(0.0002775, chain.SwapThree.Price)
+	assertion.Equal(0.000277, chain.SwapThree.Price)
 	// base amount is 100
-	assertion.Greater(100*chain.SwapOne.Price/chain.SwapTwo.Price*chain.SwapThree.Price, 104.10)
+	assertion.Greater(100*chain.SwapOne.Price/chain.SwapTwo.Price*chain.SwapThree.Price, 103.29)
 
 	// validate
 	swapRepoMock := new(SwapRepositoryMock)
@@ -204,13 +204,13 @@ func TestSwapSellBuySell(t *testing.T) {
 	}, nil)
 	swapRepoMock.On("GetSwapChainById", swapChain.Id).Return(swapChain, nil)
 
-	binanceMock.On("LimitOrder", "ETHBTC", 100.00, 0.05358, "SELL", "GTC").Return(model.BinanceOrder{
+	binanceMock.On("LimitOrder", "ETHBTC", 100.00, 0.05355, "SELL", "GTC").Return(model.BinanceOrder{
 		Status:              "NEW",
 		OrderId:             "12",
 		Symbol:              "ETHBTC",
 		ExecutedQty:         0.00,
 		OrigQty:             100.00,
-		Price:               0.05358,
+		Price:               0.05355,
 		Side:                "SELL",
 		CummulativeQuoteQty: 0.00,
 	}, nil)
@@ -220,7 +220,7 @@ func TestSwapSellBuySell(t *testing.T) {
 		ExecutedQty:         80.00,
 		OrigQty:             100.00,
 		Symbol:              "ETHBTC",
-		Price:               0.05358,
+		Price:               0.05355,
 		Side:                "SELL",
 		CummulativeQuoteQty: 80.00 * 0.05358,
 	}, nil)
@@ -230,21 +230,21 @@ func TestSwapSellBuySell(t *testing.T) {
 		ExecutedQty:         100.00,
 		OrigQty:             100.00,
 		Symbol:              "ETHBTC",
-		Price:               0.05358,
+		Price:               0.05355,
 		Side:                "SELL",
-		CummulativeQuoteQty: 100.00 * 0.05358,
+		CummulativeQuoteQty: 100.00 * 0.05355,
 	}, nil)
 
 	btcInitialBalance := 1.3455
-	balanceServiceMock.On("GetAssetBalance", "BTC", false).Return(5.358+btcInitialBalance, nil)
+	balanceServiceMock.On("GetAssetBalance", "BTC", false).Return(5.355+btcInitialBalance, nil)
 
-	binanceMock.On("LimitOrder", "XRPBTC", 375210.00, 0.00001428, "BUY", "GTC").Return(model.BinanceOrder{
+	binanceMock.On("LimitOrder", "XRPBTC", 372910.00, 0.00001436, "BUY", "GTC").Return(model.BinanceOrder{
 		Status:              "NEW",
 		OrderId:             "13",
 		Symbol:              "XRPBTC",
 		ExecutedQty:         0.00,
-		OrigQty:             375210.00,
-		Price:               0.00001428,
+		OrigQty:             372910.00,
+		Price:               0.00001436,
 		Side:                "SELL",
 		CummulativeQuoteQty: 0.00,
 	}, nil)
@@ -253,32 +253,32 @@ func TestSwapSellBuySell(t *testing.T) {
 		OrderId:             "13",
 		Symbol:              "XRPBTC",
 		ExecutedQty:         125210.00,
-		OrigQty:             375210.00,
-		Price:               0.00001428,
+		OrigQty:             372910.00,
+		Price:               0.00001436,
 		Side:                "SELL",
-		CummulativeQuoteQty: 0.00001428 * 125210.00,
+		CummulativeQuoteQty: 0.00001436 * 125210.00,
 	}, nil)
 	binanceMock.On("QueryOrder", "XRPBTC", "13").Times(2).Return(model.BinanceOrder{
 		Status:              "FILLED",
 		OrderId:             "13",
 		Symbol:              "XRPBTC",
-		ExecutedQty:         375210.00,
-		OrigQty:             375210.00,
-		Price:               0.00001428,
+		ExecutedQty:         372910.00,
+		OrigQty:             372910.00,
+		Price:               0.00001436,
 		Side:                "SELL",
-		CummulativeQuoteQty: 0.00001428 * 375210.00,
+		CummulativeQuoteQty: 0.00001436 * 372910.00,
 	}, nil)
 
 	xrpInitialBalance := 4000.00
-	balanceServiceMock.On("GetAssetBalance", "XRP", false).Return(375212.00+xrpInitialBalance, nil)
+	balanceServiceMock.On("GetAssetBalance", "XRP", false).Return(372910.00+xrpInitialBalance, nil)
 
-	binanceMock.On("LimitOrder", "XRPETH", 375210.00, 0.0002775, "SELL", "GTC").Return(model.BinanceOrder{
+	binanceMock.On("LimitOrder", "XRPETH", 372910.00, 0.000277, "SELL", "GTC").Return(model.BinanceOrder{
 		Status:              "NEW",
 		OrderId:             "14",
 		Symbol:              "XRPETH",
 		ExecutedQty:         0.00,
-		OrigQty:             375210.00,
-		Price:               0.0002775,
+		OrigQty:             372910.00,
+		Price:               0.000277,
 		Side:                "SELL",
 		CummulativeQuoteQty: 0.00,
 	}, nil)
@@ -287,27 +287,27 @@ func TestSwapSellBuySell(t *testing.T) {
 		OrderId:             "14",
 		Symbol:              "XRPETH",
 		ExecutedQty:         125210.00,
-		OrigQty:             375210.00,
-		Price:               0.0002775,
+		OrigQty:             372910.00,
+		Price:               0.000277,
 		Side:                "SELL",
-		CummulativeQuoteQty: 0.0002775 * 125210.00,
+		CummulativeQuoteQty: 0.000277 * 125210.00,
 	}, nil)
 	binanceMock.On("QueryOrder", "XRPETH", "14").Times(2).Return(model.BinanceOrder{
 		Status:              "FILLED",
 		OrderId:             "14",
 		Symbol:              "XRPETH",
-		ExecutedQty:         375210.00,
-		OrigQty:             375210.00,
-		Price:               0.0002775,
+		ExecutedQty:         372910.00,
+		OrigQty:             372910.00,
+		Price:               0.000277,
 		Side:                "SELL",
-		CummulativeQuoteQty: 0.0002775 * 375210.00,
+		CummulativeQuoteQty: 0.000277 * 372910.00,
 	}, nil)
 
 	orderRepositoryMock.On("Update", mock.Anything).Once().Return(nil)
 	swapRepoMock.On("UpdateSwapAction", mock.Anything).Return(nil)
 	balanceServiceMock.On("InvalidateBalanceCache", "ETH").Once()
 	ethInitialBalance := 10.99
-	balanceServiceMock.On("GetAssetBalance", "ETH", false).Times(2).Return(104.00+ethInitialBalance, nil)
+	balanceServiceMock.On("GetAssetBalance", "ETH", false).Times(2).Return(103.29607+ethInitialBalance, nil)
 
 	timeServiceMock := new(TimeServiceMock)
 	timeServiceMock.On("WaitSeconds", int64(5)).Times(3)
@@ -325,14 +325,17 @@ func TestSwapSellBuySell(t *testing.T) {
 
 	executor.Execute(order)
 
-	assertion.Equal(104.120775, *swapRepoMock.swapAction.EndQuantity)
+	assertion.Equal(103.29607, *swapRepoMock.swapAction.EndQuantity)
 	assertion.Equal("12", *swapRepoMock.swapAction.SwapOneExternalId)
+	assertion.Equal(0.05355, swapRepoMock.swapAction.SwapOnePrice)
 	assertion.Equal("ETHBTC", swapRepoMock.swapAction.SwapOneSymbol)
 	assertion.Equal("FILLED", *swapRepoMock.swapAction.SwapOneExternalStatus)
 	assertion.Equal("13", *swapRepoMock.swapAction.SwapTwoExternalId)
+	assertion.Equal(0.00001436, swapRepoMock.swapAction.SwapTwoPrice)
 	assertion.Equal("XRPBTC", swapRepoMock.swapAction.SwapTwoSymbol)
 	assertion.Equal("FILLED", *swapRepoMock.swapAction.SwapTwoExternalStatus)
 	assertion.Equal("14", *swapRepoMock.swapAction.SwapThreeExternalId)
+	assertion.Equal(0.000277, swapRepoMock.swapAction.SwapThreePrice)
 	assertion.Equal("XRPETH", swapRepoMock.swapAction.SwapThreeSymbol)
 	assertion.Equal("FILLED", *swapRepoMock.swapAction.SwapThreeExternalStatus)
 }
@@ -376,17 +379,17 @@ func TestSwapSellBuySellForceSwap(t *testing.T) {
 
 	chain := sbsFinder.Find("ETH").BestChain
 	assertion := assert.New(t)
-	assertion.Equal(3.5, chain.Percent.Value())
+	assertion.Equal(2.68, chain.Percent.Value())
 	assertion.Equal("SBS", chain.Type)
 	assertion.Equal("ETH sell-> BTC buy-> XRP sell-> ETH", chain.Title)
 	assertion.Equal("ETHBTC", chain.SwapOne.Symbol)
-	assertion.Equal(0.05358, chain.SwapOne.Price)
+	assertion.Equal(0.05355, chain.SwapOne.Price)
 	assertion.Equal("XRPBTC", chain.SwapTwo.Symbol)
-	assertion.Equal(0.00001428, chain.SwapTwo.Price)
+	assertion.Equal(0.00001436, chain.SwapTwo.Price)
 	assertion.Equal("XRPETH", chain.SwapThree.Symbol)
-	assertion.Equal(0.0002775, chain.SwapThree.Price)
+	assertion.Equal(0.000277, chain.SwapThree.Price)
 	// base amount is 100
-	assertion.Greater(100*chain.SwapOne.Price/chain.SwapTwo.Price*chain.SwapThree.Price, 104.10)
+	assertion.Greater(100*chain.SwapOne.Price/chain.SwapTwo.Price*chain.SwapThree.Price, 103.296)
 
 	// validate
 	swapRepoMock := new(SwapRepositoryMock)
@@ -550,13 +553,13 @@ func TestSwapSellBuySellForceSwap(t *testing.T) {
 	}, nil)
 	swapRepoMock.On("GetSwapChainById", swapChain.Id).Return(swapChain, nil)
 
-	binanceMock.On("LimitOrder", "ETHBTC", 100.00, 0.05358, "SELL", "GTC").Return(model.BinanceOrder{
+	binanceMock.On("LimitOrder", "ETHBTC", 100.00, 0.05355, "SELL", "GTC").Return(model.BinanceOrder{
 		Status:              "NEW",
 		OrderId:             "12",
 		Symbol:              "ETHBTC",
 		ExecutedQty:         0.00,
 		OrigQty:             100.00,
-		Price:               0.05358,
+		Price:               0.05355,
 		Side:                "SELL",
 		CummulativeQuoteQty: 0.00,
 	}, nil)
@@ -566,9 +569,9 @@ func TestSwapSellBuySellForceSwap(t *testing.T) {
 		ExecutedQty:         80.00,
 		OrigQty:             100.00,
 		Symbol:              "ETHBTC",
-		Price:               0.05358,
+		Price:               0.05355,
 		Side:                "SELL",
-		CummulativeQuoteQty: 80.00 * 0.05358,
+		CummulativeQuoteQty: 80.00 * 0.05355,
 	}, nil)
 	binanceMock.On("QueryOrder", "ETHBTC", "12").Times(2).Return(model.BinanceOrder{
 		Status:              "FILLED",
@@ -576,21 +579,21 @@ func TestSwapSellBuySellForceSwap(t *testing.T) {
 		ExecutedQty:         100.00,
 		OrigQty:             100.00,
 		Symbol:              "ETHBTC",
-		Price:               0.05358,
+		Price:               0.05355,
 		Side:                "SELL",
-		CummulativeQuoteQty: 100.00 * 0.05358,
+		CummulativeQuoteQty: 100.00 * 0.05355,
 	}, nil)
 
 	btcInitialBalance := 1.3455
-	balanceServiceMock.On("GetAssetBalance", "BTC", false).Return(5.358+btcInitialBalance, nil)
+	balanceServiceMock.On("GetAssetBalance", "BTC", false).Return(5.355+btcInitialBalance, nil)
 
-	binanceMock.On("LimitOrder", "XRPBTC", 375210.00, 0.00001428, "BUY", "GTC").Return(model.BinanceOrder{
+	binanceMock.On("LimitOrder", "XRPBTC", 372910.00, 0.00001436, "BUY", "GTC").Return(model.BinanceOrder{
 		Status:              "NEW",
 		OrderId:             "13",
 		Symbol:              "XRPBTC",
 		ExecutedQty:         0.00,
-		OrigQty:             375210.00,
-		Price:               0.00001428,
+		OrigQty:             372910.00,
+		Price:               0.00001436,
 		Side:                "SELL",
 		CummulativeQuoteQty: 0.00,
 	}, nil)
@@ -599,32 +602,32 @@ func TestSwapSellBuySellForceSwap(t *testing.T) {
 		OrderId:             "13",
 		Symbol:              "XRPBTC",
 		ExecutedQty:         125210.00,
-		OrigQty:             375210.00,
-		Price:               0.00001428,
+		OrigQty:             372910.00,
+		Price:               0.00001436,
 		Side:                "SELL",
-		CummulativeQuoteQty: 0.00001428 * 125210.00,
+		CummulativeQuoteQty: 0.00001436 * 125210.00,
 	}, nil)
 	binanceMock.On("QueryOrder", "XRPBTC", "13").Times(2).Return(model.BinanceOrder{
 		Status:              "FILLED",
 		OrderId:             "13",
 		Symbol:              "XRPBTC",
-		ExecutedQty:         375210.00,
-		OrigQty:             375210.00,
-		Price:               0.00001428,
+		ExecutedQty:         372910.00,
+		OrigQty:             372910.00,
+		Price:               0.00001436,
 		Side:                "SELL",
-		CummulativeQuoteQty: 0.00001428 * 375210.00,
+		CummulativeQuoteQty: 0.00001436 * 372910.00,
 	}, nil)
 
 	xrpInitialBalance := 4000.00
-	balanceServiceMock.On("GetAssetBalance", "XRP", false).Return(375212.00+xrpInitialBalance, nil)
+	balanceServiceMock.On("GetAssetBalance", "XRP", false).Return(372910.00+xrpInitialBalance, nil)
 
-	binanceMock.On("LimitOrder", "XRPETH", 375210.00, 0.0002775, "SELL", "GTC").Return(model.BinanceOrder{
+	binanceMock.On("LimitOrder", "XRPETH", 372910.00, 0.000277, "SELL", "GTC").Return(model.BinanceOrder{
 		Status:              "NEW",
 		OrderId:             "14",
 		Symbol:              "XRPETH",
 		ExecutedQty:         0.00,
-		OrigQty:             375210.00,
-		Price:               0.0002775,
+		OrigQty:             372910.00,
+		Price:               0.000277,
 		Side:                "SELL",
 		CummulativeQuoteQty: 0.00,
 	}, nil)
@@ -633,8 +636,8 @@ func TestSwapSellBuySellForceSwap(t *testing.T) {
 		OrderId:             "14",
 		Symbol:              "XRPETH",
 		ExecutedQty:         0.00,
-		OrigQty:             375210.00,
-		Price:               0.0002775,
+		OrigQty:             372910.00,
+		Price:               0.000277,
 		Side:                "SELL",
 		CummulativeQuoteQty: 0.00,
 	}, nil)
@@ -643,27 +646,27 @@ func TestSwapSellBuySellForceSwap(t *testing.T) {
 		OrderId:             "14",
 		Symbol:              "XRPETH",
 		ExecutedQty:         0.00,
-		OrigQty:             375210.00,
-		Price:               0.0002775,
+		OrigQty:             372910.00,
+		Price:               0.000277,
 		Side:                "SELL",
 		CummulativeQuoteQty: 0.00,
 	}, nil)
-	binanceMock.On("LimitOrder", "XRPETH", 375210.00, 0.0002784, "SELL", "IOC").Return(model.BinanceOrder{
+	binanceMock.On("LimitOrder", "XRPETH", 372910.00, 0.0002784, "SELL", "IOC").Return(model.BinanceOrder{
 		Status:              "FILLED",
 		OrderId:             "14",
 		Symbol:              "XRPETH",
-		ExecutedQty:         375210.00,
-		OrigQty:             375210.00,
-		Price:               0.0002775,
+		ExecutedQty:         372910.00,
+		OrigQty:             372910.00,
+		Price:               0.000277,
 		Side:                "SELL",
-		CummulativeQuoteQty: 104.46, // 375210.00 * 0.0002784
+		CummulativeQuoteQty: 372910.00 * 0.0002784,
 	}, nil)
 
 	orderRepositoryMock.On("Update", mock.Anything).Once().Return(nil)
 	swapRepoMock.On("UpdateSwapAction", mock.Anything).Return(nil)
 	balanceServiceMock.On("InvalidateBalanceCache", "ETH").Once()
 	ethInitialBalance := 10.99
-	balanceServiceMock.On("GetAssetBalance", "ETH", false).Times(2).Return(104.00+ethInitialBalance, nil)
+	balanceServiceMock.On("GetAssetBalance", "ETH", false).Times(2).Return(103.818144+ethInitialBalance, nil)
 
 	timeServiceMock := new(TimeServiceMock)
 	timeServiceMock.On("WaitSeconds", int64(5)).Times(3)
@@ -681,7 +684,7 @@ func TestSwapSellBuySellForceSwap(t *testing.T) {
 
 	executor.Execute(order)
 
-	assertion.Equal(104.46, *swapRepoMock.swapAction.EndQuantity)
+	assertion.Equal(103.818144, *swapRepoMock.swapAction.EndQuantity)
 	assertion.Equal("12", *swapRepoMock.swapAction.SwapOneExternalId)
 	assertion.Equal("ETHBTC", swapRepoMock.swapAction.SwapOneSymbol)
 	assertion.Equal("FILLED", *swapRepoMock.swapAction.SwapOneExternalStatus)

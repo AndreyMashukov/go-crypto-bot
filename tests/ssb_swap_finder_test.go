@@ -59,17 +59,17 @@ func TestSwapSellSellBuy(t *testing.T) {
 
 	chain := swapManager.Find("SOL").BestChain
 	assertion := assert.New(t)
-	assertion.Equal(13.88, chain.Percent.Value())
+	assertion.Equal(13.67, chain.Percent.Value())
 	assertion.Equal("SSB", chain.Type)
 	assertion.Equal("SOL sell-> ETH sell-> GBP buy-> SOL", chain.Title)
 	assertion.Equal("SOLETH", chain.SwapOne.Symbol)
-	assertion.Equal(0.03372, chain.SwapOne.Price)
+	assertion.Equal(0.03369, chain.SwapOne.Price)
 	assertion.Equal("ETHGBP", chain.SwapTwo.Symbol)
-	assertion.Equal(1783.06, chain.SwapTwo.Price)
+	assertion.Equal(1782.98, chain.SwapTwo.Price)
 	assertion.Equal("SOLGBP", chain.SwapThree.Symbol)
-	assertion.Equal(52.48, chain.SwapThree.Price)
+	assertion.Equal(52.53, chain.SwapThree.Price)
 	// base amount is 100
-	assertion.Greater(100*chain.SwapOne.Price*chain.SwapTwo.Price/chain.SwapThree.Price, 114.50)
+	assertion.Greater(100*chain.SwapOne.Price*chain.SwapTwo.Price/chain.SwapThree.Price, 114.35)
 
 	// validate
 	swapRepoMock := new(SwapRepositoryMock)
@@ -210,13 +210,13 @@ func TestSwapSellSellBuy(t *testing.T) {
 	}, nil)
 	swapRepoMock.On("GetSwapChainById", swapChain.Id).Return(swapChain, nil)
 
-	binanceMock.On("LimitOrder", "SOLETH", 100.00, 0.03372, "SELL", "GTC").Return(model.BinanceOrder{
+	binanceMock.On("LimitOrder", "SOLETH", 100.00, 0.03369, "SELL", "GTC").Return(model.BinanceOrder{
 		Status:              "NEW",
 		OrderId:             "16",
 		Symbol:              "SOLETH",
 		ExecutedQty:         0.00,
 		OrigQty:             100.00,
-		Price:               0.03372,
+		Price:               0.03369,
 		Side:                "SELL",
 		CummulativeQuoteQty: 00.00,
 	}, nil)
@@ -226,9 +226,9 @@ func TestSwapSellSellBuy(t *testing.T) {
 		ExecutedQty:         80.00,
 		OrigQty:             100.00,
 		Symbol:              "SOLETH",
-		Price:               0.03372,
+		Price:               0.03369,
 		Side:                "SELL",
-		CummulativeQuoteQty: 80 * 0.03372,
+		CummulativeQuoteQty: 80 * 0.03369,
 	}, nil)
 	binanceMock.On("QueryOrder", "SOLETH", "16").Times(2).Return(model.BinanceOrder{
 		Status:              "FILLED",
@@ -238,19 +238,19 @@ func TestSwapSellSellBuy(t *testing.T) {
 		Symbol:              "SOLETH",
 		Price:               0.03372,
 		Side:                "SELL",
-		CummulativeQuoteQty: 100 * 0.03372,
+		CummulativeQuoteQty: 100 * 0.03369,
 	}, nil)
 
 	ethInitialBalance := 2.99
-	balanceServiceMock.On("GetAssetBalance", "ETH", false).Return(3.372+ethInitialBalance, nil)
+	balanceServiceMock.On("GetAssetBalance", "ETH", false).Return(3.369+ethInitialBalance, nil)
 
-	binanceMock.On("LimitOrder", "ETHGBP", 3.372, 1783.06, "SELL", "GTC").Return(model.BinanceOrder{
+	binanceMock.On("LimitOrder", "ETHGBP", 3.369, 1782.98, "SELL", "GTC").Return(model.BinanceOrder{
 		Status:              "NEW",
 		OrderId:             "17",
 		Symbol:              "ETHGBP",
 		ExecutedQty:         0.00,
-		OrigQty:             3.372,
-		Price:               1783.06,
+		OrigQty:             3.369,
+		Price:               1782.98,
 		Side:                "SELL",
 		CummulativeQuoteQty: 0.00,
 	}, nil)
@@ -259,31 +259,31 @@ func TestSwapSellSellBuy(t *testing.T) {
 		OrderId:             "17",
 		Symbol:              "ETHGBP",
 		ExecutedQty:         1.272,
-		OrigQty:             3.372,
-		Price:               1783.06,
+		OrigQty:             3.369,
+		Price:               1782.98,
 		Side:                "SELL",
-		CummulativeQuoteQty: 1.272 * 1783.06,
+		CummulativeQuoteQty: 1.272 * 1782.98,
 	}, nil)
 	binanceMock.On("QueryOrder", "ETHGBP", "17").Times(2).Return(model.BinanceOrder{
 		Status:              "FILLED",
 		OrderId:             "17",
 		Symbol:              "ETHGBP",
-		ExecutedQty:         3.372,
-		OrigQty:             3.372,
-		Price:               1783.06,
+		ExecutedQty:         3.369,
+		OrigQty:             3.369,
+		Price:               1782.98,
 		Side:                "SELL",
-		CummulativeQuoteQty: 3.372 * 1783.06,
+		CummulativeQuoteQty: 3.369 * 1782.98,
 	}, nil)
 	gbpInitialBalance := 2300.99
-	balanceServiceMock.On("GetAssetBalance", "GBP", false).Return(6012.476+gbpInitialBalance, nil)
+	balanceServiceMock.On("GetAssetBalance", "GBP", false).Return(6006.85962+gbpInitialBalance, nil)
 
-	binanceMock.On("LimitOrder", "SOLGBP", 114.56, 52.48, "BUY", "GTC").Return(model.BinanceOrder{
+	binanceMock.On("LimitOrder", "SOLGBP", 114.35, 52.53, "BUY", "GTC").Return(model.BinanceOrder{
 		Status:              "NEW",
 		OrderId:             "18",
 		Symbol:              "SOLGBP",
 		ExecutedQty:         0.00,
-		OrigQty:             114.56,
-		Price:               52.48,
+		OrigQty:             114.35,
+		Price:               52.53,
 		Side:                "BUY",
 		CummulativeQuoteQty: 0.00,
 	}, nil)
@@ -292,27 +292,27 @@ func TestSwapSellSellBuy(t *testing.T) {
 		OrderId:             "18",
 		Symbol:              "SOLGBP",
 		ExecutedQty:         12.00,
-		OrigQty:             114.56,
-		Price:               52.48,
+		OrigQty:             114.35,
+		Price:               52.53,
 		Side:                "BUY",
-		CummulativeQuoteQty: 12.00 * 52.48,
+		CummulativeQuoteQty: 12.00 * 52.53,
 	}, nil)
 	binanceMock.On("QueryOrder", "SOLGBP", "18").Times(2).Return(model.BinanceOrder{
 		Status:              "FILLED",
 		OrderId:             "18",
 		Symbol:              "SOLGBP",
-		ExecutedQty:         114.56,
-		OrigQty:             114.56,
-		Price:               52.48,
+		ExecutedQty:         114.35,
+		OrigQty:             114.35,
+		Price:               52.53,
 		Side:                "BUY",
-		CummulativeQuoteQty: 114.56 * 52.48,
+		CummulativeQuoteQty: 114.35 * 52.53,
 	}, nil)
 
 	orderRepositoryMock.On("Update", mock.Anything).Once().Return(nil)
 	swapRepoMock.On("UpdateSwapAction", mock.Anything).Return(nil)
 	balanceServiceMock.On("InvalidateBalanceCache", "SOL").Once()
 	solInitialBalance := 9.00
-	balanceServiceMock.On("GetAssetBalance", "SOL", false).Times(2).Return(114.54+solInitialBalance, nil)
+	balanceServiceMock.On("GetAssetBalance", "SOL", false).Times(2).Return(114.35+solInitialBalance, nil)
 
 	timeServiceMock := new(TimeServiceMock)
 	timeServiceMock.On("WaitSeconds", int64(5)).Times(3)
@@ -330,7 +330,7 @@ func TestSwapSellSellBuy(t *testing.T) {
 
 	executor.Execute(order)
 
-	assertion.Equal(114.56, *swapRepoMock.swapAction.EndQuantity)
+	assertion.Equal(114.35, *swapRepoMock.swapAction.EndQuantity)
 	assertion.Equal("16", *swapRepoMock.swapAction.SwapOneExternalId)
 	assertion.Equal("SOLETH", swapRepoMock.swapAction.SwapOneSymbol)
 	assertion.Equal("FILLED", *swapRepoMock.swapAction.SwapOneExternalStatus)

@@ -25,4 +25,5 @@ type BotHealth struct {
 	LoadAvg       sysstats.LoadAvg  `json:"loadAvg"`
 	Updates       map[string]string `json:"updates"`
 	OrderBook     map[string]string `json:"orderBook"`
+	GOMAXPROCS    int               `json:"GOMAXPROCS"`
 }

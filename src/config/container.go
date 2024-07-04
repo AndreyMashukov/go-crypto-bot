@@ -20,6 +20,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -28,6 +29,11 @@ const BotExchangeBinance = "binance"
 const BotExchangeByBit = "bybit"
 
 func InitServiceContainer() Container {
+	if runtime.GOMAXPROCS(0) < 2 {
+		procs := runtime.GOMAXPROCS(2)
+		log.Printf("GOMAXPROCS is set to: %d", procs)
+	}
+
 	db, err := sql.Open("mysql", os.Getenv("DATABASE_DSN"))
 
 	if err != nil {

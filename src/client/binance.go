@@ -185,6 +185,14 @@ func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {
 			}
 
 			b.Channel <- msg
+			// Give control to another goroutine
+			time.Sleep(time.Millisecond)
+			// Goroutines yield to the scheduler when any of the following happens (may not be a comprehensive list):
+			// - unbuffered chan send/recv
+			// - syscalls (includes file/network reads and writes)
+			// - memory allocation
+			// - time.Sleep() is called
+			// - runtime.Gosched() is called
 		}
 	}(req)
 

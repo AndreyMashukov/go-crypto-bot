@@ -125,6 +125,7 @@ func (m *MarketTradeListener) ListenAll() {
 				m.ExchangeRepository.SaveKlineHistory(kline.ToKLine(tradeLimit.GetSymbol()))
 			}
 			log.Printf("Loaded history %s -> %d klines", tradeLimit.Symbol, klineAmount)
+			m.TimeService.WaitMilliseconds(1)
 		}(limit)
 		if "BTCUSDT" == limit.GetSymbol() {
 			hasBtcUsdt = true

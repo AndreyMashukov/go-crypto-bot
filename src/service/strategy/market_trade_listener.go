@@ -12,7 +12,6 @@ import (
 	"log"
 	"math"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -104,29 +103,23 @@ func (m *MarketTradeListener) ListenAll() {
 	hasBtcUsdt := false
 	hasEthUsdt := false
 
-	waitGroup := sync.WaitGroup{}
 	log.Printf("Price history recovery started")
-
 	for _, limit := range m.ExchangeRepository.GetTradeLimits() {
-		waitGroup.Add(1)
 		tradeLimitCollection = append(tradeLimitCollection, limit)
 
-		go func(tradeLimit model.TradeLimit) {
-			defer waitGroup.Done()
-			klineAmount := 0
-			history := m.Binance.GetKLines(tradeLimit.GetSymbol(), "1m", 200)
+		klineAmount := 0
+		history := m.Binance.GetKLines(limit.GetSymbol(), "1m", 200)
 
-			if len(history) > 0 {
-				m.ExchangeRepository.ClearKlineHistory(tradeLimit.GetSymbol())
-			}
+		if len(history) > 0 {
+			m.ExchangeRepository.ClearKlineHistory(limit.GetSymbol())
+		}
 
-			for _, kline := range history {
-				klineAmount++
-				m.ExchangeRepository.SaveKlineHistory(kline.ToKLine(tradeLimit.GetSymbol()))
-			}
-			log.Printf("Loaded history %s -> %d klines", tradeLimit.Symbol, klineAmount)
-			m.TimeService.WaitMilliseconds(1)
-		}(limit)
+		for _, kline := range history {
+			klineAmount++
+			m.ExchangeRepository.SaveKlineHistory(kline.ToKLine(limit.GetSymbol()))
+		}
+		log.Printf("Loaded history %s -> %d klines", limit.Symbol, klineAmount)
+
 		if "BTCUSDT" == limit.GetSymbol() {
 			hasBtcUsdt = true
 		}
@@ -135,7 +128,6 @@ func (m *MarketTradeListener) ListenAll() {
 		}
 	}
 
-	waitGroup.Wait()
 	log.Printf("Price history recovery finished")
 	m.EventDispatcher.Enabled = true
 	log.Printf("Event subscribers are enabled")
@@ -153,85 +145,63 @@ func (m *MarketTradeListener) ListenAll() {
 	// Price recovery watcher
 	go func() {
 		for {
-			lock := sync.Mutex{}
-			wg := sync.WaitGroup{}
-
 			invalidPriceSymbols := make([]string, 0)
 			for _, limit := range m.ExchangeRepository.GetTradeLimits() {
-				wg.Add(1)
-				go func(l model.TradeLimit) {
-					defer wg.Done()
-
-					k := m.ExchangeRepository.GetCurrentKline(l.Symbol)
-					// If update is not received from WS or price is not actual
-					if k == nil || k.IsPriceNotActual() {
-						lock.Lock()
-						invalidPriceSymbols = append(invalidPriceSymbols, l.Symbol)
-						lock.Unlock()
-					}
-				}(limit)
+				k := m.ExchangeRepository.GetCurrentKline(limit.Symbol)
+				// If update is not received from WS or price is not actual
+				if k == nil || k.IsPriceNotActual() {
+					invalidPriceSymbols = append(invalidPriceSymbols, limit.Symbol)
+				}
 			}
-			wg.Wait()
 
 			if len(invalidPriceSymbols) > 0 {
 				log.Printf("Price is invalid for: %s", strings.Join(invalidPriceSymbols, ", "))
 				tickers := m.Binance.GetTickers(invalidPriceSymbols)
 				updated := make([]string, 0)
 
-				wg = sync.WaitGroup{}
-				wg.Add(1)
-				for _, ticker := range tickers {
-					wg.Add(1)
-					go func(t model.WSTickerPrice) {
-						defer wg.Done()
-
-						k := m.ExchangeRepository.GetCurrentKline(t.Symbol)
-						currentInterval := model.TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute()
-						// Recover Kline
-						if k == nil {
-							k = &model.KLine{
-								Symbol:    t.Symbol,
-								Interval:  "1m",
-								Low:       t.Price,
-								Open:      t.Price,
-								Close:     t.Price,
-								High:      t.Price,
-								Timestamp: model.TimestampMilli(0),
-								UpdatedAt: 0,
-								OpenTime:  model.TimestampMilli(model.TimestampMilli(currentInterval).GetPeriodFromMinute()),
-							}
+				for _, t := range tickers {
+					k := m.ExchangeRepository.GetCurrentKline(t.Symbol)
+					currentInterval := model.TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute()
+					// Recover Kline
+					if k == nil {
+						k = &model.KLine{
+							Symbol:    t.Symbol,
+							Interval:  "1m",
+							Low:       t.Price,
+							Open:      t.Price,
+							Close:     t.Price,
+							High:      t.Price,
+							Timestamp: model.TimestampMilli(0),
+							UpdatedAt: 0,
+							OpenTime:  model.TimestampMilli(model.TimestampMilli(currentInterval).GetPeriodFromMinute()),
 						}
+					}
 
-						if k.IsPriceNotActual() {
-							k.High = math.Max(t.Price, k.High)
-							k.Low = math.Min(t.Price, k.Low)
+					if k.IsPriceNotActual() {
+						k.High = math.Max(t.Price, k.High)
+						k.Low = math.Min(t.Price, k.Low)
+						k.Close = t.Price
+
+						if k.Timestamp.GetPeriodToMinute() < currentInterval {
+							log.Printf(
+								"[%s] New time interval reached %d -> %d, price is unknown",
+								k.Symbol,
+								k.Timestamp.GetPeriodToMinute(),
+								currentInterval,
+							)
+							k.Timestamp = model.TimestampMilli(currentInterval)
+							k.Open = t.Price
 							k.Close = t.Price
-
-							if k.Timestamp.GetPeriodToMinute() < currentInterval {
-								log.Printf(
-									"[%s] New time interval reached %d -> %d, price is unknown",
-									k.Symbol,
-									k.Timestamp.GetPeriodToMinute(),
-									currentInterval,
-								)
-								k.Timestamp = model.TimestampMilli(currentInterval)
-								k.Open = t.Price
-								k.Close = t.Price
-								k.High = t.Price
-								k.Low = t.Price
-							}
-
-							// todo: update timestamp and recover max, min prices...
-							k.UpdatedAt = time.Now().Unix()
-							klineChannel <- *k
-							lock.Lock()
-							updated = append(updated, k.Symbol)
-							lock.Unlock()
+							k.High = t.Price
+							k.Low = t.Price
 						}
-					}(ticker)
+
+						// todo: update timestamp and recover max, min prices...
+						k.UpdatedAt = time.Now().Unix()
+						klineChannel <- *k
+						updated = append(updated, k.Symbol)
+					}
 				}
-				wg.Done()
-				wg.Wait()
 
 				if len(updated) > 0 {
 					log.Printf("Price updated for: %s", strings.Join(updated, ", "))

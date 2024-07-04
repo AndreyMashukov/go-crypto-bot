@@ -100,5 +100,6 @@ func (h *HealthService) HealthCheck() model.BotHealth {
 		LoadAvg:       loadAvg,
 		Updates:       updateMap,
 		OrderBook:     orderBookMap,
+		GOMAXPROCS:    runtime.GOMAXPROCS(0),
 	}
 }

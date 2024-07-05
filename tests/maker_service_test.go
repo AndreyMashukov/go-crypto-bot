@@ -35,13 +35,14 @@ func TestDecisionError(t *testing.T) {
 		HoldScore: 80.00,
 	}
 
+	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(nil)
 	strategyFacade.On("Decide", "BTCUSDT").Return(model.FacadeResponse{
 		Hold: 0.00,
 		Sell: 0.00,
 		Buy:  0.00,
 	}, errors.New("Test Facade!!!"))
 	maker.Make("BTCUSDT")
-	orderRepository.AssertNumberOfCalls(t, "GetOpenedOrderCached", 0)
+	exchangeRepository.AssertNumberOfCalls(t, "GetTradeLimit", 0)
 }
 
 func TestProcessSwap(t *testing.T) {

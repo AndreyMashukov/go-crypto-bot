@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
@@ -44,10 +43,11 @@ type SwapRepositoryInterface interface {
 }
 
 type SwapRepository struct {
-	DB         *sql.DB
-	RDB        *redis.Client
-	Ctx        *context.Context
-	CurrentBot *model.Bot
+	DB               *sql.DB
+	RDB              *redis.Client
+	Ctx              *context.Context
+	CurrentBot       *model.Bot
+	ObjectRepository *ObjectRepository
 }
 
 func (repo *SwapRepository) GetAvailableSwapChains() []model.SwapChainEntity {
@@ -611,23 +611,18 @@ func (s *SwapRepository) UpdateSwapTransition(transition model.SwapTransitionEnt
 	return nil
 }
 
-func (s SwapRepository) InvalidateSwapChainCache(asset string) {
-	s.RDB.Del(*s.Ctx, s.getSwapCacheKey(asset))
+func (s *SwapRepository) InvalidateSwapChainCache(asset string) {
+	_ = s.ObjectRepository.DeleteObject(s.getSwapCacheKey(asset))
 }
 
 func (s *SwapRepository) SaveSwapChainCache(asset string, entity model.SwapChainEntity) {
-	encoded, _ := json.Marshal(entity)
-
-	s.RDB.Set(*s.Ctx, s.getSwapCacheKey(asset), string(encoded), time.Second*30)
+	_ = s.ObjectRepository.SaveObject(s.getSwapCacheKey(asset), entity)
 }
 
 func (s *SwapRepository) GetSwapChainCache(asset string) *model.SwapChainEntity {
-	cached := s.RDB.Get(*s.Ctx, s.getSwapCacheKey(asset)).Val()
-
-	if len(cached) > 0 {
-		var entity model.SwapChainEntity
-		json.Unmarshal([]byte(cached), &entity)
-
+	var entity model.SwapChainEntity
+	err := s.ObjectRepository.LoadObject(s.getSwapCacheKey(asset), &entity)
+	if err == nil {
 		return &entity
 	}
 

@@ -212,14 +212,14 @@ type ByBitTicker struct {
 }
 
 type ByBitWsTicker struct {
-	Symbol       string  `json:"symbol"`
-	LastPrice    float64 `json:"lastPrice,string"`
-	HighPrice24H string  `json:"highPrice24h"`
-	LowPrice24H  string  `json:"lowPrice24h"`
-	PrevPrice24H string  `json:"prevPrice24h"`
-	Volume24H    float64 `json:"volume24h,string"`
-	Turnover24H  float64 `json:"turnover24h,string"`
-	Price24HPcnt string  `json:"price24hPcnt"`
+	Symbol       string `json:"symbol"`
+	LastPrice    Price  `json:"lastPrice"`
+	HighPrice24H string `json:"highPrice24h"`
+	LowPrice24H  string `json:"lowPrice24h"`
+	PrevPrice24H string `json:"prevPrice24h"`
+	Volume24H    Volume `json:"volume24h"`
+	Turnover24H  Volume `json:"turnover24h"`
+	Price24HPcnt string `json:"price24hPcnt"`
 }
 
 func (t *ByBitWsTicker) ToBinanceMiniTicker(time TimestampMilli) MiniTicker {
@@ -273,11 +273,11 @@ type ByBitWsKline struct {
 	Start     TimestampMilli `json:"start"`
 	End       TimestampMilli `json:"end"`
 	Interval  string         `json:"interval"`
-	Open      float64        `json:"open,string"`
-	Close     float64        `json:"close,string"`
-	High      float64        `json:"high,string"`
-	Low       float64        `json:"low,string"`
-	Volume    float64        `json:"volume,string"`
+	Open      Price          `json:"open"`
+	Close     Price          `json:"close"`
+	High      Price          `json:"high"`
+	Low       Price          `json:"low"`
+	Volume    Volume         `json:"volume"`
 	Turnover  float64        `json:"turnover,string"`
 	Confirm   bool           `json:"confirm"`
 	Timestamp TimestampMilli `json:"timestamp"`
@@ -292,7 +292,7 @@ func (b *ByBitWsKline) ToBinanceKline(symbol string, interval string) KLine {
 		High:             b.High,
 		Volume:           b.Volume,
 		Interval:         interval,
-		Timestamp:        b.Timestamp,
+		Timestamp:        TimestampMilli(b.Timestamp.GetPeriodToMinute()),
 		OpenTime:         b.Start,
 		PriceChangeSpeed: nil,
 		TradeVolume:      nil,

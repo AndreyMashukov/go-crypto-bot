@@ -11,6 +11,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"log"
 	"math"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -36,9 +37,19 @@ func (m *MarketTradeListener) ListenAll() {
 	predictChannel := make(chan string, 1000)
 	depthChannel := make(chan model.OrderBookModel, 1000)
 
-	go func() {
+	// Avoid concurrent prediction
+	predictMap := sync.Map{}
+
+	go func(pMap *sync.Map) {
 		for {
 			symbol := <-predictChannel
+
+			if status, ok := pMap.Load(symbol); ok {
+				log.Printf("[%s] Prediction status: %s, skip", symbol, status)
+				continue
+			}
+			pMap.Store(symbol, "processing")
+
 			predicted, _ := m.PythonMLBridge.Predict(symbol)
 
 			kLine := m.ExchangeRepository.GetCurrentKline(symbol)
@@ -56,37 +67,51 @@ func (m *MarketTradeListener) ListenAll() {
 					m.ExchangeRepository.SaveInterpolation(interpolation, *kLine)
 				}
 			}
+			pMap.Delete(symbol)
 		}
-	}()
+	}(&predictMap)
 
-	go func() {
-		for {
-			kLine := <-klineChannel
-			lastKline := m.ExchangeRepository.GetCurrentKline(kLine.Symbol)
+	// Consumer count for kline channel
+	klineConsumerCount := 4
 
-			if lastKline != nil && lastKline.Timestamp.Gt(kLine.Timestamp) {
-				log.Printf(
-					"[%s] Exchange sent expired stream price. T = %d < %d",
-					kLine.Symbol,
-					kLine.Timestamp.Value(),
-					lastKline.Timestamp.Value(),
-				)
-				continue
+	for i := 0; i < klineConsumerCount; i++ {
+		go func() {
+			for {
+				afterEach := func() {
+					runtime.GC()
+					runtime.Gosched()
+				}
+
+				kLine := <-klineChannel
+				lastKline := m.ExchangeRepository.GetCurrentKline(kLine.Symbol)
+
+				if lastKline != nil && lastKline.Timestamp.Gt(kLine.Timestamp) {
+					log.Printf(
+						"[%s] Exchange sent expired stream price. T = %d < %d",
+						kLine.Symbol,
+						kLine.Timestamp.Value(),
+						lastKline.Timestamp.Value(),
+					)
+					afterEach()
+					continue
+				}
+				//log.Printf("[%s] New Price [%s]: %.8f, T = %d", kLine.Symbol, kLine.Source, kLine.Close, kLine.Timestamp)
+
+				m.ExchangeRepository.SetCurrentKline(kLine)
+				if lastKline != nil && lastKline.Timestamp.GetPeriodToMinute() != kLine.Timestamp.GetPeriodToMinute() {
+					m.EventDispatcher.Dispatch(event.NewKlineReceived{
+						Previous: lastKline,
+						Current:  &kLine,
+					}, event.EventNewKLineReceived)
+				}
+
+				predictChannel <- kLine.Symbol
+				m.ExchangeRepository.SetDecision(m.BaseKLineStrategy.Decide(kLine), kLine.Symbol)
+				m.ExchangeRepository.SetDecision(m.OrderBasedStrategy.Decide(kLine), kLine.Symbol)
+				afterEach()
 			}
-
-			m.ExchangeRepository.SetCurrentKline(kLine)
-			if lastKline != nil && lastKline.Timestamp.GetPeriodToMinute() != kLine.Timestamp.GetPeriodToMinute() {
-				m.EventDispatcher.Dispatch(event.NewKlineReceived{
-					Previous: lastKline,
-					Current:  &kLine,
-				}, event.EventNewKLineReceived)
-			}
-
-			predictChannel <- kLine.Symbol
-			m.ExchangeRepository.SetDecision(m.BaseKLineStrategy.Decide(kLine), kLine.Symbol)
-			m.ExchangeRepository.SetDecision(m.OrderBasedStrategy.Decide(kLine), kLine.Symbol)
-		}
-	}()
+		}()
+	}
 
 	go func() {
 		for {
@@ -170,10 +195,10 @@ func (m *MarketTradeListener) ListenAll() {
 						k = &model.KLine{
 							Symbol:    t.Symbol,
 							Interval:  "1m",
-							Low:       t.Price,
-							Open:      t.Price,
-							Close:     t.Price,
-							High:      t.Price,
+							Low:       model.Price(t.Price),
+							Open:      model.Price(t.Price),
+							Close:     model.Price(t.Price),
+							High:      model.Price(t.Price),
 							Timestamp: model.TimestampMilli(0),
 							UpdatedAt: 0,
 							OpenTime:  model.TimestampMilli(model.TimestampMilli(currentInterval).GetPeriodFromMinute()),
@@ -181,20 +206,21 @@ func (m *MarketTradeListener) ListenAll() {
 					}
 
 					if k.IsPriceNotActual() {
-						k.High = math.Max(t.Price, k.High)
-						k.Low = math.Min(t.Price, k.Low)
-						k.Close = t.Price
+						k.High = model.Price(math.Max(t.Price, k.High.Value()))
+						k.Low = model.Price(math.Min(t.Price, k.Low.Value()))
+						k.Close = model.Price(t.Price)
 
 						if k.Timestamp.GetPeriodToMinute() < currentInterval {
 							k.Timestamp = model.TimestampMilli(currentInterval)
-							k.Open = t.Price
-							k.Close = t.Price
-							k.High = t.Price
-							k.Low = t.Price
+							k.Open = model.Price(t.Price)
+							k.Close = model.Price(t.Price)
+							k.High = model.Price(t.Price)
+							k.Low = model.Price(t.Price)
 						}
 
 						// todo: update timestamp and recover max, min prices...
 						k.UpdatedAt = time.Now().Unix()
+						k.Source = model.KLineSourceKLineFetch
 						klineChannel <- *k
 						updated = append(updated, k.Symbol)
 					}

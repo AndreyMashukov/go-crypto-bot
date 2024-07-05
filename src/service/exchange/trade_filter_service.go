@@ -94,7 +94,7 @@ func (t *TradeFilterService) IsValueMatched(filter model.TradeFilter) bool {
 	case model.TradeFilterParameterPrice:
 		kline := t.ExchangeTradeInfo.GetCurrentKline(filter.Symbol)
 		if kline != nil {
-			matched = t.CompareFloat(kline.Close, filter)
+			matched = t.CompareFloat(kline.Close.Value(), filter)
 		}
 		break
 	case model.TradeFilterParameterPositionTimeMinutes:
@@ -114,7 +114,7 @@ func (t *TradeFilterService) IsValueMatched(filter model.TradeFilter) bool {
 		kLines := t.ExchangePriceAPI.GetKLinesCached(filter.Symbol, "1d", 1)
 		if len(kLines) > 0 {
 			kLine := kLines[0]
-			percent := model.Percent(t.Formatter.ToFixed((t.Formatter.ComparePercentage(kLine.Open, kLine.Close) - 100.00).Value(), 2))
+			percent := model.Percent(t.Formatter.ToFixed((t.Formatter.ComparePercentage(kLine.Open.Value(), kLine.Close.Value()) - 100.00).Value(), 2))
 			matched = t.CompareFloat(percent.Value(), filter)
 		}
 		break

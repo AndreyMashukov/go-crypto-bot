@@ -25,7 +25,7 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 			Score:        0.00,
 			Operation:    "HOLD",
 			Timestamp:    time.Now().Unix(),
-			Price:        kLine.Close,
+			Price:        kLine.Close.Value(),
 			Params:       [3]float64{0, 0, 0},
 		}
 	}
@@ -77,7 +77,7 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 			Score:        15.00,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
-			Price:        kLine.Close,
+			Price:        kLine.Close.Value(),
 			Params:       [3]float64{0, 0, 0},
 		}
 	}
@@ -94,7 +94,7 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 		}
 	}
 
-	profitPercent := order.GetProfitPercent(kLine.Close, o.BotService.UseSwapCapital())
+	profitPercent := order.GetProfitPercent(kLine.Close.Value(), o.BotService.UseSwapCapital())
 	extraChargePercent := tradeLimit.GetBuyOnFallPercent(*order, kLine, o.BotService.UseSwapCapital())
 
 	// ATTENTION: We can not do extra buy if CanBuy() is false
@@ -105,7 +105,7 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 			Score:        model.DecisionHighestPriorityScore,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
-			Price:        kLine.Close,
+			Price:        kLine.Close.Value(),
 			Params:       [3]float64{0, 0, 0},
 		}
 	}
@@ -129,7 +129,7 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 			Score:        model.DecisionHighestPriorityScore,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
-			Price:        kLine.Close,
+			Price:        kLine.Close.Value(),
 			Params:       [3]float64{0, 0, 0},
 		}
 	}
@@ -140,12 +140,12 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 			Score:        50.00,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
-			Price:        kLine.Close,
+			Price:        kLine.Close.Value(),
 			Params:       [3]float64{0, 0, 0},
 		}
 	}
 
-	if kLine.Close > order.Price {
+	if kLine.Close.Value() > order.Price {
 		sellPrice := o.ProfitService.GetMinClosePrice(order, order.Price)
 
 		return model.Decision{
@@ -163,7 +163,7 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 		Score:        99.99,
 		Operation:    "HOLD",
 		Timestamp:    time.Now().Unix(),
-		Price:        kLine.Close,
+		Price:        kLine.Close.Value(),
 		Params:       [3]float64{0, 0, 0},
 	}
 }

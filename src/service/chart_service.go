@@ -103,10 +103,10 @@ func (e *ChartService) ProcessSymbol(symbol string) map[string][]any {
 	for _, kLine := range kLines {
 		klinePoint := model.FinancialPoint{
 			XAxis: kLine.Timestamp.GetPeriodToMinute(),
-			High:  kLine.High,
-			Close: kLine.Close,
-			Open:  kLine.Open,
-			Low:   kLine.Low,
+			High:  kLine.High.Value(),
+			Close: kLine.Close.Value(),
+			Open:  kLine.Open.Value(),
+			Low:   kLine.Low.Value(),
 		}
 		kLinePredict, _ := e.ExchangeRepository.GetKLinePredict(kLine)
 		interpolation, _ := e.ExchangeRepository.GetInterpolation(kLine)

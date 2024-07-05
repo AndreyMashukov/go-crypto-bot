@@ -510,7 +510,7 @@ func InitServiceContainer() Container {
 		BotRepository: &botRepository,
 	}
 
-	mcGatewayAddress := os.Getenv("MC_DSN")
+	mcGatewayAddress := "" //os.Getenv("MC_DSN")
 
 	mcListener := exchange.MCListener{
 		MSGatewayAddress:   mcGatewayAddress,

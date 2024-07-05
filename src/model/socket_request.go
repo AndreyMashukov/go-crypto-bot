@@ -255,13 +255,13 @@ func (k *KLineHistory) ToKLine(symbol string) KLine {
 
 	return KLine{
 		Symbol:    symbol,
-		Open:      openPrice,
-		Close:     closePrice,
-		High:      highPrice,
-		Low:       lowPrice,
+		Open:      Price(openPrice),
+		Close:     Price(closePrice),
+		High:      Price(highPrice),
+		Low:       Price(lowPrice),
 		Interval:  "1m",
 		Timestamp: k.CloseTime,
-		Volume:    volume,
+		Volume:    Volume(volume),
 		UpdatedAt: k.CloseTime.GetPeriodToMinute() / 1000,
 	}
 }

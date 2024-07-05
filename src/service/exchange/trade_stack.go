@@ -229,8 +229,8 @@ func (t *TradeStack) ProcessItem(
 	lowPrice := 0.00
 
 	if lastKLine != nil {
-		lastPrice = lastKLine.Close
-		lowPrice = lastKLine.Low
+		lastPrice = lastKLine.Close.Value()
+		lowPrice = lastKLine.Low.Value()
 		priceChangeSpeedAvg = t.Formatter.ToFixed(lastKLine.GetPriceChangeSpeedAvg(), 2)
 	}
 
@@ -306,7 +306,7 @@ func (t *TradeStack) ProcessItem(
 		if kline != nil && openedOrder.CanExtraBuy(*kline, t.BotService.UseSwapCapital()) {
 			// todo: Add filter configuration (in TradeLimit database table) for profitPercent, example: profitPercent < 0
 			// todo: Allow user to trade only after reaching specific daily price fall (or make it multi-step)
-			profitPercent := openedOrder.GetProfitPercent(kline.Close, t.BotService.UseSwapCapital())
+			profitPercent := openedOrder.GetProfitPercent(kline.Close.Value(), t.BotService.UseSwapCapital())
 			if profitPercent.Lte(tradeLimit.GetBuyOnFallPercent(*openedOrder, *kline, t.BotService.UseSwapCapital())) {
 				return &model.TradeStackItem{
 					Index:                   index,
@@ -346,7 +346,7 @@ func (t *TradeStack) ProcessItem(
 		return &model.TradeStackItem{
 			Index:                   index,
 			Symbol:                  tradeLimit.Symbol,
-			Percent:                 model.Percent(t.Formatter.ToFixed((t.Formatter.ComparePercentage(kLine.Open, kLine.Close) - 100.00).Value(), 2)),
+			Percent:                 model.Percent(t.Formatter.ToFixed((t.Formatter.ComparePercentage(kLine.Open.Value(), kLine.Close.Value()) - 100.00).Value(), 2)),
 			BudgetUsdt:              tradeLimit.USDTLimit,
 			HasEnoughBalance:        false,
 			BinanceOrder:            binanceOrder,
@@ -421,5 +421,5 @@ func (t *TradeStack) GetBuyPricePoints(kLine model.KLine, tradeLimit model.Trade
 		return 0, errors.New(fmt.Sprintf("[%s] buy price is invalid", tradeLimit.Symbol))
 	}
 
-	return int64((t.Formatter.FormatPrice(tradeLimit, buyPrice) - t.Formatter.FormatPrice(tradeLimit, kLine.Close)) / tradeLimit.MinPrice), nil
+	return int64((t.Formatter.FormatPrice(tradeLimit, buyPrice) - t.Formatter.FormatPrice(tradeLimit, kLine.Close.Value())) / tradeLimit.MinPrice), nil
 }

@@ -45,7 +45,7 @@ func (p *ProfitService) CheckBuyPriceOnHistory(limit model.TradeLimit, buyPrice 
 		closePrice := p.GetMinClosePrice(limit, buyPrice)
 		var closePriceMetTimes int64 = 0
 		for _, kline := range kLines {
-			if kline.High >= closePrice {
+			if kline.High.Value() >= closePrice {
 				closePriceMetTimes++
 			}
 		}

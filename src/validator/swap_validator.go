@@ -144,11 +144,11 @@ func (v *SwapValidator) checkHistoryData(symbol string, price float64, operation
 	seenTimes := int64(0)
 
 	for _, record := range history {
-		if "SELL" == strings.ToUpper(operation) && record.High > price {
+		if "SELL" == strings.ToUpper(operation) && record.High.Value() > price {
 			seenTimes++
 		}
 
-		if "BUY" == strings.ToUpper(operation) && record.Low < price {
+		if "BUY" == strings.ToUpper(operation) && record.Low.Value() < price {
 			seenTimes++
 		}
 	}

@@ -44,21 +44,21 @@ func (f *FrameService) GetFrame(symbol string, interval string, limit int64) mod
 	lowestPrice := 0.00
 
 	for _, kLine := range kLines {
-		if lowestPrice == 0.00 || lowestPrice > kLine.Low {
-			lowestPrice = kLine.Low
+		if lowestPrice == 0.00 || lowestPrice > kLine.Low.Value() {
+			lowestPrice = kLine.Low.Value()
 		}
 
-		if highestPrice < kLine.High {
-			highestPrice = kLine.High
+		if highestPrice < kLine.High.Value() {
+			highestPrice = kLine.High.Value()
 		}
 
 		if kLine.IsPositive() {
-			highSum += kLine.High
+			highSum += kLine.High.Value()
 			amountHigh++
 		}
 
 		if kLine.IsNegative() {
-			lowSum += kLine.Low
+			lowSum += kLine.Low.Value()
 			amountLow++
 		}
 	}

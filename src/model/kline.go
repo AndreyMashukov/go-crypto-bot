@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+const KLineSourceTickerStream = "ticker_stream"
+const KLineSourceKLineStream = "kline_stream"
+const KLineSourceKLineFetch = "kline_fetch"
+
 type PriceChange struct {
 	CloseTime       TimestampMilli `json:"closeTime"`
 	FromPrice       float64        `json:"fromPrice"`
@@ -24,17 +28,18 @@ type PriceChangeSpeed struct {
 
 type KLine struct {
 	Symbol           string            `json:"s"`
-	Open             float64           `json:"o,string"`
-	Close            float64           `json:"c,string"`
-	Low              float64           `json:"l,string"`
-	High             float64           `json:"h,string"`
+	Open             Price             `json:"o"`
+	Close            Price             `json:"c"`
+	Low              Price             `json:"l"`
+	High             Price             `json:"h"`
 	Interval         string            `json:"i"`
 	Timestamp        TimestampMilli    `json:"T,int"`
 	OpenTime         TimestampMilli    `json:"t,int"`
-	Volume           float64           `json:"v,string"`
+	Volume           Volume            `json:"v"`
 	UpdatedAt        int64             `json:"updatedAt"`
 	PriceChangeSpeed *PriceChangeSpeed `json:"priceChangeSpeed"`
 	TradeVolume      *TradeVolume      `json:"tradeVolume"`
+	Source           string            `json:"source"`
 }
 
 func (k *KLine) GetTradeVolumeSell() float64 {
@@ -96,7 +101,7 @@ func (k *KLine) GetPriceChangeSpeedAvg() float64 {
 }
 
 func (k *KLine) IsNegative() bool {
-	return k.Close < k.Open
+	return k.Close.Value() < k.Open.Value()
 }
 
 func (k *KLine) IsPositive() bool {
@@ -104,7 +109,7 @@ func (k *KLine) IsPositive() bool {
 }
 
 func (k *KLine) GetLowPercent(percent float64) float64 {
-	return k.Low + (k.Low * percent / 100)
+	return k.Low.Value() + (k.Low.Value() * percent / 100)
 }
 
 const PriceNotActualSeconds = 5
@@ -122,7 +127,7 @@ func (k *KLine) Includes(ticker MiniTicker) bool {
 	return k.OpenTime <= ticker.EventTime && ticker.EventTime < k.Timestamp
 }
 
-func (k *KLine) Update(ticker MiniTicker) KLine {
+func (k *KLine) Update(ticker MiniTicker, source string) KLine {
 	// WARNING!!!
 	// This is daily ticker price, we can use only `ticker.Close` for minute KLines!
 	currentInterval := TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute()
@@ -137,6 +142,7 @@ func (k *KLine) Update(ticker MiniTicker) KLine {
 			Interval:  "1m",
 			OpenTime:  TimestampMilli(TimestampMilli(currentInterval).GetPeriodFromMinute()),
 			UpdatedAt: time.Now().Unix(),
+			Source:    source,
 		}
 	}
 
@@ -145,13 +151,14 @@ func (k *KLine) Update(ticker MiniTicker) KLine {
 		Symbol:           ticker.Symbol,
 		Open:             k.Open,
 		Close:            ticker.Close,
-		High:             math.Max(k.High, ticker.Close),
-		Low:              math.Min(k.Low, ticker.Close),
+		High:             Price(math.Max(k.High.Value(), ticker.Close.Value())),
+		Low:              Price(math.Min(k.Low.Value(), ticker.Close.Value())),
 		Interval:         "1m",
 		OpenTime:         TimestampMilli(TimestampMilli(currentInterval).GetPeriodFromMinute()),
 		UpdatedAt:        time.Now().Unix(),
 		PriceChangeSpeed: k.PriceChangeSpeed,
 		TradeVolume:      k.TradeVolume,
+		Source:           source,
 	}
 }
 

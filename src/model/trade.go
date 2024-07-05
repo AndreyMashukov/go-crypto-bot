@@ -2,54 +2,7 @@ package model
 
 import (
 	"github.com/google/uuid"
-	"time"
 )
-
-type TimestampMilli int64
-
-func (t TimestampMilli) Value() int64 {
-	return int64(t)
-}
-
-func (t TimestampMilli) GetPeriodFromMinute() int64 {
-	dateTime := time.Unix(0, t.Value()*int64(time.Millisecond))
-	newDate := time.Date(dateTime.Year(), dateTime.Month(), dateTime.Day(), dateTime.Hour(), dateTime.Minute(), 0, 0, dateTime.Location())
-	return newDate.UnixMilli()
-}
-
-func (t TimestampMilli) GetPeriodToMinute() int64 {
-	dateTime := time.Unix(0, t.Value()*int64(time.Millisecond))
-	newDate := time.Date(dateTime.Year(), dateTime.Month(), dateTime.Day(), dateTime.Hour(), dateTime.Minute(), 59, 0, dateTime.Location())
-	return newDate.UnixMilli() + 999
-}
-
-func (t TimestampMilli) Neq(milli TimestampMilli) bool {
-	return t.Value() != milli.Value()
-}
-
-func (t TimestampMilli) Eq(milli TimestampMilli) bool {
-	return t.Value() == milli.Value()
-}
-
-func (t TimestampMilli) PeriodToEq(milli TimestampMilli) bool {
-	return t.GetPeriodToMinute() == milli.GetPeriodToMinute()
-}
-
-func (t TimestampMilli) Gt(milli TimestampMilli) bool {
-	return t.Value() > milli.Value()
-}
-
-func (t TimestampMilli) Gte(milli TimestampMilli) bool {
-	return t.Value() >= milli.Value()
-}
-
-func (t TimestampMilli) Lt(milli TimestampMilli) bool {
-	return t.Value() < milli.Value()
-}
-
-func (t TimestampMilli) Lte(milli TimestampMilli) bool {
-	return t.Value() <= milli.Value()
-}
 
 type Trade struct {
 	AggregateTradeId int64          `json:"a,int"`

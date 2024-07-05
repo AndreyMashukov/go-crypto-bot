@@ -10,6 +10,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/model"
 	"gitlab.com/open-soft/go-crypto-bot/src/repository"
 	"gitlab.com/open-soft/go-crypto-bot/src/service/ml"
+	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"runtime"
 	"time"
 )
@@ -24,6 +25,7 @@ type HealthService struct {
 	Ctx                *context.Context
 	Binance            client.ExchangeAPIInterface
 	CurrentBot         *model.Bot
+	TimeService        utils.TimeServiceInterface
 }
 
 func (h *HealthService) HealthCheck() model.BotHealth {
@@ -102,5 +104,6 @@ func (h *HealthService) HealthCheck() model.BotHealth {
 		OrderBook:     orderBookMap,
 		GOMAXPROCS:    runtime.GOMAXPROCS(0),
 		NumGoroutine:  runtime.NumGoroutine(),
+		DateTimeNow:   h.TimeService.GetNowDateTimeString(),
 	}
 }

@@ -89,12 +89,13 @@ type ExchangePriceStorageInterface interface {
 }
 
 type ExchangeRepository struct {
-	DB         *sql.DB
-	RDB        *redis.Client
-	Ctx        *context.Context
-	CurrentBot *model.Bot
-	Formatter  *utils.Formatter
-	Binance    client.ExchangePriceAPIInterface
+	DB               *sql.DB
+	RDB              *redis.Client
+	Ctx              *context.Context
+	CurrentBot       *model.Bot
+	Formatter        *utils.Formatter
+	Binance          client.ExchangePriceAPIInterface
+	ObjectRepository *ObjectRepository
 }
 
 func (e *ExchangeRepository) GetSubscribedSymbols() []model.Symbol {
@@ -694,26 +695,26 @@ func (e *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 	return nil
 }
 
+func (e *ExchangeRepository) GetKlineKey(symbol string) string {
+	return fmt.Sprintf("current-kline-%s-%d", symbol, e.CurrentBot.Id)
+}
+
 func (e *ExchangeRepository) GetCurrentKline(symbol string) *model.KLine {
-	encodedLast := e.RDB.Get(*e.Ctx, fmt.Sprintf("last-kline-%s-%d", symbol, e.CurrentBot.Id)).Val()
+	var kLine model.KLine
+	err := e.ObjectRepository.LoadObject(e.GetKlineKey(symbol), &kLine)
 
-	if len(encodedLast) > 0 {
-		var dto model.KLine
-		err := json.Unmarshal([]byte(encodedLast), &dto)
-
-		if err == nil {
-			tradeVolume := e.GetTradeVolume(dto.Symbol, dto.Timestamp)
-			if tradeVolume != nil {
-				dto.TradeVolume = tradeVolume
-			}
-
-			priceChangeSpeed := e.GetPriceChangeSpeed(dto.Symbol, dto.Timestamp)
-			if priceChangeSpeed != nil {
-				dto.PriceChangeSpeed = priceChangeSpeed
-			}
-
-			return &dto
+	if err == nil {
+		tradeVolume := e.GetTradeVolume(kLine.Symbol, kLine.Timestamp)
+		if tradeVolume != nil {
+			kLine.TradeVolume = tradeVolume
 		}
+
+		priceChangeSpeed := e.GetPriceChangeSpeed(kLine.Symbol, kLine.Timestamp)
+		if priceChangeSpeed != nil {
+			kLine.PriceChangeSpeed = priceChangeSpeed
+		}
+
+		return &kLine
 	}
 
 	return nil
@@ -754,9 +755,8 @@ func (e *ExchangeRepository) SetCurrentKline(kLine model.KLine) {
 
 	kLine.PriceChangeSpeed = priceChangeSpeed
 	e.SetPriceChangeSpeed(*priceChangeSpeed)
-	encoded, _ := json.Marshal(kLine)
 
-	e.RDB.Set(*e.Ctx, fmt.Sprintf("last-kline-%s-%d", kLine.Symbol, e.CurrentBot.Id), string(encoded), time.Hour)
+	_ = e.ObjectRepository.SaveObject(e.GetKlineKey(kLine.Symbol), kLine)
 }
 
 func (e *ExchangeRepository) SaveKlineHistory(kLine model.KLine) {

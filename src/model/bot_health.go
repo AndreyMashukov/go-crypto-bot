@@ -27,4 +27,5 @@ type BotHealth struct {
 	OrderBook     map[string]string `json:"orderBook"`
 	GOMAXPROCS    int               `json:"GOMAXPROCS"`
 	NumGoroutine  int               `json:"numGoroutine"`
+	DateTimeNow   string            `json:"dateTimeNow"`
 }

@@ -452,17 +452,25 @@ func (m *OrderExecutor) Sell(tradeLimit model.TradeLimit, opened model.Order, pr
 }
 
 func (m *OrderExecutor) ProcessSwap(order model.Order) bool {
-	if m.BotService.IsSwapEnabled() && order.IsSwap() {
+	switch true {
+	case m.BotService.IsSwapEnabled() && order.IsSwap():
 		log.Printf("[%s] Swap Order [%d] Mode: processing...", order.Symbol, order.Id)
 		m.SwapExecutor.Execute(order)
 		return true
-	} else if m.BotService.IsSwapEnabled() {
+	case m.BotService.IsSwapEnabled():
+		possibleSwap := m.HasSwapOption(&order)
+		if possibleSwap != nil {
+			m.MakeSwap(order, *possibleSwap)
+		}
+
 		swapAction, err := m.SwapRepository.GetActiveSwapAction(order)
 		if err == nil && swapAction.OrderId == order.Id {
-			log.Printf("[%s] Swap Recovered for Order [%d] Mode: processing...", order.Symbol, order.Id)
+			log.Printf("[%s] Swap Order [%d] Mode: processing...", order.Symbol, order.Id)
 			m.SwapExecutor.Execute(order)
 			return true
 		}
+
+		break
 	}
 
 	return false
@@ -1123,6 +1131,52 @@ func (m *OrderExecutor) CheckIsTimeToSell(
 	return false
 }
 
+func (m *OrderExecutor) HasSwapOption(openedBuyPosition *model.Order) *model.SwapChainEntity {
+	swapChain := m.SwapRepository.GetSwapChainCache(openedBuyPosition.GetBaseAsset())
+	if swapChain != nil {
+		possibleSwaps := m.SwapRepository.GetSwapChains(openedBuyPosition.GetBaseAsset())
+
+		if len(possibleSwaps) == 0 {
+			m.SwapRepository.InvalidateSwapChainCache(openedBuyPosition.GetBaseAsset())
+		}
+
+		kline := m.ExchangeRepository.GetCurrentKline(openedBuyPosition.Symbol)
+
+		if kline == nil {
+			return nil
+		}
+
+		for _, possibleSwap := range possibleSwaps {
+			turboSwap := possibleSwap.Percent.Gte(model.Percent(m.TurboSwapProfitPercent))
+			isTimeToSwap := openedBuyPosition.GetPositionTime().GetMinutes() >= m.BotService.GetSwapConfig().OrderTimeTrigger.GetMinutes() && openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital()).Lte(model.Percent(m.BotService.GetSwapConfig().FallPercentTrigger)) && !openedBuyPosition.IsSwap()
+
+			if !turboSwap && !isTimeToSwap {
+				break
+			}
+
+			violation := m.SwapValidator.Validate(possibleSwap, *openedBuyPosition)
+
+			if violation == nil {
+				chainCurrentPercent := m.SwapValidator.CalculatePercent(possibleSwap)
+				log.Printf(
+					"[%s] Swap chain [%s] is found for order #%d, initial percent: %.2f, current = %.2f",
+					openedBuyPosition.Symbol,
+					swapChain.Title,
+					openedBuyPosition.Id,
+					swapChain.Percent,
+					chainCurrentPercent,
+				)
+
+				return &possibleSwap
+			} else {
+				log.Printf("CheckIsTimeToSwap: %s", violation.Error())
+			}
+		}
+	}
+
+	return nil
+}
+
 func (m *OrderExecutor) CheckIsTimeToSwap(
 	binanceOrder *model.BinanceOrder,
 	orderManageChannel chan string,
@@ -1143,44 +1197,13 @@ func (m *OrderExecutor) CheckIsTimeToSwap(
 
 		// Try arbitrage for long orders >= 4 hours and with profit < -1.00%
 		if openedBuyPosition != nil {
-			swapChain := m.SwapRepository.GetSwapChainCache(openedBuyPosition.GetBaseAsset())
-			if swapChain != nil {
-				possibleSwaps := m.SwapRepository.GetSwapChains(openedBuyPosition.GetBaseAsset())
-
-				if len(possibleSwaps) == 0 {
-					m.SwapRepository.InvalidateSwapChainCache(openedBuyPosition.GetBaseAsset())
+			possibleSwap := m.HasSwapOption(openedBuyPosition)
+			if possibleSwap != nil {
+				swapCallback := func() {
+					m.MakeSwap(*openedBuyPosition, *possibleSwap)
 				}
-
-				for _, possibleSwap := range possibleSwaps {
-					turboSwap := possibleSwap.Percent.Gte(model.Percent(m.TurboSwapProfitPercent))
-					isTimeToSwap := openedBuyPosition.GetPositionTime().GetMinutes() >= m.BotService.GetSwapConfig().OrderTimeTrigger.GetMinutes() && openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital()).Lte(model.Percent(m.BotService.GetSwapConfig().FallPercentTrigger)) && !openedBuyPosition.IsSwap()
-
-					if !turboSwap && !isTimeToSwap {
-						break
-					}
-
-					violation := m.SwapValidator.Validate(possibleSwap, *openedBuyPosition)
-
-					if violation == nil {
-						chainCurrentPercent := m.SwapValidator.CalculatePercent(possibleSwap)
-						log.Printf(
-							"[%s] Swap chain [%s] is found for order #%d, initial percent: %.2f, current = %.2f",
-							binanceOrder.Symbol,
-							swapChain.Title,
-							openedBuyPosition.Id,
-							swapChain.Percent,
-							chainCurrentPercent,
-						)
-
-						swapCallback := func() {
-							m.MakeSwap(*openedBuyPosition, possibleSwap)
-						}
-						if m.TryCancel(binanceOrder, orderManageChannel, control, swapCallback, true) {
-							return true
-						}
-					} else {
-						log.Printf("CheckIsTimeToSwap: %s", violation.Error())
-					}
+				if m.TryCancel(binanceOrder, orderManageChannel, control, swapCallback, true) {
+					return true
 				}
 			}
 		}

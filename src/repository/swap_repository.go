@@ -630,7 +630,7 @@ func (s *SwapRepository) GetSwapChainCache(asset string) *model.SwapChainEntity 
 }
 
 func (s *SwapRepository) getSwapCacheKey(asset string) string {
-	return fmt.Sprintf("swap-chain-%s", asset)
+	return fmt.Sprintf("swap-chain-%s-%s", asset, s.CurrentBot.Exchange)
 }
 
 func (s *SwapRepository) CreateSwapAction(action model.SwapAction) (*int64, error) {

@@ -30,8 +30,8 @@ func (o *ObjectRepository) LoadObject(key string, object interface{}) error {
 	err := o.DB.QueryRow(`
 		SELECT 
 			os.object as ObjectJSON
-		FROM object_storage os WHERE os.storage_key = ? AND os.bot_id = ?
-	`, key, o.CurrentBot.Id).Scan(
+		FROM object_storage os WHERE os.storage_key = ?
+	`, key).Scan(
 		&jsonString,
 	)
 

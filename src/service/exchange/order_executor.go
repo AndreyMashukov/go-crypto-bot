@@ -495,6 +495,8 @@ func (m *OrderExecutor) TrySwap(order model.Order) {
 					chainCurrentPercent,
 				)
 				m.MakeSwap(order, possibleSwap)
+			} else {
+				log.Printf("TrySwap: %s", violation.Error())
 			}
 		}
 	}
@@ -1176,6 +1178,8 @@ func (m *OrderExecutor) CheckIsTimeToSwap(
 						if m.TryCancel(binanceOrder, orderManageChannel, control, swapCallback, true) {
 							return true
 						}
+					} else {
+						log.Printf("CheckIsTimeToSwap: %s", violation.Error())
 					}
 				}
 			}

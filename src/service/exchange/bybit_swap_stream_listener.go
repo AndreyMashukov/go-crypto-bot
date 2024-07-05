@@ -23,7 +23,7 @@ type BybitSwapStreamListener struct {
 }
 
 func (s *BybitSwapStreamListener) StartListening() {
-	swapKlineChannel := make(chan []byte)
+	swapKlineChannel := make(chan []byte, 1000)
 	// existing swaps real time monitoring
 	go func() {
 		for {

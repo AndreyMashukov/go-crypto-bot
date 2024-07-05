@@ -101,5 +101,6 @@ func (h *HealthService) HealthCheck() model.BotHealth {
 		Updates:       updateMap,
 		OrderBook:     orderBookMap,
 		GOMAXPROCS:    runtime.GOMAXPROCS(0),
+		NumGoroutine:  runtime.NumGoroutine(),
 	}
 }

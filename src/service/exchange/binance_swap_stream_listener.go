@@ -25,7 +25,7 @@ type BinanceSwapStreamListener struct {
 }
 
 func (s *BinanceSwapStreamListener) StartListening() {
-	swapKlineChannel := make(chan []byte)
+	swapKlineChannel := make(chan []byte, 1000)
 	// existing swaps real time monitoring
 	go func() {
 		for {
@@ -34,22 +34,25 @@ func (s *BinanceSwapStreamListener) StartListening() {
 
 			if strings.Contains(string(swapMsg), "kline") {
 				var event model.KlineEvent
-				json.Unmarshal(swapMsg, &event)
-				kLine := event.KlineData.Kline
-				kLine.UpdatedAt = time.Now().Unix()
-				// todo: track price timestamp...
-				s.ExchangeRepository.SetCurrentKline(kLine)
-				swapSymbol = kLine.Symbol
+				err := json.Unmarshal(swapMsg, &event)
+				if err == nil {
+					kLine := event.KlineData.Kline
+					kLine.UpdatedAt = time.Now().Unix()
+					// todo: track price timestamp...
+					s.ExchangeRepository.SetCurrentKline(kLine)
+					swapSymbol = kLine.Symbol
+				}
 			}
 
 			if strings.Contains(string(swapMsg), "@depth20") {
 				var event model.OrderBookEvent
-				json.Unmarshal(swapMsg, &event)
-
-				depth := event.Depth.ToOrderBookModel(strings.ToUpper(strings.ReplaceAll(event.Stream, "@depth20@1000ms", "")))
-				depth.UpdatedAt = time.Now().Unix()
-				s.ExchangeRepository.SetDepth(depth, 20, 25)
-				swapSymbol = depth.Symbol
+				err := json.Unmarshal(swapMsg, &event)
+				if err == nil {
+					depth := event.Depth.ToOrderBookModel(strings.ToUpper(strings.ReplaceAll(event.Stream, "@depth20@1000ms", "")))
+					depth.UpdatedAt = time.Now().Unix()
+					s.ExchangeRepository.SetDepth(depth, 20, 25)
+					swapSymbol = depth.Symbol
+				}
 			}
 
 			if swapSymbol == "" {

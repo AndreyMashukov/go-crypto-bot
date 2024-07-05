@@ -33,7 +33,7 @@ func (b *BinanceWSStreamer) StartStream(
 	klineChannel chan model.KLine,
 	depthChannel chan model.OrderBookModel,
 ) {
-	eventChannel := make(chan []byte)
+	eventChannel := make(chan []byte, 1000)
 
 	go func() {
 		for {
@@ -42,43 +42,49 @@ func (b *BinanceWSStreamer) StartStream(
 			switch true {
 			case strings.Contains(string(message), "miniTicker"):
 				var tickerEvent model.MiniTickerEvent
-				json.Unmarshal(message, &tickerEvent)
-				ticker := tickerEvent.MiniTicker
-				kLine := b.ExchangeRepository.GetCurrentKline(ticker.Symbol)
+				err := json.Unmarshal(message, &tickerEvent)
+				if err == nil {
+					ticker := tickerEvent.MiniTicker
+					kLine := b.ExchangeRepository.GetCurrentKline(ticker.Symbol)
 
-				if kLine != nil && kLine.Includes(ticker) {
-					klineChannel <- kLine.Update(ticker)
+					if kLine != nil && kLine.Includes(ticker) {
+						klineChannel <- kLine.Update(ticker)
+					}
 				}
 
 				break
 			case strings.Contains(string(message), "aggTrade"):
 				var tradeEvent model.TradeEvent
-				json.Unmarshal(message, &tradeEvent)
+				err := json.Unmarshal(message, &tradeEvent)
 
-				b.ExchangeRepository.AddTrade(tradeEvent.Trade)
-				smaDecision := b.SmaTradeStrategy.Decide(tradeEvent.Trade)
-				b.ExchangeRepository.SetDecision(smaDecision, tradeEvent.Trade.Symbol)
+				if err == nil {
+					b.ExchangeRepository.AddTrade(tradeEvent.Trade)
+					smaDecision := b.SmaTradeStrategy.Decide(tradeEvent.Trade)
+					b.ExchangeRepository.SetDecision(smaDecision, tradeEvent.Trade.Symbol)
+				}
 
 				break
 			case strings.Contains(string(message), "kline"):
 				var event model.KlineEvent
-				json.Unmarshal(message, &event)
-				kLine := event.KlineData.Kline
-				kLine.UpdatedAt = time.Now().Unix()
+				err := json.Unmarshal(message, &event)
+				if err == nil {
+					kLine := event.KlineData.Kline
+					kLine.UpdatedAt = time.Now().Unix()
 
-				klineChannel <- kLine
+					klineChannel <- kLine
+				}
 
 				break
 			case strings.Contains(string(message), "depth20"):
 				var event model.OrderBookEvent
-				json.Unmarshal(message, &event)
+				err := json.Unmarshal(message, &event)
 
-				depth := event.Depth.ToOrderBookModel(strings.ToUpper(strings.ReplaceAll(event.Stream, "@depth20@100ms", "")))
-				depthDecision := b.MarketDepthStrategy.Decide(depth)
-				b.ExchangeRepository.SetDecision(depthDecision, depth.Symbol)
-				go func() {
+				if err == nil {
+					depth := event.Depth.ToOrderBookModel(strings.ToUpper(strings.ReplaceAll(event.Stream, "@depth20@100ms", "")))
+					depthDecision := b.MarketDepthStrategy.Decide(depth)
+					b.ExchangeRepository.SetDecision(depthDecision, depth.Symbol)
 					depthChannel <- depth
-				}()
+				}
 				break
 			}
 		}

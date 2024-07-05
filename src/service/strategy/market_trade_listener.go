@@ -62,8 +62,6 @@ func (m *MarketTradeListener) ListenAll() {
 	go func() {
 		for {
 			kLine := <-klineChannel
-			predictChannel <- kLine.Symbol
-
 			lastKline := m.ExchangeRepository.GetCurrentKline(kLine.Symbol)
 
 			if lastKline != nil && lastKline.Timestamp.Gt(kLine.Timestamp) {
@@ -84,6 +82,7 @@ func (m *MarketTradeListener) ListenAll() {
 				}, event.EventNewKLineReceived)
 			}
 
+			predictChannel <- kLine.Symbol
 			m.ExchangeRepository.SetDecision(m.BaseKLineStrategy.Decide(kLine), kLine.Symbol)
 			m.ExchangeRepository.SetDecision(m.OrderBasedStrategy.Decide(kLine), kLine.Symbol)
 		}
@@ -187,12 +186,6 @@ func (m *MarketTradeListener) ListenAll() {
 						k.Close = t.Price
 
 						if k.Timestamp.GetPeriodToMinute() < currentInterval {
-							log.Printf(
-								"[%s] New time interval reached %d -> %d, price is unknown",
-								k.Symbol,
-								k.Timestamp.GetPeriodToMinute(),
-								currentInterval,
-							)
 							k.Timestamp = model.TimestampMilli(currentInterval)
 							k.Open = t.Price
 							k.Close = t.Price

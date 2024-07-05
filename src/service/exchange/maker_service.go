@@ -30,15 +30,15 @@ type MakerService struct {
 }
 
 func (m *MakerService) Make(symbol string) {
-	decision, err := m.StrategyFacade.Decide(symbol)
-
-	if err != nil {
-		return
-	}
-
 	openedOrder := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 
 	if openedOrder != nil && m.OrderExecutor.ProcessSwap(*openedOrder) {
+		return
+	}
+
+	decision, err := m.StrategyFacade.Decide(symbol)
+
+	if err != nil {
 		return
 	}
 
@@ -80,6 +80,7 @@ func (m *MakerService) ProcessBuy(tradeLimit model.TradeLimit) {
 	limitBuy := m.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
 
 	if limitBuy != nil {
+		// todo: signal := m.SignalStorage.GetSignal(tradeLimit.Symbol)
 		priceModel := m.PriceCalculator.CalculateBuy(tradeLimit)
 
 		err := m.OrderExecutor.Buy(tradeLimit, limitBuy.Price, limitBuy.OrigQty, priceModel.Signal)

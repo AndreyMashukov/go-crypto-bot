@@ -40,14 +40,16 @@ func InitServiceContainer() Container {
 		log.Fatal(fmt.Sprintf("[DB] MySQL can't connect: %s", err.Error()))
 	}
 
-	db.SetMaxIdleConns(64)
-	db.SetMaxOpenConns(64)
+	db.SetMaxIdleConns(8)
+	db.SetMaxOpenConns(8)
+	db.SetConnMaxIdleTime(time.Minute)
 	db.SetConnMaxLifetime(time.Minute)
 
 	swapDb, swapErr := sql.Open("mysql", os.Getenv("DATABASE_DSN"))
 
-	swapDb.SetMaxIdleConns(64)
-	swapDb.SetMaxOpenConns(64)
+	swapDb.SetMaxIdleConns(8)
+	swapDb.SetMaxOpenConns(8)
+	swapDb.SetConnMaxIdleTime(time.Minute)
 	swapDb.SetConnMaxLifetime(time.Minute)
 
 	if swapErr != nil {

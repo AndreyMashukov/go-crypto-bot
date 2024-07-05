@@ -38,7 +38,6 @@ func (b *BinanceWSStreamer) StartStream(
 	go func() {
 		for {
 			message := <-eventChannel
-
 			switch true {
 			case strings.Contains(string(message), "miniTicker"):
 				var tickerEvent model.MiniTickerEvent
@@ -47,9 +46,11 @@ func (b *BinanceWSStreamer) StartStream(
 					ticker := tickerEvent.MiniTicker
 					kLine := b.ExchangeRepository.GetCurrentKline(ticker.Symbol)
 
-					if kLine != nil && kLine.Includes(ticker) {
-						klineChannel <- kLine.Update(ticker)
+					if kLine != nil && kLine.Timestamp.Lte(ticker.EventTime) {
+						klineChannel <- kLine.Update(ticker, model.KLineSourceTickerStream)
 					}
+				} else {
+					log.Printf("Stream: Mini ticker error: %s", err.Error())
 				}
 
 				break
@@ -71,7 +72,13 @@ func (b *BinanceWSStreamer) StartStream(
 					kLine := event.KlineData.Kline
 					kLine.UpdatedAt = time.Now().Unix()
 
-					klineChannel <- kLine
+					lastKline := b.ExchangeRepository.GetCurrentKline(kLine.Symbol)
+					if lastKline == nil || lastKline.Timestamp.Lte(kLine.Timestamp) {
+						kLine.Source = model.KLineSourceKLineStream
+						klineChannel <- kLine
+					}
+				} else {
+					log.Printf("Stream: Kline error: %s", err.Error())
 				}
 
 				break

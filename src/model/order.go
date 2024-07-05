@@ -123,7 +123,7 @@ func (o *Order) GetAvailableExtraBudget(kLine KLine, withSwap bool) float64 {
 			return o.ExtraChargeOptions[i].Percent > o.ExtraChargeOptions[j].Percent
 		})
 
-		profit := o.GetProfitPercent(kLine.Close, withSwap)
+		profit := o.GetProfitPercent(kLine.Close.Value(), withSwap)
 
 		for _, option := range o.ExtraChargeOptions {
 			if profit.Lte(option.Percent) {

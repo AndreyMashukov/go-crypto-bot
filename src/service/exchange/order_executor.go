@@ -71,7 +71,7 @@ func (m *OrderExecutor) BuyExtra(tradeLimit model.TradeLimit, order model.Order,
 		return errors.New(fmt.Sprintf("[%s] Not enough budget to buy more", tradeLimit.Symbol))
 	}
 
-	profit := order.GetProfitPercent(lastKline.Close, m.BotService.UseSwapCapital())
+	profit := order.GetProfitPercent(lastKline.Close.Value(), m.BotService.UseSwapCapital())
 
 	if profit.Gt(tradeLimit.GetBuyOnFallPercent(order, *lastKline, m.BotService.UseSwapCapital())) {
 		return errors.New(fmt.Sprintf(
@@ -886,7 +886,7 @@ func (m *OrderExecutor) CheckIsBuyExpired(
 		return false
 	}
 
-	positionPercentage := m.Formatter.ComparePercentage(binanceOrder.Price, kline.Close)
+	positionPercentage := m.Formatter.ComparePercentage(binanceOrder.Price, kline.Close.Value())
 	if positionPercentage.Gte(101.00) {
 		log.Printf(
 			"[%s] %s Order [%s] status [%s] ttl reached, current price is [%.10f], order price [%.10f], diff percent: %.2f",
@@ -934,7 +934,7 @@ func (m *OrderExecutor) CheckIsSellExpired(
 
 	openedBuyPosition := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
 	if openedBuyPosition != nil {
-		profitPercent := openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital())
+		profitPercent := openedBuyPosition.GetProfitPercent(kline.Close.Value(), m.BotService.UseSwapCapital())
 		if profitPercent.Lte(0.00) {
 			log.Printf(
 				"[%s] %s Order [%s] status [%s] ttl reached, current price is [%.10f], order price [%.10f], open [%.10f], profit: %.2f",
@@ -998,11 +998,11 @@ func (m *OrderExecutor) CheckIsTimeToExtraBuy(
 
 	if binanceOrder.IsNew() || binanceOrder.IsPartiallyFilled() {
 		openedBuyPosition := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
-		if openedBuyPosition != nil && openedBuyPosition.CanExtraBuy(*kline, m.BotService.UseSwapCapital()) && m.TradeStack.CanBuy(tradeLimit) && openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital()).Lte(tradeLimit.GetBuyOnFallPercent(*openedBuyPosition, *kline, m.BotService.UseSwapCapital())) {
+		if openedBuyPosition != nil && openedBuyPosition.CanExtraBuy(*kline, m.BotService.UseSwapCapital()) && m.TradeStack.CanBuy(tradeLimit) && openedBuyPosition.GetProfitPercent(kline.Close.Value(), m.BotService.UseSwapCapital()).Lte(tradeLimit.GetBuyOnFallPercent(*openedBuyPosition, *kline, m.BotService.UseSwapCapital())) {
 			log.Printf(
 				"[%s] Extra Charge percent reached, current profit is: %.2f, SELL order is cancelled",
 				binanceOrder.Symbol,
-				openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital()).Value(),
+				openedBuyPosition.GetProfitPercent(kline.Close.Value(), m.BotService.UseSwapCapital()).Value(),
 			)
 			if m.TryCancel(binanceOrder, orderManageChannel, control, func() {}, false) {
 				return true
@@ -1041,7 +1041,7 @@ func (m *OrderExecutor) CheckIsTimeToCancel(
 				return false
 			}
 
-			if kline.Close >= binanceOrder.Price {
+			if kline.Close.Value() >= binanceOrder.Price {
 				return false
 			}
 
@@ -1115,11 +1115,11 @@ func (m *OrderExecutor) CheckIsTimeToSell(
 	openedBuyPosition := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
 
 	// [BUY] Check is it time to sell (maybe we have already partially filled)
-	if openedBuyPosition != nil && binanceOrder.IsPartiallyFilled() && binanceOrder.GetProfitPercent(kline.Close).Gte(m.ProfitService.GetMinProfitPercent(openedBuyPosition)) {
+	if openedBuyPosition != nil && binanceOrder.IsPartiallyFilled() && binanceOrder.GetProfitPercent(kline.Close.Value()).Gte(m.ProfitService.GetMinProfitPercent(openedBuyPosition)) {
 		log.Printf(
 			"[%s] Max profit percent reached, current profit is: %.2f, %s [%s] order is cancelled",
 			binanceOrder.Symbol,
-			binanceOrder.GetProfitPercent(kline.Close).Value(),
+			binanceOrder.GetProfitPercent(kline.Close.Value()).Value(),
 			binanceOrder.Side,
 			binanceOrder.OrderId,
 		)
@@ -1148,7 +1148,7 @@ func (m *OrderExecutor) HasSwapOption(openedBuyPosition *model.Order) *model.Swa
 
 		for _, possibleSwap := range possibleSwaps {
 			turboSwap := possibleSwap.Percent.Gte(model.Percent(m.TurboSwapProfitPercent))
-			isTimeToSwap := openedBuyPosition.GetPositionTime().GetMinutes() >= m.BotService.GetSwapConfig().OrderTimeTrigger.GetMinutes() && openedBuyPosition.GetProfitPercent(kline.Close, m.BotService.UseSwapCapital()).Lte(model.Percent(m.BotService.GetSwapConfig().FallPercentTrigger)) && !openedBuyPosition.IsSwap()
+			isTimeToSwap := openedBuyPosition.GetPositionTime().GetMinutes() >= m.BotService.GetSwapConfig().OrderTimeTrigger.GetMinutes() && openedBuyPosition.GetProfitPercent(kline.Close.Value(), m.BotService.UseSwapCapital()).Lte(model.Percent(m.BotService.GetSwapConfig().FallPercentTrigger)) && !openedBuyPosition.IsSwap()
 
 			if !turboSwap && !isTimeToSwap {
 				break

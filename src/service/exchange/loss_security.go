@@ -39,19 +39,19 @@ func (l *LossSecurity) IsRiskyBuy(binanceOrder model.BinanceOrder, limit model.T
 			}
 		}
 
-		if binanceOrder.Price > l.Formatter.FormatPrice(limit, kline.Close) {
-			fallPercent := model.Percent(100.00 - l.Formatter.ComparePercentage(binanceOrder.Price, kline.Close).Value())
+		if binanceOrder.Price > l.Formatter.FormatPrice(limit, kline.Close.Value()) {
+			fallPercent := model.Percent(100.00 - l.Formatter.ComparePercentage(binanceOrder.Price, kline.Close.Value()).Value())
 			minPrice := l.ExchangeRepository.GetPeriodMinPrice(binanceOrder.Symbol, 200)
 
 			cancelFallPercent := model.Percent(model.MinProfitPercent)
 
 			// If falls more than (min - 0.5%) cancel current
-			if fallPercent.Gte(cancelFallPercent) && minPrice-(minPrice*0.005) > kline.Close {
+			if fallPercent.Gte(cancelFallPercent) && minPrice-(minPrice*0.005) > kline.Close.Value() {
 				log.Printf(
 					"[%s] Close price RISK detected: %f > %f",
 					binanceOrder.Symbol,
 					binanceOrder.Price,
-					l.Formatter.FormatPrice(limit, kline.Close),
+					l.Formatter.FormatPrice(limit, kline.Close.Value()),
 				)
 
 				return true
@@ -91,8 +91,8 @@ func (l *LossSecurity) BuyPriceCorrection(price float64, limit model.TradeLimit)
 	kline := l.ExchangeRepository.GetCurrentKline(limit.Symbol)
 
 	if kline != nil {
-		if price > kline.Low {
-			price = kline.Low
+		if price > kline.Low.Value() {
+			price = kline.Low.Value()
 		}
 	}
 

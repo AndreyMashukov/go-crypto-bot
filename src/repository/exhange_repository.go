@@ -790,10 +790,10 @@ func (e *ExchangeRepository) SaveKlineHistory(kLine model.KLine) {
 func (e *ExchangeRepository) GetPriceChangeSpeedItem(kLine model.KLine, lastKlineOld model.KLine) model.PriceChange {
 	priceChangeSpeed := model.PriceChange{
 		CloseTime:       lastKlineOld.Timestamp,
-		FromPrice:       lastKlineOld.Close,
+		FromPrice:       lastKlineOld.Close.Value(),
 		FromTime:        model.TimestampMilli(lastKlineOld.UpdatedAt * 1000),
 		ToTime:          model.TimestampMilli(kLine.UpdatedAt * 1000),
-		ToPrice:         kLine.Close,
+		ToPrice:         kLine.Close.Value(),
 		PointsPerSecond: 0.00,
 	}
 
@@ -801,7 +801,7 @@ func (e *ExchangeRepository) GetPriceChangeSpeedItem(kLine model.KLine, lastKlin
 
 	if tradeLimit != nil && lastKlineOld.UpdatedAt != kLine.UpdatedAt {
 		secondsDiff := float64(kLine.UpdatedAt - lastKlineOld.UpdatedAt)
-		pricePointsDiff := (kLine.Close - lastKlineOld.Close) / tradeLimit.MinPrice
+		pricePointsDiff := (kLine.Close.Value() - lastKlineOld.Close.Value()) / tradeLimit.MinPrice
 
 		if pricePointsDiff != 0.00 {
 			priceChangeSpeed.PointsPerSecond = e.Formatter.ToFixed(pricePointsDiff/secondsDiff, 2)
@@ -854,8 +854,8 @@ func (e *ExchangeRepository) GetPeriodMinPrice(symbol string, period int64) floa
 	kLines := e.KLineList(symbol, true, period)
 	minPrice := 0.00
 	for _, kLine := range kLines {
-		if 0.00 == minPrice || kLine.Low < minPrice {
-			minPrice = kLine.Low
+		if 0.00 == minPrice || kLine.Low.Value() < minPrice {
+			minPrice = kLine.Low.Value()
 		}
 	}
 

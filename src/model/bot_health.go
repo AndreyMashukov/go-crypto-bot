@@ -14,18 +14,18 @@ const BinanceStatusDisconnected = "disconnected"
 const BinanceStatusApiKeyCheck = "api_key_checking"
 
 type BotHealth struct {
-	Bot           Bot               `json:"bot"`
-	MlStatus      string            `json:"mlStatus"`
-	DbStatus      string            `json:"dbStatus"`
-	SwapDbStatus  string            `json:"swapDbStatus"`
-	RedisStatus   string            `json:"redisStatus"`
-	BinanceStatus string            `json:"binanceStatus"`
-	Cores         int               `json:"cores"`
-	Memory        sysstats.MemStats `json:"memory"`
-	LoadAvg       sysstats.LoadAvg  `json:"loadAvg"`
-	Updates       map[string]string `json:"updates"`
-	OrderBook     map[string]string `json:"orderBook"`
-	GOMAXPROCS    int               `json:"GOMAXPROCS"`
-	NumGoroutine  int               `json:"numGoroutine"`
-	DateTimeNow   string            `json:"dateTimeNow"`
+	Bot           Bot                 `json:"bot"`
+	MlStatus      string              `json:"mlStatus"`
+	DbStatus      string              `json:"dbStatus"`
+	SwapDbStatus  string              `json:"swapDbStatus"`
+	RedisStatus   string              `json:"redisStatus"`
+	BinanceStatus string              `json:"binanceStatus"`
+	Cores         int                 `json:"cores"`
+	Memory        sysstats.MemStats   `json:"memory"`
+	LoadAvg       sysstats.LoadAvg    `json:"loadAvg"`
+	Updates       map[string][]string `json:"updates"`
+	OrderBook     map[string]string   `json:"orderBook"`
+	GOMAXPROCS    int                 `json:"GOMAXPROCS"`
+	NumGoroutine  int                 `json:"numGoroutine"`
+	DateTimeNow   string              `json:"dateTimeNow"`
 }

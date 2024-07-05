@@ -21,14 +21,14 @@ func (s *StatService) GetTradeStat(kLine model.KLine, cache bool, full bool) mod
 				Symbol:       kLine.Symbol,
 				IsBuyerMaker: true,
 				Quantity:     kLine.TradeVolume.SellQty,
-				Price:        kLine.Close,
+				Price:        kLine.Close.Value(),
 			})
 			// Buy
 			tradesPastPeriod = append(tradesPastPeriod, model.Trade{
 				Symbol:       kLine.Symbol,
 				IsBuyerMaker: false,
 				Quantity:     kLine.TradeVolume.BuyQty,
-				Price:        kLine.Close,
+				Price:        kLine.Close.Value(),
 			})
 		}
 	} else {
@@ -94,7 +94,7 @@ func (s *StatService) GetTradeStat(kLine model.KLine, cache bool, full bool) mod
 	return model.TradeStat{
 		Symbol:        kLine.Symbol,
 		Timestamp:     kLine.Timestamp,
-		Price:         kLine.Close,
+		Price:         kLine.Close.Value(),
 		BuyQty:        buyQty,
 		SellQty:       sellQty,
 		BuyVolume:     buyVolume,
@@ -106,11 +106,11 @@ func (s *StatService) GetTradeStat(kLine model.KLine, cache bool, full bool) mod
 		TradeCount:    int64(len(tradesPastPeriod)),
 		MaxPSC:        maxPcs,
 		MinPCS:        minPcs,
-		Open:          kLine.Open,
-		Close:         kLine.Close,
-		High:          kLine.High,
-		Low:           kLine.Low,
-		Volume:        kLine.Volume,
+		Open:          kLine.Open.Value(),
+		Close:         kLine.Close.Value(),
+		High:          kLine.High.Value(),
+		Low:           kLine.Low.Value(),
+		Volume:        kLine.Volume.Value(),
 		OrderBookStat: orderBookStat,
 	}
 }

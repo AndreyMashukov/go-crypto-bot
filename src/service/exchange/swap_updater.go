@@ -22,7 +22,7 @@ func (s SwapUpdater) UpdateSwapPair(swapPair model.SwapPair) {
 		if len(kLines) > 0 {
 			kline := kLines[0]
 			swapPair.DailyPercent = s.Formatter.ToFixed(
-				(s.Formatter.ComparePercentage(kline.Open, kline.Close) - 100.00).Value(),
+				(s.Formatter.ComparePercentage(kline.Open.Value(), kline.Close.Value()) - 100.00).Value(),
 				2,
 			)
 

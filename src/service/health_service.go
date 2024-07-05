@@ -29,15 +29,19 @@ type HealthService struct {
 }
 
 func (h *HealthService) HealthCheck() model.BotHealth {
-	updateMap := make(map[string]string)
+	updateMap := make(map[string][]string)
 	orderBookMap := make(map[string]string)
 
 	for _, limit := range h.ExchangeRepository.GetTradeLimits() {
 		kLine := h.ExchangeRepository.GetCurrentKline(limit.Symbol)
-		dateStringPrice := ""
+		dateStringPrice := []string{"", ""}
 		dateStringOrderBook := ""
-		if kLine != nil {
-			dateStringPrice = time.Unix(kLine.UpdatedAt, 0).Format("2006-01-02 15:04:05")
+		if kLine != nil && kLine.Source != "" {
+			dateStringPrice = []string{
+				time.Unix(kLine.UpdatedAt, 0).Format("2006-01-02 15:04:05"),
+				kLine.Source,
+				fmt.Sprintf("%.12f", kLine.Close.Value()),
+			}
 		}
 
 		orderBook := h.ExchangeRepository.GetDepth(limit.Symbol, 20)

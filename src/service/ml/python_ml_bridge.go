@@ -276,7 +276,7 @@ func (p *PythonMLBridge) Predict(symbol string) (float64, error) {
 		OrderBookSellQtySum:    depth.GetQtySumAsk(),
 		OrderBookBuyVolumeSum:  depth.GetBidVolume(),
 		OrderBookSellVolumeSum: depth.GetAskVolume(),
-		SecondaryPrice:         secondaryKline.Close,
+		SecondaryPrice:         secondaryKline.Close.Value(),
 	})
 
 	pyCodeC := C.CString(pyCode)

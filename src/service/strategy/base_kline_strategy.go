@@ -23,7 +23,7 @@ func (k *BaseKLineStrategy) Decide(kLine model.KLine) model.Decision {
 			Score:        25.00,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
-			Price:        kLine.Close,
+			Price:        kLine.Close.Value(),
 			Params:       [3]float64{0, 0, 0},
 		}
 	}
@@ -35,7 +35,7 @@ func (k *BaseKLineStrategy) Decide(kLine model.KLine) model.Decision {
 	if k.MlEnabled {
 		predict, predictErr := k.ExchangeRepository.GetPredict(kLine.Symbol)
 
-		if predictErr == nil && predict > kLine.Close {
+		if predictErr == nil && predict > kLine.Close.Value() {
 			isPositivePredict = true
 		}
 	}
@@ -57,7 +57,7 @@ func (k *BaseKLineStrategy) Decide(kLine model.KLine) model.Decision {
 								Score:        float64(points),
 								Operation:    "BUY",
 								Timestamp:    time.Now().Unix(),
-								Price:        kLine.Close,
+								Price:        kLine.Close.Value(),
 								Params:       [3]float64{0, 0, 0},
 							}
 						case points >= -5:
@@ -66,7 +66,7 @@ func (k *BaseKLineStrategy) Decide(kLine model.KLine) model.Decision {
 								Score:        20,
 								Operation:    "BUY",
 								Timestamp:    time.Now().Unix(),
-								Price:        kLine.Close,
+								Price:        kLine.Close.Value(),
 								Params:       [3]float64{0, 0, 0},
 							}
 						}
@@ -80,7 +80,7 @@ func (k *BaseKLineStrategy) Decide(kLine model.KLine) model.Decision {
 			Score:        25.00,
 			Operation:    "SELL",
 			Timestamp:    time.Now().Unix(),
-			Price:        kLine.Close,
+			Price:        kLine.Close.Value(),
 			Params:       [3]float64{0, 0, 0},
 		}
 	}
@@ -91,7 +91,7 @@ func (k *BaseKLineStrategy) Decide(kLine model.KLine) model.Decision {
 			Score:        50.00,
 			Operation:    "BUY",
 			Timestamp:    time.Now().Unix(),
-			Price:        kLine.Close,
+			Price:        kLine.Close.Value(),
 			Params:       [3]float64{0, 0, 0},
 		}
 	}
@@ -101,7 +101,7 @@ func (k *BaseKLineStrategy) Decide(kLine model.KLine) model.Decision {
 		Score:        25.00,
 		Operation:    "HOLD",
 		Timestamp:    time.Now().Unix(),
-		Price:        kLine.Close,
+		Price:        kLine.Close.Value(),
 		Params:       [3]float64{0, 0, 0},
 	}
 }

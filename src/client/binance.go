@@ -548,7 +548,7 @@ func (b *Binance) GetTickers(symbols []string) []model.WSTickerPrice {
 	json.Unmarshal(message, &response)
 
 	if response.Error != nil {
-		log.Println(socketRequest)
+		log.Println(response.Error)
 		list := make([]model.WSTickerPrice, 0)
 		return list
 	}

@@ -240,13 +240,13 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 
 	price := priceModel.Price
 
-	profit := openedOrder.GetProfitPercent(lastKline.Close, m.BotService.UseSwapCapital())
+	profit := openedOrder.GetProfitPercent(lastKline.Close.Value(), m.BotService.UseSwapCapital())
 	extraChargePercent := tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline, m.BotService.UseSwapCapital())
 
 	if profit.Lte(extraChargePercent) {
 		// extra buy on current price
-		if price < lastKline.Close {
-			price = m.Formatter.FormatPrice(tradeLimit, lastKline.Close)
+		if price < lastKline.Close.Value() {
+			price = m.Formatter.FormatPrice(tradeLimit, lastKline.Close.Value())
 		}
 
 		err := m.OrderExecutor.BuyExtra(tradeLimit, openedOrder, price)

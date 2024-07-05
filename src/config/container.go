@@ -185,11 +185,18 @@ func InitServiceContainer() Container {
 		Formatter:          &formatter,
 		Binance:            exchangeApi,
 	}
-	swapRepository := repository.SwapRepository{
-		DB:         swapDb,
+	objectRepository := repository.ObjectRepository{
+		DB:         db,
+		CurrentBot: currentBot,
 		RDB:        rdb,
 		Ctx:        &ctx,
-		CurrentBot: currentBot,
+	}
+	swapRepository := repository.SwapRepository{
+		DB:               swapDb,
+		RDB:              rdb,
+		Ctx:              &ctx,
+		CurrentBot:       currentBot,
+		ObjectRepository: &objectRepository,
 	}
 
 	swapManager := exchange.SwapManager{
@@ -265,18 +272,12 @@ func InitServiceContainer() Container {
 	callbackManager := service.CallbackManager{
 		AutoTradeHost: "https://api.autotrade.cloud",
 	}
-
 	orderRepository := repository.OrderRepository{
-		DB:         db,
-		RDB:        rdb,
-		Ctx:        &ctx,
-		CurrentBot: currentBot,
-		ObjectRepository: &repository.ObjectRepository{
-			DB:         db,
-			CurrentBot: currentBot,
-			RDB:        rdb,
-			Ctx:        &ctx,
-		},
+		DB:               db,
+		RDB:              rdb,
+		Ctx:              &ctx,
+		CurrentBot:       currentBot,
+		ObjectRepository: &objectRepository,
 	}
 	botService := service.BotService{
 		CurrentBot:    currentBot,

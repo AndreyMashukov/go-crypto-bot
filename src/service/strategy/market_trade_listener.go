@@ -12,6 +12,7 @@ import (
 	"log"
 	"math"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -100,22 +101,27 @@ func (m *MarketTradeListener) ListenAll() {
 	hasBtcUsdt := false
 	hasEthUsdt := false
 
+	waitGroup := sync.WaitGroup{}
 	log.Printf("Price history recovery started")
 	for _, limit := range m.ExchangeRepository.GetTradeLimits() {
+		waitGroup.Add(1)
 		tradeLimitCollection = append(tradeLimitCollection, limit)
 
-		klineAmount := 0
-		history := m.Binance.GetKLines(limit.GetSymbol(), "1m", 200)
+		go func(l model.TradeLimit) {
+			defer waitGroup.Done()
+			klineAmount := 0
+			history := m.Binance.GetKLines(l.GetSymbol(), "1m", 200)
 
-		if len(history) > 0 {
-			m.ExchangeRepository.ClearKlineHistory(limit.GetSymbol())
-		}
+			if len(history) > 0 {
+				m.ExchangeRepository.ClearKlineHistory(l.GetSymbol())
+			}
 
-		for _, kline := range history {
-			klineAmount++
-			m.ExchangeRepository.SaveKlineHistory(kline.ToKLine(limit.GetSymbol()))
-		}
-		log.Printf("Loaded history %s -> %d klines", limit.Symbol, klineAmount)
+			for _, kline := range history {
+				klineAmount++
+				m.ExchangeRepository.SaveKlineHistory(kline.ToKLine(l.GetSymbol()))
+			}
+			log.Printf("Loaded history %s -> %d klines", l.Symbol, klineAmount)
+		}(limit)
 
 		if "BTCUSDT" == limit.GetSymbol() {
 			hasBtcUsdt = true
@@ -124,6 +130,7 @@ func (m *MarketTradeListener) ListenAll() {
 			hasEthUsdt = true
 		}
 	}
+	waitGroup.Wait()
 
 	log.Printf("Price history recovery finished")
 	m.EventDispatcher.Enabled = true

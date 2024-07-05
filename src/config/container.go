@@ -165,13 +165,20 @@ func InitServiceContainer() Container {
 		log.Panic(fmt.Sprintf("Unsupported exchange: %s", botExchange))
 	}
 
-	exchangeRepository := repository.ExchangeRepository{
+	objectRepository := repository.ObjectRepository{
 		DB:         db,
+		CurrentBot: currentBot,
 		RDB:        rdb,
 		Ctx:        &ctx,
-		CurrentBot: currentBot,
-		Formatter:  &formatter,
-		Binance:    exchangeApi,
+	}
+	exchangeRepository := repository.ExchangeRepository{
+		DB:               db,
+		RDB:              rdb,
+		Ctx:              &ctx,
+		CurrentBot:       currentBot,
+		Formatter:        &formatter,
+		Binance:          exchangeApi,
+		ObjectRepository: &objectRepository,
 	}
 
 	marketDepthStrategy := strategy.MarketDepthStrategy{}
@@ -184,12 +191,6 @@ func InitServiceContainer() Container {
 		ExchangeRepository: &exchangeRepository,
 		Formatter:          &formatter,
 		Binance:            exchangeApi,
-	}
-	objectRepository := repository.ObjectRepository{
-		DB:         db,
-		CurrentBot: currentBot,
-		RDB:        rdb,
-		Ctx:        &ctx,
 	}
 	swapRepository := repository.SwapRepository{
 		DB:               swapDb,
@@ -500,6 +501,7 @@ func InitServiceContainer() Container {
 		SwapDb:             swapDb,
 		RDB:                rdb,
 		Ctx:                &ctx,
+		TimeService:        &timeService,
 	}
 
 	botController := controller.BotController{

@@ -10,6 +10,7 @@ import (
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/ml"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
 	"runtime"
 	"time"
 )
@@ -24,6 +25,7 @@ type HealthService struct {
 	Ctx                *context.Context
 	Binance            client.ExchangeAPIInterface
 	CurrentBot         *model.Bot
+	TimeService        utils.TimeServiceInterface
 }
 
 func (h *HealthService) HealthCheck() model.BotHealth {
@@ -102,5 +104,6 @@ func (h *HealthService) HealthCheck() model.BotHealth {
 		OrderBook:     orderBookMap,
 		GOMAXPROCS:    runtime.GOMAXPROCS(0),
 		NumGoroutine:  runtime.NumGoroutine(),
+		DateTimeNow:   h.TimeService.GetNowDateTimeString(),
 	}
 }

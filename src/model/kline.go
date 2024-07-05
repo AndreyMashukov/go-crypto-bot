@@ -1,7 +1,6 @@
 package model
 
 import (
-	"log"
 	"math"
 	"time"
 )
@@ -128,13 +127,6 @@ func (k *KLine) Update(ticker MiniTicker) KLine {
 	// This is daily ticker price, we can use only `ticker.Close` for minute KLines!
 	currentInterval := TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute()
 	if k.Timestamp.GetPeriodToMinute() < currentInterval {
-		log.Printf(
-			"[%s] New time interval reached %d -> %d, price is unknown",
-			k.Symbol,
-			k.Timestamp.GetPeriodToMinute(),
-			currentInterval,
-		)
-
 		return KLine{
 			Timestamp: TimestampMilli(currentInterval),
 			Symbol:    ticker.Symbol,

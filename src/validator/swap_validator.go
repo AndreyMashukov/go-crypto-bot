@@ -135,8 +135,12 @@ func (v *SwapValidator) validateSwap(chain model.SwapChainEntity, order model.Or
 
 func (v *SwapValidator) checkHistoryData(symbol string, price float64, operation string) error {
 	period := v.BotService.GetSwapConfig().HistoryPeriod
-	history := v.Binance.GetKLinesCached(symbol, v.BotService.GetSwapConfig().HistoryInterval, period)
 
+	if period == 0 {
+		return nil
+	}
+
+	history := v.Binance.GetKLinesCached(symbol, v.BotService.GetSwapConfig().HistoryInterval, period)
 	seenTimes := int64(0)
 
 	for _, record := range history {

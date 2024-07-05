@@ -31,9 +31,9 @@ type MarketTradeListener struct {
 }
 
 func (m *MarketTradeListener) ListenAll() {
-	klineChannel := make(chan model.KLine)
-	predictChannel := make(chan string)
-	depthChannel := make(chan model.OrderBookModel)
+	klineChannel := make(chan model.KLine, 1000)
+	predictChannel := make(chan string, 1000)
+	depthChannel := make(chan model.OrderBookModel, 1000)
 
 	go func() {
 		for {
@@ -61,10 +61,7 @@ func (m *MarketTradeListener) ListenAll() {
 	go func() {
 		for {
 			kLine := <-klineChannel
-
-			go func(symbol string) {
-				predictChannel <- symbol
-			}(kLine.Symbol)
+			predictChannel <- kLine.Symbol
 
 			lastKline := m.ExchangeRepository.GetCurrentKline(kLine.Symbol)
 

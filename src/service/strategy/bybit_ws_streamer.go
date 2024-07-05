@@ -26,7 +26,7 @@ func (b *ByBitWsStreamer) StartStream(
 	klineChannel chan model.KLine,
 	depthChannel chan model.OrderBookModel,
 ) {
-	eventChannel := make(chan []byte)
+	eventChannel := make(chan []byte, 1000)
 
 	go func() {
 		for {
@@ -90,9 +90,7 @@ func (b *ByBitWsStreamer) StartStream(
 					depth := event.Data.ToOrderBookModel()
 					depthDecision := b.MarketDepthStrategy.Decide(depth)
 					b.ExchangeRepository.SetDecision(depthDecision, depth.Symbol)
-					go func() {
-						depthChannel <- depth
-					}()
+					depthChannel <- depth
 				} else {
 					log.Printf("Order book error bybit: %s", err.Error())
 				}

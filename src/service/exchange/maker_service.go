@@ -7,6 +7,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"gitlab.com/open-soft/go-crypto-bot/src/utils"
 	"log"
+	"runtime"
 	"slices"
 	"strings"
 	"time"
@@ -448,7 +449,10 @@ func (m *MakerService) StartTrade() {
 		go func(symbol string) {
 			for {
 				m.Make(symbol)
-				time.Sleep(time.Millisecond * 500)
+
+				runtime.GC()
+				runtime.Gosched()
+				time.Sleep(time.Millisecond * 250)
 			}
 		}(tradeLimit.Symbol)
 	}

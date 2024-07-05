@@ -274,6 +274,8 @@ func InitServiceContainer() Container {
 		ObjectRepository: &repository.ObjectRepository{
 			DB:         db,
 			CurrentBot: currentBot,
+			RDB:        rdb,
+			Ctx:        &ctx,
 		},
 	}
 	botService := service.BotService{

@@ -79,7 +79,27 @@ func (m *MakerService) ProcessBuy(tradeLimit model.TradeLimit) {
 	// allow process already opened order
 	limitBuy := m.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
 
-	if !m.TradeStack.CanBuy(tradeLimit) && limitBuy == nil {
+	if limitBuy != nil {
+		priceModel := m.PriceCalculator.CalculateBuy(tradeLimit)
+
+		err := m.OrderExecutor.Buy(tradeLimit, limitBuy.Price, limitBuy.OrigQty, priceModel.Signal)
+		if err != nil {
+			log.Printf(
+				"[%s] Existing order [%s] BUY Error: %s",
+				tradeLimit.Symbol,
+				limitBuy.OrderId,
+				err,
+			)
+
+			if strings.Contains(err.Error(), "not enough balance") {
+				log.Printf("[%s] wait 1 minute...", tradeLimit.Symbol)
+				time.Sleep(time.Minute * 1)
+			}
+		}
+		return
+	}
+
+	if !m.TradeStack.CanBuy(tradeLimit) {
 		return
 	}
 
@@ -102,7 +122,7 @@ func (m *MakerService) ProcessBuy(tradeLimit model.TradeLimit) {
 	marketDepth := m.PriceCalculator.GetDepth(tradeLimit.Symbol, 20)
 	manualOrder := m.OrderRepository.GetManualOrder(tradeLimit.Symbol)
 
-	if len(marketDepth.Bids) == 0 && manualOrder == nil && limitBuy == nil {
+	if len(marketDepth.Bids) == 0 && manualOrder == nil {
 		log.Printf("[%s] Too small BIDs amount: %d\n", tradeLimit.Symbol, len(marketDepth.Bids))
 		return
 	}
@@ -159,7 +179,24 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 	// allow process already opened order
 	limitBuy := m.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
 
-	if !m.TradeStack.CanBuy(tradeLimit) && limitBuy == nil {
+	if limitBuy != nil {
+		err := m.OrderExecutor.BuyExtra(tradeLimit, openedOrder, limitBuy.Price)
+		if err != nil {
+			log.Printf(
+				"[%s] Existing order [%s] Extra BUY Error: %s",
+				tradeLimit.Symbol,
+				limitBuy.OrderId,
+				err,
+			)
+
+			if m.BotService.IsSwapEnabled() {
+				m.OrderExecutor.TrySwap(openedOrder)
+			}
+		}
+		return
+	}
+
+	if !m.TradeStack.CanBuy(tradeLimit) {
 		return
 	}
 
@@ -188,7 +225,7 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 	marketDepth := m.PriceCalculator.GetDepth(tradeLimit.Symbol, 20)
 	manualOrder := m.OrderRepository.GetManualOrder(tradeLimit.Symbol)
 
-	if len(marketDepth.Bids) == 0 && manualOrder == nil && limitBuy == nil {
+	if len(marketDepth.Bids) == 0 && manualOrder == nil {
 		log.Printf("[%s] Too small BIDs amount: %d\n", tradeLimit.Symbol, len(marketDepth.Bids))
 		return
 	}
@@ -242,7 +279,27 @@ func (m *MakerService) ProcessSell(tradeLimit model.TradeLimit, openedOrder mode
 	// allow process already opened order
 	limitSell := m.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "SELL")
 
-	if !m.TradeFilterService.CanSell(tradeLimit) && limitSell == nil {
+	if limitSell != nil {
+		err := m.OrderExecutor.Sell(
+			tradeLimit,
+			openedOrder,
+			limitSell.Price,
+			limitSell.OrigQty,
+			false,
+		)
+
+		if err != nil {
+			log.Printf(
+				"[%s] Existing order [%s] SELL error: %s",
+				openedOrder.Symbol,
+				limitSell.OrderId,
+				err.Error(),
+			)
+		}
+		return
+	}
+
+	if !m.TradeFilterService.CanSell(tradeLimit) {
 		log.Printf("[%s] Can't sell, trade filter conditions is not matched", tradeLimit.Symbol)
 
 		return

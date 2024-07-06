@@ -173,6 +173,8 @@ func (s *SwapExecutor) ExecuteSwapOne(swapAction *model.SwapAction, order model.
 
 		swapOneOrder = &binanceOrder
 		swapAction.SwapOneExternalStatus = &binanceOrder.Status
+		swapAction.SwapOneSide = &binanceOrder.Side
+		swapAction.SwapOneQuantity = &binanceOrder.OrigQty
 		_ = s.SwapRepository.UpdateSwapAction(*swapAction)
 	}
 
@@ -371,6 +373,8 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 
 		swapTwoOrder = &binanceOrder
 		swapAction.SwapTwoExternalStatus = &binanceOrder.Status
+		swapAction.SwapTwoSide = &binanceOrder.Side
+		swapAction.SwapTwoQuantity = &binanceOrder.OrigQty
 		_ = s.SwapRepository.UpdateSwapAction(*swapAction)
 	}
 
@@ -552,6 +556,8 @@ func (s *SwapExecutor) ExecuteSwapThree(
 
 		swapThreeOrder = &binanceOrder
 		swapAction.SwapThreeExternalStatus = &binanceOrder.Status
+		swapAction.SwapThreeSide = &binanceOrder.Side
+		swapAction.SwapThreeQuantity = &binanceOrder.OrigQty
 		_ = s.SwapRepository.UpdateSwapAction(*swapAction)
 	}
 

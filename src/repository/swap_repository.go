@@ -875,3 +875,83 @@ func (e *SwapRepository) GetSwapPairBySymbol(symbol string) (model.SwapPair, err
 
 	return swapPair, nil
 }
+
+func (repo *SwapRepository) GetSwapActions() []model.SwapAction {
+	res, err := repo.DB.Query(`
+		SELECT 
+		    sa.id as Id,
+		    sa.order_id as OrderId,
+		    sa.bot_id as BotId,
+		    sa.swap_chain_id as SwapChainId,
+		    sa.asset as Asset,
+		    sa.status as Status,
+		    sa.start_timestamp as StartTimestamp,
+		    sa.start_quantity as StartQuantity,
+		    sa.end_timestamp as EndTimestamp,
+		    sa.end_quantity as EndQuantity,
+		    sa.swap_one_external_id as SwapOneExternalId,
+		    sa.swap_one_external_status as SwapOneExternalStatus,
+		    sa.swap_one_symbol as SwapOneSymbol,
+		    sa.swap_one_price as SwapOnePrice,
+		    sa.swap_one_timestamp as SwapOneTimestamp,
+		    sa.swap_two_external_id as SwapTwoExternalId,
+		    sa.swap_two_external_status as SwapTwoExternalStatus,
+		    sa.swap_two_symbol as SwapTwoSymbol,
+		    sa.swap_two_price as SwapTwoPrice,
+		    sa.swap_two_timestamp as SwapTwoTimestamp,
+		    sa.swap_three_external_id as SwapThreeExternalId,
+		    sa.swap_three_external_status as SwapThreeExternalStatus,
+		    sa.swap_three_symbol as SwapThreeSymbol,
+		    sa.swap_three_price as SwapThreePrice,
+		    sa.swap_three_timestamp as SwapThreeTimestamp
+		FROM swap_action sa
+		WHERE sa.bot_id = ? AND sa.status IN (?, ?, ?)
+	`, repo.CurrentBot.Id, model.SwapActionStatusSuccess, model.SwapActionStatusProcess, model.SwapActionStatusPending)
+	defer res.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	list := make([]model.SwapAction, 0)
+
+	for res.Next() {
+		var action model.SwapAction
+
+		err := res.Scan(
+			&action.Id,
+			&action.OrderId,
+			&action.BotId,
+			&action.SwapChainId,
+			&action.Asset,
+			&action.Status,
+			&action.StartTimestamp,
+			&action.StartQuantity,
+			&action.EndTimestamp,
+			&action.EndQuantity,
+			&action.SwapOneExternalId,
+			&action.SwapOneExternalStatus,
+			&action.SwapOneSymbol,
+			&action.SwapOnePrice,
+			&action.SwapOneTimestamp,
+			&action.SwapTwoExternalId,
+			&action.SwapTwoExternalStatus,
+			&action.SwapTwoSymbol,
+			&action.SwapTwoPrice,
+			&action.SwapTwoTimestamp,
+			&action.SwapThreeExternalId,
+			&action.SwapThreeExternalStatus,
+			&action.SwapThreeSymbol,
+			&action.SwapThreePrice,
+			&action.SwapThreeTimestamp,
+		)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		list = append(list, action)
+	}
+
+	return list
+}

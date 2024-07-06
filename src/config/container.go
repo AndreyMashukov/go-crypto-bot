@@ -361,6 +361,8 @@ func InitServiceContainer() Container {
 		Ctx:                &ctx,
 		CurrentBot:         currentBot,
 		BotService:         &botService,
+		BalanceService:     &balanceService,
+		Exchange:           exchangeApi,
 	}
 
 	tradeFilterService := exchange.TradeFilterService{
@@ -622,6 +624,9 @@ func (c *Container) StartHttpServer() {
 	http.HandleFunc("/depth/", c.ExchangeController.GetDepthAction)
 	http.HandleFunc("/trade/list/", c.ExchangeController.GetTradeListAction)
 	http.HandleFunc("/swap/list", c.ExchangeController.GetSwapListAction)
+	http.HandleFunc("/swap/action/list", c.ExchangeController.GetSwapActionListAction)
+	http.HandleFunc("/account", c.ExchangeController.GetAccountAction)
+	http.HandleFunc("/exchange/order/", c.ExchangeController.GetExchangeOrderAction)
 	http.HandleFunc("/chart/list", c.ExchangeController.GetChartListAction)
 	http.HandleFunc("/order/list", c.OrderController.GetOrderListAction)
 	http.HandleFunc("/order/extra/charge/update", c.OrderController.UpdateExtraChargeAction)

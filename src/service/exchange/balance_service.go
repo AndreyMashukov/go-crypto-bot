@@ -2,6 +2,7 @@ package exchange
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"gitlab.com/open-soft/go-crypto-bot/src/client"
@@ -25,6 +26,29 @@ type BalanceService struct {
 
 func (b *BalanceService) InvalidateBalanceCache(asset string) {
 	b.RDB.Del(*b.Ctx, b.getBalanceCacheKey(asset))
+	b.RDB.Del(*b.Ctx, b.getAccountCacheKey())
+}
+
+func (b *BalanceService) GetAccount() *model.AccountStatus {
+	cached := b.RDB.Get(*b.Ctx, b.getAccountCacheKey()).Val()
+
+	if len(cached) > 0 {
+		var account model.AccountStatus
+		err := json.Unmarshal([]byte(cached), &account)
+
+		if err == nil {
+			return &account
+		}
+	}
+
+	if account, err := b.Binance.GetAccountStatus(); err == nil {
+		if encoded, err := json.Marshal(account); err == nil {
+			b.RDB.Set(*b.Ctx, b.getAccountCacheKey(), encoded, time.Minute)
+			return account
+		}
+	}
+
+	return nil
 }
 
 func (b *BalanceService) GetAssetBalance(asset string, cache bool) (float64, error) {
@@ -59,4 +83,8 @@ func (b *BalanceService) GetAssetBalance(asset string, cache bool) (float64, err
 
 func (b *BalanceService) getBalanceCacheKey(asset string) string {
 	return fmt.Sprintf("balance-%s-account-%d", asset, b.CurrentBot.Id)
+}
+
+func (b *BalanceService) getAccountCacheKey() string {
+	return fmt.Sprintf("account-status-%d", b.CurrentBot.Id)
 }

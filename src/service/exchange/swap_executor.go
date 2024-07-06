@@ -148,6 +148,8 @@ func (s *SwapExecutor) ExecuteSwapOne(swapAction *model.SwapAction, order model.
 
 		swapOneOrder = &binanceOrder
 		swapAction.SwapOneExternalId = &binanceOrder.OrderId
+		swapAction.SwapOneSide = &binanceOrder.Side
+		swapAction.SwapOneQuantity = &binanceOrder.OrigQty
 		nowTimestamp := time.Now().Unix()
 		swapAction.SwapOneTimestamp = &nowTimestamp
 		swapAction.SwapOneExternalStatus = &binanceOrder.Status
@@ -213,8 +215,11 @@ func (s *SwapExecutor) ExecuteSwapOne(swapAction *model.SwapAction, order model.
 			nowTimestamp := time.Now().Unix()
 			swapAction.SwapOneTimestamp = &nowTimestamp
 			swapAction.SwapOneExternalStatus = &binanceOrder.Status
+			swapAction.SwapOneSide = &binanceOrder.Side
+			swapAction.SwapOneQuantity = &binanceOrder.OrigQty
 			if binanceOrder.IsFilled() {
 				swapAction.SwapOnePrice = binanceOrder.Price
+				swapAction.SwapOneQuantity = &binanceOrder.ExecutedQty
 			}
 			_ = s.SwapRepository.UpdateSwapAction(*swapAction)
 
@@ -341,6 +346,8 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 
 		swapTwoOrder = &binanceOrder
 		swapAction.SwapTwoExternalId = &binanceOrder.OrderId
+		swapAction.SwapTwoSide = &binanceOrder.Side
+		swapAction.SwapTwoQuantity = &binanceOrder.OrigQty
 		nowTimestamp := time.Now().Unix()
 		swapAction.SwapTwoTimestamp = &nowTimestamp
 		swapAction.SwapTwoExternalStatus = &binanceOrder.Status
@@ -403,8 +410,11 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 			nowTimestamp := time.Now().Unix()
 			swapAction.SwapTwoTimestamp = &nowTimestamp
 			swapAction.SwapTwoExternalStatus = &binanceOrder.Status
+			swapAction.SwapTwoSide = &binanceOrder.Side
+			swapAction.SwapTwoQuantity = &binanceOrder.OrigQty
 			if binanceOrder.IsFilled() {
 				swapAction.SwapTwoPrice = binanceOrder.Price
+				swapAction.SwapTwoQuantity = &binanceOrder.ExecutedQty
 			}
 			_ = s.SwapRepository.UpdateSwapAction(*swapAction)
 
@@ -517,6 +527,8 @@ func (s *SwapExecutor) ExecuteSwapThree(
 
 		swapThreeOrder = &binanceOrder
 		swapAction.SwapThreeExternalId = &binanceOrder.OrderId
+		swapAction.SwapThreeSide = &binanceOrder.Side
+		swapAction.SwapThreeQuantity = &binanceOrder.OrigQty
 		nowTimestamp := time.Now().Unix()
 		swapAction.SwapThreeTimestamp = &nowTimestamp
 		swapAction.SwapThreeExternalStatus = &binanceOrder.Status
@@ -580,8 +592,11 @@ func (s *SwapExecutor) ExecuteSwapThree(
 			nowTimestamp := time.Now().Unix()
 			swapAction.SwapThreeTimestamp = &nowTimestamp
 			swapAction.SwapThreeExternalStatus = &binanceOrder.Status
+			swapAction.SwapThreeSide = &binanceOrder.Side
+			swapAction.SwapThreeQuantity = &binanceOrder.OrigQty
 			if binanceOrder.IsFilled() {
 				swapAction.SwapThreePrice = binanceOrder.Price
+				swapAction.SwapThreeQuantity = &binanceOrder.ExecutedQty
 			}
 			_ = s.SwapRepository.UpdateSwapAction(*swapAction)
 
@@ -739,6 +754,8 @@ func (s *SwapExecutor) TryRollbackSwapTwo(
 			action.SwapTwoPrice = binanceOrder.Price
 			action.SwapTwoSymbol = binanceOrder.Symbol
 			action.SwapTwoExternalId = &binanceOrder.OrderId
+			action.SwapTwoSide = &binanceOrder.Side
+			action.SwapTwoQuantity = &binanceOrder.OrigQty
 			action.Status = model.SwapActionStatusSuccess
 			err = s.SwapRepository.UpdateSwapAction(*action)
 			if err != nil {
@@ -890,6 +907,8 @@ func (s *SwapExecutor) TryForceSwapThree(
 			swapAction.SwapThreePrice = binanceOrder.Price
 			swapAction.SwapThreeSymbol = binanceOrder.Symbol
 			swapAction.SwapThreeExternalId = &binanceOrder.OrderId
+			swapAction.SwapThreeSide = &binanceOrder.Side
+			swapAction.SwapThreeQuantity = &binanceOrder.OrigQty
 			swapAction.Status = model.SwapActionStatusSuccess
 			err = s.SwapRepository.UpdateSwapAction(*swapAction)
 			if err != nil {

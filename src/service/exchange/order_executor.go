@@ -1304,10 +1304,13 @@ func (m *OrderExecutor) MakeSwap(order model.Order, swapChain model.SwapChainEnt
 		StartQuantity:   startQuantity,
 		SwapOneSymbol:   swapChain.SwapOne.GetSymbol(),
 		SwapOnePrice:    swapChain.SwapOne.Price,
+		SwapOneSide:     &swapChain.SwapOne.Operation,
 		SwapTwoSymbol:   swapChain.SwapTwo.GetSymbol(),
 		SwapTwoPrice:    swapChain.SwapTwo.Price,
+		SwapTwoSide:     &swapChain.SwapTwo.Operation,
 		SwapThreeSymbol: swapChain.SwapThree.GetSymbol(),
 		SwapThreePrice:  swapChain.SwapThree.Price,
+		SwapThreeSide:   &swapChain.SwapThree.Operation,
 	})
 
 	if err != nil {

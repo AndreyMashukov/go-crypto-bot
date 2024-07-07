@@ -72,10 +72,8 @@ func (s *SwapExecutor) Execute(order model.Order) {
 		return
 	}
 
-	assetTwo := strings.ReplaceAll(swapOneOrder.Symbol, swapAction.Asset, "")
-
 	// step 3
-	swapThreeOrder := s.ExecuteSwapThree(&swapAction, swapChain, *swapTwoOrder, assetTwo)
+	swapThreeOrder := s.ExecuteSwapThree(&swapAction, swapChain, *swapTwoOrder)
 
 	if swapThreeOrder == nil {
 		return
@@ -283,7 +281,7 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 	swapChain model.SwapChainEntity,
 	swapOneOrder model.BinanceOrder,
 ) *model.BinanceOrder {
-	assetTwo := strings.ReplaceAll(swapOneOrder.Symbol, swapAction.Asset, "")
+	assetTwo := swapAction.GetAssetTwo()
 
 	var swapTwoOrder *model.BinanceOrder = nil
 
@@ -462,9 +460,8 @@ func (s *SwapExecutor) ExecuteSwapThree(
 	swapAction *model.SwapAction,
 	swapChain model.SwapChainEntity,
 	swapTwoOrder model.BinanceOrder,
-	assetTwo string,
 ) *model.BinanceOrder {
-	assetThree := strings.ReplaceAll(swapTwoOrder.Symbol, assetTwo, "")
+	assetThree := swapAction.GetAssetThree()
 	var swapThreeOrder *model.BinanceOrder = nil
 
 	if swapAction.SwapThreeExternalId == nil {

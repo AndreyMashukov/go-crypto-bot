@@ -29,26 +29,44 @@ func (b *BalanceService) InvalidateBalanceCache(asset string) {
 	b.RDB.Del(*b.Ctx, b.getAccountCacheKey())
 }
 
-func (b *BalanceService) GetAccount() *model.AccountStatus {
+func (b *BalanceService) GetBalance(hideZero bool) map[string]model.Balance {
 	cached := b.RDB.Get(*b.Ctx, b.getAccountCacheKey()).Val()
+
+	balanceMap := make(map[string]model.Balance)
 
 	if len(cached) > 0 {
 		var account model.AccountStatus
 		err := json.Unmarshal([]byte(cached), &account)
 
 		if err == nil {
-			return &account
+			for _, balance := range account.Balances {
+				if hideZero && (balance.Locked+balance.Free) == 0.00 {
+					continue
+				}
+
+				balanceMap[balance.Asset] = balance
+			}
+
+			return balanceMap
 		}
 	}
 
 	if account, err := b.Binance.GetAccountStatus(); err == nil {
 		if encoded, err := json.Marshal(account); err == nil {
 			b.RDB.Set(*b.Ctx, b.getAccountCacheKey(), encoded, time.Minute)
-			return account
+			for _, balance := range account.Balances {
+				if hideZero && (balance.Locked+balance.Free) == 0.00 {
+					continue
+				}
+
+				balanceMap[balance.Asset] = balance
+			}
+
+			return balanceMap
 		}
 	}
 
-	return nil
+	return balanceMap
 }
 
 func (b *BalanceService) GetAssetBalance(asset string, cache bool) (float64, error) {

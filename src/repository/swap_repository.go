@@ -912,7 +912,7 @@ func (e *SwapRepository) GetSwapPairBySymbol(symbol string) (model.SwapPair, err
 	return swapPair, nil
 }
 
-func (repo *SwapRepository) GetSwapActions() []model.SwapAction {
+func (repo *SwapRepository) GetSwapActions() []model.SwapActionExtended {
 	res, err := repo.DB.Query(`
 		SELECT 
 		    sa.id as Id,
@@ -945,20 +945,37 @@ func (repo *SwapRepository) GetSwapActions() []model.SwapAction {
 		    sa.swap_three_external_status as SwapThreeExternalStatus,
 		    sa.swap_three_symbol as SwapThreeSymbol,
 		    sa.swap_three_price as SwapThreePrice,
-		    sa.swap_three_timestamp as SwapThreeTimestamp
+		    sa.swap_three_timestamp as SwapThreeTimestamp,
+		    one.buy_price as PriceOneBuy,
+		    one.sell_price as PriceOneSell,
+		    two.buy_price as PriceTwoBuy,
+		    two.sell_price as PriceTwoSell,
+		    three.buy_price as PriceThreeBuy,
+		    three.sell_price as PriceThreeSell
 		FROM swap_action sa
+		LEFT JOIN swap_pair one ON one.symbol = sa.swap_one_symbol AND one.exchange = ?
+		LEFT JOIN swap_pair two ON two.symbol = sa.swap_two_symbol AND two.exchange = ?
+		LEFT JOIN swap_pair three ON three.symbol = sa.swap_three_symbol AND three.exchange = ?
 		WHERE sa.bot_id = ? AND sa.status IN (?, ?, ?)
-	`, repo.CurrentBot.Id, model.SwapActionStatusSuccess, model.SwapActionStatusProcess, model.SwapActionStatusPending)
+	`,
+		repo.CurrentBot.Exchange,
+		repo.CurrentBot.Exchange,
+		repo.CurrentBot.Exchange,
+		repo.CurrentBot.Id,
+		model.SwapActionStatusSuccess,
+		model.SwapActionStatusProcess,
+		model.SwapActionStatusPending,
+	)
 	defer res.Close()
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	list := make([]model.SwapAction, 0)
+	list := make([]model.SwapActionExtended, 0)
 
 	for res.Next() {
-		var action model.SwapAction
+		var action model.SwapActionExtended
 
 		err := res.Scan(
 			&action.Id,
@@ -992,6 +1009,12 @@ func (repo *SwapRepository) GetSwapActions() []model.SwapAction {
 			&action.SwapThreeSymbol,
 			&action.SwapThreePrice,
 			&action.SwapThreeTimestamp,
+			&action.PriceOneBuy,
+			&action.PriceOneSell,
+			&action.PriceTwoBuy,
+			&action.PriceTwoSell,
+			&action.PriceThreeBuy,
+			&action.PriceThreeSell,
 		)
 
 		if err != nil {

@@ -1,9 +1,28 @@
 package model
 
+import "strings"
+
 const SwapActionStatusPending = "pending"
 const SwapActionStatusProcess = "process"
 const SwapActionStatusCanceled = "canceled"
 const SwapActionStatusSuccess = "success"
+
+type SwapContainer struct {
+	SwapAction SwapActionExtended            `json:"action"`
+	PriceMap   map[string]map[string]float64 `json:"priceMap"`
+	Balance    map[string]Balance            `json:"balance"`
+}
+
+// SwapActionExtended Note: This is how to do class extension in Go
+type SwapActionExtended struct {
+	SwapAction
+	PriceOneSell   float64 `json:"priceOneSell"`
+	PriceOneBuy    float64 `json:"priceOneBuy"`
+	PriceTwoSell   float64 `json:"priceTwoSell"`
+	PriceTwoBuy    float64 `json:"priceTwoBuy"`
+	PriceThreeSell float64 `json:"priceThreeSell"`
+	PriceThreeBuy  float64 `json:"priceThreeBuy"`
+}
 
 type SwapAction struct {
 	Id                      int64    `json:"id"`
@@ -65,4 +84,12 @@ func (a *SwapAction) IsThreeExpired() bool {
 
 func (a *SwapAction) IsThreeCanceled() bool {
 	return *a.SwapThreeExternalStatus == "CANCELED"
+}
+
+func (a *SwapAction) GetAssetTwo() string {
+	return strings.ReplaceAll(a.SwapOneSymbol, a.Asset, "")
+}
+
+func (a *SwapAction) GetAssetThree() string {
+	return strings.ReplaceAll(a.SwapTwoSymbol, a.GetAssetTwo(), "")
 }

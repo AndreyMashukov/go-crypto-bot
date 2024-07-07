@@ -11,6 +11,7 @@ import (
 	"gitlab.com/open-soft/go-crypto-bot/src/service"
 	"gitlab.com/open-soft/go-crypto-bot/src/service/exchange"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -61,8 +62,45 @@ func (e *ExchangeController) GetSwapActionListAction(w http.ResponseWriter, req 
 	}
 
 	actions := e.SwapRepository.GetSwapActions()
+	account := e.BalanceService.GetBalance(false)
+	list := make([]model.SwapContainer, 0)
+	for _, action := range actions {
+		balanceOne := model.Balance{
+			Free:   0.00,
+			Locked: 0.00,
+			Asset:  action.Asset,
+		}
+		if balance, ok := account[balanceOne.Asset]; ok {
+			balanceOne = balance
+		}
+		balanceTwo := model.Balance{
+			Free:   0.00,
+			Locked: 0.00,
+			Asset:  action.Asset,
+		}
+		if balance, ok := account[action.GetAssetTwo()]; ok {
+			balanceTwo = balance
+		}
+		balanceThree := model.Balance{
+			Free:   0.00,
+			Locked: 0.00,
+			Asset:  action.Asset,
+		}
+		if balance, ok := account[action.GetAssetThree()]; ok {
+			balanceThree = balance
+		}
 
-	encoded, _ := json.Marshal(actions)
+		list = append(list, model.SwapContainer{
+			SwapAction: action,
+			Balance: map[string]model.Balance{
+				action.Asset:           balanceOne,
+				action.GetAssetTwo():   balanceTwo,
+				action.GetAssetThree(): balanceThree,
+			},
+		})
+	}
+
+	encoded, _ := json.Marshal(list)
 	_, _ = fmt.Fprintf(w, string(encoded))
 }
 
@@ -112,7 +150,12 @@ func (e *ExchangeController) GetAccountAction(w http.ResponseWriter, req *http.R
 		return
 	}
 
-	account := e.BalanceService.GetAccount()
+	hideZero, err := strconv.ParseBool(req.URL.Query().Get("hideZero"))
+	if err != nil {
+		hideZero = false
+	}
+
+	account := e.BalanceService.GetBalance(hideZero)
 
 	encoded, _ := json.Marshal(account)
 	_, _ = fmt.Fprintf(w, string(encoded))

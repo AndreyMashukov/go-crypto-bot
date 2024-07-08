@@ -72,7 +72,7 @@ func (m *MarketTradeListener) ListenAll() {
 	}(&predictMap)
 
 	// Consumer count for kline channel
-	klineConsumerCount := 4
+	klineConsumerCount := 8
 
 	for i := 0; i < klineConsumerCount; i++ {
 		go func() {

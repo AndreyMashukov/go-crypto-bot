@@ -47,8 +47,11 @@ func TestSwapSellBuySell(t *testing.T) {
 	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "XRP").Return(options2)
 
 	sbsFinder := exchange.SBSSwapFinder{
-		ExchangeRepository: exchangeRepoMock,
-		Formatter:          &utils.Formatter{},
+		ExchangeRepository:       exchangeRepoMock,
+		Formatter:                &utils.Formatter{},
+		SwapFirstAmendmentSteps:  5,
+		SwapSecondAmendmentSteps: 10,
+		SwapThirdAmendmentSteps:  15,
 	}
 
 	chain := sbsFinder.Find("ETH").BestChain
@@ -315,12 +318,15 @@ func TestSwapSellBuySell(t *testing.T) {
 	timeServiceMock.On("GetNowDiffMinutes", mock.Anything).Return(0.50)
 
 	executor := exchange.SwapExecutor{
-		SwapRepository:  swapRepoMock,
-		OrderRepository: orderRepositoryMock,
-		BalanceService:  balanceServiceMock,
-		Binance:         binanceMock,
-		TimeService:     timeServiceMock,
-		Formatter:       &utils.Formatter{},
+		SwapRepository:           swapRepoMock,
+		OrderRepository:          orderRepositoryMock,
+		BalanceService:           balanceServiceMock,
+		Binance:                  binanceMock,
+		TimeService:              timeServiceMock,
+		Formatter:                &utils.Formatter{},
+		SwapFirstAmendmentSteps:  5,
+		SwapSecondAmendmentSteps: 10,
+		SwapThirdAmendmentSteps:  15,
 	}
 
 	executor.Execute(order)
@@ -373,8 +379,11 @@ func TestSwapSellBuySellForceSwap(t *testing.T) {
 	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "XRP").Return(options2)
 
 	sbsFinder := exchange.SBSSwapFinder{
-		ExchangeRepository: exchangeRepoMock,
-		Formatter:          &utils.Formatter{},
+		ExchangeRepository:       exchangeRepoMock,
+		Formatter:                &utils.Formatter{},
+		SwapFirstAmendmentSteps:  5,
+		SwapSecondAmendmentSteps: 10,
+		SwapThirdAmendmentSteps:  15,
 	}
 
 	chain := sbsFinder.Find("ETH").BestChain
@@ -674,12 +683,15 @@ func TestSwapSellBuySellForceSwap(t *testing.T) {
 	timeServiceMock.On("GetNowDiffMinutes", mock.Anything).Return(50.00)
 
 	executor := exchange.SwapExecutor{
-		SwapRepository:  swapRepoMock,
-		OrderRepository: orderRepositoryMock,
-		BalanceService:  balanceServiceMock,
-		Binance:         binanceMock,
-		TimeService:     timeServiceMock,
-		Formatter:       &utils.Formatter{},
+		SwapRepository:           swapRepoMock,
+		OrderRepository:          orderRepositoryMock,
+		BalanceService:           balanceServiceMock,
+		Binance:                  binanceMock,
+		TimeService:              timeServiceMock,
+		Formatter:                &utils.Formatter{},
+		SwapFirstAmendmentSteps:  5,
+		SwapSecondAmendmentSteps: 10,
+		SwapThirdAmendmentSteps:  15,
 	}
 
 	executor.Execute(order)

@@ -13,9 +13,9 @@ import (
 	"time"
 )
 
-const SwapFirstAmendmentSteps = 5
-const SwapSecondAmendmentSteps = 10
-const SwapThirdAmendmentSteps = 15
+const SwapFirstAmendmentSteps = 10
+const SwapSecondAmendmentSteps = 50
+const SwapThirdAmendmentSteps = 250
 const SwapStepCommission = 0.002
 
 type SwapExecutorInterface interface {
@@ -23,13 +23,16 @@ type SwapExecutorInterface interface {
 }
 
 type SwapExecutor struct {
-	SwapRepository  repository.SwapBasicRepositoryInterface
-	OrderRepository repository.OrderUpdaterInterface
-	BalanceService  BalanceServiceInterface
-	Binance         client.ExchangeOrderAPIInterface
-	TimeService     utils.TimeServiceInterface
-	Formatter       *utils.Formatter
-	CurrentBot      *model.Bot
+	SwapRepository           repository.SwapBasicRepositoryInterface
+	OrderRepository          repository.OrderUpdaterInterface
+	BalanceService           BalanceServiceInterface
+	Binance                  client.ExchangeOrderAPIInterface
+	TimeService              utils.TimeServiceInterface
+	Formatter                *utils.Formatter
+	CurrentBot               *model.Bot
+	SwapFirstAmendmentSteps  float64
+	SwapSecondAmendmentSteps float64
+	SwapThirdAmendmentSteps  float64
 }
 
 func (s *SwapExecutor) Execute(order model.Order) {
@@ -112,7 +115,7 @@ func (s *SwapExecutor) ExecuteSwapOne(swapAction *model.SwapAction, order model.
 		swapPrice := swapAction.SwapOnePrice
 		swapPair, err := s.SwapRepository.GetSwapPairBySymbol(swapAction.SwapOneSymbol)
 		// Price can grow before we start processing, take max price for swap
-		swapPrice = math.Max(swapPrice, swapPair.SellPrice-(swapPair.MinPrice*SwapFirstAmendmentSteps))
+		swapPrice = math.Max(swapPrice, swapPair.SellPrice-(swapPair.MinPrice*s.SwapFirstAmendmentSteps))
 
 		binanceOrder, err := s.Binance.LimitOrder(
 			swapAction.SwapOneSymbol,
@@ -310,7 +313,7 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 
 		if swapChain.IsSSB() {
 			// Price can grow before we start processing, take max price for swap
-			swapPrice = math.Max(swapPrice, swapPair.SellPrice-(swapPair.MinPrice*SwapSecondAmendmentSteps))
+			swapPrice = math.Max(swapPrice, swapPair.SellPrice-(swapPair.MinPrice*s.SwapSecondAmendmentSteps))
 
 			binanceOrder, err = s.Binance.LimitOrder(
 				swapAction.SwapTwoSymbol,
@@ -323,7 +326,7 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 
 		if swapChain.IsSBB() || swapChain.IsSBS() {
 			// Price can fall down before we start processing, take min price for swap
-			swapPrice = math.Min(swapPrice, swapPair.BuyPrice+(swapPair.MinPrice*SwapSecondAmendmentSteps))
+			swapPrice = math.Min(swapPrice, swapPair.BuyPrice+(swapPair.MinPrice*s.SwapSecondAmendmentSteps))
 
 			binanceOrder, err = s.Binance.LimitOrder(
 				swapAction.SwapTwoSymbol,
@@ -472,6 +475,7 @@ func (s *SwapExecutor) ExecuteSwapThree(
 			quantity = swapTwoOrder.ExecutedQty
 		}
 
+		// todo: check difference and validate...
 		if quantity > balance {
 			quantity = balance
 		}
@@ -492,7 +496,7 @@ func (s *SwapExecutor) ExecuteSwapThree(
 
 		if swapChain.IsSSB() || swapChain.IsSBB() {
 			// Price can fall down before we start processing, take min price for swap
-			swapPrice = math.Min(swapPrice, swapPair.BuyPrice+(swapPair.MinPrice*SwapThirdAmendmentSteps))
+			swapPrice = math.Min(swapPrice, swapPair.BuyPrice+(swapPair.MinPrice*s.SwapThirdAmendmentSteps))
 
 			binanceOrder, err = s.Binance.LimitOrder(
 				swapAction.SwapThreeSymbol,
@@ -505,7 +509,7 @@ func (s *SwapExecutor) ExecuteSwapThree(
 
 		if swapChain.IsSBS() {
 			// Price can grow before we start processing, take max price for swap
-			swapPrice = math.Max(swapPrice, swapPair.SellPrice-(swapPair.MinPrice*SwapThirdAmendmentSteps))
+			swapPrice = math.Max(swapPrice, swapPair.SellPrice-(swapPair.MinPrice*s.SwapThirdAmendmentSteps))
 
 			binanceOrder, err = s.Binance.LimitOrder(
 				swapAction.SwapThreeSymbol,
@@ -709,6 +713,7 @@ func (s *SwapExecutor) TryRollbackSwapTwo(
 		price = swapPair.BuyPrice + (swapPair.MinPrice * i)
 		quantity := swapOneOrder.CummulativeQuoteQty
 
+		// todo: check difference and validate...
 		if quantity > balance {
 			quantity = balance
 		}
@@ -833,6 +838,7 @@ func (s *SwapExecutor) TryForceSwapThree(
 		return err
 	}
 
+	// todo: check difference and validate...
 	if quantity > balance {
 		quantity = balance
 	}

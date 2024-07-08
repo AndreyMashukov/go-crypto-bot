@@ -293,8 +293,19 @@ func (s *SwapExecutor) ExecuteSwapTwo(
 		// Calculate how much we earn, and sell it!
 		quantity := swapOneOrder.CummulativeQuoteQty
 
+		initialQty := quantity
 		if quantity > balance {
 			quantity = balance
+		}
+
+		if s.Formatter.ComparePercentage(initialQty, quantity).Lte(99.9) {
+			log.Printf(
+				"[%d] swap quantity is less than allowed: %.10f > %.10f (step two)",
+				swapAction.Id,
+				initialQty,
+				quantity,
+			)
+			return nil
 		}
 
 		log.Printf(
@@ -475,9 +486,19 @@ func (s *SwapExecutor) ExecuteSwapThree(
 			quantity = swapTwoOrder.ExecutedQty
 		}
 
-		// todo: check difference and validate...
+		initialQty := quantity
 		if quantity > balance {
 			quantity = balance
+		}
+
+		if s.Formatter.ComparePercentage(initialQty, quantity).Lte(99.9) {
+			log.Printf(
+				"[%d] swap quantity is less than allowed: %.10f > %.10f (step three)",
+				swapAction.Id,
+				initialQty,
+				quantity,
+			)
+			return nil
 		}
 
 		log.Printf(

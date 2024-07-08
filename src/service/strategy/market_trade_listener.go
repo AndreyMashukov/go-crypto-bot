@@ -85,7 +85,7 @@ func (m *MarketTradeListener) ListenAll() {
 				kLine := <-klineChannel
 				lastKline := m.ExchangeRepository.GetCurrentKline(kLine.Symbol)
 
-				if lastKline != nil && (lastKline.Timestamp.Gt(kLine.Timestamp) || kLine.IsPriceNotActual()) {
+				if lastKline != nil && (lastKline.Timestamp.Gt(kLine.Timestamp) || kLine.IsPriceNotActual() || kLine.IsPriceWrongTimestamp()) {
 					log.Printf(
 						"[%s] (%s) Exchange sent expired stream price. T = %d < %d, UpdAt: %d, Now: %d [%d]",
 						kLine.Symbol,

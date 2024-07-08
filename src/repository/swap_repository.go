@@ -946,12 +946,12 @@ func (repo *SwapRepository) GetSwapActions() []model.SwapActionExtended {
 		    sa.swap_three_symbol as SwapThreeSymbol,
 		    sa.swap_three_price as SwapThreePrice,
 		    sa.swap_three_timestamp as SwapThreeTimestamp,
-		    one.buy_price as PriceOneBuy,
-		    one.sell_price as PriceOneSell,
-		    two.buy_price as PriceTwoBuy,
-		    two.sell_price as PriceTwoSell,
-		    three.buy_price as PriceThreeBuy,
-		    three.sell_price as PriceThreeSell
+		    IFNULL(one.buy_price, 0.00) as PriceOneBuy,
+		    IFNULL(one.sell_price, 0.00) as PriceOneSell,
+		    IFNULL(two.buy_price, 0.00) as PriceTwoBuy,
+		    IFNULL(two.sell_price, 0.00) as PriceTwoSell,
+		    IFNULL(three.buy_price, 0.00) as PriceThreeBuy,
+		    IFNULL(three.sell_price, 0.00) as PriceThreeSell
 		FROM swap_action sa
 		LEFT JOIN swap_pair one ON one.symbol = sa.swap_one_symbol AND one.exchange = ?
 		LEFT JOIN swap_pair two ON two.symbol = sa.swap_two_symbol AND two.exchange = ?

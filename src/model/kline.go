@@ -151,7 +151,7 @@ func (k *KLine) Update(ticker MiniTicker, source string) KLine {
 	}
 
 	return KLine{
-		Timestamp:        TimestampMilli(currentInterval),
+		Timestamp:        k.Timestamp,
 		Symbol:           ticker.Symbol,
 		Open:             k.Open,
 		Close:            ticker.Close,

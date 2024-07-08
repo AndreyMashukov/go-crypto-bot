@@ -46,7 +46,7 @@ func (b *BinanceWSStreamer) StartStream(
 					ticker := tickerEvent.MiniTicker
 					kLine := b.ExchangeRepository.GetCurrentKline(ticker.Symbol)
 
-					if kLine != nil && kLine.Timestamp.Lte(ticker.EventTime) {
+					if kLine != nil {
 						klineChannel <- kLine.Update(ticker, model.KLineSourceTickerStream)
 					}
 				} else {
@@ -72,11 +72,8 @@ func (b *BinanceWSStreamer) StartStream(
 					kLine := event.KlineData.Kline
 					kLine.UpdatedAt = time.Now().Unix()
 
-					lastKline := b.ExchangeRepository.GetCurrentKline(kLine.Symbol)
-					if lastKline == nil || lastKline.Timestamp.Lte(kLine.Timestamp) {
-						kLine.Source = model.KLineSourceKLineStream
-						klineChannel <- kLine
-					}
+					kLine.Source = model.KLineSourceKLineStream
+					klineChannel <- kLine
 				} else {
 					log.Printf("Stream: Kline error: %s", err.Error())
 				}

@@ -40,9 +40,8 @@ func (b *ByBitWsStreamer) StartStream(
 					tickerData := tickerEvent.Data
 					ticker := tickerData.ToBinanceMiniTicker(tickerEvent.Ts)
 					kLine := b.ExchangeRepository.GetCurrentKline(ticker.Symbol)
-					periodTo := model.TimestampMilli(ticker.EventTime.GetPeriodToMinute())
 
-					if kLine != nil && kLine.Timestamp.Lte(periodTo) {
+					if kLine != nil {
 						klineChannel <- kLine.Update(ticker, model.KLineSourceTickerStream)
 					}
 				} else {
@@ -77,11 +76,8 @@ func (b *ByBitWsStreamer) StartStream(
 						kLine := byBitKline.ToBinanceKline(symbol, b.Formatter.ByBitIntervalToBinanceInterval(byBitKline.Interval))
 						kLine.UpdatedAt = time.Now().Unix()
 
-						lastKline := b.ExchangeRepository.GetCurrentKline(kLine.Symbol)
-						if lastKline == nil || lastKline.Timestamp.Lte(kLine.Timestamp) {
-							kLine.Source = model.KLineSourceKLineStream
-							klineChannel <- kLine
-						}
+						kLine.Source = model.KLineSourceKLineStream
+						klineChannel <- kLine
 					}
 				} else {
 					log.Printf("Kline error bybit: %s", err.Error())

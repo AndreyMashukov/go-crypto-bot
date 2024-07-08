@@ -103,11 +103,11 @@ func (v *SwapValidator) validateSwap(chain model.SwapChainEntity, order model.Or
 		return errors.New(fmt.Sprintf("Swap [%s:%s] price is expired", entity.Operation, entity.Symbol))
 	}
 
-	if entity.IsBuy() && v.Formatter.ComparePercentage(entity.Price, swapCurrentKline.BuyPrice).Gte(100.10) {
+	if entity.IsBuy() && v.Formatter.ComparePercentage(entity.Price, swapCurrentKline.BuyPrice).Gte(100.50) {
 		return errors.New(fmt.Sprintf("Swap [%s:%s] price is too high", entity.Operation, entity.Symbol))
 	}
 
-	if entity.IsSell() && v.Formatter.ComparePercentage(entity.Price, swapCurrentKline.SellPrice).Lte(99.90) {
+	if entity.IsSell() && v.Formatter.ComparePercentage(entity.Price, swapCurrentKline.SellPrice).Lte(99.50) {
 		return errors.New(fmt.Sprintf("Swap [%s:%s] price is too low", entity.Operation, entity.Symbol))
 	}
 

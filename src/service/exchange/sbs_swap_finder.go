@@ -11,8 +11,11 @@ import (
 )
 
 type SBSSwapFinder struct {
-	ExchangeRepository repository.SwapPairRepositoryInterface
-	Formatter          *utils.Formatter
+	ExchangeRepository       repository.SwapPairRepositoryInterface
+	Formatter                *utils.Formatter
+	SwapFirstAmendmentSteps  float64
+	SwapSecondAmendmentSteps float64
+	SwapThirdAmendmentSteps  float64
 }
 
 func (s *SBSSwapFinder) Find(asset string) model.BBSArbitrageChain {
@@ -35,7 +38,7 @@ func (s *SBSSwapFinder) Find(asset string) model.BBSArbitrageChain {
 
 		// Do not validate first order for gainer/looser and bull/bear
 
-		option0Price := option0.SellPrice - (option0.MinPrice * SwapFirstAmendmentSteps)
+		option0Price := option0.SellPrice - (option0.MinPrice * s.SwapFirstAmendmentSteps)
 		option0Price = s.Formatter.FormatPrice(option0, option0Price)
 		//log.Printf("[%s] formatted [3] %f -> %f", option0.Symbol, option0.SellPrice, option0Price)
 		sell0Quantity := initialBalance //s.Formatter.FormatQuantity(option0, initialBalance)
@@ -68,7 +71,7 @@ func (s *SBSSwapFinder) Find(asset string) model.BBSArbitrageChain {
 				continue
 			}
 
-			option1Price := option1.BuyPrice + (option1.MinPrice * SwapSecondAmendmentSteps)
+			option1Price := option1.BuyPrice + (option1.MinPrice * s.SwapSecondAmendmentSteps)
 			option1Price = s.Formatter.FormatPrice(option1, option1Price)
 			//log.Printf("[%s] formatted [4] %f -> %f", option1.Symbol, option1.BuyPrice, option1Price)
 			buy0Quantity := sell0.Balance //s.Formatter.FormatQuantity(option1, sell0.Balance)
@@ -101,7 +104,7 @@ func (s *SBSSwapFinder) Find(asset string) model.BBSArbitrageChain {
 					continue
 				}
 
-				option2Price := option2.SellPrice - (option2.MinPrice * SwapThirdAmendmentSteps)
+				option2Price := option2.SellPrice - (option2.MinPrice * s.SwapThirdAmendmentSteps)
 				option2Price = s.Formatter.FormatPrice(option2, option2Price)
 				//log.Printf("[%s] formatted [5] %f -> %f", option2.Symbol, option2.BuyPrice, option2Price)
 				buy1Quantity := buy0.Balance //s.Formatter.FormatQuantity(option2, buy0.Balance)

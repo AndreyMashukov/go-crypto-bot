@@ -53,8 +53,11 @@ func TestSwapSellSellBuy(t *testing.T) {
 	exchangeRepoMock.On("GetSwapPairsByBaseAsset", "GBP").Return(options4)
 
 	swapManager := &exchange.SSBSwapFinder{
-		Formatter:          &utils.Formatter{},
-		ExchangeRepository: exchangeRepoMock,
+		Formatter:                &utils.Formatter{},
+		ExchangeRepository:       exchangeRepoMock,
+		SwapFirstAmendmentSteps:  5,
+		SwapSecondAmendmentSteps: 10,
+		SwapThirdAmendmentSteps:  15,
 	}
 
 	chain := swapManager.Find("SOL").BestChain
@@ -320,12 +323,15 @@ func TestSwapSellSellBuy(t *testing.T) {
 	timeServiceMock.On("GetNowDiffMinutes", mock.Anything).Return(0.50)
 
 	executor := exchange.SwapExecutor{
-		SwapRepository:  swapRepoMock,
-		OrderRepository: orderRepositoryMock,
-		BalanceService:  balanceServiceMock,
-		Binance:         binanceMock,
-		TimeService:     timeServiceMock,
-		Formatter:       &utils.Formatter{},
+		SwapRepository:           swapRepoMock,
+		OrderRepository:          orderRepositoryMock,
+		BalanceService:           balanceServiceMock,
+		Binance:                  binanceMock,
+		TimeService:              timeServiceMock,
+		Formatter:                &utils.Formatter{},
+		SwapFirstAmendmentSteps:  5,
+		SwapSecondAmendmentSteps: 10,
+		SwapThirdAmendmentSteps:  15,
 	}
 
 	executor.Execute(order)

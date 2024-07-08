@@ -115,12 +115,16 @@ func (k *KLine) GetLowPercent(percent float64) float64 {
 const PriceNotActualSeconds = 5
 const PriceValidSeconds = 30
 
+func (k *KLine) IsPriceWrongTimestamp() bool {
+	return TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute() > k.Timestamp.GetPeriodToMinute()
+}
+
 func (k *KLine) IsPriceExpired() bool {
 	return (time.Now().Unix() - (k.UpdatedAt)) > PriceValidSeconds
 }
 
 func (k *KLine) IsPriceNotActual() bool {
-	return (time.Now().Unix() - (k.UpdatedAt)) > PriceNotActualSeconds
+	return (time.Now().Unix()-(k.UpdatedAt)) > PriceNotActualSeconds || k.IsPriceWrongTimestamp()
 }
 
 func (k *KLine) Includes(ticker MiniTicker) bool {

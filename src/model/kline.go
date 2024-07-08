@@ -124,7 +124,7 @@ func (k *KLine) IsPriceExpired() bool {
 }
 
 func (k *KLine) IsPriceNotActual() bool {
-	return (time.Now().Unix()-(k.UpdatedAt)) > PriceNotActualSeconds || k.IsPriceWrongTimestamp()
+	return (time.Now().Unix() - (k.UpdatedAt)) > PriceNotActualSeconds
 }
 
 func (k *KLine) Includes(ticker MiniTicker) bool {

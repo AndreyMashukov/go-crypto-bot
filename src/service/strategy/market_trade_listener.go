@@ -85,12 +85,16 @@ func (m *MarketTradeListener) ListenAll() {
 				kLine := <-klineChannel
 				lastKline := m.ExchangeRepository.GetCurrentKline(kLine.Symbol)
 
-				if lastKline != nil && lastKline.Timestamp.Gt(kLine.Timestamp) {
+				if lastKline != nil && (lastKline.Timestamp.Gt(kLine.Timestamp) || kLine.IsPriceNotActual()) {
 					log.Printf(
-						"[%s] Exchange sent expired stream price. T = %d < %d",
+						"[%s] (%s) Exchange sent expired stream price. T = %d < %d, UpdAt: %d, Now: %d [%d]",
 						kLine.Symbol,
+						kLine.Source,
 						kLine.Timestamp.Value(),
 						lastKline.Timestamp.Value(),
+						kLine.UpdatedAt,
+						time.Now().Unix(),
+						model.TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute(),
 					)
 					afterEach()
 					continue
@@ -230,7 +234,7 @@ func (m *MarketTradeListener) ListenAll() {
 					log.Printf("Price updated for: %s", strings.Join(updated, ", "))
 				}
 			}
-			m.TimeService.WaitSeconds(2)
+			m.TimeService.WaitSeconds(4)
 		}
 	}()
 	log.Printf("Price recovery watcher started")

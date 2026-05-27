@@ -1,0 +1,66 @@
+[
+    {
+        "ipAddress": "127.0.0.1",
+        "hasActiveSignalSubscription": true,
+        "hasDedicatedServer": false,
+        "dedicatedPaidServiceCode": "dedicated_binance_server",
+        "hasActiveDedicatedServerSubscription": false,
+        "id": "<id>",
+        "provider": "binance",
+        "status": "running",
+        "cryptoTradeConfigs": [
+            {
+                "id": "<id>",
+                "symbol": "PERPUSDT",
+                "usdtLimit": 100,
+                "enabled": true,
+                "minPriceMinutesPeriod": 200,
+                "frameInterval": "2h",
+                "framePeriod": 20,
+                "buyPriceHistoryCheckInterval": "1d",
+                "buyPriceHistoryCheckPeriod": 14,
+                "extraChargeOptions": [],
+                "profitOptions": [],
+                "buyConditions": [],
+                "sellConditions": [],
+                "avgConditions": [],
+                "signalTrading": true,
+                "signalConfig": {
+                    "percentFilter": 1,
+                    "ratingFilter": false,
+                    "avgBuyFilter": false,
+                    "avgSellFilter": false,
+                    "avgBuyCorrection": true,
+                    "avgSellCorrection": false,
+                    "sellPriceCorrectionMode": "equal",
+                    "signalPeriodDays": 1
+                },
+                "label": null,
+                "score": null
+            }
+        ],
+        "master": false,
+        "errorMessage": null,
+        "dedicated": null,
+        "restartRequired": false,
+        "dedicatedServerExpiresAt": null,
+        "test": false
+    },
+    {
+        "ipAddress": null,
+        "hasActiveSignalSubscription": true,
+        "hasDedicatedServer": false,
+        "dedicatedPaidServiceCode": "dedicated_bybit_server",
+        "hasActiveDedicatedServerSubscription": false,
+        "id": "<id>",
+        "provider": "bybit",
+        "status": "new",
+        "cryptoTradeConfigs": [],
+        "master": false,
+        "errorMessage": null,
+        "dedicated": null,
+        "restartRequired": false,
+        "dedicatedServerExpiresAt": null,
+        "test": false
+    }
+]

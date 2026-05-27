@@ -1,0 +1,30 @@
+[
+    {
+        "code": "basic_subscription",
+        "isActive": true,
+        "price": 890,
+        "days": 30,
+        "expiresAt": "<date>"
+    },
+    {
+        "code": "signal_subscription",
+        "isActive": false,
+        "price": 20,
+        "days": 30,
+        "expiresAt": null
+    },
+    {
+        "code": "dedicated_binance_server",
+        "isActive": false,
+        "price": 15,
+        "days": 30,
+        "expiresAt": null
+    },
+    {
+        "code": "api_subscription",
+        "isActive": false,
+        "price": 89,
+        "days": 30,
+        "expiresAt": null
+    }
+]

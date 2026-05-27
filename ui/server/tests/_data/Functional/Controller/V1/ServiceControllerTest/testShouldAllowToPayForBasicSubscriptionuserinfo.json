@@ -1,0 +1,20 @@
+{
+    "email": "john@batur.loc",
+    "roles": [
+        "ROLE_USER",
+        "ROLE_ADMIN"
+    ],
+    "username": "<username>",
+    "nickname": "trader99",
+    "phone": "6285940749131",
+    "language": "ru",
+    "uid": "1",
+    "hasActiveBasicSubscription": true,
+    "hasActiveSignalSubscription": false,
+    "isPartner": false,
+    "hasActiveApiSubscription": false,
+    "budget": 110,
+    "partnerBudget": 0,
+    "signalSubscriptionExpiresAt": null,
+    "basicSubscriptionExpiresAt": "<date>"
+}

@@ -1,0 +1,69 @@
+{
+    "code": 400,
+    "message": "Validation Failed",
+    "errors": {
+        "children": {
+            "symbol": [],
+            "conditions": {
+                "children": [
+                    {
+                        "children": {
+                            "symbol": [],
+                            "parameter": {
+                                "errors": [
+                                    "The value you selected is not a valid choice."
+                                ]
+                            },
+                            "condition": {
+                                "errors": [
+                                    "The value you selected is not a valid choice."
+                                ]
+                            },
+                            "value": [],
+                            "type": [],
+                            "children": []
+                        }
+                    },
+                    {
+                        "children": {
+                            "symbol": [],
+                            "parameter": [],
+                            "condition": [],
+                            "value": [],
+                            "type": [],
+                            "children": {
+                                "children": [
+                                    {
+                                        "children": {
+                                            "symbol": {
+                                                "errors": [
+                                                    "This value should not be null."
+                                                ]
+                                            },
+                                            "parameter": {
+                                                "errors": [
+                                                    "The value you selected is not a valid choice."
+                                                ]
+                                            },
+                                            "condition": {
+                                                "errors": [
+                                                    "The value you selected is not a valid choice."
+                                                ]
+                                            },
+                                            "value": {
+                                                "errors": [
+                                                    "This value should not be null."
+                                                ]
+                                            },
+                                            "type": []
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

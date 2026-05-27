@@ -1,0 +1,12 @@
+* [:star2: Home](/en/ "Trading Bot Documentation - Home")
+* [:1st_place_medal: Advantages](/en/advantages.md "Advantages of the Autotrade.cloud Trading Bot")
+* [:accessibility: Registration](/en/registration.md "Trading Bot Documentation - Registration")
+* [:computer: Personal Account](/en/account.md "Trading Bot Documentation - Personal Account")
+* [:gear: Setting up the Binance Bot](/en/binance.md "Trading Bot Documentation - Setting up the Binance Bot")
+* [:gear: Setting up the ByBit Bot](/en/bybit.md "Trading Bot Documentation - Setting up the ByBit Bot")
+* [:chart_with_upwards_trend: Beginning Trading](/en/begin.md "Trading Bot Documentation - Beginning Trading")
+* [:keyboard: Dashboard](/en/dashboard.md "Trading Bot Documentation - Dashboard")
+* [:zap: Trading AI Signals](/en/signal.md "Trading Bot Documentation - Trading AI Signals")
+
+[//]: # (todo: frequently asked questions!!!)
+[//]: # (todo: images for English translations in English too!!!)

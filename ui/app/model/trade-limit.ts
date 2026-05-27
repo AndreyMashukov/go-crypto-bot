@@ -1,0 +1,27 @@
+export class TradeLimit {
+    public static readonly SYMBOLS = [
+        'NEOUSDT',
+        'PERPUSDT',
+        'ETHUSDT',
+        'SOLUSDT',
+        'BTCUSDT',
+        'LTCUSDT',
+        'XRPUSDT',
+        'BNBUSDT',
+        'TRXUSDT',
+        'AVAXUSDT',
+        'ADAUSDT',
+        'DOGEUSDT',
+        'BCHUSDT',
+        'LINKUSDT',
+        'MATICUSDT',
+        'DOTUSDT',
+        'UNIUSDT',
+        'ETCUSDT',
+        'XLMUSDT',
+        'ATOMUSDT',
+        'NEARUSDT',
+        'ZECUSDT',
+        'SHIBUSDT',
+    ];
+}

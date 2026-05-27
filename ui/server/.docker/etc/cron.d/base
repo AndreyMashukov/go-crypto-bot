@@ -1,0 +1,1 @@
+# 0 */12 * * * /usr/local/bin/php /srv/www/bin/console presta:sitemaps:dump >/dev/null 2>&1

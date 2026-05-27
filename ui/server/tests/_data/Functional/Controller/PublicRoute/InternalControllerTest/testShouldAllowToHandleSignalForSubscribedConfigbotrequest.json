@@ -1,0 +1,39 @@
+{
+    "method": "POST",
+    "uri": "http:<file-path>:8000<file-path>?botUuid=87bf6369-3a27-4d2f-b26c-f90aed0c955b",
+    "options": {
+        "timeout": 60,
+        "json": {
+            "exchange": "binance",
+            "symbol": "PERPUSDT",
+            "buyPrice": 0.8379493056,
+            "percent": 6.35,
+            "profitOptions": [
+                {
+                    "index": 0,
+                    "optionPercent": 6.35,
+                    "optionUnit": "h",
+                    "isTriggerOption": true,
+                    "optionValue": 12,
+                    "sellPrice": 1.0567520833
+                },
+                {
+                    "index": 1,
+                    "optionPercent": 3.18,
+                    "optionUnit": "h",
+                    "optionValue": 24,
+                    "sellPrice": 0.8645960935
+                }
+            ],
+            "extraChargeOptions": [
+                {
+                    "index": 0,
+                    "percent": -9.41,
+                    "buyPrice": 0.7590982759,
+                    "budgetPercentage": 100
+                }
+            ],
+            "expireTimestamp": 1714754067823
+        }
+    }
+}

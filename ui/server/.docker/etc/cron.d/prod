@@ -1,0 +1,4 @@
+*/10 * * * * /usr/local/bin/php /srv/www/bin/console bot:trades:sync >/dev/null 2>&1
+*/10 * * * * /usr/local/bin/php /srv/www/bin/console oxa:expire:dedicated >/dev/null 2>&1
+*/1 * * * * /usr/local/bin/php /srv/www/bin/console bot:position:price >/dev/null 2>&1
+*/5 * * * * /usr/local/bin/php /srv/www/bin/console bot:sentiment:process >/dev/null 2>&1

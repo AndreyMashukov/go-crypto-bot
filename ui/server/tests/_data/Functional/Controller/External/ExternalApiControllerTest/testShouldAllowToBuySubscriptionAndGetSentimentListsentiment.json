@@ -1,0 +1,14 @@
+[
+    {
+        "coin": "PERP",
+        "score": "0.5",
+        "label": "BEARISH",
+        "news": [
+            {
+                "url": "https:<file-path>",
+                "label": "BEARISH",
+                "score": 0.5
+            }
+        ]
+    }
+]

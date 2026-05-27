@@ -1,0 +1,16 @@
+# config/packages/cache.yaml
+framework:
+    cache:
+        app: my_redis
+        pools:
+            my_redis:
+                adapter: cache.adapter.redis
+                provider: app.redis_provider
+
+services:
+    app.redis_provider:
+        class: \Predis
+        factory: ['Symfony\Component\Cache\Adapter\RedisAdapter', 'createConnection']
+        arguments:
+            - '%env(REDIS_DSN)%'
+            - { retry_interval: 2, timeout: 10 }

@@ -1,0 +1,11 @@
+{
+    "email": "john@batur.loc",
+    "roles": [
+        "ROLE_USER",
+        "ROLE_ADMIN"
+    ],
+    "username": "<username>",
+    "language": "ru",
+    "phone": "6285940749131",
+    "activeSubscription": null
+}

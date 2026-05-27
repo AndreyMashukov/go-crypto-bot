@@ -1,0 +1,161 @@
+nelmio_api_doc:
+    models:
+        use_jms: true
+
+    documentation:
+        info:
+            title: Autotrade.cloud API
+            description: Crypto Trading Platform
+            version: 1.16.0
+        basePath: /
+        schemes:
+            - 'https'
+        securityDefinitions:
+            oauth2:
+                type: apiKey
+                name: Authorization
+                in: header
+
+        definitions:
+            InvalidScopeResponse:
+                type: object
+                properties:
+                    error:
+                        type: string
+                        example: "invalid_scope"
+                    error_description:
+                        type: string
+                        example: "The requested scope is invalid, unknown, or malformed"
+                    hint:
+                        type: string
+                        example: "Check the `scope123` scope"
+                    message:
+                        type: string
+                        example: "The requested scope is invalid, unknown, or malformed"
+
+            InvalidClientResponse:
+                type: object
+                properties:
+                    error:
+                        type: string
+                        example: "invalid_client"
+                    error_description:
+                        type: string
+                        example: "Client authentication failed"
+                    message:
+                        type: string
+                        example: "Client authentication failed"
+
+            InvalidGrantResponse:
+                type: object
+                properties:
+                    error:
+                        type: string
+                        example: "unsupported_grant_type"
+                    error_description:
+                        type: string
+                        example: "The authorization grant type is not supported by the authorization server."
+                    hint:
+                        type: string
+                        example: "Check that all required parameters have been provided"
+                    message:
+                        type: string
+                        example: "The authorization grant type is not supported by the authorization server."
+
+            OAuth2TokenBody:
+                properties:
+                    client_id:
+                        type: string
+                        example: "e6bb4626807db29f314d568c5bb88d21"
+                        description: 'Use `client_id` from this example'
+                    client_secret:
+                        type: string
+                        example: "c77d7230292adaa796517e123f39c8741a113de52de88bdecc5438037df2a2297a1132b08b5f1b3665d65acd072615dcf8483f9aba585bb2c306a9d2deea512d"
+                        description: 'Use `client_secret` from this example'
+                    grant_type:
+                        type: string
+                        example: "password"
+                    username:
+                        type: string
+                        example: "test@test.com"
+                        description: 'Your email'
+                    password:
+                        type: string
+                        example: "pass123"
+                        description: 'Your password'
+
+            OAuth2RefreshBody:
+                properties:
+                    client_id:
+                        type: string
+                        example: "e6bb4626807db29f314d568c5bb88d21"
+                        description: 'Use `client_id` from this example'
+                    client_secret:
+                        type: string
+                        example: "c77d7230292adaa796517e123f39c8741a113de52de88bdecc5438037df2a2297a1132b08b5f1b3665d65acd072615dcf8483f9aba585bb2c306a9d2deea512d"
+                        description: 'Use `client_secret` from this example'
+                    grant_type:
+                        type: string
+                        example: "refresh_token"
+                    refresh_token:
+                        type: string
+                        example: "def502007bbc1ef4f63aff71b816ffbe2b564b9cc7aaa9e57b5257482308d18fa072b10ea67106dce7bf7fed0bdad80ef526bec2327a1ffca763629f561312f2a615c72548327436a71a4e28c235becc538f1eab75342c026f5100ac0ffd0459551f9ef6e4211c4ef6b37f75d4ce8886a7f81d9317d8fa6df6707ed1744cf1a465ea84247562ccc931f5304775d647aa0b2603934d9b6ae2553eb99b2185d8fc90320dc3aecb649a925bcf916a600b24f10593b748a52dd525799652ffa6514f4cfdde722f5aa89dbfe3850a6fea3ba0d50fd1681533dee205e87fd057238bd63c4b922903e3d20a76a8d9095417b3e23052263ba7db772ced4e3c63ce38fe46b64d41f06f4277e2ce07ea21a0bf9de0acfda537a6dfb4b799b8adcbed7d5544abcf9f79f2615ed60bfc0c79503249dbc800cf6408f4db290313bc69b1e1b729b75573e421afd047caa8b1a2108d218340003180716e6c6d8c3abee76f094136fe8d50e03eef505e3f7768404b6536f8a164f6c02d2516df796f4c3fdd18b1407e17f7600878fd08e3ff541b6ae10432a48338686f1c"
+
+            OAuth2Response:
+                type: object
+                properties:
+                    token_type:
+                        type: string
+                        example: "Bearer"
+                    expires_in:
+                        type: integer
+                        example: 3600
+                    access_token:
+                        type: string
+                        example: "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiJjM2ZmMzYzNzlmZDBhZmYzMTTdlZDFkMWI0NWI4MCIsImp0aSI6ImUyZWE2ZjlmZGQwZjI0NmYxYWFlNDhkNjFjMzMzYmIzMTUwMGViODBhNDkyYzBiNDI1ZDEwYzc3NjliYjAyMTk1YjQ4ODQ4OTUyNDczMDY3IiwiaWF0IjoxNjI3MTUzNjgyLjM4NjAyNCwibmJmIjoxNjI3MTUzNjgyLjM4NjAzLCJleHAiOjE2MjcxNTcyODIuMzYwNjA3LCJzdWIiOiJ0ZXN0QHRlc3QuY29tIiwic2NvcGVzIjpbImJyb2tlciJdfQ.l_Jq55sPmxbAgZ3xwqt_uGudrDPNgWz5kRQ02r2uOup2dcB3TDzMCeiE3sUul2BHGq2T3m_VrVVi0jNN8TNWOWKOb1uuUWbb-6wZOCrTUqD0scOeywyYGfcriGcfVG-vyMi5IVgYvTpKMGjQbC1RxyNyqvBjz1HgoyST4aJG_VHFgI6EAp67q_l3cl9LFdP5PX7JxzZexlnXOXviNzuGN7om6nU47WoZbc6nbDL-tGgZArR-frXvUPkI9sms36Un4eIvrGqw5lHZXL2ef8Bbduq_3cZ_mn5JXtvOoxx1GDdqg6hWremMbUmbN_SD002t_tiGbfj_ACoXY06Q_NoSVw"
+                    refresh_token:
+                        type: string
+                        example: "def502007bbc1ef4f63aff71b816ffbe2b564b9cc7aaa9e57b525748d18fa072b10ea67106dce7bf7fed0bdad80ef526bec2327a1ffca763629f561312f2a615c72548327436a71a4e28c235becc538f1eab75342c026f5100ac0ffd0459551f9ef6e4211c4ef6b37f75d4ce8886a7f81d9317d8fa6df6707ed1744cf1a465ea84247562ccc931f5304775d647aa0b2603934d9b6ae2553eb99b2185d8fc90320dc3aecb649a925bcf916a600b24f10593b748a52dd525799652ffa6514f4cfdde722f5aa89dbfe3850a6fea3ba0d50fd1681533dee205e87fd057238bd63c4b922903e3d20a76a8d9095417b3e23052263ba7db772ced4e3c63ce38fe46b64d41f06f4277e2ce07ea21a0bf9de0acfda537a6dfb4b799b8adcbed7d5544abcf9f79f2615ed60bfc0c79503249dbc800cf6408f4db290313bc69b1e1b729b75573e421afd047caa8b1a2108d218340003180716e6c6d8c3abee76f094136fe8d50e03eef505e3f7768404b6536f8a164f6c02d2516df796f4c3fdd18b1407e17f7600878fd08e3ff541b6ae10432a48338686f1c"
+
+            NotFoundResponse:
+                type: object
+                properties:
+                    code:
+                        type: integer
+                        example: 404
+                    message:
+                        type: string
+                        example: "User is not found."
+
+            CoinSentimentAnalysis:
+                type: object
+                properties:
+                    coin:
+                        type: string
+                        example: "PERP"
+                    score:
+                        type: float
+                        example: 0.5
+                    label:
+                        type: string
+                        example: "BEARISH"
+                    news:
+                        type: array
+                        items:
+                            type: object
+                            properties:
+                                url:
+                                    type: string
+                                    example: 'https://bitcoinist.com/bloomberg-analyst-deadline-for-ethereum-spot-etf/'
+                                score:
+                                    type: float
+                                    example: 0.71
+                                label:
+                                    type: string
+                                    example: "BULLISH"
+
+    areas:
+        default:
+            name_patterns:
+                - ^external_api_sentiment_list$
+                - ^oauth2_

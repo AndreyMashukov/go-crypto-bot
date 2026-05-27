@@ -1,0 +1,9 @@
+doctrine:
+  orm:
+    mappings:
+      CryptoBotContext:
+        is_bundle: false
+        type: annotation
+        dir: '%kernel.project_dir%/bundles/CryptoBotContext/Entity'
+        prefix: 'Bundles\CryptoBotContextBundle\Entity'
+        alias: CryptoBotContext

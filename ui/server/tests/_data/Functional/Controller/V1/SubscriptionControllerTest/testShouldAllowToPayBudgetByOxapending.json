@@ -1,0 +1,7 @@
+{
+    "id": "<id>",
+    "amount": 100,
+    "status": "pending",
+    "currency": "USDT",
+    "description": "Budget recharge"
+}

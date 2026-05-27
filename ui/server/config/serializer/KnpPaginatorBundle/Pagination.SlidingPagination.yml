@@ -1,0 +1,9 @@
+Knp\Bundle\PaginatorBundle\Pagination\SlidingPagination:
+    exclusion_policy: ALL
+    properties:
+        items:
+            expose: true
+            access_type: public_method
+            accessor:
+                getter: getItems
+            groups: [foo, bar]

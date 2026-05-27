@@ -1,0 +1,74 @@
+name: ui/app (Nuxt frontend)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ui/app/**'
+      - '.github/workflows/ui-app.yml'
+  pull_request:
+    paths:
+      - 'ui/app/**'
+      - '.github/workflows/ui-app.yml'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: ui/app
+
+jobs:
+  install:
+    name: yarn install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: yarn
+          cache-dependency-path: ui/app/yarn.lock
+      - run: yarn install --frozen-lockfile
+
+  lint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: yarn
+          cache-dependency-path: ui/app/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn lint
+
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: yarn
+          cache-dependency-path: ui/app/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn typecheck
+
+  build:
+    name: nuxt build
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: yarn
+          cache-dependency-path: ui/app/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn build

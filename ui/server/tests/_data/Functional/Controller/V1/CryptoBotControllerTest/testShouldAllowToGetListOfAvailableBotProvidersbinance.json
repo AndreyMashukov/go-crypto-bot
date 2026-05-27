@@ -1,0 +1,14 @@
+{
+    "ipAddress": null,
+    "hasActiveSignalSubscription": false,
+    "id": "<id>",
+    "provider": "binance",
+    "apiKey": "testapikey",
+    "apiSecret": "apisecret",
+    "port": null,
+    "status": "new",
+    "cryptoTradeConfigs": [],
+    "master": false,
+    "errorMessage": null,
+    "restartRequired": false
+}

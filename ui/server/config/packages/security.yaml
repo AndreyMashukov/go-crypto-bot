@@ -1,0 +1,43 @@
+security:
+    encoders:
+        Bundles\UserContext\Entity\User:
+            algorithm: argon2i
+
+    providers:
+        pdadmin_auth:
+            entity:
+                class: Bundles\UserContext\Entity\User
+                property: username
+
+    firewalls:
+        api_doc:
+            pattern: ^/doc
+            security: false
+
+        api_public:
+            pattern: ^/public
+            security: false
+
+        oauth2:
+            pattern: ^/oauth2/(token|refresh)$
+            security: false
+
+        api:
+            pattern: ^/
+            security: true
+            stateless: true
+            oauth2: true
+            provider: pdadmin_auth
+            anonymous: true
+
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+
+    role_hierarchy:
+        ROLE_SUPER_ADMIN: [ROLE_ADMIN]
+
+    access_control:
+        - { path: ^/api/doc$, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+        - { path: ^/v1/item/[0-9]+/contact$, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+        - { path: ^/, roles: IS_AUTHENTICATED_FULLY }

@@ -1,0 +1,9 @@
+doctrine:
+  orm:
+    mappings:
+      UserContext:
+        is_bundle: false
+        type: annotation
+        dir: '%kernel.project_dir%/bundles/UserContext/Entity'
+        prefix: 'Bundles\UserContextBundle\Entity'
+        alias: UserContext

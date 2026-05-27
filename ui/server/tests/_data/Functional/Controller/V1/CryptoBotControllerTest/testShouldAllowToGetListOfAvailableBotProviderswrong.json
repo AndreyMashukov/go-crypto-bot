@@ -1,0 +1,16 @@
+{
+    "code": 400,
+    "message": "Validation Failed",
+    "errors": {
+        "children": {
+            "apiKey": [],
+            "apiSecret": [],
+            "provider": {
+                "errors": [
+                    "The value you selected is not a valid choice."
+                ]
+            },
+            "cryptoTradeConfigs": []
+        }
+    }
+}

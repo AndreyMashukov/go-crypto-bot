@@ -1,0 +1,20 @@
+{
+    "status": "Paid",
+    "trackId": "72391551",
+    "address": "TH5QysotuFub4hDVbPePHtZ9EQZVnMSw89",
+    "txID": "8e29a2e22a1c1b11360784495b8bdec6326b222ea85bbc70a19b9e6513a346af",
+    "amount": "10",
+    "currency": "USDT",
+    "price": "9.85",
+    "payAmount": "10",
+    "payCurrency": "USDT",
+    "network": "TRC20",
+    "feePaidByPayer": 0,
+    "underPaidCover": 10,
+    "email": "amashukov@example.com",
+    "orderId": "7e2c1533-a9b1-4f3e-bab9-a801065d50cb",
+    "description": "Basic for 30 days",
+    "date": "1701800130",
+    "payDate": "1701800247",
+    "type": "payment"
+}

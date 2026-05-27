@@ -178,6 +178,139 @@ if [ -n "$STAGED_GO" ] && [ "$BLOCK" = "0" ]; then
     fi
 fi
 
+# ---- ui/ checks (Nuxt + Symfony + Go microservices) -----------------------
+# Each ui/<layer> check runs only if its docker-compose stack is up.
+# Stack not up → instructive skip (we cannot fall back to host tooling per
+# the "runtime in containers only" policy).
+
+compose_running() {
+    # $1 = working dir of compose project ; $2 = service name
+    (cd "$1" && docker compose ps --services --status=running 2>/dev/null | grep -qx "$2")
+}
+
+# ---- Check 8: ui/app — Nuxt (ESLint + typecheck) --------------------------
+
+STAGED_UI_APP="$(printf "%s\n" "$STAGED" | grep -E '^ui/app/.*\.(vue|ts|tsx|js|mjs|cjs)$' | grep -vE '^ui/app/(\.nuxt|\.output|node_modules)/' || true)"
+if [ -n "$STAGED_UI_APP" ]; then
+    if compose_running "ui/app" "frontend"; then
+        if ! (cd ui/app && docker compose exec -T frontend yarn lint) > /tmp/go-crypto-bot.uiapp-lint.out 2>&1; then
+            printf "%b\n" "${RED}[hooks] ESLint findings in ui/app:${RESET}"
+            tail -60 /tmp/go-crypto-bot.uiapp-lint.out | sed 's/^/    /'
+            BLOCK=1
+        fi
+        if ! (cd ui/app && docker compose exec -T frontend yarn typecheck) > /tmp/go-crypto-bot.uiapp-tc.out 2>&1; then
+            printf "%b\n" "${RED}[hooks] typecheck failures in ui/app:${RESET}"
+            tail -60 /tmp/go-crypto-bot.uiapp-tc.out | sed 's/^/    /'
+            BLOCK=1
+        fi
+    else
+        printf "%b\n" "${YELLOW}[hooks] ui/app frontend container is not running — skipping ESLint/typecheck.${RESET}"
+        printf "%b\n" "${GRAY}  Start it to enable the gate:  (cd ui/app && make up)${RESET}"
+        printf "%b\n" "${GRAY}  CI (ui-app.yml) still gates the merge.${RESET}"
+    fi
+fi
+
+# ---- Check 9: ui/server — Symfony (php-cs-fixer + phpstan + rector) -------
+
+STAGED_UI_SERVER="$(printf "%s\n" "$STAGED" | grep -E '^ui/server/.*\.php$' | grep -vE '^ui/server/(var|vendor|microservices)/' || true)"
+if [ -n "$STAGED_UI_SERVER" ]; then
+    if ! compose_running "ui/server" "backend"; then
+        printf "%b\n" "${YELLOW}[hooks] ui/server backend container is not running — skipping php-cs-fixer/phpstan/rector.${RESET}"
+        printf "%b\n" "${GRAY}  Start it to enable the gate:  (cd ui/server && make up)${RESET}"
+        printf "%b\n" "${GRAY}  CI (ui-server.yml) still gates the merge.${RESET}"
+        STAGED_UI_SERVER=""
+    fi
+fi
+if [ -n "$STAGED_UI_SERVER" ]; then
+    if compose_running "ui/server" "backend"; then
+        # php-cs-fixer (staged files only — list them inside the container)
+        STAGED_REL="$(printf "%s\n" "$STAGED_UI_SERVER" | sed 's|^ui/server/||' | tr '\n' ' ')"
+        if ! (cd ui/server && docker compose exec -T backend vendor/bin/php-cs-fixer fix --dry-run --diff \
+                --config=.php-cs-fixer.dist.php --allow-risky=yes $STAGED_REL) \
+                > /tmp/go-crypto-bot.uisvr-cs.out 2>&1; then
+            printf "%b\n" "${RED}[hooks] php-cs-fixer findings in ui/server:${RESET}"
+            tail -60 /tmp/go-crypto-bot.uisvr-cs.out | sed 's/^/    /'
+            BLOCK=1
+        fi
+        # phpstan (full project — boundary effects)
+        if ! (cd ui/server && docker compose exec -T backend vendor/bin/phpstan analyse --memory-limit=1G --no-progress) \
+                > /tmp/go-crypto-bot.uisvr-stan.out 2>&1; then
+            printf "%b\n" "${RED}[hooks] phpstan findings:${RESET}"
+            tail -60 /tmp/go-crypto-bot.uisvr-stan.out | sed 's/^/    /'
+            BLOCK=1
+        fi
+        # rector --dry-run (full project)
+        if ! (cd ui/server && docker compose exec -T backend vendor/bin/rector process --dry-run --no-progress-bar) \
+                > /tmp/go-crypto-bot.uisvr-rector.out 2>&1; then
+            printf "%b\n" "${RED}[hooks] rector findings (run 'make rector' to apply):${RESET}"
+            tail -60 /tmp/go-crypto-bot.uisvr-rector.out | sed 's/^/    /'
+            BLOCK=1
+        fi
+    else
+        printf "%b\n" "${RED}[hooks] ui/server backend container is not running.${RESET}"
+        printf "%b\n" "${GRAY}  Start it and re-commit:  (cd ui/server && make up)${RESET}"
+        BLOCK=1
+    fi
+fi
+
+# ---- Check 10: ui/server/microservices — Go services ----------------------
+
+STAGED_UI_MS="$(printf "%s\n" "$STAGED" | grep -E '^ui/server/microservices/.*\.go$' || true)"
+STAGED_UI_MS_CONTENT="$(git diff --cached --name-only --diff-filter=AMT \
+    | grep -E '^ui/server/microservices/.*\.go$' || true)"
+if [ -n "$STAGED_UI_MS" ] && [ -z "$STAGED_UI_MS_CONTENT" ]; then
+    printf "%b\n" "${BLUE}[hooks] rename-only changes in ui/server/microservices — skipping${RESET}"
+    STAGED_UI_MS=""
+fi
+if [ -n "$STAGED_UI_MS" ]; then
+    if ! compose_running "ui/server" "backend"; then
+        printf "%b\n" "${YELLOW}[hooks] ui/server backend container is not running — skipping microservices vet/build/go-lint.${RESET}"
+        printf "%b\n" "${GRAY}  Start it to enable the gate:  (cd ui/server && make up)${RESET}"
+        printf "%b\n" "${GRAY}  CI (ui-microservices.yml) still gates the merge.${RESET}"
+        STAGED_UI_MS=""
+    else
+        # Group by module root (e.g. ui/server/microservices/signal-server).
+        MS_MODS="$(printf "%s\n" "$STAGED_UI_MS" | awk -F/ '{print $1"/"$2"/"$3"/"$4}' | sort -u)"
+        while IFS= read -r mod; do
+            [ -z "$mod" ] && continue
+            mod_in_container="/srv/www/${mod#ui/server/}"
+            # gofmt — staged files only; runs inside the backend container.
+            FILES_IN_MOD_REL="$(printf "%s\n" "$STAGED_UI_MS" | grep "^${mod}/" | sed "s|^${mod}/||" | tr '\n' ' ')"
+            FMT_OUT="$( (cd ui/server && docker compose exec -T backend sh -c "cd ${mod_in_container} && gofmt -l ${FILES_IN_MOD_REL}") 2>&1 || true)"
+            if [ -n "$FMT_OUT" ]; then
+                printf "%b\n" "${RED}[hooks] gofmt drift in $mod:${RESET}"
+                printf "%s\n" "$FMT_OUT" | sed 's/^/    /'
+                BLOCK=1
+            fi
+            if ! (cd ui/server && docker compose exec -T backend sh -c "cd ${mod_in_container} && go vet ./...") \
+                    > /tmp/go-crypto-bot.ms-vet.out 2>&1; then
+                printf "%b\n" "${RED}[hooks] go vet failures in $mod:${RESET}"
+                tail -30 /tmp/go-crypto-bot.ms-vet.out | sed 's/^/    /'
+                BLOCK=1
+            fi
+            if ! (cd ui/server && docker compose exec -T backend sh -c "cd ${mod_in_container} && go build ./...") \
+                    > /tmp/go-crypto-bot.ms-build.out 2>&1; then
+                printf "%b\n" "${RED}[hooks] go build failed in $mod:${RESET}"
+                tail -30 /tmp/go-crypto-bot.ms-build.out | sed 's/^/    /'
+                BLOCK=1
+            fi
+            if ! (cd ui/server && docker compose exec -T backend sh -c "cd ${mod_in_container} && go-lint ./...") \
+                    > /tmp/go-crypto-bot.ms-ailint.out 2>&1; then
+                # go-lint may not be installed in the backend image. Tail the
+                # output so the user can decide whether it's a real finding
+                # or "binary not found".
+                printf "%b\n" "${YELLOW}[hooks] go-lint check in $mod:${RESET}"
+                tail -30 /tmp/go-crypto-bot.ms-ailint.out | sed 's/^/    /'
+                if grep -q 'not found' /tmp/go-crypto-bot.ms-ailint.out; then
+                    printf "%b\n" "${GRAY}  Install inside the container: go install github.com/AndreyMashukov/go-lint/cmd/go-lint@latest${RESET}"
+                else
+                    BLOCK=1
+                fi
+            fi
+        done <<< "$MS_MODS"
+    fi
+fi
+
 # ---- Final verdict --------------------------------------------------------
 
 if [ "$BLOCK" = "1" ]; then

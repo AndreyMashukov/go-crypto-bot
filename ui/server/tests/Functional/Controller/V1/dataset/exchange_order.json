@@ -1,0 +1,14 @@
+{
+    "orderId": "698776",
+    "symbol": "BCHTRY",
+    "transactTime": 0,
+    "price": "10583",
+    "origQty": "1.576",
+    "executedQty": "1.576",
+    "cummulativeQuoteQty": "16678.808",
+    "status": "FILLED",
+    "type": "LIMIT",
+    "side": "SELL",
+    "workingTime": 1720186794566,
+    "time": 1720186794566
+}

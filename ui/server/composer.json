@@ -1,0 +1,124 @@
+{
+    "name": "amashukov/crypto-saas-server",
+    "type": "project",
+    "license": "MIT",
+    "description": "SaaS backend for AutoTrade.cloud — Symfony 7.3 / PHP 8.3.",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": ">=8.3",
+        "ext-ctype": "*",
+        "ext-dom": "*",
+        "ext-iconv": "*",
+        "ext-json": "*",
+        "ext-libxml": "*",
+        "ext-simplexml": "*",
+        "aws/aws-sdk-php": "^3.300",
+        "beberlei/doctrineextensions": "^1.5",
+        "doctrine/doctrine-bundle": "^2.13",
+        "doctrine/doctrine-migrations-bundle": "^3.4",
+        "doctrine/orm": "^3.3",
+        "flagception/flagception-bundle": "^4.3",
+        "friendsofsymfony/rest-bundle": "^3.7",
+        "gedmo/doctrine-extensions": "^3.18",
+        "guzzlehttp/guzzle": "^7.9",
+        "jms/serializer-bundle": "^5.5",
+        "knplabs/knp-paginator-bundle": "^6.5",
+        "kunicmarko/jms-messenger-adapter": "^2.0",
+        "nelmio/api-doc-bundle": "^5.0",
+        "nyholm/psr7": "^1.8",
+        "oro/doctrine-extensions": "^2.1",
+        "presta/sitemap-bundle": "^4.0",
+        "psr/clock": "^1.0",
+        "ramsey/uuid-doctrine": "^2.1",
+        "stof/doctrine-extensions-bundle": "^1.13",
+        "symfony/asset": "7.3.*",
+        "symfony/console": "7.3.*",
+        "symfony/dotenv": "7.3.*",
+        "symfony/flex": "^2.5",
+        "symfony/form": "7.3.*",
+        "symfony/framework-bundle": "7.3.*",
+        "symfony/http-client": "7.3.*",
+        "symfony/messenger": "7.3.*",
+        "symfony/monolog-bundle": "^3.10",
+        "symfony/options-resolver": "7.3.*",
+        "symfony/psr-http-message-bridge": "^7.3",
+        "symfony/runtime": "7.3.*",
+        "symfony/security-bundle": "7.3.*",
+        "symfony/translation": "7.3.*",
+        "symfony/twig-bundle": "7.3.*",
+        "symfony/validator": "7.3.*",
+        "symfony/yaml": "7.3.*",
+        "trikoder/oauth2-bundle": "^5.0",
+        "twig/twig": "^3.14",
+        "unleash/client": "^2.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true,
+            "symfony/flex": true,
+            "symfony/runtime": true
+        },
+        "optimize-autoloader": true,
+        "preferred-install": {
+            "*": "dist"
+        },
+        "sort-packages": true,
+        "bump-after-update": true
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/",
+            "Bundles\\": "bundles/",
+            "League\\OAuth2\\Server\\Entities\\Traits\\": "League/OAuth2/Server/Entities/Traits/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "App\\Tests\\": "tests/"
+        }
+    },
+    "replace": {
+        "symfony/polyfill-ctype": "*",
+        "symfony/polyfill-iconv": "*",
+        "symfony/polyfill-php72": "*",
+        "symfony/polyfill-php80": "*",
+        "symfony/polyfill-php81": "*"
+    },
+    "scripts": {
+        "auto-scripts": {
+            "cache:clear": "symfony-cmd",
+            "assets:install %PUBLIC_DIR%": "symfony-cmd"
+        },
+        "post-install-cmd": [
+            "@auto-scripts"
+        ],
+        "post-update-cmd": [
+            "@auto-scripts"
+        ]
+    },
+    "conflict": {
+        "symfony/symfony": "*"
+    },
+    "extra": {
+        "symfony": {
+            "allow-contrib": false,
+            "require": "7.3.*"
+        }
+    },
+    "require-dev": {
+        "amashukov/rector-php-rules": "^0.1",
+        "doctrine/doctrine-fixtures-bundle": "^4.0",
+        "friendsofphp/php-cs-fixer": "^3.94",
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-doctrine": "^2.0",
+        "phpstan/phpstan-symfony": "^2.0",
+        "phpunit/phpunit": "^11.5",
+        "rector/rector": "^2.0",
+        "symfony/browser-kit": "7.3.*",
+        "symfony/css-selector": "7.3.*",
+        "symfony/maker-bundle": "^1.62",
+        "symfony/stopwatch": "7.3.*",
+        "symfony/web-profiler-bundle": "7.3.*"
+    }
+}

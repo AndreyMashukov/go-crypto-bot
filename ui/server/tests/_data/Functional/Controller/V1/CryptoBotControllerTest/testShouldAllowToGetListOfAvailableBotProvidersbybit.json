@@ -1,0 +1,20 @@
+{
+    "ipAddress": null,
+    "hasActiveSignalSubscription": true,
+    "hasDedicatedServer": false,
+    "dedicatedPaidServiceCode": "dedicated_bybit_server",
+    "hasActiveDedicatedServerSubscription": false,
+    "id": "<id>",
+    "provider": "bybit",
+    "apiKey": "testapikey",
+    "apiSecret": "apisecret",
+    "port": null,
+    "status": "new",
+    "cryptoTradeConfigs": [],
+    "master": false,
+    "errorMessage": null,
+    "dedicated": null,
+    "restartRequired": false,
+    "dedicatedServerExpiresAt": null,
+    "test": false
+}

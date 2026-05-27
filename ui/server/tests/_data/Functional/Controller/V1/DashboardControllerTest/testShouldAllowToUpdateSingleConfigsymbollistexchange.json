@@ -1,0 +1,140 @@
+[
+    {
+        "id": "<id>",
+        "symbol": "ADAUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "ATOMUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "AVAXUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "BCHUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "BNBUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "BTCUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "DOGEUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "DOTUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "ETCUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "ETHUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "LINKUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "LTCUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "MATICUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "NEARUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "NEOUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "PERPUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "SHIBUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "SOLUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "TRXUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "UNIUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "XLMUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "XRPUSDT",
+        "exchange": "binance",
+        "enabled": true
+    },
+    {
+        "id": "<id>",
+        "symbol": "ZECUSDT",
+        "exchange": "binance",
+        "enabled": true
+    }
+]

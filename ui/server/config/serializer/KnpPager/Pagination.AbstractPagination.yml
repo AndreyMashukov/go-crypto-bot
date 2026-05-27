@@ -1,0 +1,34 @@
+Knp\Component\Pager\Pagination\AbstractPagination:
+    exclusion_policy: ALL
+    accessor_order: custom
+    custom_accessor_order: [currentPageNumber, numItemsPerPage, totalCount, items]
+    properties:
+        items:
+            expose: true
+            groups: [knp_basic]
+            access_type: public_method
+            accessor:
+                getter: getItems
+            type: array
+            serialized_name:
+                data
+        currentPageNumber:
+            expose: true
+            groups: [knp_basic]
+            serialized_name:
+                currentPage
+        numItemsPerPage:
+            expose: true
+            groups: [knp_basic]
+            serialized_name:
+                itemsPerPage
+        totalCount:
+            expose: true
+            groups: [knp_basic]
+            serialized_name:
+                totalItems
+        customParameters:
+            expose: true
+            groups: [knp_basic]
+            serialized_name:
+                meta

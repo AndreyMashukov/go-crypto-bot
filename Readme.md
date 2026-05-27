@@ -16,14 +16,20 @@ API for management.
 
 ## What's in this repo
 
-| Layer | Path | README |
-|---|---|---|
-| Trading engine (Go module) | `server/` | [server/README.md](server/README.md) |
-| Dev stack (docker-compose, ClickHouse config, base image) | `.docker/`, `docker-compose.yaml.dist` | — |
-| Lint, hooks, lint config | `.githooks/`, `.golangci.yml` | — |
+| Layer | Path | Stack | README |
+|---|---|---|---|
+| Trading engine | `server/` | Go 1.21 | [server/README.md](server/README.md) |
+| SaaS UI (Nuxt + Symfony + Go microservices + docs) | `ui/` | mixed | [ui/README.md](ui/README.md) |
+| Dev stack (docker-compose, ClickHouse config, base image) | `.docker/`, `docker-compose.yaml.dist` | Docker | — |
+| Lint, hooks, lint config | `.githooks/`, `.golangci.yml` | — | — |
 
-Each layer keeps its own deep documentation; this top-level README is just
-the orientation page.
+Each layer keeps its own deep documentation; this top-level README is
+just the orientation page.
+
+The `ui/` directory contains the Nuxt frontend (`ui/app/`), Symfony
+backend (`ui/server/`), Go microservices (`ui/server/microservices/`),
+end-user docs (`ui/docs/`), and Ansible deploy playbooks
+(`ui/deploy/`).
 
 ---
 

@@ -1,0 +1,116 @@
+name: ui/server (Symfony backend)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ui/server/**'
+      - '.github/workflows/ui-server.yml'
+  pull_request:
+    paths:
+      - 'ui/server/**'
+      - '.github/workflows/ui-server.yml'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: ui/server
+
+jobs:
+  install:
+    name: composer install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+          extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
+      - name: composer cache dir
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('ui/server/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+      - run: composer install --prefer-dist --no-progress --no-interaction --ansi
+
+  cs-fixer:
+    name: php-cs-fixer --dry-run
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+          extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
+      - run: composer install --prefer-dist --no-progress --no-interaction
+      - run: vendor/bin/php-cs-fixer fix --dry-run --diff --config=.php-cs-fixer.dist.php --allow-risky=yes
+
+  phpstan:
+    name: phpstan
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+          extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
+      - run: composer install --prefer-dist --no-progress --no-interaction
+      - run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+
+  rector:
+    name: rector --dry-run
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+          extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
+      - run: composer install --prefer-dist --no-progress --no-interaction
+      - run: vendor/bin/rector process --dry-run --no-progress-bar
+
+  phpunit:
+    name: phpunit
+    runs-on: ubuntu-latest
+    needs: install
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: crypto_saas_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+          extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
+      - run: composer install --prefer-dist --no-progress --no-interaction
+      - env:
+          APP_ENV: test
+          DATABASE_URL: mysql://root:root@127.0.0.1:3306/crypto_saas_test?serverVersion=8.4
+        run: vendor/bin/phpunit -c phpunit.xml.dist --no-coverage

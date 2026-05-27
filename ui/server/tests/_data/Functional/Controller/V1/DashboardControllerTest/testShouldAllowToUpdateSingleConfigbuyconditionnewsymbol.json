@@ -1,0 +1,25 @@
+[
+    {
+        "type": "or",
+        "value": null,
+        "symbol": null,
+        "children": [
+            {
+                "type": "and",
+                "value": "true",
+                "symbol": "ADAUSDT",
+                "children": [],
+                "condition": "eq",
+                "parameter": "has_signal"
+            },
+            {
+                "type": "and",
+                "value": "-5.00",
+                "symbol": "ADAUSDT",
+                "children": [],
+                "condition": "lte",
+                "parameter": "daily_percent"
+            }
+        ]
+    }
+]

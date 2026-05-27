@@ -1,0 +1,48 @@
+{
+  "email": "amashukov@example.com",
+  "id": 20,
+  "emailBlacklisted": false,
+  "smsBlacklisted": false,
+  "createdAt": "2023-06-05T13:20:36.997+08:00",
+  "modifiedAt": "2023-07-28T11:24:12.089+08:00",
+  "attributes": {},
+  "listIds": [
+    3,
+    6
+  ],
+  "statistics": {
+    "messagesSent": [
+      {
+        "campaignId": 7,
+        "eventTime": "2023-06-20T15:25:38.041+08:00"
+      }
+    ],
+    "opened": [
+      {
+        "campaignId": 7,
+        "ip": "66.249.84.107",
+        "count": 5,
+        "eventTime": "2023-06-20T15:28:52.142+08:00"
+      }
+    ],
+    "clicked": [
+      {
+        "campaignId": 7,
+        "links": [
+          {
+            "count": 3,
+            "ip": "203.78.121.69",
+            "eventTime": "2023-06-20T16:09:41.842+08:00",
+            "url": "https://example.com/TelegaCRM-info-50b55f3260e54339a58269ff58cb7f10"
+          }
+        ]
+      }
+    ],
+    "delivered": [
+      {
+        "campaignId": 7,
+        "eventTime": "2023-06-20T15:25:41.088+08:00"
+      }
+    ]
+  }
+}

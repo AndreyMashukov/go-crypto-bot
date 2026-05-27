@@ -1,0 +1,5 @@
+User-Agent: *
+Allow: *
+
+Sitemap: https://docs.autotrade.cloud/sitemap.xml
+Host: https://docs.autotrade.cloud

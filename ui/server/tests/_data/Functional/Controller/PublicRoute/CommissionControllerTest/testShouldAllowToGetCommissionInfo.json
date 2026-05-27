@@ -1,0 +1,30 @@
+[
+    {
+        "level": 1,
+        "volume": 5000,
+        "commissionPercent": 50,
+        "minCommissionUsd": 1,
+        "title": "0.00<small>USDT<\/small> - 5000.00<small>USDT<\/small>"
+    },
+    {
+        "level": 2,
+        "volume": 25000,
+        "commissionPercent": 35,
+        "minCommissionUsd": 1,
+        "title": "5000.00<small>USDT<\/small> - 25000.00<small>USDT<\/small>"
+    },
+    {
+        "level": 3,
+        "volume": 50000,
+        "commissionPercent": 30,
+        "minCommissionUsd": 1,
+        "title": "25000.00<small>USDT<\/small> - 50000.00<small>USDT<\/small>"
+    },
+    {
+        "level": 4,
+        "volume": "{max_float}",
+        "commissionPercent": 25,
+        "minCommissionUsd": 1,
+        "title": "> 50000.00<small>USDT<\/small>"
+    }
+]

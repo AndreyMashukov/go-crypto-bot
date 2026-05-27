@@ -24,8 +24,8 @@
     "nuxt": "^3.18.1",
     "nuxt-delay-hydration": "^1.3.8",
     "typescript": "^5.9.3",
-    "vue": "^3.6.0",
-    "vue-router": "^4.6.3"
+    "vue": "^3.5.0",
+    "vue-router": "^4.5.0"
   },
   "dependencies": {
     "@gtm-support/vue-gtm": "^3.1.0",

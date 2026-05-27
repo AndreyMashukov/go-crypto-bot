@@ -33,9 +33,9 @@ jobs:
       - name: resolve deps (lockfile is regenerated until first stable run)
         run: |
           if [ -f composer.lock ]; then
-            composer install --prefer-dist --no-progress --no-interaction --ansi
+            composer install --prefer-dist --no-progress --no-interaction --no-audit --ansi
           else
-            composer update --prefer-dist --no-progress --no-interaction --ansi --no-scripts
+            composer update --prefer-dist --no-progress --no-interaction --no-audit --ansi --no-scripts
           fi
 
   cs-fixer:
@@ -52,9 +52,9 @@ jobs:
           extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
       - run: |
           if [ -f composer.lock ]; then
-            composer install --prefer-dist --no-progress --no-interaction
+            composer install --prefer-dist --no-progress --no-interaction --no-audit
           else
-            composer update --prefer-dist --no-progress --no-interaction --no-scripts
+            composer update --prefer-dist --no-progress --no-interaction --no-scripts --no-audit
           fi
       - run: vendor/bin/php-cs-fixer fix --dry-run --diff --config=.php-cs-fixer.dist.php --allow-risky=yes
         continue-on-error: true
@@ -73,9 +73,9 @@ jobs:
           extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
       - run: |
           if [ -f composer.lock ]; then
-            composer install --prefer-dist --no-progress --no-interaction
+            composer install --prefer-dist --no-progress --no-interaction --no-audit
           else
-            composer update --prefer-dist --no-progress --no-interaction --no-scripts
+            composer update --prefer-dist --no-progress --no-interaction --no-scripts --no-audit
           fi
       - run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
         continue-on-error: true
@@ -94,9 +94,9 @@ jobs:
           extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
       - run: |
           if [ -f composer.lock ]; then
-            composer install --prefer-dist --no-progress --no-interaction
+            composer install --prefer-dist --no-progress --no-interaction --no-audit
           else
-            composer update --prefer-dist --no-progress --no-interaction --no-scripts
+            composer update --prefer-dist --no-progress --no-interaction --no-scripts --no-audit
           fi
       - run: vendor/bin/rector process --dry-run --no-progress-bar
         continue-on-error: true
@@ -127,9 +127,9 @@ jobs:
           extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
       - run: |
           if [ -f composer.lock ]; then
-            composer install --prefer-dist --no-progress --no-interaction
+            composer install --prefer-dist --no-progress --no-interaction --no-audit
           else
-            composer update --prefer-dist --no-progress --no-interaction --no-scripts
+            composer update --prefer-dist --no-progress --no-interaction --no-scripts --no-audit
           fi
       - env:
           APP_ENV: test

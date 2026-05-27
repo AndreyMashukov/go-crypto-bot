@@ -10,10 +10,12 @@ use Amashukov\RectorRules\NoDirectDbMutationInFunctionalTestsRector;
 use Amashukov\RectorRules\NoDirectDispatchInFunctionalTestsRector;
 use Amashukov\RectorRules\NoEnvironmentCheckInSrcRector;
 use Amashukov\RectorRules\NoExistenceOnlyAssertionsInTestsRector;
+use Amashukov\RectorRules\NoNullCoalesceNewFallbackRector;
 use Amashukov\RectorRules\NoPhpstanIgnoreRector;
 use Amashukov\RectorRules\NoSuperglobalAccessRector;
 use Amashukov\RectorRules\NoTypeOnlyAssertionsInTestsRector;
 use Amashukov\RectorRules\RequirePsrClockInterfaceRector;
+use Amashukov\RectorRules\Yaml\YamlNoCommentsRector;
 use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
@@ -64,4 +66,12 @@ return RectorConfig::configure()
         NoExistenceOnlyAssertionsInTestsRector::class,
         NoDirectDbMutationInFunctionalTestsRector::class,
         NoDirectDispatchInFunctionalTestsRector::class,
+        NoNullCoalesceNewFallbackRector::class,
+    ])
+    ->withConfiguredRule(YamlNoCommentsRector::class, [
+        YamlNoCommentsRector::PATHS => [
+            __DIR__ . '/config',
+            __DIR__ . '/translations',
+            __DIR__ . '/bundles',
+        ],
     ]);

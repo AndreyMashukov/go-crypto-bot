@@ -107,7 +107,7 @@
         }
     },
     "require-dev": {
-        "amashukov/rector-php-rules": "^0.1",
+        "amashukov/rector-php-rules": "^0.2",
         "doctrine/doctrine-fixtures-bundle": "^4.0",
         "friendsofphp/php-cs-fixer": "^3.94",
         "phpstan/phpstan": "^2.1",

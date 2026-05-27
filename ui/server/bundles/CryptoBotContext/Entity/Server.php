@@ -18,7 +18,7 @@ class Server
 
     private bool $master = false;
 
-    private Collection $cryptoBots;
+    private readonly Collection $cryptoBots;
 
     public function __construct()
     {

@@ -1,7 +1,9 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Bundles\UserContext\Entity;
 
-use Pd\UserBundle\Model\UserInterface;
 use Bundles\CryptoBotContext\Entity\CryptoBot;
 use Bundles\OxaPayContext\Entity\PromoCode;
 use Bundles\OxaPayContext\Entity\Transaction;
@@ -10,12 +12,9 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\Criteria;
 use Doctrine\ORM\Mapping as ORM;
-use JMS\Serializer\Annotation as Serializer;
-use Pd\UserBundle\Model\ProfileInterface;
-use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Validator\Constraints as Assert;
 
-class User extends BaseUser implements ProfileInterface, PasswordAuthenticatedUserInterface
+class User extends BaseUser
 {
     public const ROLE_PARTNER = 'ROLE_PARTNER';
 
@@ -25,38 +24,27 @@ class User extends BaseUser implements ProfileInterface, PasswordAuthenticatedUs
 
     protected ?string $email = null;
 
-    /**
-     *
-     * @Assert\Length(max="40")
-     * @ORM\Column(name="username", type="string", length=40, unique=true)
-     */
+    #[Assert\Length(max: 40)]
+    #[ORM\Column(name: 'username', type: 'string', length: 40, unique: true)]
     protected string $username;
 
-    protected $roles;
-
-    protected $profile;
+    /** @var list<string> */
+    protected array $roles = [];
 
     protected ?string $lastLoginIp = null;
 
-    /**
-     *
-     * @Assert\NotBlank
-     * @Assert\Length(max="70")
-     * @ORM\Column(name="nickname", type="string", length=70)
-     */
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 70)]
+    #[ORM\Column(name: 'nickname', type: 'string', length: 70)]
     protected ?string $nickname = null;
 
-    /**
-     * @ORM\Column(name="phone", type="string", length=15, nullable=true)
-     */
+    #[ORM\Column(name: 'phone', type: 'string', length: 15, nullable: true)]
     protected ?string $phone = null;
 
-    /**
-     * @ORM\Column(name="language", type="string", length=2, nullable=true)
-     */
+    #[ORM\Column(name: 'language', type: 'string', length: 2, nullable: true)]
     protected ?string $language = null;
 
-    protected $createdAt;
+    protected ?\DateTimeInterface $createdAt = null;
 
     protected string $plainPassword = '';
 
@@ -104,11 +92,6 @@ class User extends BaseUser implements ProfileInterface, PasswordAuthenticatedUs
         return true;
     }
 
-    /**
-     * @Serializer\VirtualProperty("username")
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"user_extended", "admin"})
-     */
     public function getUsername(): string
     {
         return $this->username;
@@ -229,25 +212,20 @@ class User extends BaseUser implements ProfileInterface, PasswordAuthenticatedUs
     }
 
     /**
-     * @return array
+     * @return list<string>
      */
     #[\Override]
-    public function getRoles(): ?array
+    public function getRoles(): array
     {
-        $roles = parent::getRoles() ?: [];
+        $roles = parent::getRoles();
 
         if ($this->hasActiveApiSubscription()) {
             $roles[] = self::ROLE_API;
         }
 
-        return array_unique($roles);
+        return \array_values(\array_unique($roles));
     }
 
-    /**
-     * @Serializer\VirtualProperty("uid")
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"user_public"})
-     */
     public function getUid(): string
     {
         return $this->id;
@@ -314,11 +292,6 @@ class User extends BaseUser implements ProfileInterface, PasswordAuthenticatedUs
         return $this;
     }
 
-    /**
-     * @Serializer\VirtualProperty("hasActiveBasicSubscription")
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"user_extended"})
-     */
     public function hasActiveBasicSubscription(): bool
     {
         if (!$this->basicSubscriptionExpiresAt instanceof \DateTimeImmutable) {
@@ -392,11 +365,6 @@ class User extends BaseUser implements ProfileInterface, PasswordAuthenticatedUs
         return $this;
     }
 
-    /**
-     * @Serializer\VirtualProperty("hasActiveSignalSubscription")
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"user_extended", "admin"})
-     */
     public function hasActiveSignalSubscription(): bool
     {
         if (!$this->signalSubscriptionExpiresAt instanceof \DateTimeImmutable) {
@@ -406,11 +374,6 @@ class User extends BaseUser implements ProfileInterface, PasswordAuthenticatedUs
         return $this->signalSubscriptionExpiresAt->getTimestamp() > (new \DateTimeImmutable())->getTimestamp();
     }
 
-    /**
-     * @Serializer\VirtualProperty("isFreeze")
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"admin"})
-     */
     #[\Override]
     public function isFreeze(): bool
     {
@@ -464,11 +427,6 @@ class User extends BaseUser implements ProfileInterface, PasswordAuthenticatedUs
         return $promoCode->getPartner();
     }
 
-    /**
-     * @Serializer\VirtualProperty("isPartner")
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"user_extended", "admin"})
-     */
     public function isPartner(): bool
     {
         return $this->hasRole(self::ROLE_PARTNER);
@@ -514,11 +472,6 @@ class User extends BaseUser implements ProfileInterface, PasswordAuthenticatedUs
         return $this;
     }
 
-    /**
-     * @Serializer\VirtualProperty("hasActiveApiSubscription")
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"user_extended", "admin"})
-     */
     public function hasActiveApiSubscription(): bool
     {
         if (!$this->apiSubscriptionExpiresAt instanceof \DateTimeImmutable) {

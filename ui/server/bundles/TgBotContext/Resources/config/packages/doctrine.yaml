@@ -1,9 +1,0 @@
-doctrine:
-  orm:
-    mappings:
-      TgBotContext:
-        is_bundle: false
-        type: annotation
-        dir: '%kernel.project_dir%/bundles/TgBotContext/Entity'
-        prefix: 'Bundles\TgBotContextBundle\Entity'
-        alias: TgBotContext

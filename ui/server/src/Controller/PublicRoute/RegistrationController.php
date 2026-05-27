@@ -22,11 +22,8 @@ class RegistrationController extends AbstractFOSRestController
     }
 
     /**
-     * @Rest\Route("/code", methods={"POST"}, name="code")
-     * @Rest\View
-     *
-     *
      * @throws \Exception
+     *
      * @return mixed[]|null
      */
     public function post(Request $request)

@@ -11,33 +11,30 @@ class ProfitOption
 {
     /**
      * @Serializer\Expose
-     * @Assert\NotNull
      */
+    #[Assert\NotNull]
     public ?int $index = null;
 
     /**
      * @Serializer\Expose
-     * @Assert\NotNull
-     * @Assert\GreaterThanOrEqual(value="0.50")
      */
+    #[Assert\NotNull]
+    #[Assert\GreaterThanOrEqual(value: 0.5)]
     public ?float $optionPercent = null;
 
     /**
      * @Serializer\Expose
-     * @Assert\NotNull
-     * @Assert\Choice(choices={"i", "h", "d", "m"})
      */
+    #[Assert\NotNull]
+    #[Assert\Choice(choices: ['i', 'h', 'd', 'm'])]
     public ?string $optionUnit = null;
 
-    /**
-     * @Serializer\Expose
-     */
     public ?bool $isTriggerOption = null;
 
     /**
      * @Serializer\Expose
-     * @Assert\NotNull
-     * @Assert\GreaterThan(value="0.00")
      */
+    #[Assert\NotNull]
+    #[Assert\GreaterThan(value: 0)]
     public ?float $optionValue = null;
 }

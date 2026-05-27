@@ -9,7 +9,6 @@ use Bundles\UserContext\Model\SecureDataInterface;
 trait SecureValidation
 {
     /**
-     *
      * @throws \Exception
      *
      * @return bool

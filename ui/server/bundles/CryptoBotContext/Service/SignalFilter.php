@@ -18,7 +18,6 @@ class SignalFilter
 
     /**
      * @throws BadTradeSignalException
-     *
      */
     public function process(Signal $signal, CryptoTradeConfig $config): void
     {

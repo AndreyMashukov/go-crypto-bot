@@ -1,12 +1,17 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Bundles\UserContext\Model;
 
+use Bundles\UserContext\Entity\Group;
 use Doctrine\Common\Collections\ArrayCollection;
-use Pd\UserBundle\Model\GroupInterface;
-use Pd\UserBundle\Model\ProfileInterface;
-use Pd\UserBundle\Model\UserInterface;
+use Doctrine\Common\Collections\Collection;
+use Stringable;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 
-abstract class User implements UserInterface, \Serializable, \Stringable
+abstract class User implements UserInterface, PasswordAuthenticatedUserInterface, Stringable
 {
     public const ROLE_DEFAULT = 'ROLE_USER';
 
@@ -16,15 +21,13 @@ abstract class User implements UserInterface, \Serializable, \Stringable
 
     protected ?int $id = null;
 
-    protected ?\Profile $profile = null;
-
     protected ?string $password = null;
 
     protected ?string $email = null;
 
-    protected ?bool $active = true;
+    protected bool $active = true;
 
-    protected ?bool $freeze = false;
+    protected bool $freeze = false;
 
     protected ?\DateTimeInterface $lastLogin = null;
 
@@ -36,50 +39,42 @@ abstract class User implements UserInterface, \Serializable, \Stringable
 
     protected ?\DateTimeInterface $createdAt = null;
 
-    protected $roles;
+    /** @var list<string> */
+    protected array $roles = [];
 
-    protected $groups;
+    /** @var Collection<int, Group> */
+    protected Collection $groups;
 
     public function __construct()
     {
-        $this->roles     = [static::ROLE_DEFAULT];
+        $this->roles     = [self::ROLE_DEFAULT];
         $this->createdAt = new \DateTime();
         $this->groups    = new ArrayCollection();
     }
 
-    public function getSalt()
-    {
-        return null;
-    }
-
     public function __toString(): string
     {
-        return (string) $this->getUsername();
+        return (string) $this->getUserIdentifier();
     }
 
-    public function getId(): int
+    abstract public function getUsername(): string;
+
+    public function getUserIdentifier(): string
+    {
+        return $this->getUsername();
+    }
+
+    public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getProfile(): ?ProfileInterface
-    {
-        return $this->profile;
-    }
-
-    public function setProfile(?ProfileInterface $profile): UserInterface
-    {
-        $this->profile = $profile;
-
-        return $this;
-    }
-
-    public function getPassword(): string
+    public function getPassword(): ?string
     {
         return $this->password;
     }
 
-    public function setPassword(string $password): UserInterface
+    public function setPassword(string $password): static
     {
         $this->password = $password;
 
@@ -91,7 +86,7 @@ abstract class User implements UserInterface, \Serializable, \Stringable
         return $this->email;
     }
 
-    public function setEmail(?string $email): UserInterface
+    public function setEmail(?string $email): static
     {
         $this->email = $email;
 
@@ -103,7 +98,7 @@ abstract class User implements UserInterface, \Serializable, \Stringable
         return $this->active;
     }
 
-    public function setActive(bool $active): UserInterface
+    public function setActive(bool $active): static
     {
         $this->active = $active;
 
@@ -115,19 +110,19 @@ abstract class User implements UserInterface, \Serializable, \Stringable
         return $this->freeze;
     }
 
-    public function setFreeze(bool $enabled): UserInterface
+    public function setFreeze(bool $enabled): static
     {
         $this->freeze = $enabled;
 
         return $this;
     }
 
-    public function getLastLogin(): ?\DateTime
+    public function getLastLogin(): ?\DateTimeInterface
     {
         return $this->lastLogin;
     }
 
-    public function setLastLogin(\DateTime $time = null): UserInterface
+    public function setLastLogin(?\DateTimeInterface $time = null): static
     {
         $this->lastLogin = $time;
 
@@ -139,7 +134,7 @@ abstract class User implements UserInterface, \Serializable, \Stringable
         return $this->lastLoginIp;
     }
 
-    public function setLastLoginIp(?string $lastLoginIp): UserInterface
+    public function setLastLoginIp(?string $lastLoginIp): static
     {
         $this->lastLoginIp = $lastLoginIp;
 
@@ -151,75 +146,85 @@ abstract class User implements UserInterface, \Serializable, \Stringable
         return $this->confirmationToken;
     }
 
-    public function setConfirmationToken(?string $confirmationToken): UserInterface
+    public function setConfirmationToken(?string $confirmationToken): static
     {
         $this->confirmationToken = $confirmationToken;
 
         return $this;
     }
 
-    public function createConfirmationToken(): UserInterface
+    public function createConfirmationToken(): static
     {
         $this->confirmationToken = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
 
         return $this;
     }
 
-    public function getPasswordRequestedAt(): ?\DateTime
+    public function getPasswordRequestedAt(): ?\DateTimeInterface
     {
         return $this->passwordRequestedAt;
     }
 
-    public function setPasswordRequestedAt(\DateTime $date = null): UserInterface
+    public function setPasswordRequestedAt(?\DateTimeInterface $date = null): static
     {
         $this->passwordRequestedAt = $date;
 
         return $this;
     }
 
-    public function isPasswordRequestNonExpired($ttl): bool
+    public function isPasswordRequestNonExpired(int $ttl): bool
     {
-        return $this->getPasswordRequestedAt() instanceof \DateTime && $this->getPasswordRequestedAt()->getTimestamp() + $ttl > time();
+        return $this->passwordRequestedAt instanceof \DateTimeInterface
+            && $this->passwordRequestedAt->getTimestamp() + $ttl > time();
     }
 
-    public function getCreatedAt(): ?\DateTime
+    public function getCreatedAt(): ?\DateTimeInterface
     {
         return $this->createdAt;
     }
 
-    public function setCreatedAt(\DateTime $time = null): UserInterface
+    public function setCreatedAt(?\DateTimeInterface $time = null): static
     {
         $this->createdAt = $time;
 
         return $this;
     }
 
-    public function getRoles(bool $privateRoles = false): ?array
+    /**
+     * @return list<string>
+     */
+    public function getRoles(): array
     {
-        $roles      = $this->roles;
         $groupRoles = [[]];
-
-        foreach ($this->getGroups() as $group) {
+        foreach ($this->groups as $group) {
             $groupRoles[] = $group->getRoles();
         }
-        $groupRoles = array_merge(...$groupRoles);
 
-        return array_unique(array_merge($roles, $groupRoles));
+        return \array_values(\array_unique(\array_merge($this->roles, ...$groupRoles)));
     }
 
-    public function getRolesUser(): ?array
+    /**
+     * @return list<string>
+     */
+    public function getRolesUser(): array
     {
         return $this->roles;
     }
 
-    public function setRoles(array $roles): UserInterface
+    /**
+     * @param list<string> $roles
+     */
+    public function setRoles(array $roles): static
     {
         $this->roles = $roles;
 
         return $this;
     }
 
-    public function addRoles(array $roles): UserInterface
+    /**
+     * @param list<string> $roles
+     */
+    public function addRoles(array $roles): static
     {
         $this->roles = [];
 
@@ -230,9 +235,9 @@ abstract class User implements UserInterface, \Serializable, \Stringable
         return $this;
     }
 
-    public function addRole(string $role): UserInterface
+    public function addRole(string $role): static
     {
-        $role = mb_strtoupper($role);
+        $role = \mb_strtoupper($role);
 
         if (!\in_array($role, $this->roles, true)) {
             $this->roles[] = $role;
@@ -241,11 +246,13 @@ abstract class User implements UserInterface, \Serializable, \Stringable
         return $this;
     }
 
-    public function removeRole(string $role): UserInterface
+    public function removeRole(string $role): static
     {
-        if (false !== $key = array_search(mb_strtoupper($role), $this->roles, true)) {
+        $key = \array_search(\mb_strtoupper($role), $this->roles, true);
+
+        if ($key !== false) {
             unset($this->roles[$key]);
-            $this->roles = array_values($this->roles);
+            $this->roles = \array_values($this->roles);
         }
 
         return $this;
@@ -253,26 +260,35 @@ abstract class User implements UserInterface, \Serializable, \Stringable
 
     public function hasRole(string $role): bool
     {
-        return \in_array(mb_strtoupper($role), $this->getRoles(), true);
+        return \in_array(\mb_strtoupper($role), $this->getRoles(), true);
     }
 
-    public function getGroups()
+    /**
+     * @return Collection<int, Group>
+     */
+    public function getGroups(): Collection
     {
         return $this->groups;
     }
 
-    public function setGroups(ArrayCollection $groups): UserInterface
+    /**
+     * @param Collection<int, Group> $groups
+     */
+    public function setGroups(Collection $groups): static
     {
         $this->groups = $groups;
 
         return $this;
     }
 
-    public function getGroupNames(): ?array
+    /**
+     * @return list<string>
+     */
+    public function getGroupNames(): array
     {
         $names = [];
 
-        foreach ($this->getGroups() as $group) {
+        foreach ($this->groups as $group) {
             $names[] = $group->getName();
         }
 
@@ -284,49 +300,23 @@ abstract class User implements UserInterface, \Serializable, \Stringable
         return \in_array($name, $this->getGroupNames(), true);
     }
 
-    public function addGroup(GroupInterface $group): UserInterface
+    public function addGroup(Group $group): static
     {
-        if (!$this->getGroups()->contains($group)) {
-            $this->getGroups()->add($group);
+        if (!$this->groups->contains($group)) {
+            $this->groups->add($group);
         }
 
         return $this;
     }
 
-    public function removeGroup(GroupInterface $group): UserInterface
+    public function removeGroup(Group $group): static
     {
-        if ($this->getGroups()->contains($group)) {
-            $this->getGroups()->removeElement($group);
-        }
+        $this->groups->removeElement($group);
 
         return $this;
     }
 
-    public function eraseCredentials()
+    public function eraseCredentials(): void
     {
-    }
-
-    public function serialize()
-    {
-        return serialize([
-            $this->id,
-            $this->password,
-            $this->email,
-            $this->active,
-            $this->lastLogin,
-            $this->createdAt,
-        ]);
-    }
-
-    public function unserialize($serialized)
-    {
-        [
-            $this->id,
-            $this->password,
-            $this->email,
-            $this->active,
-            $this->lastLogin,
-            $this->createdAt
-        ] = unserialize($serialized);
     }
 }

@@ -4,9 +4,7 @@ namespace Bundles\UserContext\Service;
 class RandomCode
 {
     /**
-     *
      * @throws \Exception
-     *
      */
     public static function string(int $bites): string
     {
@@ -14,9 +12,7 @@ class RandomCode
     }
 
     /**
-     *
      * @throws \Exception
-     *
      */
     public function generate(int $bites): string
     {

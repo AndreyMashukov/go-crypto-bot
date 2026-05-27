@@ -1,15 +1,19 @@
 security:
-    encoders:
+    password_hashers:
         Bundles\UserContext\Entity\User:
             algorithm: argon2i
 
     providers:
-        pdadmin_auth:
+        users:
             entity:
                 class: Bundles\UserContext\Entity\User
                 property: username
 
     firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+
         api_doc:
             pattern: ^/doc
             security: false
@@ -18,26 +22,23 @@ security:
             pattern: ^/public
             security: false
 
-        oauth2:
-            pattern: ^/oauth2/(token|refresh)$
-            security: false
-
         api:
             pattern: ^/
-            security: true
             stateless: true
-            oauth2: true
-            provider: pdadmin_auth
-            anonymous: true
-
-        dev:
-            pattern: ^/(_(profiler|wdt)|css|images|js)/
-            security: false
-
-    role_hierarchy:
-        ROLE_SUPER_ADMIN: [ROLE_ADMIN]
+            provider: users
+            # Custom authenticators (TG / JWT / ...) wire in here. Empty
+            # for the migration baseline — all /api/* paths fall through
+            # to access_control denial until a real authenticator lands.
 
     access_control:
-        - { path: ^/api/doc$, roles: IS_AUTHENTICATED_ANONYMOUSLY }
-        - { path: ^/v1/item/[0-9]+/contact$, roles: IS_AUTHENTICATED_ANONYMOUSLY }
-        - { path: ^/, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/doc$, roles: PUBLIC_ACCESS }
+        - { path: ^/, roles: PUBLIC_ACCESS }
+
+when@test:
+    security:
+        password_hashers:
+            Bundles\UserContext\Entity\User:
+                algorithm: auto
+                cost: 4
+                time_cost: 3
+                memory_cost: 10

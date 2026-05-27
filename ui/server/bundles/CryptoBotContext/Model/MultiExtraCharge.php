@@ -10,14 +10,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 class MultiExtraCharge
 {
-    /**
-     * @Assert\NotNull
-     */
+    #[Assert\NotNull]
     public ?int $orderId = null;
 
-    /**
-     * @Assert\Valid
-     */
+    #[Assert\Valid]
     public ArrayCollection $extraChargeOptions;
 
     public function __construct(public CryptoBot $cryptobot)

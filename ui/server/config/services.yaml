@@ -23,11 +23,6 @@ services:
 
     Knp\Component\Pager\PaginatorInterface: '@knp_paginator'
 
-    App\Service\UserProviderDecorator:
-        decorates: Symfony\Component\Security\Core\User\UserProviderInterface
-        arguments:
-            $userProvider: '@.inner'
-
     GuzzleHttp\Client:
         arguments:
             - timeout: 60

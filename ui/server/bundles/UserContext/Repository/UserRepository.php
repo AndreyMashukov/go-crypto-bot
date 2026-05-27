@@ -10,7 +10,7 @@ use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends \Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository<\Bundles\UserContext\Entity\User>
+ * @extends ServiceEntityRepository<User>
  */
 class UserRepository extends ServiceEntityRepository
 {

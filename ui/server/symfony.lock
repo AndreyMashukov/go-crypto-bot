@@ -1,7 +1,4 @@
 {
-    "appaydin/pd-user": {
-        "version": "3.0.0"
-    },
     "doctrine/annotations": {
         "version": "1.13",
         "recipe": {
@@ -125,19 +122,6 @@
         },
         "files": [
             "config/packages/jms_messenger.yaml"
-        ]
-    },
-    "league/oauth2-server-bundle": {
-        "version": "1.1",
-        "recipe": {
-            "repo": "github.com/symfony/recipes",
-            "branch": "main",
-            "version": "0.11",
-            "ref": "b40f5dd1cb1761570881520b9d3d7edae9c220cc"
-        },
-        "files": [
-            "config/packages/league_oauth2_server.yaml",
-            "config/routes/league_oauth2_server.yaml"
         ]
     },
     "nelmio/api-doc-bundle": {
@@ -292,18 +276,6 @@
             "public/index.php",
             "src/Controller/.gitignore",
             "src/Kernel.php"
-        ]
-    },
-    "symfony/mailer": {
-        "version": "5.4",
-        "recipe": {
-            "repo": "github.com/symfony/recipes",
-            "branch": "main",
-            "version": "4.3",
-            "ref": "97a61eabb351d7f6cb7702039bcfe07fe9d7e03c"
-        },
-        "files": [
-            "config/packages/mailer.yaml"
         ]
     },
     "symfony/maker-bundle": {

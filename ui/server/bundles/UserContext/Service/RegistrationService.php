@@ -75,9 +75,7 @@ class RegistrationService
     }
 
     /**
-     *
      * @throws ORMException
-     *
      */
     private function findUser(string $email): User
     {

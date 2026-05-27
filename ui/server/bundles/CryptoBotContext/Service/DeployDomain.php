@@ -18,7 +18,6 @@ class DeployDomain
     }
 
     /**
-     *
      * @throws ServersIsOutOfStockException
      * @throws \DomainException
      */

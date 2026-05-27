@@ -8,8 +8,8 @@ class SignalProfitOption extends ProfitOption
 {
     /**
      * @Serializer\Expose
-     * @Assert\NotNull
      */
+    #[Assert\NotNull]
     private ?float $sellPrice = null;
 
     public function getSellPrice(): ?float

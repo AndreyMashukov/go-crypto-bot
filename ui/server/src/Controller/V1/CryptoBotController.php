@@ -42,10 +42,6 @@ class CryptoBotController extends AbstractFOSRestController
     {
     }
 
-    /**
-     * @Rest\Route("/list", name="list", methods={"GET"})
-     * @Rest\View(serializerGroups={"cryptobot", "cryptotrade_config", "server"})
-     */
     public function getList(): array
     {
         $user = $this->getUser();
@@ -55,10 +51,6 @@ class CryptoBotController extends AbstractFOSRestController
         ]);
     }
 
-    /**
-     * @Rest\Route("/list/extended", name="list_extended", methods={"GET"})
-     * @Rest\View(serializerGroups={"cryptobot", "cryptotrade_config", "server", "commission"})
-     */
     public function getListExtended(): array
     {
         $user       = $this->getUser();
@@ -76,12 +68,6 @@ class CryptoBotController extends AbstractFOSRestController
         return $extendedList;
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/symbol/list", name="symbol_list", methods={"GET"})
-     * @Rest\View(serializerGroups={"exchange_symbol"})
-     *
-     *
-     */
     public function getSymbolList(CryptoBot $cryptobot): array
     {
         $user = $this->getUser();
@@ -96,10 +82,6 @@ class CryptoBotController extends AbstractFOSRestController
         ], ['symbol' => 'ASC']);
     }
 
-    /**
-     * @Rest\Route("/available", name="available", methods={"GET"})
-     * @Rest\View
-     */
     public function getAvailableBots(): array
     {
         $user = $this->getUser();
@@ -116,10 +98,6 @@ class CryptoBotController extends AbstractFOSRestController
         return $available;
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/server/list", name="bot_server_list", methods={"GET"})
-     * @Rest\View(serializerGroups={"server"})
-     */
     public function getBotServerList(CryptoBot $cryptobot): array
     {
         $list = $cryptobot->hasDedicatedServer() ? [
@@ -134,12 +112,6 @@ class CryptoBotController extends AbstractFOSRestController
         ];
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}", name="get", methods={"GET"})
-     * @Rest\View(serializerGroups={"cryptobot", "cryptotrade_config", "server", "cryptobot_secured"})
-     *
-     *
-     */
     public function getAction(CryptoBot $cryptobot): CryptoBot
     {
         $user = $this->getUser();
@@ -151,10 +123,6 @@ class CryptoBotController extends AbstractFOSRestController
         return $cryptobot;
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/deploy", name="deploy", methods={"PUT"})
-     * @Rest\View
-     */
     public function putDeploy(CryptoBot $cryptobot): void
     {
         $user = $this->getUser();
@@ -188,10 +156,6 @@ class CryptoBotController extends AbstractFOSRestController
         }
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/stop", name="stop", methods={"PUT"})
-     * @Rest\View
-     */
     public function putStop(CryptoBot $cryptobot): void
     {
         $user = $this->getUser();
@@ -215,10 +179,6 @@ class CryptoBotController extends AbstractFOSRestController
         }
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/config/sync", name="config_sync", methods={"PUT"})
-     * @Rest\View
-     */
     public function putSyncConfig(CryptoBot $cryptobot): void
     {
         $user = $this->getUser();
@@ -232,10 +192,6 @@ class CryptoBotController extends AbstractFOSRestController
     }
 
     /**
-     * @Rest\Route("", name="post", methods={"POST"})
-     * @Rest\View(serializerGroups={"cryptobot", "cryptotrade_config", "cryptobot_secured"})
-     *
-     *
      * @return array|CryptoBot
      */
     public function post(Request $request)
@@ -272,10 +228,6 @@ class CryptoBotController extends AbstractFOSRestController
     }
 
     /**
-     * @Rest\Route("/{cryptobot}/multi/charge", name="put_multi_charge", methods={"PUT"})
-     * @Rest\View
-     *
-     *
      * @return mixed[]|null
      */
     public function putMultiCharge(Request $request, CryptoBot $cryptobot)
@@ -315,10 +267,6 @@ class CryptoBotController extends AbstractFOSRestController
     }
 
     /**
-     * @Rest\Route("/{cryptobot}/multi/profit", name="put_multi_profit", methods={"PUT"})
-     * @Rest\View
-     *
-     *
      * @return mixed[]|null
      */
     public function putMultiProfit(Request $request, CryptoBot $cryptobot)
@@ -358,10 +306,6 @@ class CryptoBotController extends AbstractFOSRestController
     }
 
     /**
-     * @Rest\Route("/{cryptobot}/buy/conditions", name="put_buy_conditions", methods={"PUT"})
-     * @Rest\View
-     *
-     *
      * @return mixed[]|null
      */
     public function putBuyConditions(Request $request, CryptoBot $cryptobot)
@@ -406,10 +350,6 @@ class CryptoBotController extends AbstractFOSRestController
     }
 
     /**
-     * @Rest\Route("/{cryptobot}/sell/conditions", name="put_sell_conditions", methods={"PUT"})
-     * @Rest\View
-     *
-     *
      * @return mixed[]|null
      */
     public function putSellConditions(Request $request, CryptoBot $cryptobot)
@@ -454,10 +394,6 @@ class CryptoBotController extends AbstractFOSRestController
     }
 
     /**
-     * @Rest\Route("/{cryptobot}/avg/conditions", name="put_avg_conditions", methods={"PUT"})
-     * @Rest\View
-     *
-     *
      * @return mixed[]|null
      */
     public function putAvgConditions(Request $request, CryptoBot $cryptobot)
@@ -502,10 +438,6 @@ class CryptoBotController extends AbstractFOSRestController
     }
 
     /**
-     * @Rest\Route("/{cryptobot}", name="patch", methods={"PATCH"})
-     * @Rest\View(serializerGroups={"cryptobot", "cryptotrade_config", "server", "cryptobot_secured"})
-     *
-     *
      * @return array|CryptoBot
      */
     public function patch(Request $request, CryptoBot $cryptobot)
@@ -562,10 +494,6 @@ class CryptoBotController extends AbstractFOSRestController
         return $data;
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}", name="delete", methods={"DELETE"})
-     * @Rest\View
-     */
     public function delete(CryptoBot $cryptobot): void
     {
         $user = $this->getUser();
@@ -578,10 +506,6 @@ class CryptoBotController extends AbstractFOSRestController
     }
 
     /**
-     * @Rest\Route("/{cryptobot}/order", name="post_order", methods={"POST"})
-     * @Rest\View
-     *
-     *
      * @return mixed[]|null
      */
     public function postOrder(Request $request, CryptoBot $cryptobot)
@@ -622,10 +546,6 @@ class CryptoBotController extends AbstractFOSRestController
         return null;
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/order/{symbol}", name="delete_order", methods={"DELETE"})
-     * @Rest\View
-     */
     public function deleteOrder(CryptoBot $cryptobot, string $symbol)
     {
         $user = $this->getUser();

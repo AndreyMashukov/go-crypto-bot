@@ -11,9 +11,7 @@ class AbstractHttpService
     }
 
     /**
-     *
      * @throws GuzzleException
-     *
      */
     protected function request(string $method, string $uri, array $json, int $timeout = 60): array
     {

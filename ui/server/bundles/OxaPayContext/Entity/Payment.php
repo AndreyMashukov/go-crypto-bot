@@ -26,7 +26,7 @@ class Payment
 
     private string $email;
 
-    private \DateTimeImmutable $createdAt;
+    private readonly \DateTimeImmutable $createdAt;
 
     private ?int $trackId = null;
 
@@ -37,7 +37,7 @@ class Payment
     private ?\DateTimeImmutable $completedAt = null;
 
     public function __construct(
-        private User $user,
+        private readonly User $user,
         private float $amount,
         private string $description
     ) {

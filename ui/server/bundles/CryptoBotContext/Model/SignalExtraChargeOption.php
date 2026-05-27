@@ -8,29 +8,29 @@ class SignalExtraChargeOption
 {
     /**
      * @Serializer\Expose
-     * @Assert\NotNull
      */
+    #[Assert\NotNull]
     public ?int $index = null;
 
     /**
      * @Serializer\Expose
-     * @Assert\NotNull
-     * @Assert\LessThan(value="0.00")
      */
+    #[Assert\NotNull]
+    #[Assert\LessThan(value: 0)]
     public ?float $percent = null;
 
     /**
      * @Serializer\Expose
-     * @Assert\NotNull
-     * @Assert\GreaterThan(value="0.00")
      */
+    #[Assert\NotNull]
+    #[Assert\GreaterThan(value: 0)]
     public ?float $buyPrice = null;
 
     /**
      * @Serializer\Expose
-     * @Assert\NotNull
-     * @Assert\GreaterThan(value="0.00")
      */
+    #[Assert\NotNull]
+    #[Assert\GreaterThan(value: 0)]
     public ?float $budgetPercentage = null;
 
     public function getIndex(): ?int

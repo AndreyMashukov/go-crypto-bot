@@ -5,7 +5,6 @@ use Bundles\CryptoBotContext\Form\SignalType;
 use Bundles\CryptoBotContext\Model\Signal;
 use Bundles\CryptoBotContext\Service\SignalHandler;
 use FOS\RestBundle\Controller\AbstractFOSRestController;
-use FOS\RestBundle\Controller\Annotations as Rest;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
@@ -16,10 +15,6 @@ class InternalController extends AbstractFOSRestController
     {
     }
 
-    /**
-     * @Rest\Route("/signal", methods={"POST"}, name="signal")
-     * @Rest\View
-     */
     public function postSignal(Request $request)
     {
         $this->verifyRequest($request);

@@ -20,11 +20,6 @@ class SignalModificationTest extends TestCase
         $this->signalModification = new SignalModification($this->tradeRepository);
     }
 
-    /**
-     * Should allow to modify signal.
-     *
-     * @dataProvider signalDataProvider
-     */
     public function testShouldAllowToModifySignal(float $minSellPrice, array $expects): void
     {
         $signal = $this->createMock(Signal::class);

@@ -20,11 +20,6 @@ class TradeRegistryTest extends RestTestCase
         self::getContainer()->set('test.trade_repository', $this->tradeRepository);
     }
 
-    /**
-     * Should apply dynamic commission percent.
-     *
-     * @dataProvider profitDataProvider
-     */
     public function testShouldApplyDynamicCommissionPercent(
         float $profitUsdt,
         float $tradingMonthlyVolume,

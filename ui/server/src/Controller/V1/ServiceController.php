@@ -6,7 +6,6 @@ use Bundles\OxaPayContext\Model\PaidService;
 use Bundles\OxaPayContext\Model\ServicePurchase;
 use Bundles\OxaPayContext\Service\PaidServiceManager;
 use FOS\RestBundle\Controller\AbstractFOSRestController;
-use FOS\RestBundle\Controller\Annotations as Rest;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
@@ -26,10 +25,6 @@ class ServiceController extends AbstractFOSRestController
         return $this->paidServiceManager->getServiceList($user);
     }
 
-    /**
-     * @Rest\Route("/purchase", name="purchase", methods={"POST"})
-     * @Rest\View
-     */
     public function post(Request $request)
     {
         $user = $this->getUser();

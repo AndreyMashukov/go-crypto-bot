@@ -8,57 +8,55 @@ class Signal
 {
     /**
      * @Serializer\Expose
-     * @Assert\NotNull
      */
+    #[Assert\NotNull]
     private ?string $exchange = null;
 
     /**
      * @Serializer\Expose
-     * @Assert\NotNull
      */
+    #[Assert\NotNull]
     private ?string $symbol = null;
 
     /**
      * @Serializer\Expose
-     * @Assert\NotNull
-     * @Assert\GreaterThan(value="0")
      */
+    #[Assert\NotNull]
+    #[Assert\GreaterThan(value: 0)]
     private ?float $buyPrice = null;
 
     /**
      * @Serializer\Expose
-     * @Assert\NotNull
-     * @Assert\GreaterThan(value="0")
      */
+    #[Assert\NotNull]
+    #[Assert\GreaterThan(value: 0)]
     private ?float $percent = null;
 
     /**
      * @Serializer\Expose
      * @Serializer\Type("array<Bundles\CryptoBotContext\Model\SignalProfitOption>")
-     * @Assert\Valid
-     * @Assert\Count(min="1")
      */
+    #[Assert\Valid]
+    #[Assert\Count(min: 1)]
     private array $profitOptions = [];
 
     /**
      * @Serializer\Expose
      * @Serializer\Type("array<Bundles\CryptoBotContext\Model\SignalExtraChargeOption>")
-     * @Assert\Valid
-     * @Assert\Count(min="1")
      */
+    #[Assert\Valid]
+    #[Assert\Count(min: 1)]
     private array $extraChargeOptions = [];
 
     /**
      * @Serializer\Expose
-     * @Assert\NotNull
-     * @Assert\GreaterThan(value="0")
      */
+    #[Assert\NotNull]
+    #[Assert\GreaterThan(value: 0)]
     private ?int $expireTimestamp = null;
 
-    /**
-     * @Assert\NotNull
-     * @Assert\Choice(choices={1, 7, 14, 30})
-     */
+    #[Assert\NotNull]
+    #[Assert\Choice(choices: [1, 7, 14, 30])]
     private ?int $periodDays = null;
 
     public function getExchange(): ?string

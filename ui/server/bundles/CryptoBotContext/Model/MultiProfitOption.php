@@ -10,14 +10,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 class MultiProfitOption
 {
-    /**
-     * @Assert\NotNull
-     */
+    #[Assert\NotNull]
     public ?int $orderId = null;
 
-    /**
-     * @Assert\Valid
-     */
+    #[Assert\Valid]
     public ArrayCollection $profitOptions;
 
     public function __construct(public CryptoBot $cryptobot)

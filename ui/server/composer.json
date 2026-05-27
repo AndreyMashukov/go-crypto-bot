@@ -2,7 +2,7 @@
     "name": "amashukov/crypto-saas-server",
     "type": "project",
     "license": "MIT",
-    "description": "SaaS backend for AutoTrade.cloud — Symfony 7.3 / PHP 8.3.",
+    "description": "SaaS backend for AutoTrade.cloud \u2014 Symfony 7.3 / PHP 8.3.",
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
@@ -13,7 +13,6 @@
         "ext-json": "*",
         "ext-libxml": "*",
         "ext-simplexml": "*",
-        "appaydin/pd-user": "^3.0.4",
         "aws/aws-sdk-php": "^3.382.1",
         "beberlei/doctrineextensions": "^1.5",
         "doctrine/doctrine-bundle": "^2.18.2",
@@ -49,7 +48,6 @@
         "symfony/twig-bundle": "7.3.*",
         "symfony/validator": "7.3.*",
         "symfony/yaml": "7.3.*",
-        "league/oauth2-server-bundle": "^1.1.1",
         "twig/twig": "^3.26",
         "unleash/client": "^2.9.283"
     },
@@ -72,8 +70,7 @@
     "autoload": {
         "psr-4": {
             "App\\": "src/",
-            "Bundles\\": "bundles/",
-            "League\\OAuth2\\Server\\Entities\\Traits\\": "League/OAuth2/Server/Entities/Traits/"
+            "Bundles\\": "bundles/"
         }
     },
     "autoload-dev": {

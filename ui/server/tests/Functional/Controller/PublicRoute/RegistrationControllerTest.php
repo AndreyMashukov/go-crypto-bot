@@ -62,9 +62,7 @@ class RegistrationControllerTest extends AsyncHandlerTestCase
     }
 
     /**
-     *
      * @throws \Exception
-     *
      */
     private function getSecret(string $email): string
     {

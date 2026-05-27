@@ -29,10 +29,8 @@ class TradeActionCondition
 
     public ?string $type = null;
 
-    /**
-     * @Assert\NotNull
-     * @Assert\Valid
-     */
+    #[Assert\NotNull]
+    #[Assert\Valid]
     public array $children = [];
 
     /**

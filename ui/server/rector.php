@@ -21,6 +21,8 @@ use Amashukov\RectorRules\Yaml\YamlNoCommentsChecker;
 use Amashukov\RectorRules\Yaml\YamlNoCommentsCheckerInterface;
 use Amashukov\RectorRules\Yaml\YamlNoCommentsRector;
 use Rector\Config\RectorConfig;
+use Rector\Doctrine\Set\DoctrineSetList;
+use Rector\Symfony\Set\SymfonySetList;
 
 return RectorConfig::configure()
     ->registerService(YamlNoCommentsChecker::class, YamlNoCommentsCheckerInterface::class)
@@ -59,6 +61,10 @@ return RectorConfig::configure()
         symfonyCodeQuality:   true,
         symfonyConfigs:       true,
     )
+    ->withSets([
+        DoctrineSetList::ANNOTATIONS_TO_ATTRIBUTES,
+        SymfonySetList::ANNOTATIONS_TO_ATTRIBUTES,
+    ])
     ->withRules([
         NoCommentsOutsideInterfaceMethodDocBlockRector::class,
         NoPhpstanIgnoreRector::class,

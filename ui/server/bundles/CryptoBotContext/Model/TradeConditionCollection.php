@@ -10,14 +10,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 class TradeConditionCollection
 {
-    /**
-     * @Assert\NotNull
-     */
+    #[Assert\NotNull]
     public ?string $symbol = null;
 
-    /**
-     * @Assert\Valid
-     */
+    #[Assert\Valid]
     public ArrayCollection $conditions;
 
     public function __construct(public CryptoBot $cryptobot)

@@ -9,9 +9,6 @@ class PhoneValidator extends ConstraintValidator
 {
     private const string MASK = '/^7\d{10}$/';
 
-    /**
-     * @param mixed      $value
-     */
     public function validate(mixed $value, Constraint $constraint): void
     {
         if (!$constraint instanceof Phone) {

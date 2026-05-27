@@ -11,9 +11,6 @@ use Flagception\Model\Context;
 
 class UserContextDecorator implements ContextDecoratorInterface
 {
-    /**
-     * ClientContextDecorator constructor.
-     */
     public function __construct(private readonly UserProvider $userProvider)
     {
     }
@@ -24,9 +21,7 @@ class UserContextDecorator implements ContextDecoratorInterface
     }
 
     /**
-     *
      * @throws AlreadyDefinedException
-     *
      */
     public function decorate(Context $context): Context
     {

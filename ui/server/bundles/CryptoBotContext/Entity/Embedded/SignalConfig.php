@@ -15,83 +15,83 @@ class SignalConfig
 
     /**
      *
-     * @ORM\Column(name="percent_filter", type="float", options={"default": 1.00})
      *
-     * @Assert\NotNull
-     * @Assert\GreaterThanOrEqual(value="0.50")
      *
      * @Serializer\Expose
      * @Serializer\Groups(groups={"cryptotrade_config"})
      */
+    #[ORM\Column(name: 'percent_filter', type: 'float', options: ['default' => '1.00'])]
+    #[Assert\NotNull]
+    #[Assert\GreaterThanOrEqual(value: 0.5)]
     private float $percentFilter = 1.00;
 
     /**
      *
-     * @ORM\Column(name="rating_filter", type="boolean", options={"default": 0})
      *
      * @Serializer\Expose
      * @Serializer\Groups(groups={"cryptotrade_config"})
      */
+    #[ORM\Column(name: 'rating_filter', type: 'boolean', options: ['default' => 0])]
     private bool $ratingFilter = false;
 
     /**
      *
-     * @ORM\Column(name="avg_buy_filter", type="boolean", options={"default": 0})
      *
      * @Serializer\Expose
      * @Serializer\Groups(groups={"cryptotrade_config"})
      */
+    #[ORM\Column(name: 'avg_buy_filter', type: 'boolean', options: ['default' => 0])]
     private bool $avgBuyFilter = false;
 
     /**
      *
-     * @ORM\Column(name="avg_sell_filter", type="boolean", options={"default": 0})
      *
      * @Serializer\Expose
      * @Serializer\Groups(groups={"cryptotrade_config"})
      */
+    #[ORM\Column(name: 'avg_sell_filter', type: 'boolean', options: ['default' => 0])]
     private bool $avgSellFilter = false;
 
     /**
      *
-     * @ORM\Column(name="avg_buy_correction", type="boolean", options={"default": 1})
      *
      * @Serializer\Expose
      * @Serializer\Groups(groups={"cryptotrade_config"})
      */
+    #[ORM\Column(name: 'avg_buy_correction', type: 'boolean', options: ['default' => 1])]
     private bool $avgBuyCorrection = true;
 
     /**
      *
-     * @ORM\Column(name="avg_sell_correction", type="boolean", options={"default": 0})
      *
      * @Serializer\Expose
      * @Serializer\Groups(groups={"cryptotrade_config"})
      */
+    #[ORM\Column(name: 'avg_sell_correction', type: 'boolean', options: ['default' => 0])]
     private bool $avgSellCorrection = false;
 
     /**
      *
-     * @ORM\Column(name="sell_price_correction_mode", type="string", length=10, nullable=false, options={"default": "equal"})
      *
-     * @Assert\NotNull
-     * @Assert\Choice(choices={"max", "min", "equal"})
      *
      * @Serializer\Expose
      * @Serializer\Groups(groups={"cryptotrade_config"})
      */
+    #[ORM\Column(name: 'sell_price_correction_mode', type: 'string', length: 10, nullable: false, options: ['default' => 'equal'])]
+    #[Assert\NotNull]
+    #[Assert\Choice(choices: ['max', 'min', 'equal'])]
     private string $sellPriceCorrectionMode = self::SELL_PRICE_CORRECTION_MODE_EQUAL;
 
     /**
      *
-     * @ORM\Column(name="signal_period_days", type="integer", options={"default": 1})
      *
-     * @Assert\NotNull
-     * @Assert\Choice(choices={1, 7, 14, 30})
      *
      * @Serializer\Expose
      * @Serializer\Groups(groups={"cryptotrade_config"})
      */
+    #[ORM\Column(name: 'signal_period_days', type: 'integer', options: ['default' => 1])]
+    #[Assert\NotNull]
+    #[Assert\Choice(choices: [1, 7, 14, 30])]
     private int $signalPeriodDays = 1;
 
     public function getPercentFilter(): float

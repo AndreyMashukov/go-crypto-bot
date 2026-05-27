@@ -4,7 +4,6 @@ namespace App\Controller\V1;
 use Bundles\OxaPayContext\Entity\Payment;
 use Bundles\OxaPayContext\Service\PaymentManager;
 use FOS\RestBundle\Controller\AbstractFOSRestController;
-use FOS\RestBundle\Controller\Annotations as Rest;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
@@ -14,12 +13,6 @@ class SubscriptionController extends AbstractFOSRestController
     {
     }
 
-    /**
-     * @Rest\Route("/budget", methods={"POST"}, name="budget")
-     * @Rest\View(serializerGroups={"payment_short"})
-     *
-     *
-     */
     public function postBudget(Request $request): Payment
     {
         $user = $this->getUser();

@@ -6,7 +6,6 @@ use Bundles\UserContext\Entity\User;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\Criteria;
-use JMS\Serializer\Annotation as Serializer;
 use Ramsey\Uuid\Uuid;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
@@ -333,11 +332,6 @@ class CryptoBot
         return $dedicated->getId() === $server->getId();
     }
 
-    /**
-     * @Serializer\VirtualProperty("hasActiveSignalSubscription")
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot"})
-     */
     public function hasActiveSignalSubscription(): bool
     {
         return $this->user->hasActiveSignalSubscription();
@@ -355,21 +349,11 @@ class CryptoBot
         return $this;
     }
 
-    /**
-     * @Serializer\VirtualProperty("hasDedicatedServer")
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot"})
-     */
     public function hasDedicatedServer(): bool
     {
         return $this->getDedicated() instanceof Server;
     }
 
-    /**
-     * @Serializer\VirtualProperty("dedicatedPaidServiceCode")
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot"})
-     */
     public function getDedicatedPaidServiceCode(): ?string
     {
         return match ($this->provider) {
@@ -391,11 +375,6 @@ class CryptoBot
         return $this;
     }
 
-    /**
-     * @Serializer\VirtualProperty("hasActiveDedicatedServerSubscription")
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot"})
-     */
     public function hasActiveDedicatedServerSubscription(): bool
     {
         if (!$this->dedicatedServerExpiresAt instanceof \DateTimeImmutable) {

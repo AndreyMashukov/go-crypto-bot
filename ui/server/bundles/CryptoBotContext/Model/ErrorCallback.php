@@ -9,23 +9,15 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 class ErrorCallback
 {
-    /**
-     * @Assert\NotNull
-     */
+    #[Assert\NotNull]
     public ?CryptoBot $bot = null;
 
-    /**
-     * @Assert\NotNull
-     */
+    #[Assert\NotNull]
     public ?string $errorCode = null;
 
-    /**
-     * @Assert\NotNull
-     */
+    #[Assert\NotNull]
     public ?string $errorMessage = null;
 
-    /**
-     * @Assert\NotNull
-     */
+    #[Assert\NotNull]
     public ?bool $stop = null;
 }

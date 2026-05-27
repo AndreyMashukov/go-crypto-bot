@@ -37,7 +37,7 @@ class CryptoTradeConfig
 
     private bool $signalTrading = false;
 
-    private SignalConfig $signalConfig;
+    private readonly SignalConfig $signalConfig;
 
     private ?\DateTimeImmutable $positionUpdatedAt = null;
 

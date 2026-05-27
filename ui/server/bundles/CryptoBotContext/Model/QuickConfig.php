@@ -7,9 +7,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 class QuickConfig
 {
-    /**
-     * @Assert\NotNull
-     */
+    #[Assert\NotNull]
     private ?ExchangeSymbol $exchangeSymbol = null;
 
     private bool $restartBot = false;

@@ -17,13 +17,6 @@ class UserController extends AbstractFOSRestController
     {
     }
 
-    /**
-     * @Rest\Route("/list", name="list", methods={"GET"})
-     * @Rest\View(serializerGroups={"admin", "knp_basic"})
-     * @IsGranted("ROLE_ADMIN")
-     *
-     *
-     */
     public function getList(Request $request): PaginationInterface
     {
         $page  = $request->get('page', 1);
@@ -33,12 +26,7 @@ class UserController extends AbstractFOSRestController
     }
 
     /**
-     * @Rest\Route("/{user}", name="patch", methods={"PATCH"})
-     * @Rest\View(serializerGroups={"admin"})
-     *
-     *
      * @return array|User
-     * @IsGranted("ROLE_ADMIN")
      */
     public function patch(Request $request, User $user)
     {
@@ -62,13 +50,6 @@ class UserController extends AbstractFOSRestController
         return $data;
     }
 
-    /**
-     * @Rest\Route("/{user}/freeze/switch", name="put_freeze_switch", methods={"PUT"})
-     * @Rest\View(serializerGroups={"admin"})
-     *
-     * @IsGranted("ROLE_ADMIN")
-     *
-     */
     public function putFreezeSwitch(User $user): User
     {
         $user->setFreeze(!$user->isFreeze());

@@ -23,7 +23,7 @@ class PromoCode
 
     private $users;
 
-    public function __construct(private User $partner, private string $code)
+    public function __construct(private readonly User $partner, private string $code)
     {
         $this->users   = new ArrayCollection();
     }

@@ -3,7 +3,7 @@ doctrine:
     mappings:
       UserContext:
         is_bundle: false
-        type: annotation
+        type: attribute
         dir: '%kernel.project_dir%/bundles/UserContext/Entity'
         prefix: 'Bundles\UserContextBundle\Entity'
         alias: UserContext

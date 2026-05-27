@@ -9,24 +9,16 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 class ManualOrder
 {
-    /**
-     * @Assert\GreaterThan(value="0.00")
-     */
+    #[Assert\GreaterThan(value: 0)]
     public float $price = 0.00;
 
-    /**
-     * @Assert\NotBlank
-     */
+    #[Assert\NotBlank]
     public string $symbol = '';
 
-    /**
-     * @Assert\NotBlank
-     */
+    #[Assert\NotBlank]
     public string $operation = '';
 
-    /**
-     * @Assert\GreaterThanOrEqual(value="0")
-     */
+    #[Assert\GreaterThanOrEqual(value: 0)]
     public int $ttl = 3600 * 24;
 
     public function __construct(private readonly CryptoBot $cryptoBot)

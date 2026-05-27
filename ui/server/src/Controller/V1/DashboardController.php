@@ -33,12 +33,6 @@ class DashboardController extends AbstractFOSRestController
     {
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/chart", name="chart", methods={"GET"})
-     * @Rest\View
-     *
-     *
-     */
     public function getChart(Request $request, CryptoBot $cryptobot): Response
     {
         $user   = $this->getUser();
@@ -57,12 +51,6 @@ class DashboardController extends AbstractFOSRestController
         );
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/stack/v2", name="stack_v2", methods={"GET"})
-     * @Rest\View
-     *
-     *
-     */
     public function getStackV2(CryptoBot $cryptobot): array
     {
         $user = $this->getUser();
@@ -74,12 +62,6 @@ class DashboardController extends AbstractFOSRestController
         return $this->stackService->getTradeStack($cryptobot);
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/swap/list", name="swap_list", methods={"GET"})
-     * @Rest\View
-     *
-     *
-     */
     public function getSwapList(CryptoBot $cryptobot): array
     {
         $user = $this->getUser();
@@ -91,12 +73,6 @@ class DashboardController extends AbstractFOSRestController
         return $this->tradeListService->getSwapActionList($cryptobot);
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/balance", name="balance", methods={"GET"})
-     * @Rest\View
-     *
-     *
-     */
     public function getBalance(CryptoBot $cryptobot): array
     {
         $user = $this->getUser();
@@ -112,12 +88,6 @@ class DashboardController extends AbstractFOSRestController
         }
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/stack/{sorting}/sort", name="switch_sort", methods={"PUT"})
-     * @Rest\View
-     *
-     *
-     */
     public function putStackSort(CryptoBot $cryptobot, string $sorting): array
     {
         $user = $this->getUser();
@@ -129,12 +99,6 @@ class DashboardController extends AbstractFOSRestController
         return $this->stackService->setSorting($cryptobot, $sorting);
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/stack/{symbol}/switch", name="switch_symbol", methods={"PUT"})
-     * @Rest\View
-     *
-     *
-     */
     public function putSwitchSymbol(CryptoBot $cryptobot, string $symbol): array
     {
         $user = $this->getUser();
@@ -166,10 +130,6 @@ class DashboardController extends AbstractFOSRestController
     }
 
     /**
-     * @Rest\Route("/{cryptobot}/{symbol}/update", name="cryptobot_symbol_update", methods={"PATCH"})
-     * @Rest\View
-     *
-     *
      * @return array|CryptoTradeConfig
      */
     public function patchSymbol(Request $request, CryptoBot $cryptobot, string $symbol)
@@ -213,12 +173,6 @@ class DashboardController extends AbstractFOSRestController
         return $config;
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/stack/{symbol}/signal-switch", name="signal_switch_symbol", methods={"PUT"})
-     * @Rest\View(serializerGroups={"cryptotrade_config"})
-     *
-     *
-     */
     public function putSignalSwitchSymbol(CryptoBot $cryptobot, string $symbol): CryptoTradeConfig
     {
         $user = $this->getUser();
@@ -244,10 +198,6 @@ class DashboardController extends AbstractFOSRestController
         return $config;
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/trades", name="trades", methods={"GET"})
-     * @Rest\View
-     */
     public function getTrades(CryptoBot $cryptobot): array
     {
         $user = $this->getUser();
@@ -278,12 +228,6 @@ class DashboardController extends AbstractFOSRestController
         return $tradeList;
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/symbol/available", name="symbol_available", methods={"GET"})
-     * @Rest\View
-     *
-     *
-     */
     public function getSymbolAvailable(CryptoBot $cryptobot): array
     {
         $user = $this->getUser();
@@ -295,12 +239,6 @@ class DashboardController extends AbstractFOSRestController
         return $this->symbolRepository->getAvailableSymbols($cryptobot);
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/profit", name="profit", methods={"GET"})
-     * @Rest\View
-     *
-     *
-     */
     public function getProfit(CryptoBot $cryptobot, Request $request): array
     {
         $user = $this->getUser();
@@ -318,10 +256,6 @@ class DashboardController extends AbstractFOSRestController
         return $this->tradeRepository->getProfitByPeriod($cryptobot, $period);
     }
 
-    /**
-     * @Rest\Route("/{cryptobot}/positions", name="positions", methods={"GET"})
-     * @Rest\View
-     */
     public function getPositions(CryptoBot $cryptobot): array
     {
         $user = $this->getUser();
@@ -334,10 +268,6 @@ class DashboardController extends AbstractFOSRestController
     }
 
     /**
-     * @Rest\Route("/{cryptobot}/quick/symbol", name="quick_symbol", methods={"POST"})
-     * @Rest\View
-     *
-     *
      * @return mixed[]|null
      */
     public function postQuickSymbol(Request $request, CryptoBot $cryptobot)

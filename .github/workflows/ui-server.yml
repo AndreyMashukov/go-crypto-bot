@@ -33,7 +33,7 @@ jobs:
       - name: resolve deps (lockfile is regenerated until first stable run)
         run: |
           if [ -f composer.lock ]; then
-            composer install --prefer-dist --no-progress --no-interaction --no-audit --ansi
+            composer install --prefer-dist --no-progress --no-interaction --ansi
           else
             composer update --prefer-dist --no-progress --no-interaction --no-audit --ansi --no-scripts
           fi
@@ -52,7 +52,7 @@ jobs:
           extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
       - run: |
           if [ -f composer.lock ]; then
-            composer install --prefer-dist --no-progress --no-interaction --no-audit
+            composer install --prefer-dist --no-progress --no-interaction
           else
             composer update --prefer-dist --no-progress --no-interaction --no-scripts --no-audit
           fi
@@ -73,7 +73,7 @@ jobs:
           extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
       - run: |
           if [ -f composer.lock ]; then
-            composer install --prefer-dist --no-progress --no-interaction --no-audit
+            composer install --prefer-dist --no-progress --no-interaction
           else
             composer update --prefer-dist --no-progress --no-interaction --no-scripts --no-audit
           fi
@@ -94,7 +94,7 @@ jobs:
           extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
       - run: |
           if [ -f composer.lock ]; then
-            composer install --prefer-dist --no-progress --no-interaction --no-audit
+            composer install --prefer-dist --no-progress --no-interaction
           else
             composer update --prefer-dist --no-progress --no-interaction --no-scripts --no-audit
           fi
@@ -127,7 +127,7 @@ jobs:
           extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
       - run: |
           if [ -f composer.lock ]; then
-            composer install --prefer-dist --no-progress --no-interaction --no-audit
+            composer install --prefer-dist --no-progress --no-interaction
           else
             composer update --prefer-dist --no-progress --no-interaction --no-scripts --no-audit
           fi

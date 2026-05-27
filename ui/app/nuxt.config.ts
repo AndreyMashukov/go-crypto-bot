@@ -32,6 +32,7 @@ export default defineNuxtConfig({
     transpile: ['vuetify', 'vue-flag-icon', 'rxjs'],
   },
   modules: [
+    '@nuxt/eslint',
     'nuxt-tradingview',
     'nuxt-delay-hydration',
     (_options, nuxt) => {

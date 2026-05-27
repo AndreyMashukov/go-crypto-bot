@@ -14,7 +14,7 @@ use Doctrine\Persistence\ObjectManager;
 
 class SubscriptionFixtures extends Fixture implements FixtureGroupInterface, DependentFixtureInterface
 {
-    public function load(ObjectManager $manager)
+    public function load(ObjectManager $manager): void
     {
         /** @var User $user */
         $user = $this->getReference(OAuthFixtures::USER_REFERENCE);

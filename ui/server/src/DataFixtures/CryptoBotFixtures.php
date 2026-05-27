@@ -18,7 +18,7 @@ class CryptoBotFixtures extends Fixture implements FixtureGroupInterface, Depend
 {
     public const TEST_CRYPTO_BOT_UUID = '87bf6369-3a27-4d2f-b26c-f90aed0c955b';
 
-    public function load(ObjectManager $manager)
+    public function load(ObjectManager $manager): void
     {
         /** @var User $user */
         $user = $this->getReference(OAuthFixtures::USER_REFERENCE);

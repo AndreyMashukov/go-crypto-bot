@@ -25,7 +25,7 @@ class ServerFixtures extends Fixture implements FixtureGroupInterface
         ],
     ];
 
-    public function load(ObjectManager $manager)
+    public function load(ObjectManager $manager): void
     {
         foreach (self::SERVER_LIST as $server) {
             $serverEntity = (new Server())

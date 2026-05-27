@@ -36,7 +36,7 @@ class OAuthFixtures extends Fixture implements FixtureGroupInterface
     /**
      * @throws Exception
      */
-    public function load(ObjectManager $manager)
+    public function load(ObjectManager $manager): void
     {
         /** @var User $user */
         $user = (new User())

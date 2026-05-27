@@ -39,7 +39,7 @@ class ExchangeSymbolFixtures extends Fixture implements FixtureGroupInterface
         'SHIBUSDT',
     ];
 
-    public function load(ObjectManager $manager)
+    public function load(ObjectManager $manager): void
     {
         foreach (self::SYMBOL_LIST as $symbol) {
             foreach ([CryptoBot::PROVIDER_BINANCE, CryptoBot::PROVIDER_BYBIT] as $exchange) {

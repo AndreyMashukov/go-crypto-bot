@@ -2,7 +2,9 @@ version: '3.5'
 
 services:
   writer:
-    build: '.'
+    build:
+      context: ./server
+      dockerfile: Dockerfile
     container_name: go_crypto_bot
     environment:
         BOT_UUID: '{BOT_UUID_4_HERE}'
@@ -30,7 +32,7 @@ services:
     depends_on:
       - mysql
     volumes:
-      - './:/go/src/app/dev'
+      - './server:/go/src/app/dev'
 
   mysql:
     platform: linux/x86_64

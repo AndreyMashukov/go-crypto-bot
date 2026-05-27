@@ -1,0 +1,190 @@
+#!/usr/bin/env bash
+#
+# go-crypto-bot pre-commit hook.
+#
+# Repo layout: Go module lives under `server/`. This hook runs the Go
+# toolchain from there but resolves staged paths relative to the repo root.
+#
+# No bypass. --no-verify / CLAUDE_HOOKS_DISABLED / CI=true / core.hooksPath
+# overrides are not honored — if a check fails, fix the underlying issue.
+#
+# Install: git config core.hooksPath .githooks/  (or `make hooks`)
+#
+# Checks (in order, all BLOCKING):
+#   0. AI-trace files in stage  — CLAUDE.md / .claude/ etc must never be committed
+#   1. gofmt -l                 — staged server/**/*.go
+#   2. go vet ./...             — from server/
+#   3. go build ./...           — from server/
+#   4. golangci-lint run        — from server/, --new-from-rev=HEAD
+#   5. go-lint ./...            — from server/, on staged packages
+#   6. Source-without-test      — server/**/*.go must pair with _test.go
+#   7. go test                  — paired test set in staged packages
+
+set -euo pipefail
+
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+cd "$PROJECT_ROOT"
+SERVER_DIR="server"
+
+BLOCK=0
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+GRAY='\033[0;90m'
+RESET='\033[0m'
+
+# ---- Gather staged files --------------------------------------------------
+
+STAGED="$(git diff --cached --name-only --diff-filter=ACMR)"
+[ -z "$STAGED" ] && exit 0
+
+# All staged .go files (added/modified/renamed/copied), repo-root–relative.
+STAGED_GO="$(printf "%s\n" "$STAGED" | grep -E '^server/.*\.go$' || true)"
+
+# .go files whose CONTENT changed (added/modified/type-changed). Renames are
+# not in this set — they preserve content by definition, so vet/build/lint/
+# test have nothing to verify. This isn't a bypass; pure git-mv coda cannot
+# regress on its own bytes.
+STAGED_GO_CONTENT="$(git diff --cached --name-only --diff-filter=AMT \
+    | grep -E '^server/.*\.go$' || true)"
+
+STAGED_GO_SRC="$(printf "%s\n" "$STAGED_GO_CONTENT" | grep -vE '_test\.go$' || true)"
+STAGED_GO_TEST="$(printf "%s\n" "$STAGED_GO_CONTENT" | grep -E '_test\.go$' || true)"
+
+# Same content-changed files, but as paths relative to server/.
+STAGED_GO_REL="$(printf "%s\n" "$STAGED_GO_CONTENT" | sed 's|^server/||')"
+
+printf "%b\n" "${BLUE}[hooks] pre-commit: checking $(printf "%s\n" "$STAGED" | wc -l) staged file(s)${RESET}"
+
+# Rename-only short-circuit: if every staged .go file is a rename (content
+# preserved), checks 1–7 have nothing to verify. We still run check 0 below
+# (AI traces — metadata-only). Then exit clean.
+RENAME_ONLY=0
+if [ -n "$STAGED_GO" ] && [ -z "$STAGED_GO_CONTENT" ]; then
+    printf "%b\n" "${BLUE}[hooks] rename-only Go changes detected — skipping content-based checks${RESET}"
+    RENAME_ONLY=1
+    # Zero out the variables so the per-check guards (each tests STAGED_GO)
+    # silently skip without re-implementing the rename detection.
+    STAGED_GO=""
+    STAGED_GO_SRC=""
+    STAGED_GO_TEST=""
+    STAGED_GO_REL=""
+fi
+
+# ---- Check 0: AI-trace files never enter the index ------------------------
+
+AI_TRACES="$(printf "%s\n" "$STAGED" | grep -E '(^|/)(CLAUDE\.md|claude\.md|AGENTS\.md|\.cursorrules|copilot-instructions\.md)$|(^|/)\.claude/|(^|/)\.cursor/|(^|/)\.aider' || true)"
+if [ -n "$AI_TRACES" ]; then
+    printf "%b\n" "${RED}[hooks] AI-agent traces staged for commit — these must stay local:${RESET}"
+    printf "%s\n" "$AI_TRACES" | sed 's/^/    /'
+    printf "%b\n" "${GRAY}  Fix: git restore --staged <files>; ensure .git/info/exclude has these patterns.${RESET}"
+    BLOCK=1
+fi
+
+# ---- Check 1: gofmt -l ----------------------------------------------------
+
+if [ -n "$STAGED_GO" ]; then
+    FMT_OUT="$(printf "%s\n" "$STAGED_GO" | xargs gofmt -l 2>&1 || true)"
+    if [ -n "$FMT_OUT" ]; then
+        printf "%b\n" "${RED}[hooks] gofmt diff in staged files:${RESET}"
+        printf "%s\n" "$FMT_OUT" | sed 's/^/    /'
+        printf "%b\n" "${GRAY}  Fix: gofmt -w <files>, then re-stage.${RESET}"
+        BLOCK=1
+    fi
+fi
+
+# ---- Check 2: go vet ------------------------------------------------------
+
+if [ -n "$STAGED_GO" ]; then
+    if ! (cd "$SERVER_DIR" && go vet ./...) > /tmp/go-crypto-bot.vet.out 2>&1; then
+        printf "%b\n" "${RED}[hooks] go vet failures:${RESET}"
+        tail -40 /tmp/go-crypto-bot.vet.out | sed 's/^/    /'
+        BLOCK=1
+    fi
+fi
+
+# ---- Check 3: go build ----------------------------------------------------
+
+if [ -n "$STAGED_GO" ]; then
+    if ! (cd "$SERVER_DIR" && go build ./...) > /tmp/go-crypto-bot.build.out 2>&1; then
+        printf "%b\n" "${RED}[hooks] go build failed:${RESET}"
+        tail -40 /tmp/go-crypto-bot.build.out | sed 's/^/    /'
+        BLOCK=1
+    fi
+fi
+
+# ---- Check 4: golangci-lint -----------------------------------------------
+
+if [ -n "$STAGED_GO" ]; then
+    if ! (cd "$SERVER_DIR" && golangci-lint run --config=../.golangci.yml --new-from-rev=HEAD --timeout=2m) \
+            > /tmp/go-crypto-bot.lint.out 2>&1; then
+        printf "%b\n" "${RED}[hooks] golangci-lint findings:${RESET}"
+        tail -60 /tmp/go-crypto-bot.lint.out | sed 's/^/    /'
+        printf "%b\n" "${GRAY}  Fix the issues above and re-stage. Suppression directives are banned (see go-lint/nolintdirective).${RESET}"
+        BLOCK=1
+    fi
+fi
+
+# ---- Check 5: go-lint (AI-bloat analyzers) --------------------------------
+
+if [ -n "$STAGED_GO" ]; then
+    if command -v go-lint >/dev/null 2>&1; then
+        STAGED_PKGS_REL="$(printf "%s\n" "$STAGED_GO_REL" | xargs -I{} dirname {} | sort -u | sed 's|^|./|')"
+        if ! (cd "$SERVER_DIR" && go-lint $STAGED_PKGS_REL) > /tmp/go-crypto-bot.ailint.out 2>&1; then
+            printf "%b\n" "${RED}[hooks] go-lint (AI-bloat) findings:${RESET}"
+            tail -60 /tmp/go-crypto-bot.ailint.out | sed 's/^/    /'
+            BLOCK=1
+        fi
+    else
+        printf "%b\n" "${YELLOW}[hooks] go-lint binary not on PATH — skipping AI-bloat checks${RESET}"
+        printf "%b\n" "${GRAY}  Install: go install github.com/AndreyMashukov/go-lint/cmd/go-lint@latest${RESET}"
+    fi
+fi
+
+# ---- Check 6: source-without-test (BLOCKING) ------------------------------
+
+MISSING=""
+SKIP_PATTERNS='/model/|/config/|/event/[^/]+\.go$|^server/main\.go$'
+while IFS= read -r src; do
+    [ -z "$src" ] && continue
+    printf "%s\n" "$src" | grep -qE "$SKIP_PATTERNS" && continue
+    base="$(basename "$src" .go)"
+    dir="$(dirname "$src")"
+    test_file="${dir}/${base}_test.go"
+    if printf "%s\n" "$STAGED_GO_TEST" | grep -qx "$test_file"; then continue; fi
+    if [ -f "$PROJECT_ROOT/$test_file" ]; then continue; fi
+    MISSING="${MISSING}    ${src} → need ${test_file}\n"
+done <<< "$STAGED_GO_SRC"
+
+if [ -n "$MISSING" ]; then
+    printf "%b\n" "${RED}[hooks] source files staged without paired _test.go:${RESET}"
+    printf "%b" "$MISSING"
+    printf "%b\n" "${GRAY}  Write the tests. No tests = no commit. Pure-data files (model/, config/, event/) are exempt.${RESET}"
+    BLOCK=1
+fi
+
+# ---- Check 7: go test (paired set) ----------------------------------------
+
+if [ -n "$STAGED_GO" ] && [ "$BLOCK" = "0" ]; then
+    TEST_PKGS_REL="$(printf "%s\n" "$STAGED_GO_REL" | xargs -I{} dirname {} | sort -u | sed 's|^|./|')"
+    if [ -n "$TEST_PKGS_REL" ]; then
+        if ! (cd "$SERVER_DIR" && go test -count=1 -timeout=60s $TEST_PKGS_REL) \
+                > /tmp/go-crypto-bot.test.out 2>&1; then
+            printf "%b\n" "${RED}[hooks] go test failures in staged packages:${RESET}"
+            tail -60 /tmp/go-crypto-bot.test.out | sed 's/^/    /'
+            BLOCK=1
+        fi
+    fi
+fi
+
+# ---- Final verdict --------------------------------------------------------
+
+if [ "$BLOCK" = "1" ]; then
+    printf "%b\n" "${RED}[hooks] COMMIT BLOCKED — fix the issues above and re-stage.${RESET}"
+    printf "%b\n" "${GRAY}  No bypass exists. Hook bugs are fixed in .githooks/ and committed separately.${RESET}"
+    exit 1
+fi
+
+printf "%b\n" "${GREEN}[hooks] pre-commit OK.${RESET}"
+exit 0

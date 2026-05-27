@@ -1,0 +1,146 @@
+run:
+  timeout: 3m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gofmt
+    - goimports
+    - revive
+    - gosec
+    - gocritic
+    - unconvert
+    - unparam
+    - misspell
+    - prealloc
+    - bodyclose
+    - noctx
+    - nilerr
+    - nilnil
+    - exportloopref
+    - nakedret
+    - forbidigo
+    - dupl
+    - gocyclo
+    - funlen
+    - lll
+    - whitespace
+    - wastedassign
+    - errorlint
+    - copyloopvar
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+  funlen:
+    lines: 80
+    statements: 50
+  lll:
+    line-length: 140
+  dupl:
+    threshold: 120
+  nakedret:
+    max-func-lines: 0
+  revive:
+    severity: error
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: empty-block
+      - name: error-naming
+      - name: error-return
+      - name: error-strings
+      - name: errorf
+      - name: exported
+        arguments:
+          - "checkPrivateReceivers"
+          - "disableStutteringCheck"
+      - name: increment-decrement
+      - name: indent-error-flow
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: redefines-builtin-id
+      - name: superfluous-else
+      - name: time-naming
+      - name: unexported-return
+      - name: unreachable-code
+      - name: unused-parameter
+      - name: var-declaration
+      - name: var-naming
+      - name: early-return
+      - name: confusing-naming
+      - name: confusing-results
+      - name: unnecessary-stmt
+      - name: useless-break
+      - name: duplicated-imports
+      - name: unhandled-error
+        arguments:
+          - "fmt.Print.*"
+          - "fmt.Fprint.*"
+  forbidigo:
+    forbid:
+      - p: ^fmt\.Print.*$
+        msg: "use a structured logger, not fmt.Print*"
+      - p: ^print$
+        msg: "use a logger"
+      - p: ^println$
+        msg: "use a logger"
+      - p: ^panic$
+        msg: "return error instead of panic"
+    exclude-godoc-examples: true
+    analyze-types: false
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+      - opinionated
+    disabled-checks:
+      - hugeParam
+      - ifElseChain
+  errorlint:
+    errorf: true
+    asserts: true
+    comparison: true
+  gosec:
+    excludes:
+      - G104
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-use-default: false
+  exclude-dirs:
+    - migrations
+    - .docker
+    - tests/example
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - funlen
+        - gocyclo
+        - dupl
+        - gosec
+    - path: main\.go
+      linters:
+        - forbidigo
+        - gocyclo
+        - funlen
+
+severity:
+  default-severity: error

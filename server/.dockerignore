@@ -1,0 +1,7 @@
+trade.log
+kline.log
+*.test
+coverage.out
+models/
+results/
+datasets/

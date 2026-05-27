@@ -1,3 +1,36 @@
+# Environment / secrets — never commit
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Generated docker-compose with real creds
+docker-compose.yaml
+
+# Dev artifacts
 test2.csv
 ml.go
-docker-compose.yaml
+*.log
+trade.log
+kline.log
+
+# Build / test output
+*.test
+*.out
+coverage.out
+coverage.html
+
+# ML runtime data (created by Dockerfile)
+models/
+results/
+datasets/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Vendored deps (if ever generated)
+vendor/

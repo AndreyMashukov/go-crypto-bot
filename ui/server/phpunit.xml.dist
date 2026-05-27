@@ -17,6 +17,13 @@
         <server name="SYMFONY_PHPUNIT_VERSION" value="9.5" />
         <server name="KERNEL_CLASS" value="App\Kernel" />
         <env name="SYMFONY_DEPRECATIONS_HELPER" value="disabled" />
+
+        <!-- ###+ league/oauth2-server-bundle ### -->
+        <env name="OAUTH_PRIVATE_KEY" value="%kernel.project_dir%/config/jwt/private.pem"/>
+        <env name="OAUTH_PUBLIC_KEY" value="%kernel.project_dir%/config/jwt/public.pem"/>
+        <env name="OAUTH_PASSPHRASE" value="3f21f17cb5144d78bb60d5eac1e4dc82"/>
+        <env name="OAUTH_ENCRYPTION_KEY" value="92c66269084078dd5ce6b42a1492aecb"/>
+        <!-- ###- league/oauth2-server-bundle ### -->
     </php>
 
     <testsuites>

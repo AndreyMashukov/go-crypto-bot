@@ -1,2 +1,0 @@
-#oauth2:
-#    resource: '@TrikoderOAuth2Bundle/Resources/config/routes.xml'

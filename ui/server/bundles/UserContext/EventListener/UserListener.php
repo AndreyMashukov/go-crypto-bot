@@ -16,8 +16,8 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 use Symfony\Component\Security\Core\Exception\UserNotFoundException;
 use Symfony\Component\Security\Core\User\UserProviderInterface;
-use Trikoder\Bundle\OAuth2Bundle\Event\UserResolveEvent;
-use Trikoder\Bundle\OAuth2Bundle\OAuth2Events;
+use League\Bundle\OAuth2ServerBundle\Event\UserResolveEvent;
+use League\Bundle\OAuth2ServerBundle\OAuth2Events;
 
 class UserListener implements EventSubscriberInterface
 {

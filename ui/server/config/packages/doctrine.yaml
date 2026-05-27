@@ -2,9 +2,9 @@ doctrine:
     dbal:
         url: '%env(resolve:DATABASE_URL)%'
 
-        # IMPORTANT: You MUST configure your server version,
-        # either here or in the DATABASE_URL env var (see .env file)
-        #server_version: '13'
+
+
+
     orm:
         auto_generate_proxy_classes: true
         naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
@@ -17,11 +17,11 @@ doctrine:
                 alias: App
         dql:
             string_functions:
-#                JSON_EXTRACT: Scienta\DoctrineJsonFunctions\Query\AST\Functions\Mysql\JsonExtract
-#                JSON_UNQUOTE: Scienta\DoctrineJsonFunctions\Query\AST\Functions\Mysql\JsonUnquote
-#                JSON_VALUE: Scienta\DoctrineJsonFunctions\Query\AST\Functions\Mariadb\JsonValue
-#                TIMESTAMPDIFF: Oro\ORM\Query\AST\Functions\Numeric\TimestampDiff
-#                DATE_FORMAT: Oro\ORM\Query\AST\Functions\String\DateFormat
+
+
+
+
+
                 DATEDIFF: DoctrineExtensions\Query\Mysql\DateDiff
                 TIMEDIFF: DoctrineExtensions\Query\Mysql\TimeDiff
                 TIME_TO_SEC: DoctrineExtensions\Query\Mysql\TimeToSec
@@ -38,11 +38,11 @@ doctrine:
                 IFNULL: DoctrineExtensions\Query\Mysql\IfNull
                 REGEXP: DoctrineExtensions\Query\Mysql\Regexp
                 FIELD: DoctrineExtensions\Query\Mysql\Field
-#                first: App\DoctrineExtensions\Query\Mysql\First
-#                ST_AsGeoJson: App\DoctrineExtensions\Query\Mysql\STAsGeoJson
+
+
             numeric_functions:
-#                point: CrEOF\Spatial\ORM\Query\AST\Functions\MySql\Point
-#                st_contains: CrEOF\Spatial\ORM\Query\AST\Functions\MySql\STContains
+
+
                 pi: DoctrineExtensions\Query\Mysql\Pi
                 degrees: DoctrineExtensions\Query\Mysql\Degrees
                 radians: DoctrineExtensions\Query\Mysql\Radians
@@ -54,7 +54,7 @@ doctrine:
                 least: DoctrineExtensions\Query\Mysql\Least
                 power: DoctrineExtensions\Query\Mysql\Power
                 floor: DoctrineExtensions\Query\Mysql\Floor
-#                geo_distance: App\DoctrineExtensions\Query\Mysql\GeoDistance
+
                 ceil: DoctrineExtensions\Query\Mysql\Ceil
 
 when@prod:

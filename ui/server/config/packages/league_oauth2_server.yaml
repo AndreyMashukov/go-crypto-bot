@@ -1,19 +1,16 @@
-trikoder_oauth2:
-
+league_oauth2_server:
     authorization_server:
         private_key: '%kernel.project_dir%/src/Resources/oauth/private.key'
         private_key_passphrase: null
-
         encryption_key: '%env(string:OAUTH2_ENCRYPTION_KEY)%'
-
-        # for test example PT3M (3 minutes) or P1M (1 month)
-        access_token_ttl: '%env(ACCESS_TOKEN_TTL)%' # 1 month
-        refresh_token_ttl: P6M # half a year (6 months)
+        access_token_ttl: '%env(ACCESS_TOKEN_TTL)%'
+        refresh_token_ttl: P6M
 
     resource_server:
         public_key: '%kernel.project_dir%/src/Resources/oauth/public.key'
 
-    persistence:
-        doctrine: null
+    scopes:
+        available: ['user']
 
-    scopes: ['user']
+    persistence:
+        doctrine: ~

@@ -7,7 +7,7 @@ namespace Bundles\UserContext\Service;
 
 use Symfony\Component\Security\Core\Security;
 use Symfony\Component\Security\Core\User\UserInterface;
-use Trikoder\Bundle\OAuth2Bundle\Security\Authentication\Token\OAuth2Token;
+use League\Bundle\OAuth2ServerBundle\Security\Authenticator\OAuth2Token;
 
 class UserProvider
 {

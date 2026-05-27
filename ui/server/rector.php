@@ -15,10 +15,16 @@ use Amashukov\RectorRules\NoPhpstanIgnoreRector;
 use Amashukov\RectorRules\NoSuperglobalAccessRector;
 use Amashukov\RectorRules\NoTypeOnlyAssertionsInTestsRector;
 use Amashukov\RectorRules\RequirePsrClockInterfaceRector;
+use Amashukov\RectorRules\Yaml\YamlCommentStripper;
+use Amashukov\RectorRules\Yaml\YamlCommentStripperInterface;
+use Amashukov\RectorRules\Yaml\YamlNoCommentsChecker;
+use Amashukov\RectorRules\Yaml\YamlNoCommentsCheckerInterface;
 use Amashukov\RectorRules\Yaml\YamlNoCommentsRector;
 use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
+    ->registerService(YamlNoCommentsChecker::class, YamlNoCommentsCheckerInterface::class)
+    ->registerService(YamlCommentStripper::class, YamlCommentStripperInterface::class)
     ->withParallel(600, 16)
     ->withPaths([
         __DIR__ . '/src',

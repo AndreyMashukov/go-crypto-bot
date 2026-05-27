@@ -22,7 +22,7 @@ fos_rest:
             Symfony\Component\HttpKernel\Exception\BadRequestHttpException: true
             Symfony\Component\HttpKernel\Exception\NotFoundHttpException: true
 
-    #    routing_loader:
-    #        default_format: json
-    #        include_format: false
+
+
+
     versioning: true

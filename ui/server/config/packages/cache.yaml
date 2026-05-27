@@ -1,4 +1,4 @@
-# config/packages/cache.yaml
+
 framework:
     cache:
         app: my_redis

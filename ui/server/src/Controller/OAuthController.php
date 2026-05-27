@@ -77,7 +77,7 @@ class OAuthController extends AbstractFOSRestController
      */
     public function postTokenAction()
     {
-        return $this->forward('Trikoder\Bundle\OAuth2Bundle\Controller\TokenController::indexAction');
+        return $this->forward('League\Bundle\OAuth2ServerBundle\Controller\TokenController::indexAction');
     }
 
     /**
@@ -152,7 +152,7 @@ class OAuthController extends AbstractFOSRestController
             }
         }
 
-        return $this->forward('Trikoder\Bundle\OAuth2Bundle\Controller\TokenController::indexAction');
+        return $this->forward('League\Bundle\OAuth2ServerBundle\Controller\TokenController::indexAction');
     }
 
     private function getUserByRefreshToken(string $refreshToken): User

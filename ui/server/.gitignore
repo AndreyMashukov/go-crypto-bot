@@ -17,3 +17,6 @@
 /.docker/rabbitmq
 .phpunit.result.cache
 .env
+###> league/oauth2-server-bundle ###
+/config/jwt/*.pem
+###< league/oauth2-server-bundle ###

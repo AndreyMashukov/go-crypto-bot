@@ -30,7 +30,7 @@ class EmailValidator extends ConstraintValidator
         $this->defaultMode = $defaultMode;
     }
 
-    public function validate($value, Constraint $constraint)
+    public function validate(mixed $value, Constraint $constraint): void
     {
         if (!$constraint instanceof Email) {
             throw new UnexpectedTypeException($constraint, Email::class);

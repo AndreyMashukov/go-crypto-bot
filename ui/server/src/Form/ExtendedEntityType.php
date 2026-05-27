@@ -24,7 +24,7 @@ class ExtendedEntityType extends EntityType
         parent::__construct($registry);
     }
 
-    public function configureOptions(OptionsResolver $resolver)
+    public function configureOptions(OptionsResolver $resolver): void
     {
         $choiceLoader = function (Options $options) {
             // Unless the choices are given explicitly, load them on demand

@@ -10,7 +10,6 @@ API for management.
 ![Go Multithreading Crypto Trading Bot](.github/images/orders.png)
 
 - Community: [Autotrade.cloud Discord](https://discord.gg/eS6tCBCcQ2)
-- Hosted version: [autotrade.cloud](https://autotrade.cloud) — $10 trial on signup.
 
 ---
 

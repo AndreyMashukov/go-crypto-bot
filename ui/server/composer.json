@@ -51,7 +51,7 @@
         "symfony/yaml": "7.3.*",
         "league/oauth2-server-bundle": "^1.1.1",
         "twig/twig": "^3.26",
-        "unleash/client": "^2.9.284"
+        "unleash/client": "^2.9.283"
     },
     "config": {
         "allow-plugins": {
@@ -60,6 +60,9 @@
             "symfony/runtime": true
         },
         "optimize-autoloader": true,
+        "platform": {
+            "php": "8.3"
+        },
         "preferred-install": {
             "*": "dist"
         },

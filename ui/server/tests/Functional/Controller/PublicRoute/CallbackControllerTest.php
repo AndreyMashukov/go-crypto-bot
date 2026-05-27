@@ -1,24 +1,16 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Functional\Controller\PublicRoute;
 
 use App\DataFixtures\CryptoBotFixtures;
 use App\Tests\RestTestCase;
 use Bundles\TgBotContext\MessageBuilder;
-use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Component\HttpFoundation\Request;
 
-/**
- * @group functional
- */
 class CallbackControllerTest extends RestTestCase
 {
-    /** @var MessageBuilder|MockObject */
     private MessageBuilder $messageBuilder;
 
+    #[\Override]
     protected function services(): void
     {
         parent::services();
@@ -27,9 +19,6 @@ class CallbackControllerTest extends RestTestCase
         self::getContainer()->set('test.tg_message_builder', $this->messageBuilder);
     }
 
-    /**
-     * Should match bot by UUID.
-     */
     public function testShouldMatchBotByUUID(): void
     {
         $this->messageBuilder

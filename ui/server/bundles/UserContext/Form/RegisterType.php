@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\UserContext\Form;
 
@@ -17,16 +16,10 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class RegisterType extends AbstractType
 {
-    private EntityManagerInterface $entityManager;
-
-    public function __construct(EntityManagerInterface $entityManager)
+    public function __construct(private readonly EntityManagerInterface $entityManager)
     {
-        $this->entityManager = $entityManager;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $builder
@@ -40,9 +33,6 @@ class RegisterType extends AbstractType
         ;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults([
@@ -51,6 +41,7 @@ class RegisterType extends AbstractType
         ]);
     }
 
+    #[\Override]
     public function getBlockPrefix()
     {
         return '';
@@ -62,7 +53,6 @@ class RegisterType extends AbstractType
         $fakeMetadata->setIdentifier(['code']);
         $fakeMetadata->fieldMappings['code']['type'] = 'string';
         $reflectionProperty                          = new \ReflectionProperty(PromoCode::class, 'code');
-        $reflectionProperty->setAccessible(true);
         $fakeMetadata->reflFields['code'] = $reflectionProperty;
 
         return new IdReader($this->entityManager, $fakeMetadata);

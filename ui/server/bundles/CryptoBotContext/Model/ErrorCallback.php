@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\CryptoBotContext\Model;
 
@@ -12,29 +11,21 @@ class ErrorCallback
 {
     /**
      * @Assert\NotNull
-     *
-     * @var null|CryptoBot
      */
     public ?CryptoBot $bot = null;
 
     /**
      * @Assert\NotNull
-     *
-     * @var null|string
      */
     public ?string $errorCode = null;
 
     /**
      * @Assert\NotNull
-     *
-     * @var null|string
      */
     public ?string $errorMessage = null;
 
     /**
      * @Assert\NotNull
-     *
-     * @var null|bool
      */
     public ?bool $stop = null;
 }

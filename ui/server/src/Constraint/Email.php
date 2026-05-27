@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace App\Constraint;
 
 use Egulias\EmailValidator\EmailValidator as StrictEmailValidator;
@@ -10,12 +6,6 @@ use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Exception\InvalidArgumentException;
 use Symfony\Component\Validator\Exception\LogicException;
 
-/**
- * @Annotation
- * @Target({"PROPERTY", "METHOD", "ANNOTATION"})
- *
- * @author Bernhard Schussek <bschussek@gmail.com>
- */
 #[\Attribute(\Attribute::TARGET_PROPERTY | \Attribute::TARGET_METHOD | \Attribute::IS_REPEATABLE)]
 class Email extends Constraint
 {
@@ -31,11 +21,6 @@ class Email extends Constraint
         self::INVALID_FORMAT_ERROR => 'STRICT_CHECK_FAILED_ERROR',
     ];
 
-    /**
-     * @var string[]
-     *
-     * @internal
-     */
     public static $validationModes = [
         self::VALIDATION_MODE_HTML5,
         self::VALIDATION_MODE_STRICT,
@@ -67,7 +52,7 @@ class Email extends Constraint
         $this->normalizer = $normalizer       ?? $this->normalizer;
 
         if (self::VALIDATION_MODE_STRICT === $this->mode && !class_exists(StrictEmailValidator::class)) {
-            throw new LogicException(sprintf('The "egulias/email-validator" component is required to use the "%s" constraint in strict mode.', __CLASS__));
+            throw new LogicException(sprintf('The "egulias/email-validator" component is required to use the "%s" constraint in strict mode.', self::class));
         }
 
         if (null !== $this->normalizer && !\is_callable($this->normalizer)) {

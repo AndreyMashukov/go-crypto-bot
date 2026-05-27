@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Repository;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
@@ -14,11 +10,6 @@ use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<ExchangeSymbol>
- *
- * @method null|ExchangeSymbol find($id, $lockMode = null, $lockVersion = null)
- * @method null|ExchangeSymbol findOneBy(array $criteria, array $orderBy = null)
- * @method ExchangeSymbol[]    findAll()
- * @method ExchangeSymbol[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
 class ExchangeSymbolRepository extends ServiceEntityRepository
 {

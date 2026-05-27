@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\TgBotContext\Event;
 
 use App\Context\Geo\Model\Point;
@@ -10,20 +6,14 @@ use Symfony\Contracts\EventDispatcher\Event;
 
 class GeoCodeEvent extends Event
 {
-    private string $toGeocode;
-
     private array $results = [];
-
-    private ?int $selectedIndex;
 
     private ?Point $point = null;
 
     private ?string $selectedKind = null;
 
-    public function __construct(string $toGeocode, int $selectedIndex = null)
+    public function __construct(private readonly string $toGeocode, private readonly ?int $selectedIndex = null)
     {
-        $this->toGeocode     = $toGeocode;
-        $this->selectedIndex = $selectedIndex;
     }
 
     public function getToGeocode(): string

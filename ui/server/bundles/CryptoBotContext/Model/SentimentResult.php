@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\CryptoBotContext\Model;
 
@@ -13,20 +12,8 @@ class SentimentResult
 
     public const LABEL_NEUTRAL = 'NEUTRAL';
 
-    private RSSFeedArticle $article;
-
-    private string $label;
-
-    private float $score;
-
-    private array $coins;
-
-    public function __construct(RSSFeedArticle $article, string $label, float $score, array $coins)
+    public function __construct(private readonly RSSFeedArticle $article, private readonly string $label, private readonly float $score, private readonly array $coins)
     {
-        $this->article = $article;
-        $this->label   = $label;
-        $this->score   = $score;
-        $this->coins   = $coins;
     }
 
     public function getArticle(): RSSFeedArticle

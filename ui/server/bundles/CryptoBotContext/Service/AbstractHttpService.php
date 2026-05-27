@@ -1,29 +1,19 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Service;
 
+use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\ClientInterface;
 
 class AbstractHttpService
 {
-    private ClientInterface $client;
-
-    public function __construct(ClientInterface $client)
+    public function __construct(private readonly ClientInterface $client)
     {
-        $this->client = $client;
     }
 
     /**
-     * @param string $method
-     * @param string $uri
-     * @param array  $json
      *
-     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws GuzzleException
      *
-     * @return array
      */
     protected function request(string $method, string $uri, array $json, int $timeout = 60): array
     {
@@ -31,7 +21,7 @@ class AbstractHttpService
             'timeout' => $timeout,
         ];
 
-        if ($json) {
+        if ($json !== []) {
             $params['json'] = $json;
         }
 
@@ -52,7 +42,7 @@ class AbstractHttpService
             'timeout' => $timeout,
         ];
 
-        if ($json) {
+        if ($json !== []) {
             $params['json'] = $json;
         }
 

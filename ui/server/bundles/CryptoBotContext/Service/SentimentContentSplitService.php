@@ -1,13 +1,11 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\CryptoBotContext\Service;
 
 class SentimentContentSplitService
 {
-    // Go-sentiment microservice is able to process short sentiments.
     public const MAX_SENTENCE_LENGTH = 2000;
 
     public function split(string $content): array
@@ -25,7 +23,7 @@ class SentimentContentSplitService
                     $resultPart = $explode;
                     break;
                 case mb_strlen($explode) > self::MAX_SENTENCE_LENGTH:
-                    if ($resultPart) {
+                    if ($resultPart !== '' && $resultPart !== '0') {
                         $batch[] = $resultPart;
                     }
                     $resultPart = mb_substr($explode, 0, self::MAX_SENTENCE_LENGTH);
@@ -33,7 +31,7 @@ class SentimentContentSplitService
             }
         }
 
-        if ($resultPart) {
+        if ($resultPart !== '' && $resultPart !== '0') {
             $batch[] = $resultPart;
         }
 

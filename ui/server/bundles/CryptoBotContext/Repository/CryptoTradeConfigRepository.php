@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Repository;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
@@ -13,11 +9,6 @@ use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<CryptoTradeConfig>
- *
- * @method null|CryptoTradeConfig find($id, $lockMode = null, $lockVersion = null)
- * @method null|CryptoTradeConfig findOneBy(array $criteria, array $orderBy = null)
- * @method CryptoTradeConfig[]    findAll()
- * @method CryptoTradeConfig[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
 class CryptoTradeConfigRepository extends ServiceEntityRepository
 {
@@ -100,7 +91,7 @@ EOL;
             ->fetchAllAssociative();
 
         foreach ($result as $key => $item) {
-            $news = json_decode($item['news'], true);
+            $news = json_decode((string) $item['news'], true);
             $uniq = [];
             foreach ($news as $article) {
                 $uniq[$article['url']] = $article;

@@ -1,10 +1,7 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace App\Controller\V1;
 
+use Bundles\CryptoBotContext\Entity\Server;
 use Bundles\CryptoBotContext\Entity\CryptoBot;
 use Bundles\CryptoBotContext\Entity\CryptoTradeConfig;
 use Bundles\CryptoBotContext\Exception\ServersIsOutOfStockException;
@@ -24,7 +21,6 @@ use Bundles\CryptoBotContext\Service\CryptoBotService;
 use Bundles\CryptoBotContext\Service\DeployDomain;
 use Bundles\OxaPayContext\Service\CommissionService;
 use Bundles\TgBotContext\Service\AlertService;
-use Bundles\UserContext\Entity\User;
 use Bundles\UserContext\Exception\MaxPairLimitReachedException;
 use Bundles\UserContext\Service\LimitService;
 use FOS\RestBundle\Controller\AbstractFOSRestController;
@@ -35,9 +31,6 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
-/**
- * @Rest\Route("/v1/cryptobot", name="v1_cryptobot_")
- */
 class CryptoBotController extends AbstractFOSRestController
 {
     public const AVAILABLE_PROVIDERS = [
@@ -45,55 +38,16 @@ class CryptoBotController extends AbstractFOSRestController
         CryptoBot::PROVIDER_BYBIT   => true,
     ];
 
-    private CryptoBotRepository $repository;
-
-    private CryptoBotService $cryptoBotService;
-
-    private ServerRepository $serverRepository;
-
-    private DeployDomain $deployDomain;
-
-    private LoggerInterface $logger;
-
-    private ExchangeSymbolRepository $symbolRepository;
-
-    private LimitService $limitService;
-
-    private CommissionService $commissionService;
-
-    private AlertService $alertService;
-
-    public function __construct(
-        CryptoBotRepository $repository,
-        DeployDomain $deployDomain,
-        CryptoBotService $cryptoBotService,
-        ServerRepository $serverRepository,
-        LoggerInterface $logger,
-        ExchangeSymbolRepository $symbolRepository,
-        LimitService $limitService,
-        CommissionService $commissionService,
-        AlertService $alertService
-    ) {
-        $this->repository        = $repository;
-        $this->cryptoBotService  = $cryptoBotService;
-        $this->serverRepository  = $serverRepository;
-        $this->deployDomain      = $deployDomain;
-        $this->logger            = $logger;
-        $this->symbolRepository  = $symbolRepository;
-        $this->limitService      = $limitService;
-        $this->commissionService = $commissionService;
-        $this->alertService      = $alertService;
+    public function __construct(private readonly CryptoBotRepository $repository, private readonly DeployDomain $deployDomain, private readonly CryptoBotService $cryptoBotService, private readonly ServerRepository $serverRepository, private readonly LoggerInterface $logger, private readonly ExchangeSymbolRepository $symbolRepository, private readonly LimitService $limitService, private readonly CommissionService $commissionService, private readonly AlertService $alertService)
+    {
     }
 
     /**
      * @Rest\Route("/list", name="list", methods={"GET"})
      * @Rest\View(serializerGroups={"cryptobot", "cryptotrade_config", "server"})
-     *
-     * @return array
      */
-    public function getListAction(): array
+    public function getList(): array
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         return $this->repository->findBy([
@@ -104,12 +58,9 @@ class CryptoBotController extends AbstractFOSRestController
     /**
      * @Rest\Route("/list/extended", name="list_extended", methods={"GET"})
      * @Rest\View(serializerGroups={"cryptobot", "cryptotrade_config", "server", "commission"})
-     *
-     * @return array
      */
-    public function getListExtendedAction(): array
+    public function getListExtended(): array
     {
-        /** @var User $user */
         $user       = $this->getUser();
         $cryptoBots = $user->getCryptoBots();
 
@@ -129,13 +80,10 @@ class CryptoBotController extends AbstractFOSRestController
      * @Rest\Route("/{cryptobot}/symbol/list", name="symbol_list", methods={"GET"})
      * @Rest\View(serializerGroups={"exchange_symbol"})
      *
-     * @param CryptoBot $cryptobot
      *
-     * @return array
      */
-    public function getSymbolListAction(CryptoBot $cryptobot): array
+    public function getSymbolList(CryptoBot $cryptobot): array
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -151,8 +99,6 @@ class CryptoBotController extends AbstractFOSRestController
     /**
      * @Rest\Route("/available", name="available", methods={"GET"})
      * @Rest\View
-     *
-     * @return array
      */
     public function getAvailableBots(): array
     {
@@ -173,18 +119,12 @@ class CryptoBotController extends AbstractFOSRestController
     /**
      * @Rest\Route("/{cryptobot}/server/list", name="bot_server_list", methods={"GET"})
      * @Rest\View(serializerGroups={"server"})
-     *
-     * @return array
      */
-    public function getBotServerListAction(CryptoBot $cryptobot): array
+    public function getBotServerList(CryptoBot $cryptobot): array
     {
-        if ($cryptobot->hasDedicatedServer()) {
-            $list = [
-                $cryptobot->getDedicated(),
-            ];
-        } else {
-            $list = $this->serverRepository->findAll();
-        }
+        $list = $cryptobot->hasDedicatedServer() ? [
+            $cryptobot->getDedicated(),
+        ] : $this->serverRepository->findAll();
 
         $stats = $this->serverRepository->getServerStats();
 
@@ -198,13 +138,10 @@ class CryptoBotController extends AbstractFOSRestController
      * @Rest\Route("/{cryptobot}", name="get", methods={"GET"})
      * @Rest\View(serializerGroups={"cryptobot", "cryptotrade_config", "server", "cryptobot_secured"})
      *
-     * @param CryptoBot $cryptobot
      *
-     * @return CryptoBot
      */
     public function getAction(CryptoBot $cryptobot): CryptoBot
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -217,12 +154,9 @@ class CryptoBotController extends AbstractFOSRestController
     /**
      * @Rest\Route("/{cryptobot}/deploy", name="deploy", methods={"PUT"})
      * @Rest\View
-     *
-     * @param CryptoBot $cryptobot
      */
-    public function putDeployAction(CryptoBot $cryptobot): void
+    public function putDeploy(CryptoBot $cryptobot): void
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -257,19 +191,16 @@ class CryptoBotController extends AbstractFOSRestController
     /**
      * @Rest\Route("/{cryptobot}/stop", name="stop", methods={"PUT"})
      * @Rest\View
-     *
-     * @param CryptoBot $cryptobot
      */
-    public function putStopAction(CryptoBot $cryptobot): void
+    public function putStop(CryptoBot $cryptobot): void
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
             throw new AccessDeniedHttpException('Forbidden.');
         }
 
-        if (!$cryptobot->getServer()) {
+        if (!$cryptobot->getServer() instanceof Server) {
             throw new BadRequestHttpException('Server is not set, can not stop the bot.');
         }
 
@@ -287,12 +218,9 @@ class CryptoBotController extends AbstractFOSRestController
     /**
      * @Rest\Route("/{cryptobot}/config/sync", name="config_sync", methods={"PUT"})
      * @Rest\View
-     *
-     * @param CryptoBot $cryptobot
      */
-    public function putSyncConfigAction(CryptoBot $cryptobot): void
+    public function putSyncConfig(CryptoBot $cryptobot): void
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -307,13 +235,11 @@ class CryptoBotController extends AbstractFOSRestController
      * @Rest\Route("", name="post", methods={"POST"})
      * @Rest\View(serializerGroups={"cryptobot", "cryptotrade_config", "cryptobot_secured"})
      *
-     * @param Request $request
      *
      * @return array|CryptoBot
      */
-    public function postAction(Request $request)
+    public function post(Request $request)
     {
-        /** @var User $user */
         $user = $this->getUser();
         $form = $this->createForm(CryptoBotType::class, new CryptoBot($user), [
             'method' => Request::METHOD_POST,
@@ -329,7 +255,6 @@ class CryptoBotController extends AbstractFOSRestController
             ];
         }
 
-        /** @var CryptoBot $data */
         $data     = $form->getData();
         $existing = $this->repository->findOneBy([
             'provider' => $data->getProvider(),
@@ -350,14 +275,11 @@ class CryptoBotController extends AbstractFOSRestController
      * @Rest\Route("/{cryptobot}/multi/charge", name="put_multi_charge", methods={"PUT"})
      * @Rest\View
      *
-     * @param Request   $request
-     * @param CryptoBot $cryptobot
      *
-     * @return array|void
+     * @return mixed[]|null
      */
-    public function putMultiChargeAction(Request $request, CryptoBot $cryptobot)
+    public function putMultiCharge(Request $request, CryptoBot $cryptobot)
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -378,7 +300,6 @@ class CryptoBotController extends AbstractFOSRestController
             ];
         }
 
-        /** @var MultiExtraCharge $data */
         $data = $form->getData();
 
         try {
@@ -390,20 +311,18 @@ class CryptoBotController extends AbstractFOSRestController
             ]);
             throw new ServiceUnavailableHttpException(60, 'Service unavailable, please try later...', $exception);
         }
+        return null;
     }
 
     /**
      * @Rest\Route("/{cryptobot}/multi/profit", name="put_multi_profit", methods={"PUT"})
      * @Rest\View
      *
-     * @param Request   $request
-     * @param CryptoBot $cryptobot
      *
-     * @return array|void
+     * @return mixed[]|null
      */
-    public function putMultiProfitAction(Request $request, CryptoBot $cryptobot)
+    public function putMultiProfit(Request $request, CryptoBot $cryptobot)
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -424,7 +343,6 @@ class CryptoBotController extends AbstractFOSRestController
             ];
         }
 
-        /** @var MultiProfitOption $data */
         $data = $form->getData();
 
         try {
@@ -436,20 +354,18 @@ class CryptoBotController extends AbstractFOSRestController
             ]);
             throw new ServiceUnavailableHttpException(60, 'Service unavailable, please try later...', $exception);
         }
+        return null;
     }
 
     /**
      * @Rest\Route("/{cryptobot}/buy/conditions", name="put_buy_conditions", methods={"PUT"})
      * @Rest\View
      *
-     * @param Request   $request
-     * @param CryptoBot $cryptobot
      *
-     * @return array|void
+     * @return mixed[]|null
      */
-    public function putBuyConditionsAction(Request $request, CryptoBot $cryptobot)
+    public function putBuyConditions(Request $request, CryptoBot $cryptobot)
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -470,7 +386,6 @@ class CryptoBotController extends AbstractFOSRestController
             ];
         }
 
-        /** @var TradeConditionCollection $data */
         $data = $form->getData();
 
         try {
@@ -487,20 +402,18 @@ class CryptoBotController extends AbstractFOSRestController
             ]);
             throw new ServiceUnavailableHttpException(60, 'Service unavailable, please try later...', $exception);
         }
+        return null;
     }
 
     /**
      * @Rest\Route("/{cryptobot}/sell/conditions", name="put_sell_conditions", methods={"PUT"})
      * @Rest\View
      *
-     * @param Request   $request
-     * @param CryptoBot $cryptobot
      *
-     * @return array|void
+     * @return mixed[]|null
      */
-    public function putSellConditionsAction(Request $request, CryptoBot $cryptobot)
+    public function putSellConditions(Request $request, CryptoBot $cryptobot)
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -521,7 +434,6 @@ class CryptoBotController extends AbstractFOSRestController
             ];
         }
 
-        /** @var TradeConditionCollection $data */
         $data = $form->getData();
 
         try {
@@ -538,20 +450,18 @@ class CryptoBotController extends AbstractFOSRestController
             ]);
             throw new ServiceUnavailableHttpException(60, 'Service unavailable, please try later...', $exception);
         }
+        return null;
     }
 
     /**
      * @Rest\Route("/{cryptobot}/avg/conditions", name="put_avg_conditions", methods={"PUT"})
      * @Rest\View
      *
-     * @param Request   $request
-     * @param CryptoBot $cryptobot
      *
-     * @return array|void
+     * @return mixed[]|null
      */
-    public function putAvgConditionsAction(Request $request, CryptoBot $cryptobot)
+    public function putAvgConditions(Request $request, CryptoBot $cryptobot)
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -572,7 +482,6 @@ class CryptoBotController extends AbstractFOSRestController
             ];
         }
 
-        /** @var TradeConditionCollection $data */
         $data = $form->getData();
 
         try {
@@ -589,20 +498,18 @@ class CryptoBotController extends AbstractFOSRestController
             ]);
             throw new ServiceUnavailableHttpException(60, 'Service unavailable, please try later...', $exception);
         }
+        return null;
     }
 
     /**
      * @Rest\Route("/{cryptobot}", name="patch", methods={"PATCH"})
      * @Rest\View(serializerGroups={"cryptobot", "cryptotrade_config", "server", "cryptobot_secured"})
      *
-     * @param Request   $request
-     * @param CryptoBot $cryptobot
      *
      * @return array|CryptoBot
      */
-    public function patchAction(Request $request, CryptoBot $cryptobot)
+    public function patch(Request $request, CryptoBot $cryptobot)
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -624,13 +531,12 @@ class CryptoBotController extends AbstractFOSRestController
             ];
         }
 
-        /** @var CryptoBot $data */
         $data = $form->getData();
 
         try {
             $this->limitService->checkLimits($data);
         } catch (MaxPairLimitReachedException $exception) {
-            throw new BadRequestHttpException($exception->getMessage());
+            throw new BadRequestHttpException($exception->getMessage(), $exception);
         }
 
         $this->repository->add($data, true);
@@ -659,12 +565,9 @@ class CryptoBotController extends AbstractFOSRestController
     /**
      * @Rest\Route("/{cryptobot}", name="delete", methods={"DELETE"})
      * @Rest\View
-     *
-     * @param CryptoBot $cryptobot
      */
-    public function deleteAction(CryptoBot $cryptobot): void
+    public function delete(CryptoBot $cryptobot): void
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -678,14 +581,11 @@ class CryptoBotController extends AbstractFOSRestController
      * @Rest\Route("/{cryptobot}/order", name="post_order", methods={"POST"})
      * @Rest\View
      *
-     * @param Request   $request
-     * @param CryptoBot $cryptobot
      *
-     * @return array|void
+     * @return mixed[]|null
      */
-    public function postOrderAction(Request $request, CryptoBot $cryptobot)
+    public function postOrder(Request $request, CryptoBot $cryptobot)
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -706,7 +606,6 @@ class CryptoBotController extends AbstractFOSRestController
             ];
         }
 
-        /** @var ManualOrder $data */
         $data = $form->getData();
 
         try {
@@ -720,17 +619,15 @@ class CryptoBotController extends AbstractFOSRestController
             ]);
             throw new ServiceUnavailableHttpException(60, 'Service unavailable, please try later...', $exception);
         }
+        return null;
     }
 
     /**
      * @Rest\Route("/{cryptobot}/order/{symbol}", name="delete_order", methods={"DELETE"})
      * @Rest\View
-     *
-     * @param CryptoBot $cryptobot
      */
-    public function deleteOrderAction(CryptoBot $cryptobot, string $symbol)
+    public function deleteOrder(CryptoBot $cryptobot, string $symbol)
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {

@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace App\Tests\Functional\Controller\V1;
 
 use App\Tests\RestTestCase;
@@ -11,14 +7,8 @@ use Bundles\UserContext\Entity\User;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * @group functional
- */
 class SubscriptionControllerTest extends RestTestCase
 {
-    /**
-     * Should allow to pay by oxa.
-     */
     public function testShouldAllowToPayBudgetByOxa(): void
     {
         $url  = $this->getUrl('v1_subscription_budget');

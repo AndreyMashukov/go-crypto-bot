@@ -1,87 +1,35 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Entity;
 
-use Bundles\CryptoBotContext\Repository\TradeRepository;
 use Bundles\UserContext\Entity\User;
-use Doctrine\ORM\Mapping as ORM;
 
-/**
- * @ORM\Entity(repositoryClass=TradeRepository::class)
- */
 class Trade
 {
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(name="trd_id", type="integer")
-     */
-    private $id;
+    private ?int $id = null;
 
-    /**
-     * @ORM\ManyToOne(targetEntity="Bundles\UserContext\Entity\User")
-     * @ORM\JoinColumn(name="trd_user", nullable=false, referencedColumnName="id")
-     */
-    private $user;
+    private ?User $user = null;
 
-    /**
-     * @ORM\ManyToOne(targetEntity="Bundles\CryptoBotContext\Entity\CryptoBot")
-     * @ORM\JoinColumn(name="trd_bot", nullable=false, referencedColumnName="ctb_id")
-     */
-    private $bot;
+    private ?CryptoBot $bot = null;
 
-    /**
-     * @ORM\Column(name="trd_profit", type="float")
-     */
-    private $profit;
+    private ?float $profit = null;
 
-    /**
-     * @ORM\Column(name="trd_symbol", type="string", length=10)
-     */
-    private $symbol;
+    private ?string $symbol = null;
 
-    /**
-     * @ORM\Column(name="trd_buy_qty", type="float")
-     */
-    private $buyQty;
+    private ?float $buyQty = null;
 
-    /**
-     * @ORM\Column(name="trd_sell_qty", type="float")
-     */
-    private $sellQty;
+    private ?float $sellQty = null;
 
-    /**
-     * @ORM\Column(name="trd_buy_price", type="float")
-     */
-    private $buyPrice;
+    private ?float $buyPrice = null;
 
-    /**
-     * @ORM\Column(name="trd_sell_price", type="float")
-     */
-    private $sellPrice;
+    private ?float $sellPrice = null;
 
-    /**
-     * @ORM\Column(name="trd_percent", type="float")
-     */
-    private $percent;
+    private ?float $percent = null;
 
-    /**
-     * @ORM\Column(name="trd_buy_date", type="datetime_immutable")
-     */
     private $buyDate;
 
-    /**
-     * @ORM\Column(name="trd_sell_date", type="datetime_immutable")
-     */
     private $sellDate;
 
-    /**
-     * @ORM\Column(name="trd_order_id", type="integer")
-     */
-    private $orderId;
+    private ?int $orderId = null;
 
     public function getId(): ?int
     {

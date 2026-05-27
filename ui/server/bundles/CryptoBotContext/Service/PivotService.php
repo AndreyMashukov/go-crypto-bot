@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Service;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
@@ -14,20 +10,8 @@ use Symfony\Contracts\Cache\CacheInterface;
 
 class PivotService
 {
-    private ClientInterface $client;
-
-    private CacheInterface $cache;
-
-    private LoggerInterface $logger;
-
-    public function __construct(
-        ClientInterface $client,
-        CacheInterface $cache,
-        LoggerInterface $logger
-    ) {
-        $this->client = $client;
-        $this->cache  = $cache;
-        $this->logger = $logger;
+    public function __construct(private readonly ClientInterface $client, private readonly CacheInterface $cache, private readonly LoggerInterface $logger)
+    {
     }
 
     public function getPivotGrid(CryptoBot $cryptoBot): array

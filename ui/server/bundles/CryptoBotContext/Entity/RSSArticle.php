@@ -1,68 +1,24 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Entity;
 
-use Bundles\CryptoBotContext\Repository\RSSArticleRepository;
-use Doctrine\ORM\Mapping as ORM;
-
-/**
- * @ORM\Table(name="rss_article", indexes={
- *     @ORM\Index(columns={"rsa_url", "rsa_url_crc_32"}),
- *     @ORM\Index(columns={"rsa_expired", "rsa_expires_at"}),
- * })
- *
- * @ORM\Entity(repositoryClass=RSSArticleRepository::class)
- */
 class RSSArticle
 {
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(name="rsa_id", type="integer")
-     */
     private ?int $id = null;
 
-    /**
-     * @ORM\Column(name="rsa_url", type="string", length=255)
-     */
     private ?string $url = null;
 
-    /**
-     * @ORM\Column(name="rsa_url_crc_32", type="bigint")
-     */
     private ?int $urlCrc32 = null;
 
-    /**
-     * @ORM\Column(name="rsa_expires_at", type="datetime_immutable")
-     */
     private ?\DateTimeImmutable $expiresAt = null;
 
-    /**
-     * @ORM\Column(name="rsa_label", type="string", length=20)
-     */
     private ?string $label = null;
 
-    /**
-     * @ORM\Column(name="rsa_score", type="float")
-     */
     private ?float $score = null;
 
-    /**
-     * @ORM\Column(name="rsa_expired", type="boolean", options={"default": 0})
-     */
     private ?bool $expired = false;
 
-    /**
-     * @ORM\Column(name="rsa_coins", type="json")
-     */
     private array $coins = [];
 
-    /**
-     * @ORM\Column(name="rsa_created_at", type="datetime_immutable")
-     */
     private ?\DateTimeImmutable $createdAt = null;
 
     public function __construct()

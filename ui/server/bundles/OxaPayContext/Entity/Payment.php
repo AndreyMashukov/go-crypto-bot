@@ -1,21 +1,9 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\OxaPayContext\Entity;
 
-use Bundles\OxaPayContext\Repository\PaymentRepository;
 use Bundles\UserContext\Entity\User;
-use Doctrine\ORM\Mapping as ORM;
-use JMS\Serializer\Annotation as Serializer;
 use Ramsey\Uuid\Uuid;
 
-/**
- * @ORM\Entity(repositoryClass=PaymentRepository::class)
- *
- * @Serializer\ExclusionPolicy(Serializer\ExclusionPolicy::ALL)
- */
 class Payment
 {
     public const STATUS_PENDING = 'pending';
@@ -28,102 +16,33 @@ class Payment
 
     public const CURRENCY_USDT = 'USDT';
 
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(name="pmt_id", type="integer")
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"payment_short", "payment"})
-     */
     private ?int $id = null;
 
-    /**
-     * @ORM\Column(name="pmt_amount", type="float")
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"payment"})
-     */
-    private float $amount;
-
-    /**
-     * @ORM\Column(name="pmt_status", type="string")
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"payment"})
-     */
     private string $status = self::STATUS_PENDING;
 
-    /**
-     * @ORM\Column(name="pmt_currency", type="string", length=255)
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"payment"})
-     */
     private string $currency = self::CURRENCY_USDT;
 
-    /**
-     * @ORM\Column(name="pmt_description", type="string", length=255)
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"payment"})
-     */
-    private string $description;
-
-    /**
-     * @ORM\Column(name="pmt_order_id", type="uuid", length=255)
-     */
     private string $orderId;
 
-    /**
-     * @ORM\Column(name="pmt_email", type="string", length=255)
-     */
     private string $email;
 
-    /**
-     * @ORM\Column(name="pmt_created_at", type="datetime_immutable")
-     */
     private \DateTimeImmutable $createdAt;
 
-    /**
-     * @ORM\Column(name="pmt_track_id", type="integer", nullable=true)
-     */
-    private $trackId;
+    private ?int $trackId = null;
 
-    /**
-     * @ORM\Column(name="pmt_payment_link", type="string", length=255, nullable=true)
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"payment_short"})
-     */
-    private $paymentLink;
+    private ?string $paymentLink = null;
 
-    /**
-     * @ORM\Column(name="pmt_expires_at", type="datetime_immutable", nullable=true)
-     */
     private $expiresAt;
 
-    /**
-     * @ORM\Column(name="pmt_completed_at", type="datetime_immutable", nullable=true)
-     */
     private ?\DateTimeImmutable $completedAt = null;
 
-    /**
-     * @ORM\ManyToOne(targetEntity=User::class)
-     * @ORM\JoinColumn(name="pmt_user", nullable=false)
-     */
-    private $user;
-
     public function __construct(
-        User $user,
-        float $amount,
-        string $description
+        private User $user,
+        private float $amount,
+        private string $description
     ) {
         $this->orderId      = Uuid::uuid4();
-        $this->user         = $user;
-        $this->email        = $user->getEmail();
-        $this->description  = $description;
-        $this->amount       = $amount;
+        $this->email        = $this->user->getEmail();
         $this->createdAt    = new \DateTimeImmutable('now');
     }
 

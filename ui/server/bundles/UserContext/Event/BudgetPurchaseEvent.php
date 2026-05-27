@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\UserContext\Event;
 
@@ -10,14 +9,8 @@ use Symfony\Contracts\EventDispatcher\Event;
 
 class BudgetPurchaseEvent extends Event
 {
-    private User $user;
-
-    private float $amount;
-
-    public function __construct(User $user, float $amount)
+    public function __construct(private readonly User $user, private readonly float $amount)
     {
-        $this->user   = $user;
-        $this->amount = $amount;
     }
 
     public function getUser(): User

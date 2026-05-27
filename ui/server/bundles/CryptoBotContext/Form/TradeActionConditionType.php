@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\CryptoBotContext\Form;
 
@@ -22,11 +21,13 @@ class TradeActionConditionType extends AbstractType
         ;
     }
 
+    #[\Override]
     public function getParent()
     {
         return TradeActionConditionChildrenType::class;
     }
 
+    #[\Override]
     public function getBlockPrefix()
     {
         return '';

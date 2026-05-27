@@ -1,27 +1,19 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace App\Tests\Functional\Controller\V1;
 
 use App\Tests\RestTestCase;
 use Bundles\UserContext\Entity\User;
 use GuzzleHttp\ClientInterface;
-use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * @group functional
- */
 class CryptoBotControllerTest extends RestTestCase
 {
-    /** @var ClientInterface|MockObject */
     private ClientInterface $guzzle;
 
+    #[\Override]
     protected function services(): void
     {
         parent::services();
@@ -30,9 +22,6 @@ class CryptoBotControllerTest extends RestTestCase
         self::getContainer()->set('test.client_interface', $this->guzzle);
     }
 
-    /**
-     * Should allow to do CRUD operations.
-     */
     public function testShouldAllowToDoCrudOperations(): void
     {
         $this->guzzle
@@ -141,9 +130,6 @@ class CryptoBotControllerTest extends RestTestCase
         $this->assertJsonSnapshot($json);
     }
 
-    /**
-     * Should allow to set buy conditions with children.
-     */
     public function testShouldAllowToSetBuyConditionsWithChildren(): void
     {
         $this->guzzle
@@ -247,7 +233,6 @@ class CryptoBotControllerTest extends RestTestCase
             'cryptobot' => $updated['id'],
         ]), Request::METHOD_PUT), Response::HTTP_NO_CONTENT);
 
-        // send valid data
         $this->deserialize($this->apiRequest($this->getUrl('v1_cryptobot_put_buy_conditions', [
             'cryptobot' => $updated['id'],
         ]), Request::METHOD_PUT, [
@@ -289,9 +274,6 @@ class CryptoBotControllerTest extends RestTestCase
         $this->assertJsonSnapshot($new, 'bot_updated');
     }
 
-    /**
-     * Should allow to get list of available bot providers.
-     */
     public function testShouldAllowToGetListOfAvailableBotProviders(): void
     {
         $json = $this->deserialize($this->apiRequest($this->getUrl('v1_cryptobot_available')));
@@ -316,7 +298,7 @@ class CryptoBotControllerTest extends RestTestCase
             'apiSecret' => 'apisecret',
             'provider'  => 'bybit',
         ]), Response::HTTP_BAD_REQUEST);
-        $duplicate['message'] = preg_replace('/instance #\d+/ui', 'instance #N', $duplicate['message']);
+        $duplicate['message'] = preg_replace('/instance #\d+/ui', 'instance #N', (string) $duplicate['message']);
         $this->assertJsonSnapshot($duplicate, 'duplicate');
 
         $json = $this->deserialize($this->apiRequest($this->getUrl('v1_cryptobot_available')));
@@ -326,9 +308,6 @@ class CryptoBotControllerTest extends RestTestCase
         $this->assertJsonSnapshot($json, 'all_created');
     }
 
-    /**
-     * Should allow to get extended cryptobot list.
-     */
     public function testShouldAllowToGetExtendedCryptobotList(): void
     {
         $list = $this->deserialize($this->apiRequest($this->getUrl('v1_cryptobot_list_extended')));

@@ -1,21 +1,15 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\EntitySubscriber;
 
+use Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener;
 use Bundles\CryptoBotContext\Entity\CryptoTradeConfig;
 use Bundles\CryptoBotContext\Service\CryptoBotService;
-use Doctrine\Common\EventSubscriber;
 use Doctrine\ORM\Event\PreUpdateEventArgs;
 use Doctrine\ORM\Events;
 
-class CryptoTradeConfigSubscriber implements EventSubscriber
+#[AsDoctrineListener(event: Events::preUpdate)]
+class CryptoTradeConfigSubscriber
 {
-    /**
-     * The list of parameters which affect BUY price calculation logic.
-     */
     public const CANCEL_EXCHANGE_BUY_ORDER_ON = [
         'usdtLimit'                            => true,
         'enabled'                              => true,
@@ -34,26 +28,13 @@ class CryptoTradeConfigSubscriber implements EventSubscriber
         'signalConfig.percentFilter'           => true,
         'signalConfig.sellPriceCorrectionMode' => true,
     ];
-
     public const BOT_REMOTE_UPDATE_REQUIRED = [
         'label' => true,
         'score' => true,
     ];
-
-    private CryptoBotService $cryptoBotService;
-
-    public function __construct(CryptoBotService $cryptoBotService)
+    public function __construct(private readonly CryptoBotService $cryptoBotService)
     {
-        $this->cryptoBotService = $cryptoBotService;
     }
-
-    public function getSubscribedEvents()
-    {
-        return [
-            Events::preUpdate,
-        ];
-    }
-
     public function preUpdate(PreUpdateEventArgs $eventArgs): void
     {
         $entity = $eventArgs->getObject();
@@ -62,7 +43,6 @@ class CryptoTradeConfigSubscriber implements EventSubscriber
             return;
         }
 
-        // todo: move this logic to service, refactor required in the future.
         $cryptoBot = $entity->getCryptobot();
         if (!$cryptoBot->isRunning()) {
             return;
@@ -90,7 +70,6 @@ class CryptoTradeConfigSubscriber implements EventSubscriber
                     CryptoBotService::OPERATION_BUY
                 );
             } catch (\Throwable $exception) {
-                // It can be something wrong on server (bot) or Order could not exist on Crypto Exchange.
                 unset($exception);
             }
         }
@@ -99,7 +78,6 @@ class CryptoTradeConfigSubscriber implements EventSubscriber
             try {
                 $this->cryptoBotService->updateOneTradeLimit($cryptoBot, $entity);
             } catch (\Throwable $exception) {
-                // It can be something wrong on server (bot) or Order could not exist on Crypto Exchange.
                 unset($exception);
             }
         }

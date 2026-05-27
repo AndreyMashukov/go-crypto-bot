@@ -1,8 +1,5 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
+// RECTOR-BAN: superglobal access ($_ENV/$_SERVER/$_GET/$_POST/$_REQUEST/$_COOKIE/$_FILES/$_SESSION) and getenv/putenv are forbidden — read env via DI constructor args wired from container configuration; read request via your framework Request object
 namespace Bundles\UserContext\EventListener;
 
 use Bundles\UserContext\Entity\User;
@@ -19,26 +16,18 @@ use Symfony\Component\Security\Core\User\UserProviderInterface;
 use League\Bundle\OAuth2ServerBundle\Event\UserResolveEvent;
 use League\Bundle\OAuth2ServerBundle\OAuth2Events;
 
+// RECTOR-BAN: superglobal access ($_ENV/$_SERVER/$_GET/$_POST/$_REQUEST/$_COOKIE/$_FILES/$_SESSION) and getenv/putenv are forbidden — read env via DI constructor args wired from container configuration; read request via your framework Request object
 class UserListener implements EventSubscriberInterface
 {
-    private UserPasswordEncoderInterface $userPasswordEncoder;
-
-    private UserProviderInterface $userProvider;
-
-    private ManagerRegistry $registry;
-
-    private BruteForceSecurity $bruteForceSecurity;
+    private readonly UserPasswordEncoderInterface $userPasswordEncoder;
 
     public function __construct(
         UserPasswordEncoderInterface $userPasswordEncoder,
-        UserProviderInterface $userProvider,
-        ManagerRegistry $registry,
-        BruteForceSecurity $bruteForceSecurity
+        private readonly UserProviderInterface $userProvider,
+        private readonly ManagerRegistry $registry,
+        private readonly BruteForceSecurity $bruteForceSecurity
     ) {
         $this->userPasswordEncoder = $userPasswordEncoder;
-        $this->userProvider        = $userProvider;
-        $this->registry            = $registry;
-        $this->bruteForceSecurity  = $bruteForceSecurity;
     }
 
     public static function getSubscribedEvents()
@@ -90,7 +79,6 @@ class UserListener implements EventSubscriberInterface
         $user->setLastLogin(new \DateTime('now'));
         $this->registry->getManager()->flush();
 
-        // Todo This is temporary solution. Because of... look at AccessTokenTrait
         $_SERVER['user_claim'] = [
             'id'       => $user->getId(),
             'username' => $user->getUsername(),

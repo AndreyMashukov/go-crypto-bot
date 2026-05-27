@@ -1,26 +1,13 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\CryptoBotContext\Model;
 
 class RSSFeedArticle
 {
-    private string $url;
-
-    private string $title;
-
-    private string $shortText;
-
-    private array $fullText;
-
-    public function __construct(string $url, string $title, string $shortText, array $fullText)
+    public function __construct(private readonly string $url, private readonly string $title, private readonly string $shortText, private readonly array $fullText)
     {
-        $this->url       = $url;
-        $this->title     = $title;
-        $this->shortText = $shortText;
-        $this->fullText  = $fullText;
     }
 
     public function getUrl(): string

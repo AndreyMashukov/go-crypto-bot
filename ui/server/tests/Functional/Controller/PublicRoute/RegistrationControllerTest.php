@@ -1,27 +1,17 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace App\Tests\Functional\Controller\PublicRoute;
 
+use Lcobucci\JWT\Token\Parser;
 use App\Tests\AsyncHandlerTestCase;
 use Bundles\OxaPayContext\Entity\PromoCode;
 use Bundles\UserContext\Entity\User;
 use Bundles\UserContext\Model\Register;
 use Lcobucci\JWT\Encoding\JoseEncoder;
-use Lcobucci\JWT\Token;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * @group functional
- */
 class RegistrationControllerTest extends AsyncHandlerTestCase
 {
-    /**
-     * Should allow to register user and send code.
-     */
     public function testShouldAllowToRegisterUserAndSendCode(): void
     {
         $email = 'amashukov@example.com';
@@ -55,7 +45,7 @@ class RegistrationControllerTest extends AsyncHandlerTestCase
         $json = $this->deserialize($this->apiPublicRequest($url, Request::METHOD_POST, $body));
         $this->assertArrayHasKey('access_token', $json);
 
-        $parser    = new Token\Parser(new JoseEncoder());
+        $parser    = new Parser(new JoseEncoder());
         $parsedJWT = $parser->parse($json['access_token']);
         $userData  = $parsedJWT->claims()->get('user');
 
@@ -72,11 +62,9 @@ class RegistrationControllerTest extends AsyncHandlerTestCase
     }
 
     /**
-     * @param string $email
      *
      * @throws \Exception
      *
-     * @return string
      */
     private function getSecret(string $email): string
     {

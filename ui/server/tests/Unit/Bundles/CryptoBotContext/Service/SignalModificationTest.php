@@ -1,27 +1,17 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Unit\Bundles\CryptoBotContext\Service;
 
 use Bundles\CryptoBotContext\Entity\CryptoTradeConfig;
 use Bundles\CryptoBotContext\Entity\Embedded\SignalConfig;
 use Bundles\CryptoBotContext\Model\Signal;
-use Bundles\CryptoBotContext\Model\SignalProfitOption;
 use Bundles\CryptoBotContext\Repository\TradeRepository;
 use Bundles\CryptoBotContext\Service\SignalModification;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @group unit
- */
 class SignalModificationTest extends TestCase
 {
     private SignalModification $signalModification;
 
-    /** @var MockObject|TradeRepository */
     private TradeRepository $tradeRepository;
 
     protected function setUp(): void
@@ -34,9 +24,6 @@ class SignalModificationTest extends TestCase
      * Should allow to modify signal.
      *
      * @dataProvider signalDataProvider
-     *
-     * @param float $minSellPrice
-     * @param array $expects
      */
     public function testShouldAllowToModifySignal(float $minSellPrice, array $expects): void
     {
@@ -123,7 +110,6 @@ class SignalModificationTest extends TestCase
         $signalNew = $this->signalModification->modify($signal, $config);
         $this->assertEquals($signal, $signalNew);
         $this->assertCount(3, $setProfitOptions);
-        /** @var SignalProfitOption $firstProfit */
         $firstProfit = $setProfitOptions[0];
         $this->assertEquals($expects[0][0], $firstProfit->getSellPrice());
         $this->assertEquals($expects[0][1], $firstProfit->index);
@@ -132,7 +118,6 @@ class SignalModificationTest extends TestCase
         $this->assertEquals($expects[0][4], $firstProfit->optionUnit);
         $this->assertEquals($expects[0][5], $firstProfit->isTriggerOption);
 
-        /** @var SignalProfitOption $secondProfit */
         $secondProfit = $setProfitOptions[1];
         $this->assertEquals($expects[1][0], $secondProfit->getSellPrice());
         $this->assertEquals($expects[1][1], $secondProfit->index);
@@ -141,7 +126,6 @@ class SignalModificationTest extends TestCase
         $this->assertEquals($expects[1][4], $secondProfit->optionUnit);
         $this->assertEquals($expects[1][5], $secondProfit->isTriggerOption);
 
-        /** @var SignalProfitOption $secondProfit */
         $secondProfit = $setProfitOptions[2];
         $this->assertEquals($expects[2][0], $secondProfit->getSellPrice());
         $this->assertEquals($expects[2][1], $secondProfit->index);

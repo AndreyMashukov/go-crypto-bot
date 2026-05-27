@@ -1,22 +1,12 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace App\Tests\Functional\Controller\V1;
 
 use App\Tests\RestTestCase;
 use Bundles\UserContext\Entity\User;
 use Symfony\Component\HttpFoundation\Request;
 
-/**
- * @group functional
- */
 class UserControllerTest extends RestTestCase
 {
-    /**
-     * Should allow to get authorized user info.
-     */
     public function testShouldAllowToGetAuthorizedUserInfo(): void
     {
         $date = new \DateTimeImmutable();
@@ -25,7 +15,6 @@ class UserControllerTest extends RestTestCase
         $json = $this->deserialize($this->apiRequest($url));
         $this->assertJsonSnapshot($json);
 
-        // Check user activity time is updated
         $user = $this->em->getRepository(User::class)->findOneBy([
             'username' => $this->username,
         ]);

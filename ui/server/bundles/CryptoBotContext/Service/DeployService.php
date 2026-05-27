@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Service;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
@@ -13,20 +9,13 @@ use Psr\Log\LoggerInterface;
 
 class DeployService extends AbstractHttpService
 {
-    private HealthCheckService $healthCheckService;
-
-    private AlertService $alertService;
-
     public function __construct(
         ClientInterface $client,
         LoggerInterface $logger,
-        HealthCheckService $healthCheckService,
-        AlertService $alertService
+        private readonly HealthCheckService $healthCheckService,
+        private readonly AlertService $alertService
     ) {
         parent::__construct($client, $logger);
-
-        $this->healthCheckService = $healthCheckService;
-        $this->alertService       = $alertService;
     }
 
     public function stop(CryptoBot $cryptoBot, Server $server): void
@@ -100,7 +89,7 @@ class DeployService extends AbstractHttpService
                     $health = [];
                     throw new \LogicException('API key checking...');
                 }
-            } catch (\Throwable $exception) {
+            } catch (\Throwable) {
                 sleep(1);
                 ++$attempts;
             }
@@ -108,7 +97,7 @@ class DeployService extends AbstractHttpService
 
         $user = $cryptoBot->getUser();
 
-        if (!$health) {
+        if ($health === []) {
             $errorMessage = 'Bot was not deployed, please try later.';
             $cryptoBot->setErrorMessage($errorMessage);
             $this->alertService->alert("DeployService: Bot #{$cryptoBot->getId()} ({$cryptoBot->getProvider()}) User {$user->getEmail()} - {$errorMessage}");

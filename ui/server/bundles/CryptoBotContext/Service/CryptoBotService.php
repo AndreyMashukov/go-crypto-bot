@@ -1,10 +1,7 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Service;
 
+use GuzzleHttp\Exception\GuzzleException;
 use Bundles\CryptoBotContext\Entity\CryptoBot;
 use Bundles\CryptoBotContext\Entity\CryptoTradeConfig;
 use Bundles\CryptoBotContext\Model\ExtraChargeOption;
@@ -25,16 +22,12 @@ class CryptoBotService extends AbstractHttpService
 
     public const OPERATION_SELL = 'sell';
 
-    private ArrayTransformerInterface $arrayTransformer;
-
     public function __construct(
         ClientInterface $client,
         LoggerInterface $logger,
-        ArrayTransformerInterface $arrayTransformer
+        private readonly ArrayTransformerInterface $arrayTransformer
     ) {
         parent::__construct($client, $logger);
-
-        $this->arrayTransformer = $arrayTransformer;
     }
 
     public function setupLimits(CryptoBot $cryptoBot): void
@@ -78,7 +71,6 @@ class CryptoBotService extends AbstractHttpService
             }
         }
 
-        // disable deleted limits
         foreach ($currentLimitsMap as $deletedLimit) {
             $deletedLimit['isEnabled'] = false;
             $this->updateLimit(
@@ -114,7 +106,6 @@ class CryptoBotService extends AbstractHttpService
             $cryptoConfig->setSellConditions($config['tradeFiltersSell'] ?? []);
             $cryptoConfig->setAvgConditions($config['tradeFiltersExtraCharge'] ?? []);
 
-            // todo: test it!
             $previousConfig = $previousConfigs[$cryptoConfig->getSymbol()] ?? null;
             if ($previousConfig instanceof CryptoTradeConfig) {
                 $previousSignalConfig = $previousConfig->getSignalConfig();
@@ -310,7 +301,7 @@ class CryptoBotService extends AbstractHttpService
         } catch (BadResponseException $exception) {
             $message = $exception->getResponse()->getBody()->getContents();
 
-            throw new \BadMethodCallException($message);
+            throw new \BadMethodCallException($message, $exception->getCode(), $exception);
         }
     }
 
@@ -342,9 +333,7 @@ class CryptoBotService extends AbstractHttpService
     }
 
     /**
-     * @param MultiExtraCharge $extraCharge
-     *
-     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws GuzzleException
      */
     public function setMultiExtraCharge(MultiExtraCharge $extraCharge): void
     {
@@ -358,28 +347,22 @@ class CryptoBotService extends AbstractHttpService
                 "http://{$extraCharge->cryptobot->getIpAddress()}:{$extraCharge->cryptobot->getPort()}/order/extra/charge/update?botUuid={$extraCharge->cryptobot->getUuid()}",
                 [
                     'orderId'            => $extraCharge->orderId,
-                    'extraChargeOptions' => $extraCharge->extraChargeOptions->map(function (
-                        ExtraChargeOption $chargeOption
-                    ) {
-                        return [
-                            'index'      => $chargeOption->index,
-                            'percent'    => $chargeOption->percent,
-                            'amountUsdt' => $chargeOption->amountUsdt,
-                        ];
-                    })->toArray(),
+                    'extraChargeOptions' => $extraCharge->extraChargeOptions->map(fn(ExtraChargeOption $chargeOption) => [
+                        'index'      => $chargeOption->index,
+                        'percent'    => $chargeOption->percent,
+                        'amountUsdt' => $chargeOption->amountUsdt,
+                    ])->toArray(),
                 ]
             );
         } catch (BadResponseException $exception) {
             $message = $exception->getResponse()->getBody()->getContents();
 
-            throw new \BadMethodCallException($message);
+            throw new \BadMethodCallException($message, $exception->getCode(), $exception);
         }
     }
 
     /**
-     * @param MultiProfitOption $multiProfitOption
-     *
-     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @throws GuzzleException
      */
     public function setMultiProfitOption(MultiProfitOption $multiProfitOption): void
     {
@@ -393,23 +376,19 @@ class CryptoBotService extends AbstractHttpService
                 "http://{$multiProfitOption->cryptobot->getIpAddress()}:{$multiProfitOption->cryptobot->getPort()}/order/profit/options/update?botUuid={$multiProfitOption->cryptobot->getUuid()}",
                 [
                     'orderId'       => $multiProfitOption->orderId,
-                    'profitOptions' => $multiProfitOption->profitOptions->map(function (
-                        ProfitOption $chargeOption
-                    ) {
-                        return [
-                            'index'           => $chargeOption->index,
-                            'isTriggerOption' => (bool) $chargeOption->isTriggerOption,
-                            'optionValue'     => $chargeOption->optionValue,
-                            'optionUnit'      => $chargeOption->optionUnit,
-                            'optionPercent'   => $chargeOption->optionPercent,
-                        ];
-                    })->toArray(),
+                    'profitOptions' => $multiProfitOption->profitOptions->map(fn(ProfitOption $chargeOption) => [
+                        'index'           => $chargeOption->index,
+                        'isTriggerOption' => (bool) $chargeOption->isTriggerOption,
+                        'optionValue'     => $chargeOption->optionValue,
+                        'optionUnit'      => $chargeOption->optionUnit,
+                        'optionPercent'   => $chargeOption->optionPercent,
+                    ])->toArray(),
                 ]
             );
         } catch (BadResponseException $exception) {
             $message = $exception->getResponse()->getBody()->getContents();
 
-            throw new \BadMethodCallException($message);
+            throw new \BadMethodCallException($message, $exception->getCode(), $exception);
         }
     }
 
@@ -419,24 +398,24 @@ class CryptoBotService extends AbstractHttpService
             'PUT',
             "http://{$cryptoBot->getIpAddress()}:{$cryptoBot->getPort()}/trade/limit/update?botUuid={$cryptoBot->getUuid()}",
             [
-                'symbol'                       => $config ? $config->getSymbol() : $currentLimit['symbol'],
-                'USDTLimit'                    => $config ? $config->getUsdtLimit() : $currentLimit['USDTLimit'],
+                'symbol'                       => $config instanceof CryptoTradeConfig ? $config->getSymbol() : $currentLimit['symbol'],
+                'USDTLimit'                    => $config instanceof CryptoTradeConfig ? $config->getUsdtLimit() : $currentLimit['USDTLimit'],
                 'minPrice'                     => $currentLimit['minPrice'] ?? 0.001,
                 'minQuantity'                  => $currentLimit['minQuantity'] ?? 0.001,
                 'minNotional'                  => $currentLimit['minNotional'] ?? 0.001,
-                'isEnabled'                    => $config ? $config->isEnabled() : $currentLimit['isEnabled'],
-                'minPriceMinutesPeriod'        => $config ? $config->getMinPriceMinutesPeriod() : $currentLimit['minPriceMinutesPeriod'],
-                'frameInterval'                => $config ? $config->getFrameInterval() : $currentLimit['frameInterval'],
-                'framePeriod'                  => $config ? $config->getFramePeriod() : $currentLimit['framePeriod'],
-                'buyPriceHistoryCheckInterval' => $config ? $config->getBuyPriceHistoryCheckInterval() : $currentLimit['buyPriceHistoryCheckInterval'],
-                'buyPriceHistoryCheckPeriod'   => $config ? $config->getBuyPriceHistoryCheckPeriod() : $currentLimit['buyPriceHistoryCheckPeriod'],
-                'profitOptions'                => $config ? $config->getProfitOptionsMapped() : ($currentLimit['profitOptions'] ?? []),
-                'extraChargeOptions'           => $config ? $config->getExtraChargeOptions() : ($currentLimit['extraChargeOptions'] ?? []),
-                'tradeFiltersBuy'              => $config ? $config->getBuyConditions() : ($currentLimit['tradeFiltersBuy'] ?? []),
-                'tradeFiltersSell'             => $config ? $config->getSellConditions() : ($currentLimit['tradeFiltersSell'] ?? []),
-                'tradeFiltersExtraCharge'      => $config ? $config->getAvgConditions() : ($currentLimit['tradeFiltersExtraCharge'] ?? []),
-                'sentimentLabel'               => $config ? $config->getLabel() : ($currentLimit['sentimentLabel'] ?? []),
-                'sentimentScore'               => $config ? $config->getScore() : ($currentLimit['sentimentScore'] ?? []),
+                'isEnabled'                    => $config instanceof CryptoTradeConfig ? $config->isEnabled() : $currentLimit['isEnabled'],
+                'minPriceMinutesPeriod'        => $config instanceof CryptoTradeConfig ? $config->getMinPriceMinutesPeriod() : $currentLimit['minPriceMinutesPeriod'],
+                'frameInterval'                => $config instanceof CryptoTradeConfig ? $config->getFrameInterval() : $currentLimit['frameInterval'],
+                'framePeriod'                  => $config instanceof CryptoTradeConfig ? $config->getFramePeriod() : $currentLimit['framePeriod'],
+                'buyPriceHistoryCheckInterval' => $config instanceof CryptoTradeConfig ? $config->getBuyPriceHistoryCheckInterval() : $currentLimit['buyPriceHistoryCheckInterval'],
+                'buyPriceHistoryCheckPeriod'   => $config instanceof CryptoTradeConfig ? $config->getBuyPriceHistoryCheckPeriod() : $currentLimit['buyPriceHistoryCheckPeriod'],
+                'profitOptions'                => $config instanceof CryptoTradeConfig ? $config->getProfitOptionsMapped() : ($currentLimit['profitOptions'] ?? []),
+                'extraChargeOptions'           => $config instanceof CryptoTradeConfig ? $config->getExtraChargeOptions() : ($currentLimit['extraChargeOptions'] ?? []),
+                'tradeFiltersBuy'              => $config instanceof CryptoTradeConfig ? $config->getBuyConditions() : ($currentLimit['tradeFiltersBuy'] ?? []),
+                'tradeFiltersSell'             => $config instanceof CryptoTradeConfig ? $config->getSellConditions() : ($currentLimit['tradeFiltersSell'] ?? []),
+                'tradeFiltersExtraCharge'      => $config instanceof CryptoTradeConfig ? $config->getAvgConditions() : ($currentLimit['tradeFiltersExtraCharge'] ?? []),
+                'sentimentLabel'               => $config instanceof CryptoTradeConfig ? $config->getLabel() : ($currentLimit['sentimentLabel'] ?? []),
+                'sentimentScore'               => $config instanceof CryptoTradeConfig ? $config->getScore() : ($currentLimit['sentimentScore'] ?? []),
             ]
         );
     }

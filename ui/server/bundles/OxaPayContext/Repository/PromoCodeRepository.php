@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\OxaPayContext\Repository;
 
@@ -11,11 +10,6 @@ use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<PromoCode>
- *
- * @method null|PromoCode find($id, $lockMode = null, $lockVersion = null)
- * @method null|PromoCode findOneBy(array $criteria, array $orderBy = null)
- * @method PromoCode[]    findAll()
- * @method PromoCode[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
 class PromoCodeRepository extends ServiceEntityRepository
 {
@@ -42,28 +36,5 @@ class PromoCodeRepository extends ServiceEntityRepository
         }
     }
 
-//    /**
-//     * @return PromoCode[] Returns an array of PromoCode objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('p')
-//            ->andWhere('p.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('p.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
 
-//    public function findOneBySomeField($value): ?PromoCode
-//    {
-//        return $this->createQueryBuilder('p')
-//            ->andWhere('p.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
 }

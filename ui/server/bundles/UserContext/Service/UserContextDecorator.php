@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\UserContext\Service;
 
@@ -10,21 +9,13 @@ use Flagception\Decorator\ContextDecoratorInterface;
 use Flagception\Exception\AlreadyDefinedException;
 use Flagception\Model\Context;
 
-/**
- * Class UserContextDecorator.
- */
 class UserContextDecorator implements ContextDecoratorInterface
 {
-    private UserProvider $userProvider;
-
     /**
      * ClientContextDecorator constructor.
-     *
-     * @param UserProvider $userProvider
      */
-    public function __construct(UserProvider $userProvider)
+    public function __construct(private readonly UserProvider $userProvider)
     {
-        $this->userProvider = $userProvider;
     }
 
     public function getName(): string
@@ -33,15 +24,12 @@ class UserContextDecorator implements ContextDecoratorInterface
     }
 
     /**
-     * @param Context $context
      *
      * @throws AlreadyDefinedException
      *
-     * @return Context
      */
     public function decorate(Context $context): Context
     {
-        /** @var User $user */
         $user = $this->userProvider->getCurrentUser();
 
         if ($user instanceof User) {

@@ -1,17 +1,13 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\TgBotContext\Model;
 
 class StartInput implements Input
 {
-    private ?string $tracker;
-
-    public function __construct(?string $tracker)
+    public function __construct(private readonly ?string $tracker)
     {
-        $this->tracker = $tracker;
     }
 
     public function getText(): string

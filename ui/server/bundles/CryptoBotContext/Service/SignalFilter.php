@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\CryptoBotContext\Service;
 
@@ -13,20 +12,13 @@ use Bundles\CryptoBotContext\Repository\TradeRepository;
 
 class SignalFilter
 {
-    private TradeRepository $tradeRepository;
-
-    public function __construct(TradeRepository $tradeRepository)
+    public function __construct(private readonly TradeRepository $tradeRepository)
     {
-        $this->tradeRepository = $tradeRepository;
     }
 
     /**
-     * @param Signal            $signal
-     * @param CryptoTradeConfig $config
-     *
      * @throws BadTradeSignalException
      *
-     * @return Signal
      */
     public function process(Signal $signal, CryptoTradeConfig $config): void
     {
@@ -64,7 +56,6 @@ class SignalFilter
         if ($signalConfig->isAvgSellFilter()) {
             $matched = false;
 
-            /** @var SignalProfitOption $option */
             foreach ($signal->getProfitOptions() as $option) {
                 if ($option->getSellPrice() <= $avgSellPrice) {
                     $matched = true;

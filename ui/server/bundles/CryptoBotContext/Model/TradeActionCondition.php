@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\CryptoBotContext\Model;
 
@@ -20,42 +19,23 @@ class TradeActionCondition
         'sentiment_score',
     ];
 
-    /**
-     * @var null|string
-     */
     public ?string $symbol = null;
 
-    /**
-     * @var null|string
-     */
     public ?string $parameter = null;
 
-    /**
-     * @var null|string
-     */
     public ?string $condition = null;
 
-    /**
-     * @var null|string
-     */
     public ?string $value = null;
 
-    /**
-     * @var null|string
-     */
     public ?string $type = null;
 
     /**
      * @Assert\NotNull
      * @Assert\Valid
-     *
-     * @var array
      */
     public array $children = [];
 
     /**
-     * @Assert\Callback
-     *
      * @param mixed $payload
      */
     public function validateSymbol(ExecutionContextInterface $context, $payload): bool
@@ -77,8 +57,6 @@ class TradeActionCondition
     }
 
     /**
-     * @Assert\Callback
-     *
      * @param mixed $payload
      */
     public function validateParameter(ExecutionContextInterface $context, $payload): bool
@@ -109,8 +87,6 @@ class TradeActionCondition
     }
 
     /**
-     * @Assert\Callback
-     *
      * @param mixed $payload
      */
     public function validateCondition(ExecutionContextInterface $context, $payload): bool
@@ -146,8 +122,6 @@ class TradeActionCondition
     }
 
     /**
-     * @Assert\Callback
-     *
      * @param mixed $payload
      */
     public function validateValue(ExecutionContextInterface $context, $payload): bool

@@ -1,27 +1,16 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Entity;
 
-use Bundles\CryptoBotContext\Repository\CryptoBotRepository;
 use Bundles\OxaPayContext\Service\PaidServiceManager;
 use Bundles\UserContext\Entity\User;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\Criteria;
-use Doctrine\ORM\Mapping as ORM;
 use JMS\Serializer\Annotation as Serializer;
 use Ramsey\Uuid\Uuid;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
-/**
- * @ORM\Entity(repositoryClass=CryptoBotRepository::class)
- *
- * @Serializer\ExclusionPolicy(Serializer\ExclusionPolicy::ALL)
- */
 class CryptoBot
 {
     public const PROVIDER_BINANCE = 'binance';
@@ -38,148 +27,41 @@ class CryptoBot
 
     public const STATUS_ERROR = 'error';
 
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(name="ctb_id", type="integer")
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot"})
-     */
-    private $id;
+    private ?int $id = null;
 
-    /**
-     * @ORM\Column(name="ctb_uuid", type="uuid")
-     */
     private $uuid;
 
-    /**
-     * @ORM\Column(name="ctb_provider", type="string", length=50)
-     *
-     * @Assert\Choice(choices={"binance", "bybit"})
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot"})
-     */
     private string $provider = self::PROVIDER_BINANCE;
 
-    /**
-     * @ORM\Column(name="ctb_api_key", type="string", length=255, nullable=true)
-     *
-     * @Assert\Regex(pattern="/^[a-z0-9]+$/ui")
-     * @Assert\NotBlank
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot_secured"})
-     */
-    private $apiKey;
+    private ?string $apiKey = null;
 
-    /**
-     * @ORM\Column(name="ctb_api_secret", type="string", length=255, nullable=true)
-     *
-     * @Assert\Regex(pattern="/^[a-z0-9]+$/ui")
-     * @Assert\NotBlank
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot_secured"})
-     */
-    private $apiSecret;
+    private ?string $apiSecret = null;
 
-    /**
-     * @ORM\ManyToOne(targetEntity="Bundles\CryptoBotContext\Entity\Server", inversedBy="cryptoBots")
-     * @ORM\JoinColumn(name="ctb_server", nullable=true, referencedColumnName="srv_id")
-     */
     private ?Server $server = null;
 
-    /**
-     * @ORM\Column(name="ctb_port", type="string", length=255, nullable=true)
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot_secured"})
-     */
-    private $port;
+    private ?string $port = null;
 
-    /**
-     * @ORM\ManyToOne(targetEntity=User::class, inversedBy="cryptoBots")
-     * @ORM\JoinColumn(name="ctb_user", nullable=false)
-     */
-    private $user;
+    private ?string $containerId = null;
 
-    /**
-     * @ORM\Column(name="ctb_container_id", type="string", length=255, nullable=true)
-     */
-    private $containerId;
-
-    /**
-     * @ORM\Column(name="ctb_status", type="string", length=255)
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot"})
-     */
     private string $status = self::STATUS_NEW;
 
-    /**
-     * @ORM\OneToMany(targetEntity=CryptoTradeConfig::class, mappedBy="cryptobot", cascade={"persist", "remove"},
-     * orphanRemoval=true)
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot"})
-     */
     private Collection $cryptoTradeConfigs;
 
-    /**
-     * @ORM\Column(name="ctb_master", type="boolean")
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot"})
-     */
     private bool $master = false;
 
-    /**
-     * @ORM\Column(name="ctb_error_message", type="text", nullable=true)
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot"})
-     */
     private ?string $errorMessage = null;
 
-    /**
-     * @ORM\ManyToOne(targetEntity="Bundles\CryptoBotContext\Entity\Server")
-     * @ORM\JoinColumn(name="ctb_dedicated_server", nullable=true, referencedColumnName="srv_id")
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot"})
-     */
     private ?Server $dedicated = null;
 
-    /**
-     * @ORM\Column(name="ctb_restart_required", type="boolean", options={"default": 0})
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot"})
-     */
     private bool $restartRequired = false;
 
-    /**
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot"})
-     *
-     * @ORM\Column(name="ctb_dedicated_server_expires_at", type="datetime_immutable", nullable=true)
-     */
     private ?\DateTimeImmutable $dedicatedServerExpiresAt = null;
 
-    /**
-     * @ORM\Column(name="ctb_test", type="boolean", options={"default": 0})
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot"})
-     */
     private bool $test = false;
 
-    public function __construct(User $user)
+    public function __construct(private User $user)
     {
         $this->uuid               = Uuid::uuid4();
-        $this->user               = $user;
         $this->cryptoTradeConfigs = new ArrayCollection();
     }
 
@@ -236,11 +118,6 @@ class CryptoBot
         return $this;
     }
 
-    /**
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"cryptobot"})
-     * @Serializer\VirtualProperty("ipAddress")
-     */
     public function getIpAddress(): ?string
     {
         if (!$this->server instanceof Server) {
@@ -368,14 +245,11 @@ class CryptoBot
     }
 
     /**
-     * @Assert\Callback
-     *
      * @param mixed $payload
      */
     public function validateLimits(ExecutionContextInterface $context, $payload): bool
     {
         $symbols = [];
-        /** @var CryptoTradeConfig $config */
         foreach ($this->cryptoTradeConfigs as $config) {
             $symbols[] = $config->getSymbol();
         }
@@ -429,9 +303,7 @@ class CryptoBot
     public function getPairsHash(): string
     {
         $pairs = $this->getCryptoTradeConfigs()->toArray();
-        usort($pairs, function (CryptoTradeConfig $a, CryptoTradeConfig $b) {
-            return $a->getId() > $b->getId() ? 1 : -1;
-        });
+        usort($pairs, fn(CryptoTradeConfig $a, CryptoTradeConfig $b) => $a->getId() > $b->getId() ? 1 : -1);
 
         $symbols = array_map(fn (CryptoTradeConfig $x) => $x->getSymbol(), $pairs);
 
@@ -465,8 +337,6 @@ class CryptoBot
      * @Serializer\VirtualProperty("hasActiveSignalSubscription")
      * @Serializer\Expose
      * @Serializer\Groups(groups={"cryptobot"})
-     *
-     * @return bool
      */
     public function hasActiveSignalSubscription(): bool
     {
@@ -489,8 +359,6 @@ class CryptoBot
      * @Serializer\VirtualProperty("hasDedicatedServer")
      * @Serializer\Expose
      * @Serializer\Groups(groups={"cryptobot"})
-     *
-     * @return bool
      */
     public function hasDedicatedServer(): bool
     {
@@ -501,19 +369,14 @@ class CryptoBot
      * @Serializer\VirtualProperty("dedicatedPaidServiceCode")
      * @Serializer\Expose
      * @Serializer\Groups(groups={"cryptobot"})
-     *
-     * @return null|string
      */
     public function getDedicatedPaidServiceCode(): ?string
     {
-        switch ($this->provider) {
-            case self::PROVIDER_BINANCE:
-                return PaidServiceManager::DEDICATED_SERVER_BINANCE_CODE;
-            case self::PROVIDER_BYBIT:
-                return PaidServiceManager::DEDICATED_SERVER_BYBIT_CODE;
-            default:
-                return null;
-        }
+        return match ($this->provider) {
+            self::PROVIDER_BINANCE => PaidServiceManager::DEDICATED_SERVER_BINANCE_CODE,
+            self::PROVIDER_BYBIT => PaidServiceManager::DEDICATED_SERVER_BYBIT_CODE,
+            default => null,
+        };
     }
 
     public function getDedicatedServerExpiresAt(): ?\DateTimeImmutable
@@ -532,8 +395,6 @@ class CryptoBot
      * @Serializer\VirtualProperty("hasActiveDedicatedServerSubscription")
      * @Serializer\Expose
      * @Serializer\Groups(groups={"cryptobot"})
-     *
-     * @return bool
      */
     public function hasActiveDedicatedServerSubscription(): bool
     {

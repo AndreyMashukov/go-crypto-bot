@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\OxaPayContext\Service;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
@@ -25,25 +21,11 @@ class PaidServiceManager
 
     public const DEDICATED_SERVER_BYBIT_CODE = 'dedicated_bybit_server';
 
-    private EntityManagerInterface $entityManager;
-
-    private ServerRepository $serverRepository;
-
-    private AlertService $alertService;
-
-    public function __construct(
-        EntityManagerInterface $entityManager,
-        ServerRepository $serverRepository,
-        AlertService $alertService
-    ) {
-        $this->entityManager    = $entityManager;
-        $this->serverRepository = $serverRepository;
-        $this->alertService     = $alertService;
+    public function __construct(private readonly EntityManagerInterface $entityManager, private readonly ServerRepository $serverRepository, private readonly AlertService $alertService)
+    {
     }
 
     /**
-     * @param User $user
-     *
      * @return array|PaidService[]
      */
     public function getServiceList(User $user): array
@@ -54,21 +36,17 @@ class PaidServiceManager
         $services[]           = new PaidService(
             self::BASIC_SUBSCRIPTION_CODE,
             $hasBasicSubscription,
-            890.00, // 890 USDT
-            30, // 30 Days
-            $hasBasicSubscription ? $user->getBasicSubscriptionExpiresAt() : null
+            890.00, 30, $hasBasicSubscription ? $user->getBasicSubscriptionExpiresAt() : null
         );
 
         $hasSignalSubscription = $user->hasActiveSignalSubscription();
         $services[]            = new PaidService(
             self::SIGNAL_SUBSCRIPTION_CODE,
             $hasSignalSubscription,
-            20.00, // 20 USDT
-            30, // 30 Days
-            $hasSignalSubscription ? $user->getSignalSubscriptionExpiresAt() : null
+            20.00, 30, $hasSignalSubscription ? $user->getSignalSubscriptionExpiresAt() : null
         );
 
-        if ($binanceBot = $user->getBinanceBot()) {
+        if (($binanceBot = $user->getBinanceBot()) instanceof CryptoBot) {
             $hasDedicatedBinance = $binanceBot->hasDedicatedServer() && $binanceBot->hasActiveDedicatedServerSubscription();
 
             $services[] = new PaidService(
@@ -80,7 +58,7 @@ class PaidServiceManager
             );
         }
 
-        if ($bybitBot = $user->getByBitBot()) {
+        if (($bybitBot = $user->getByBitBot()) instanceof CryptoBot) {
             $hasDedicatedByBit = $bybitBot->hasDedicatedServer() && $bybitBot->hasActiveDedicatedServerSubscription();
 
             $services[] = new PaidService(
@@ -96,9 +74,7 @@ class PaidServiceManager
         $services[]         = new PaidService(
             self::API_SUBSCRIPTION_CODE,
             $hasApiSubscription,
-            89.00, // 89 USDT
-            30, // 30 Days
-            $hasApiSubscription ? $user->getApiSubscriptionExpiresAt() : null
+            89.00, 30, $hasApiSubscription ? $user->getApiSubscriptionExpiresAt() : null
         );
 
         return $services;
@@ -155,7 +131,7 @@ class PaidServiceManager
                 }
 
                 $exchangeBot->setDedicatedServerExpiresAt($expiresAt);
-                if (!$exchangeBot->getDedicated()) {
+                if (!$exchangeBot->getDedicated() instanceof Server) {
                     $dedicatedServer = $this->serverRepository->getAvailableServer($exchangeBot);
                     if (!$dedicatedServer instanceof Server) {
                         throw new \BadMethodCallException("Unable to provide dedicated server for bot #{$exchangeBot->getId()}");

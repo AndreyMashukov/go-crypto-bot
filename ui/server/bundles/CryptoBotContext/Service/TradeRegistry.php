@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Service;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
@@ -14,20 +10,8 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class TradeRegistry
 {
-    private EntityManagerInterface $entityManager;
-
-    private TradeRepository $tradeRepository;
-
-    private EventDispatcherInterface $eventDispatcher;
-
-    public function __construct(
-        EntityManagerInterface $entityManager,
-        TradeRepository $tradeRepository,
-        EventDispatcherInterface $eventDispatcher
-    ) {
-        $this->entityManager   = $entityManager;
-        $this->tradeRepository = $tradeRepository;
-        $this->eventDispatcher = $eventDispatcher;
+    public function __construct(private readonly EntityManagerInterface $entityManager, private readonly TradeRepository $tradeRepository, private readonly EventDispatcherInterface $eventDispatcher)
+    {
     }
 
     public function registerTrade(array $tradeData, CryptoBot $cryptoBot): void

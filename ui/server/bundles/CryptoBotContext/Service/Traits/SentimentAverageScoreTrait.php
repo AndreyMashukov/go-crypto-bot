@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Service\Traits;
 
 use Bundles\CryptoBotContext\Model\RSSFeedArticle;
@@ -27,15 +23,11 @@ trait SentimentAverageScoreTrait
 
     protected function processAverage(array $average): array
     {
-        switch (true) {
-            case $average[SentimentResult::LABEL_BEARISH] > $average[SentimentResult::LABEL_BULLISH]:
-                return [SentimentResult::LABEL_BEARISH, $average[SentimentResult::LABEL_BEARISH] - $average[SentimentResult::LABEL_BULLISH]];
-            case $average[SentimentResult::LABEL_BULLISH] > $average[SentimentResult::LABEL_BEARISH]:
-                return [SentimentResult::LABEL_BULLISH, $average[SentimentResult::LABEL_BULLISH] - $average[SentimentResult::LABEL_BEARISH]];
-            case 0.00 === $average[SentimentResult::LABEL_BEARISH] && 0.00 === $average[SentimentResult::LABEL_BULLISH]:
-            default:
-                return [SentimentResult::LABEL_NEUTRAL, $average[SentimentResult::LABEL_NEUTRAL]];
-        }
+        return match (true) {
+            $average[SentimentResult::LABEL_BEARISH] > $average[SentimentResult::LABEL_BULLISH] => [SentimentResult::LABEL_BEARISH, $average[SentimentResult::LABEL_BEARISH] - $average[SentimentResult::LABEL_BULLISH]],
+            $average[SentimentResult::LABEL_BULLISH] > $average[SentimentResult::LABEL_BEARISH] => [SentimentResult::LABEL_BULLISH, $average[SentimentResult::LABEL_BULLISH] - $average[SentimentResult::LABEL_BEARISH]],
+            default => [SentimentResult::LABEL_NEUTRAL, $average[SentimentResult::LABEL_NEUTRAL]],
+        };
     }
 
     protected function getAverageResult(RSSFeedArticle $article, array $results, array $relatedCoins): SentimentResult

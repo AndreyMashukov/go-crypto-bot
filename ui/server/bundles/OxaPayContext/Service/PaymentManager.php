@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\OxaPayContext\Service;
 
 use Bundles\OxaPayContext\Entity\Payment;
@@ -17,28 +13,8 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class PaymentManager
 {
-    private PaymentRepository $repository;
-
-    private OxaPayClient $oxaPayClient;
-
-    private EventDispatcherInterface $eventDispatcher;
-
-    private EntityManagerInterface $entityManager;
-
-    private AlertService $alertService;
-
-    public function __construct(
-        PaymentRepository $repository,
-        OxaPayClient $oxaPayClient,
-        EventDispatcherInterface $eventDispatcher,
-        EntityManagerInterface $entityManager,
-        AlertService $alertService
-    ) {
-        $this->repository      = $repository;
-        $this->oxaPayClient    = $oxaPayClient;
-        $this->eventDispatcher = $eventDispatcher;
-        $this->entityManager   = $entityManager;
-        $this->alertService    = $alertService;
+    public function __construct(private readonly PaymentRepository $repository, private readonly OxaPayClient $oxaPayClient, private readonly EventDispatcherInterface $eventDispatcher, private readonly EntityManagerInterface $entityManager, private readonly AlertService $alertService)
+    {
     }
 
     public function validateCallback(OxaCallback $callback): void
@@ -74,12 +50,11 @@ class PaymentManager
 
             $this->alertService->alert("PaymentManager: invoice #{$payment->getId()} ({$payment->getAmount()}$) from User {$payment->getUser()->getEmail()} is paid");
         });
-        // todo: success payment notification
+
     }
 
     public function getBudgetPaymentLink(User $user, float $amount): Payment
     {
-        // todo: get last not expired payment for this payment type
         $payment = new Payment(
             $user,
             $amount,

@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Service;
 
 use Symfony\Contracts\Cache\CacheInterface;
@@ -18,14 +14,8 @@ class CachedTradeListService implements CachedTradeListServiceInterface
 
     public const CACHE_TTL = '+30 seconds';
 
-    private TradeListService $tradeListService;
-
-    private CacheInterface $cache;
-
-    public function __construct(TradeListService $tradeListService, CacheInterface $cache)
+    public function __construct(private readonly TradeListService $tradeListService, private readonly CacheInterface $cache)
     {
-        $this->tradeListService = $tradeListService;
-        $this->cache            = $cache;
     }
 
     public function getPublicPositionList(): array

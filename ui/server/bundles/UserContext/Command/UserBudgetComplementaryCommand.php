@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\UserContext\Command;
 
 use Bundles\UserContext\Entity\User;
@@ -22,22 +18,12 @@ class UserBudgetComplementaryCommand extends Command
 
     protected static $defaultDescription = 'Complementary budget purchase';
 
-    private EventDispatcherInterface $eventDispatcher;
-
-    private EntityManagerInterface $entityManager;
-
-    private UserRepository $userRepository;
-
     public function __construct(
-        EventDispatcherInterface $eventDispatcher,
-        EntityManagerInterface $entityManager,
-        UserRepository $userRepository
+        private readonly EventDispatcherInterface $eventDispatcher,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly UserRepository $userRepository
     ) {
         parent::__construct(self::$defaultName);
-
-        $this->eventDispatcher = $eventDispatcher;
-        $this->entityManager   = $entityManager;
-        $this->userRepository  = $userRepository;
     }
 
     protected function configure(): void

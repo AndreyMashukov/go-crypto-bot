@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\CryptoBotContext\Event;
 
@@ -10,11 +9,8 @@ use Symfony\Contracts\EventDispatcher\Event;
 
 class StopBotEvent extends Event
 {
-    private CryptoBot $cryptoBot;
-
-    public function __construct(CryptoBot $cryptoBot)
+    public function __construct(private readonly CryptoBot $cryptoBot)
     {
-        $this->cryptoBot = $cryptoBot;
     }
 
     public function getCryptoBot(): CryptoBot

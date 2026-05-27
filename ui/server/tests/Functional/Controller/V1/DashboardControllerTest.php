@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Functional\Controller\V1;
 
 use App\Tests\RestTestCase;
@@ -12,23 +8,18 @@ use Bundles\CryptoBotContext\Entity\Server;
 use Bundles\CryptoBotContext\Service\CryptoBotService;
 use Bundles\UserContext\Entity\User;
 use GuzzleHttp\ClientInterface;
-use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * @group functional
- */
 class DashboardControllerTest extends RestTestCase
 {
-    /** @var ClientInterface|MockObject */
     private ClientInterface $guzzle;
 
-    /** @var CryptoBotService|MockObject */
     private CryptoBotService $cryptoBotService;
 
+    #[\Override]
     protected function services(): void
     {
         parent::services();
@@ -40,9 +31,6 @@ class DashboardControllerTest extends RestTestCase
         self::getContainer()->set('test.cryptobot_service', $this->cryptoBotService);
     }
 
-    /**
-     * Should allow to update single config.
-     */
     public function testShouldAllowToUpdateSingleConfig(): void
     {
         $this->guzzle
@@ -116,7 +104,6 @@ class DashboardControllerTest extends RestTestCase
         $json = $this->deserialize($response);
         $this->assertJsonSnapshot($json);
 
-        // Get exchange symbols
         $json = $this->deserialize($this->apiRequest($this->getUrl('v1_cryptobot_symbol_list', [
             'cryptobot' => $cryptoBot->getId(),
         ])));
@@ -126,7 +113,6 @@ class DashboardControllerTest extends RestTestCase
             $symbols[] = $item['symbol'];
         }
         $this->assertContains($config->getSymbol(), $symbols);
-        // Get available symbols
         $json = $this->deserialize($this->apiRequest($this->getUrl('v1_dashboard_symbol_available', [
             'cryptobot' => $cryptoBot->getId(),
         ])));
@@ -139,7 +125,6 @@ class DashboardControllerTest extends RestTestCase
 
         $addedSymbol = $json[0]['symbol'];
 
-        // Quick symbol add
         $response = $this->apiRequest($this->getUrl('v1_dashboard_quick_symbol', [
             'cryptobot' => $cryptoBot->getId(),
         ]), Request::METHOD_POST, [
@@ -149,7 +134,6 @@ class DashboardControllerTest extends RestTestCase
         $json = $this->deserialize($response, Response::HTTP_NO_CONTENT);
         $this->assertJsonSnapshot($json, 'quick_add');
 
-        // Get available symbols
         $json = $this->deserialize($this->apiRequest($this->getUrl('v1_dashboard_symbol_available', [
             'cryptobot' => $cryptoBot->getId(),
         ])));
@@ -174,9 +158,6 @@ class DashboardControllerTest extends RestTestCase
         $this->assertEquals(50.00, $symbolConfig->getUsdtLimit());
     }
 
-    /**
-     * Should allow to get trade stack v2.
-     */
     public function testShouldAllowToGetTradeStackV2(): void
     {
         $this->guzzle
@@ -210,7 +191,6 @@ class DashboardControllerTest extends RestTestCase
 
         $cryptoBot = $this->em->find(CryptoBot::class, 1);
         $this->assertInstanceOf(CryptoBot::class, $cryptoBot);
-        /** @var CryptoTradeConfig $config */
         $config = $cryptoBot->getCryptoTradeConfigs()->first();
         $this->assertInstanceOf(CryptoTradeConfig::class, $config);
         $config->setLabel('BEARISH')->setScore(0.80);
@@ -222,9 +202,6 @@ class DashboardControllerTest extends RestTestCase
         $this->assertJsonSnapshot($json);
     }
 
-    /**
-     * Should allow to get profit report.
-     */
     public function testShouldAllowToGetProfitReport(): void
     {
         $cryptoBot = $this->em->find(CryptoBot::class, 1);
@@ -269,9 +246,6 @@ class DashboardControllerTest extends RestTestCase
         $this->assertJsonSnapshot($json, 'has_trade_month');
     }
 
-    /**
-     * Should allow to get bot positions.
-     */
     public function testShouldAllowGetBotPositionsFromCache(): void
     {
         $this->guzzle
@@ -291,7 +265,6 @@ class DashboardControllerTest extends RestTestCase
                 return $response;
             });
 
-        // Get first bot
         $cryptoBot = $this->em->find(CryptoBot::class, 1);
 
         $cryptoBotConfig = new CryptoTradeConfig();

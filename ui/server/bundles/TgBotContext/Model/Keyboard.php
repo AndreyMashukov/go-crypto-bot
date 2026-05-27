@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\TgBotContext\Model;
 
 use TgBotApi\BotApiBase\Exception\BadArgumentException;
@@ -22,10 +18,8 @@ class Keyboard
     private int $rowLimit = 3;
 
     /**
-     * @param string $action
      *
      * @throws BadArgumentException
-     *
      * @return $this
      */
     public function addAction(string $action): self
@@ -36,10 +30,8 @@ class Keyboard
     }
 
     /**
-     * @param string $action
      *
      * @throws BadArgumentException
-     *
      * @return $this
      */
     public function addContactRequest(string $action): self
@@ -52,10 +44,6 @@ class Keyboard
     }
 
     /**
-     * @param string $action
-     * @param string $url
-     * @param string $data
-     *
      * @throws BadArgumentException
      *
      * @return $this
@@ -72,8 +60,6 @@ class Keyboard
 
     /**
      * @throws BadArgumentException
-     *
-     * @return ReplyKeyboardMarkupType
      */
     public function getKeyboardMarkup(): ReplyKeyboardMarkupType
     {
@@ -83,9 +69,6 @@ class Keyboard
         ]);
     }
 
-    /**
-     * @return InlineKeyboardMarkupType
-     */
     public function getInlineKeyboardMarkup(): InlineKeyboardMarkupType
     {
         if ($this->oneRow) {

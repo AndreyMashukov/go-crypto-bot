@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\UserContext\Service;
 
 use Bundles\UserContext\Entity\User;
@@ -11,14 +7,8 @@ use GuzzleHttp\Exception\ClientException;
 
 class EmailSender
 {
-    private ClientInterface $client;
-
-    private string $apiKey;
-
-    public function __construct(string $apiKey, ClientInterface $client)
+    public function __construct(private readonly string $apiKey, private readonly ClientInterface $client)
     {
-        $this->apiKey = $apiKey;
-        $this->client = $client;
     }
 
     public function send(int $templateId, array $parameters, User $user)
@@ -26,7 +16,7 @@ class EmailSender
         try {
             $contact = $this->getContact($user->getEmail());
             $this->updateContact($user);
-        } catch (ClientException $exception) {
+        } catch (ClientException) {
             $this->createContact($user);
             $contact = $this->getContact($user->getEmail());
         }

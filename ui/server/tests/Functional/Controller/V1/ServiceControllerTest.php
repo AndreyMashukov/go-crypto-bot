@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Functional\Controller\V1;
 
 use App\Tests\RestTestCase;
@@ -12,29 +8,17 @@ use Bundles\UserContext\Entity\User;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * @group functional
- */
 class ServiceControllerTest extends RestTestCase
 {
-    /**
-     * Should allow to get list of service and purchase it.
-     */
     public function testShouldAllowToGetListOfServiceAndPurchaseIt(): void
     {
-//        $json = $this->deserialize($this->apiRequest($this->getUrl('v1_service_get_list')));
-//        $this->assertJsonSnapshot($json, 'list_1');
-
-        $user = $this->em->getRepository(User::class)->findOneBy([
+$user = $this->em->getRepository(User::class)->findOneBy([
             'username' => $this->username,
         ]);
         $this->assertInstanceOf(User::class, $user);
         $user->setSignalSubscriptionExpiresAt(null);
         $this->em->flush();
-//        $json = $this->deserialize($this->apiRequest($this->getUrl('v1_service_get_list')));
-//        $this->assertJsonSnapshot($json, 'list_2');
-
-        $json = $this->deserialize($this->apiRequest($this->getUrl('v1_service_purchase'), Request::METHOD_POST, [
+$json = $this->deserialize($this->apiRequest($this->getUrl('v1_service_purchase'), Request::METHOD_POST, [
             'code' => PaidServiceManager::SIGNAL_SUBSCRIPTION_CODE,
         ]), Response::HTTP_BAD_REQUEST);
         $this->assertJsonSnapshot($json, 'no_balance');
@@ -59,9 +43,6 @@ class ServiceControllerTest extends RestTestCase
         $this->assertEquals(80, $user->getBudget());
     }
 
-    /**
-     * Should allow to pay for basic subscription.
-     */
     public function testShouldAllowToPayForBasicSubscription(): void
     {
         $user = $this->em->getRepository(User::class)->findOneBy([
@@ -92,9 +73,6 @@ class ServiceControllerTest extends RestTestCase
         $this->assertEquals(110, $user->getBudget());
     }
 
-    /**
-     * Should allow to pay for dedicated server.
-     */
     public function testShouldAllowToPayForDedicatedServer(): void
     {
         $user = $this->em->getRepository(User::class)->findOneBy([

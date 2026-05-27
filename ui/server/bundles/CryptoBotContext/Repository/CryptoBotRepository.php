@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Repository;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
@@ -11,11 +7,6 @@ use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<CryptoBot>
- *
- * @method null|CryptoBot find($id, $lockMode = null, $lockVersion = null)
- * @method null|CryptoBot findOneBy(array $criteria, array $orderBy = null)
- * @method CryptoBot[]    findAll()
- * @method CryptoBot[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
 class CryptoBotRepository extends ServiceEntityRepository
 {

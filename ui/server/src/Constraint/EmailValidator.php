@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace App\Constraint;
 
 use Egulias\EmailValidator\EmailValidator as EguliasEmailValidator;
@@ -12,18 +8,13 @@ use Symfony\Component\Validator\ConstraintValidator;
 use Symfony\Component\Validator\Exception\UnexpectedTypeException;
 use Symfony\Component\Validator\Exception\UnexpectedValueException;
 
-/**
- * @author Bernhard Schussek <bschussek@gmail.com>
- *
- * @SuppressWarnings(PHPMD)
- */
 class EmailValidator extends ConstraintValidator
 {
-    private const PATTERN_HTML5 = '/^[a-zA-Z0-9.!#$%&\'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/';
+    private const string PATTERN_HTML5 = '/^[a-zA-Z0-9.!#$%&\'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/';
 
-    private const PATTERN_LOOSE = '/^.+\@\S+\.\S+$/';
+    private const string PATTERN_LOOSE = '/^.+\@\S+\.\S+$/';
 
-    private const EMAIL_PATTERNS = [
+    private const array EMAIL_PATTERNS = [
         Email::VALIDATION_MODE_LOOSE => self::PATTERN_LOOSE,
         Email::VALIDATION_MODE_HTML5 => self::PATTERN_HTML5,
     ];
@@ -39,9 +30,6 @@ class EmailValidator extends ConstraintValidator
         $this->defaultMode = $defaultMode;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function validate($value, Constraint $constraint)
     {
         if (!$constraint instanceof Email) {
@@ -86,7 +74,7 @@ class EmailValidator extends ConstraintValidator
             }
         }
 
-        if (!preg_match(self::EMAIL_PATTERNS[Email::VALIDATION_MODE_LOOSE], $value)) {
+        if (!preg_match(self::EMAIL_PATTERNS[Email::VALIDATION_MODE_LOOSE], (string) $value)) {
             $this->context->buildViolation($constraint->message)
                 ->setParameter('{{ value }}', $this->formatValue($value))
                 ->setCode(Email::INVALID_FORMAT_ERROR)

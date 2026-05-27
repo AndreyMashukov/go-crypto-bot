@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\CryptoBotContext\Repository;
 
@@ -12,11 +11,6 @@ use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<Trade>
- *
- * @method null|Trade find($id, $lockMode = null, $lockVersion = null)
- * @method null|Trade findOneBy(array $criteria, array $orderBy = null)
- * @method Trade[]    findAll()
- * @method Trade[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
 class TradeRepository extends ServiceEntityRepository
 {
@@ -47,7 +41,7 @@ class TradeRepository extends ServiceEntityRepository
     {
         $query = $this->getSqlProfitPeriod($period);
 
-        if (!$query) {
+        if ($query === '' || $query === '0') {
             return [];
         }
 
@@ -122,9 +116,8 @@ EOL;
 
     private function getSqlProfitPeriod(string $period): string
     {
-        switch ($period) {
-            case 'month':
-                return <<<EOL
+        return match ($period) {
+            'month' => <<<EOL
 SELECT
     DATE_FORMAT(t.trd_sell_date, '%Y-%m') AS title,
     SUM(t.trd_profit) AS profit,
@@ -136,9 +129,8 @@ FROM trade t
 WHERE t.trd_bot = ?
 GROUP BY Title
 ORDER BY MaxDate DESC
-EOL;
-            case 'week':
-                return <<<EOL
+EOL,
+            'week' => <<<EOL
 SELECT
     CONCAT(DATE_FORMAT(t.trd_sell_date, '%Y-%m-'), WEEK(t.trd_sell_date)) AS title,
     SUM(t.trd_profit) AS profit,
@@ -150,9 +142,8 @@ FROM trade t
 WHERE t.trd_bot = ?
 GROUP BY Title
 ORDER BY MaxDate DESC
-EOL;
-            case 'day':
-                return <<<EOL
+EOL,
+            'day' => <<<EOL
 SELECT
     DATE_FORMAT(t.trd_sell_date, '%Y-%m-%d') AS title,
     SUM(t.trd_profit) AS profit,
@@ -164,9 +155,8 @@ FROM trade t
 WHERE t.trd_bot = ?
 GROUP BY Title
 ORDER BY MaxDate DESC
-EOL;
-            default:
-                return '';
-        }
+EOL,
+            default => '',
+        };
     }
 }

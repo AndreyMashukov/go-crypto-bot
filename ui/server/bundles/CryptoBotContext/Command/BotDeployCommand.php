@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Command;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
@@ -20,16 +16,9 @@ class BotDeployCommand extends Command
 
     protected static $defaultDescription = 'Deploy bot (paid only)';
 
-    private CryptoBotRepository $repository;
-
-    private DeployDomain $deployDomain;
-
-    public function __construct(CryptoBotRepository $repository, DeployDomain $deployDomain)
+    public function __construct(private readonly CryptoBotRepository $repository, private readonly DeployDomain $deployDomain)
     {
         parent::__construct(self::$defaultName);
-
-        $this->repository    = $repository;
-        $this->deployDomain  = $deployDomain;
     }
 
     protected function configure()

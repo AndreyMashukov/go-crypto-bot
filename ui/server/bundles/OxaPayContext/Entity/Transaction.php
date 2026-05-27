@@ -1,41 +1,17 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\OxaPayContext\Entity;
 
-use Bundles\OxaPayContext\Repository\TransactionRepository;
 use Bundles\UserContext\Entity\User;
-use Doctrine\ORM\Mapping as ORM;
 
-/**
- * @ORM\Entity(repositoryClass=TransactionRepository::class)
- */
 class Transaction
 {
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(name="trx_id", type="integer")
-     */
-    private $id;
+    private ?int $id = null;
 
-    /**
-     * @ORM\Column(name="trx_amount", type="float")
-     */
-    private $amount;
+    private ?float $amount = null;
 
-    /**
-     * @ORM\Column(name="trx_created_at", type="datetime_immutable")
-     */
     private $createdAt;
 
-    /**
-     * @ORM\ManyToOne(targetEntity=User::class, inversedBy="transactions")
-     * @ORM\JoinColumn(name="trx_user", nullable=false, referencedColumnName="id")
-     */
-    private $user;
+    private ?User $user = null;
 
     public function __construct()
     {

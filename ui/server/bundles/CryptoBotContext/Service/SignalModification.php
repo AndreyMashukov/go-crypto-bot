@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Service;
 
 use Bundles\CryptoBotContext\Entity\CryptoTradeConfig;
@@ -13,19 +9,10 @@ use Bundles\CryptoBotContext\Repository\TradeRepository;
 
 class SignalModification
 {
-    private TradeRepository $tradeRepository;
-
-    public function __construct(TradeRepository $tradeRepository)
+    public function __construct(private readonly TradeRepository $tradeRepository)
     {
-        $this->tradeRepository = $tradeRepository;
     }
 
-    /**
-     * @param Signal            $signal
-     * @param CryptoTradeConfig $config
-     *
-     * @return Signal
-     */
     public function modify(Signal $signal, CryptoTradeConfig $config): Signal
     {
         $signalConfig = $config->getSignalConfig();
@@ -33,7 +20,6 @@ class SignalModification
         $rating       = $ratingMap[$signal->getSymbol()] ?? null;
 
         if (!$rating) {
-            // Can not modify, no rating data found...
             return $signal;
         }
 
@@ -46,23 +32,14 @@ class SignalModification
         }
 
         if ($signalConfig->isAvgSellCorrection()) {
-            switch ($signalConfig->getSellPriceCorrectionMode()) {
-                case SignalConfig::SELL_PRICE_CORRECTION_MODE_EQUAL:
-                    $avgSellPrice = $rating['avgSellPrice'];
-                    break;
-                case SignalConfig::SELL_PRICE_CORRECTION_MODE_MAX:
-                    $avgSellPrice = max($rating['avgSellPrice'], $signal->getMaxSellPrice());
-                    break;
-                case SignalConfig::SELL_PRICE_CORRECTION_MODE_MIN:
-                    $avgSellPrice = min($rating['avgSellPrice'], $signal->getMaxSellPrice());
-                    break;
-                default:
-                    throw new \BadMethodCallException('');
-            }
-
+            $avgSellPrice = match ($signalConfig->getSellPriceCorrectionMode()) {
+                SignalConfig::SELL_PRICE_CORRECTION_MODE_EQUAL => $rating['avgSellPrice'],
+                SignalConfig::SELL_PRICE_CORRECTION_MODE_MAX => max($rating['avgSellPrice'], $signal->getMaxSellPrice()),
+                SignalConfig::SELL_PRICE_CORRECTION_MODE_MIN => min($rating['avgSellPrice'], $signal->getMaxSellPrice()),
+                default => throw new \BadMethodCallException(''),
+            };
             $avgPositionTimeHours = (float) max($rating['avgPositionTimeHours'], 1);
             $newProfitOptions     = [];
-
             $percent       = round(($avgSellPrice * 100 / $signal->getBuyPrice()) - 100, 2);
             $primaryOption = SignalProfitOption::create(
                 $avgSellPrice,
@@ -73,9 +50,8 @@ class SignalModification
                 true
             );
             $newProfitOptions[] = $primaryOption;
-            $minSignalSellPrice = $signal->getMinSellPrice(); // todo: must not be greater AVG SELL! If `max` mode???
+            $minSignalSellPrice = $signal->getMinSellPrice();
             $minSignalPercent   = round(($minSignalSellPrice * 100 / $signal->getBuyPrice()) - 100, 2);
-
             $lastPercent = $minSignalPercent;
             $lastOption  = SignalProfitOption::create(
                 $minSignalSellPrice,
@@ -85,7 +61,6 @@ class SignalModification
                 $lastPercent,
                 false
             );
-
             $middleSellPrice = ($primaryOption->getSellPrice() + $lastOption->getSellPrice()) / 2;
             $middlePercent   = round(($middleSellPrice * 100 / $signal->getBuyPrice()) - 100, 2);
             $middleOption    = SignalProfitOption::create(
@@ -96,15 +71,12 @@ class SignalModification
                 $middlePercent,
                 false
             );
-
             $newProfitOptions[] = $middleOption;
             $newProfitOptions[] = $lastOption;
-
             $signal->setProfitOptions($newProfitOptions);
         }
 
         if ($buyPriceChanged) {
-            /** @var SignalProfitOption $profitOption */
             foreach ($signal->getProfitOptions() as $profitOption) {
                 $percent = round(($profitOption->getSellPrice() * 100 / $signal->getBuyPrice()) - 100, 2);
 
@@ -112,7 +84,6 @@ class SignalModification
             }
         }
 
-        /** @var SignalProfitOption $primaryOption */
         $primaryOption = $signal->getProfitOptions()[0];
         $percent       = round(($primaryOption->getSellPrice() * 100 / $signal->getBuyPrice()) - 100, 2);
         $signal->setPercent($percent);

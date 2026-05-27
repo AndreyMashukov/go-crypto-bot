@@ -1,11 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Command;
 
-use Bundles\CryptoBotContext\Entity\CryptoTradeConfig;
 use Bundles\CryptoBotContext\Entity\RSSArticle;
 use Bundles\CryptoBotContext\Repository\CryptoTradeConfigRepository;
 use Bundles\CryptoBotContext\Repository\ExchangeSymbolRepository;
@@ -28,42 +23,17 @@ class BotSentimentProcessCommand extends Command
 
     protected static $defaultDescription = 'RSS feed sentiment analyser';
 
-    private RSSParser $rssParser;
-
-    private SentimentService $sentimentService;
-
-    private RSSArticleRepository $repository;
-
-    private ExchangeSymbolRepository $symbolRepository;
-
-    private CryptoTradeConfigRepository $configRepository;
-
-    private EntityManagerInterface $entityManager;
-
-    private LoggerInterface $logger;
-
-    private AlertService $alertService;
-
     public function __construct(
-        RSSParser $rssParser,
-        SentimentService $sentimentService,
-        RSSArticleRepository $repository,
-        ExchangeSymbolRepository $symbolRepository,
-        CryptoTradeConfigRepository $configRepository,
-        EntityManagerInterface $entityManager,
-        LoggerInterface $logger,
-        AlertService $alertService
+        private RSSParser $rssParser,
+        private SentimentService $sentimentService,
+        private RSSArticleRepository $repository,
+        private ExchangeSymbolRepository $symbolRepository,
+        private CryptoTradeConfigRepository $configRepository,
+        private EntityManagerInterface $entityManager,
+        private LoggerInterface $logger,
+        private AlertService $alertService
     ) {
         parent::__construct(self::$defaultName);
-
-        $this->rssParser        = $rssParser;
-        $this->sentimentService = $sentimentService;
-        $this->repository       = $repository;
-        $this->symbolRepository = $symbolRepository;
-        $this->configRepository = $configRepository;
-        $this->entityManager    = $entityManager;
-        $this->logger           = $logger;
-        $this->alertService     = $alertService;
     }
 
     protected function configure(): void
@@ -72,18 +42,6 @@ class BotSentimentProcessCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        // todo: lock command...
-
-        // todo: set model by volume (go)
-
-        // todo: validation for 2000 symbols in predictor (go)
-        // todo: authentication middleware in predictor (go)
-
-        // todo: implement on front-end
-        // todo: implement condition on bot
-
-        // todo: separate method to get news list with sentiment label...
-
         foreach ($this->rssParser->iterateArticles() as $article) {
             try {
                 $sentimentResult  = $this->sentimentService->sentimentAnalysis($article);
@@ -113,11 +71,10 @@ class BotSentimentProcessCommand extends Command
         $changed = [];
 
         foreach ($this->symbolRepository->getSymbolCoins() as $symbolCoin) {
-            /** @var CryptoTradeConfig[] $configs */
             $configs = $this->configRepository->getActiveConfigs($symbolCoin['symbol']);
             $results = $this->repository->getResults($symbolCoin['coin']);
 
-            if ($results) {
+            if ($results !== []) {
                 [$label, $score] = $this->processAverage($this->calculateAverage($results));
 
                 foreach ($configs as $config) {

@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\OxaPayContext\Service;
 
 use Bundles\OxaPayContext\Entity\Payment;
@@ -18,26 +14,10 @@ class OxaPayClient
 
     public const MAX_PAYMENT_LIFETIME_MINUTES = 2880;
 
-    private ClientInterface $client;
-
     private string $baseUrl = 'https://api.oxapay.com';
 
-    private string $apiKey;
-
-    private string $backEndHost;
-
-    private string $frontEndHost;
-
-    public function __construct(
-        string $backEndHost,
-        string $frontEndHost,
-        string $apiKey,
-        ClientInterface $client
-    ) {
-        $this->client       = $client;
-        $this->apiKey       = $apiKey;
-        $this->backEndHost  = $backEndHost;
-        $this->frontEndHost = $frontEndHost;
+    public function __construct(private readonly string $backEndHost, private readonly string $frontEndHost, private readonly string $apiKey, private readonly ClientInterface $client)
+    {
     }
 
     public function createInvoice(Payment $payment): void

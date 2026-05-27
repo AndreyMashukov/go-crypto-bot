@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Command;
 
 use Bundles\CryptoBotContext\Repository\CryptoBotRepository;
@@ -18,18 +14,11 @@ class BotStopAllCommand extends Command
 
     protected static $defaultDescription = 'Stop all bots';
 
-    private CryptoBotRepository $repository;
-
-    private DeployDomain $deployDomain;
-
     public function __construct(
-        CryptoBotRepository $repository,
-        DeployDomain $deployDomain
+        private readonly CryptoBotRepository $repository,
+        private readonly DeployDomain $deployDomain
     ) {
         parent::__construct(self::$defaultName);
-
-        $this->repository   = $repository;
-        $this->deployDomain = $deployDomain;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int

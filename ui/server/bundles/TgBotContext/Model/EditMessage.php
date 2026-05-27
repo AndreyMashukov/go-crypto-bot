@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\TgBotContext\Model;
 
 use Bundles\TgBotContext\Model\Traits\SendTrait;
@@ -14,15 +10,12 @@ class EditMessage extends BasicMessage
 {
     use SendTrait;
 
-    private int $messageId;
-
-    public function __construct(string $messageText, int $messageId, ?Keyboard $keyboard)
+    public function __construct(string $messageText, private int $messageId, ?Keyboard $keyboard)
     {
         parent::__construct($messageText, $keyboard);
-
-        $this->messageId = $messageId;
     }
 
+    #[\Override]
     public function send(BotApiComplete $bot, ConfigurationInterface $configuration): void
     {
         $params   = ['parseMode' => 'html'];

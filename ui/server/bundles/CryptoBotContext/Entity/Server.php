@@ -1,64 +1,23 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Entity;
 
-use Bundles\CryptoBotContext\Repository\ServerRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
-use Doctrine\ORM\Mapping as ORM;
-use JMS\Serializer\Annotation as Serializer;
 
-/**
- * @ORM\Entity(repositoryClass=ServerRepository::class)
- *
- * @Serializer\ExclusionPolicy(Serializer\ExclusionPolicy::ALL)
- */
 class Server
 {
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(name="srv_id", type="integer")
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"server"})
-     */
-    private $id;
+    private ?int $id = null;
 
-    /**
-     * @ORM\Column(name="srv_ip", type="string", length=255)
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"server"})
-     */
-    private $ip;
+    private ?string $ip = null;
 
-    /**
-     * @ORM\Column(name="srv_slots", type="integer")
-     */
     private int $slots = 3;
 
-    /**
-     * @ORM\Column(name="srv_cpu", type="integer")
-     */
-    private $cpu;
+    private ?int $cpu = null;
 
-    /**
-     * @ORM\Column(name="srv_ram", type="integer")
-     */
-    private $ram;
+    private ?int $ram = null;
 
-    /**
-     * @ORM\Column(name="srv_master", type="boolean")
-     */
     private bool $master = false;
 
-    /**
-     * @ORM\OneToMany(targetEntity="Bundles\CryptoBotContext\Entity\CryptoBot", mappedBy="server")
-     */
     private Collection $cryptoBots;
 
     public function __construct()
@@ -119,6 +78,9 @@ class Server
         return $this;
     }
 
+    /**
+     * @return Collection<int, CryptoBot>
+     */
     public function getCryptoBots(): Collection
     {
         return $this->cryptoBots;

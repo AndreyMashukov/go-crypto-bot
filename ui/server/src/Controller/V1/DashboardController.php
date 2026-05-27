@@ -1,14 +1,9 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace App\Controller\V1;
 
 use App\Service\BackgroundProcessing;
 use Bundles\CryptoBotContext\Entity\CryptoBot;
 use Bundles\CryptoBotContext\Entity\CryptoTradeConfig;
-use Bundles\CryptoBotContext\Entity\ExchangeSymbol;
 use Bundles\CryptoBotContext\Form\CryptoTradeConfigUpdateType;
 use Bundles\CryptoBotContext\Form\QuickConfigType;
 use Bundles\CryptoBotContext\Model\QuickConfig;
@@ -18,7 +13,6 @@ use Bundles\CryptoBotContext\Service\CryptoBotService;
 use Bundles\CryptoBotContext\Service\DeployDomain;
 use Bundles\CryptoBotContext\Service\TradeListService;
 use Bundles\CryptoBotContext\Service\TradeStackService;
-use Bundles\UserContext\Entity\User;
 use Bundles\UserContext\Exception\MaxPairLimitReachedException;
 use Bundles\UserContext\Service\LimitService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -33,67 +27,20 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
-/**
- * @Rest\Route("/v1/dashboard", name="v1_dashboard_")
- */
 class DashboardController extends AbstractFOSRestController
 {
-    private CryptoBotService $cryptoBotService;
-
-    private TradeStackService $stackService;
-
-    private EntityManagerInterface $entityManager;
-
-    private TradeRepository $tradeRepository;
-
-    private ExchangeSymbolRepository $symbolRepository;
-
-    private LimitService $limitService;
-
-    private BackgroundProcessing $backgroundProcessing;
-
-    private DeployDomain $deployDomain;
-
-    private LoggerInterface $logger;
-
-    private TradeListService $tradeListService;
-
-    public function __construct(
-        CryptoBotService $cryptoBotService,
-        TradeStackService $stackService,
-        EntityManagerInterface $entityManager,
-        TradeRepository $tradeRepository,
-        ExchangeSymbolRepository $symbolRepository,
-        LimitService $limitService,
-        BackgroundProcessing $backgroundProcessing,
-        DeployDomain $deployDomain,
-        LoggerInterface $logger,
-        TradeListService $tradeListService
-    ) {
-        $this->cryptoBotService     = $cryptoBotService;
-        $this->stackService         = $stackService;
-        $this->entityManager        = $entityManager;
-        $this->tradeRepository      = $tradeRepository;
-        $this->symbolRepository     = $symbolRepository;
-        $this->limitService         = $limitService;
-        $this->backgroundProcessing = $backgroundProcessing;
-        $this->deployDomain         = $deployDomain;
-        $this->logger               = $logger;
-        $this->tradeListService     = $tradeListService;
+    public function __construct(private readonly CryptoBotService $cryptoBotService, private readonly TradeStackService $stackService, private readonly EntityManagerInterface $entityManager, private readonly TradeRepository $tradeRepository, private readonly ExchangeSymbolRepository $symbolRepository, private readonly LimitService $limitService, private readonly BackgroundProcessing $backgroundProcessing, private readonly DeployDomain $deployDomain, private readonly LoggerInterface $logger, private readonly TradeListService $tradeListService)
+    {
     }
 
     /**
      * @Rest\Route("/{cryptobot}/chart", name="chart", methods={"GET"})
      * @Rest\View
      *
-     * @param Request   $request
-     * @param CryptoBot $cryptobot
      *
-     * @return Response
      */
-    public function getChartAction(Request $request, CryptoBot $cryptobot): Response
+    public function getChart(Request $request, CryptoBot $cryptobot): Response
     {
-        /** @var User $user */
         $user   = $this->getUser();
         $symbol = $request->get('symbol', '');
 
@@ -114,13 +61,10 @@ class DashboardController extends AbstractFOSRestController
      * @Rest\Route("/{cryptobot}/stack/v2", name="stack_v2", methods={"GET"})
      * @Rest\View
      *
-     * @param CryptoBot $cryptobot
      *
-     * @return array
      */
-    public function getStackV2Action(CryptoBot $cryptobot): array
+    public function getStackV2(CryptoBot $cryptobot): array
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -134,13 +78,10 @@ class DashboardController extends AbstractFOSRestController
      * @Rest\Route("/{cryptobot}/swap/list", name="swap_list", methods={"GET"})
      * @Rest\View
      *
-     * @param CryptoBot $cryptobot
      *
-     * @return array
      */
-    public function getSwapListAction(CryptoBot $cryptobot): array
+    public function getSwapList(CryptoBot $cryptobot): array
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -154,13 +95,10 @@ class DashboardController extends AbstractFOSRestController
      * @Rest\Route("/{cryptobot}/balance", name="balance", methods={"GET"})
      * @Rest\View
      *
-     * @param CryptoBot $cryptobot
      *
-     * @return array
      */
-    public function getBalanceAction(CryptoBot $cryptobot): array
+    public function getBalance(CryptoBot $cryptobot): array
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -178,14 +116,10 @@ class DashboardController extends AbstractFOSRestController
      * @Rest\Route("/{cryptobot}/stack/{sorting}/sort", name="switch_sort", methods={"PUT"})
      * @Rest\View
      *
-     * @param CryptoBot $cryptobot
-     * @param string    $sorting
      *
-     * @return array
      */
-    public function putStackSortAction(CryptoBot $cryptobot, string $sorting): array
+    public function putStackSort(CryptoBot $cryptobot, string $sorting): array
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -199,14 +133,10 @@ class DashboardController extends AbstractFOSRestController
      * @Rest\Route("/{cryptobot}/stack/{symbol}/switch", name="switch_symbol", methods={"PUT"})
      * @Rest\View
      *
-     * @param CryptoBot $cryptobot
-     * @param string    $symbol
      *
-     * @return array
      */
-    public function putSwitchSymbolAction(CryptoBot $cryptobot, string $symbol): array
+    public function putSwitchSymbol(CryptoBot $cryptobot, string $symbol): array
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -227,7 +157,7 @@ class DashboardController extends AbstractFOSRestController
                 $this->limitService->checkLimits($cryptobot);
             }
         } catch (MaxPairLimitReachedException $exception) {
-            throw new BadRequestHttpException($exception->getMessage());
+            throw new BadRequestHttpException($exception->getMessage(), $exception);
         }
 
         $this->entityManager->flush();
@@ -239,15 +169,11 @@ class DashboardController extends AbstractFOSRestController
      * @Rest\Route("/{cryptobot}/{symbol}/update", name="cryptobot_symbol_update", methods={"PATCH"})
      * @Rest\View
      *
-     * @param Request   $request
-     * @param CryptoBot $cryptobot
-     * @param string    $symbol
      *
      * @return array|CryptoTradeConfig
      */
-    public function patchSymbolAction(Request $request, CryptoBot $cryptobot, string $symbol)
+    public function patchSymbol(Request $request, CryptoBot $cryptobot, string $symbol)
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -278,7 +204,7 @@ class DashboardController extends AbstractFOSRestController
                 $this->limitService->checkLimits($cryptobot);
             }
         } catch (MaxPairLimitReachedException $exception) {
-            throw new BadRequestHttpException($exception->getMessage());
+            throw new BadRequestHttpException($exception->getMessage(), $exception);
         }
 
         $this->cryptoBotService->updateOneTradeLimit($cryptobot, $config);
@@ -291,14 +217,10 @@ class DashboardController extends AbstractFOSRestController
      * @Rest\Route("/{cryptobot}/stack/{symbol}/signal-switch", name="signal_switch_symbol", methods={"PUT"})
      * @Rest\View(serializerGroups={"cryptotrade_config"})
      *
-     * @param CryptoBot $cryptobot
-     * @param string    $symbol
      *
-     * @return CryptoTradeConfig
      */
-    public function putSignalSwitchSymbolAction(CryptoBot $cryptobot, string $symbol): CryptoTradeConfig
+    public function putSignalSwitchSymbol(CryptoBot $cryptobot, string $symbol): CryptoTradeConfig
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -325,12 +247,9 @@ class DashboardController extends AbstractFOSRestController
     /**
      * @Rest\Route("/{cryptobot}/trades", name="trades", methods={"GET"})
      * @Rest\View
-     *
-     * @return array
      */
-    public function getTradesAction(CryptoBot $cryptobot): array
+    public function getTrades(CryptoBot $cryptobot): array
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -346,8 +265,8 @@ class DashboardController extends AbstractFOSRestController
         }
 
         foreach ($tradeList as $key => $trade) {
-            $sellPrecision    = mb_strlen(explode('.', ((string) $trade['sell']))[1] ?? 0);
-            $sellQtyPrecision = mb_strlen(explode('.', ((string) $trade['sellQuantity']))[1] ?? 0);
+            $sellPrecision    = mb_strlen((string) (explode('.', ((string) $trade['sell']))[1] ?? 0));
+            $sellQtyPrecision = mb_strlen((string) (explode('.', ((string) $trade['sellQuantity']))[1] ?? 0));
 
             $tradeList[$key]['buy']         = round($trade['buy'], $sellPrecision);
             $tradeList[$key]['buyQuantity'] = round($trade['buyQuantity'], $sellQtyPrecision);
@@ -363,13 +282,10 @@ class DashboardController extends AbstractFOSRestController
      * @Rest\Route("/{cryptobot}/symbol/available", name="symbol_available", methods={"GET"})
      * @Rest\View
      *
-     * @param CryptoBot $cryptobot
      *
-     * @return array
      */
-    public function getSymbolAvailableAction(CryptoBot $cryptobot): array
+    public function getSymbolAvailable(CryptoBot $cryptobot): array
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -383,14 +299,10 @@ class DashboardController extends AbstractFOSRestController
      * @Rest\Route("/{cryptobot}/profit", name="profit", methods={"GET"})
      * @Rest\View
      *
-     * @param CryptoBot $cryptobot
-     * @param Request   $request
      *
-     * @return array
      */
-    public function getProfitAction(CryptoBot $cryptobot, Request $request): array
+    public function getProfit(CryptoBot $cryptobot, Request $request): array
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -409,12 +321,9 @@ class DashboardController extends AbstractFOSRestController
     /**
      * @Rest\Route("/{cryptobot}/positions", name="positions", methods={"GET"})
      * @Rest\View
-     *
-     * @return array
      */
-    public function getPositionsAction(CryptoBot $cryptobot): array
+    public function getPositions(CryptoBot $cryptobot): array
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -428,14 +337,11 @@ class DashboardController extends AbstractFOSRestController
      * @Rest\Route("/{cryptobot}/quick/symbol", name="quick_symbol", methods={"POST"})
      * @Rest\View
      *
-     * @param Request   $request
-     * @param CryptoBot $cryptobot
      *
-     * @return array|void
+     * @return mixed[]|null
      */
-    public function postQuickSymbolAction(Request $request, CryptoBot $cryptobot)
+    public function postQuickSymbol(Request $request, CryptoBot $cryptobot)
     {
-        /** @var User $user */
         $user = $this->getUser();
 
         if (!$cryptobot->isOwnedBy($user)) {
@@ -460,13 +366,12 @@ class DashboardController extends AbstractFOSRestController
             ];
         }
 
-        /** @var QuickConfig $data */
         $data = $form->getData();
 
         try {
             $this->limitService->checkLimits($cryptobot);
         } catch (MaxPairLimitReachedException $exception) {
-            throw new BadRequestHttpException($exception->getMessage());
+            throw new BadRequestHttpException($exception->getMessage(), $exception);
         }
 
         $exchangeSymbol = $data->getExchangeSymbol();
@@ -481,7 +386,6 @@ class DashboardController extends AbstractFOSRestController
             throw new BadRequestHttpException("Symbol {$addedSymbol} is not enabled for {$exchange}");
         }
 
-        /** @var ExchangeSymbol[] $availableSymbols */
         $availableSymbols  = $this->symbolRepository->getAvailableSymbols($cryptobot);
         $isAllowedToAdd    = false;
         foreach ($availableSymbols as $symbol) {
@@ -547,7 +451,6 @@ class DashboardController extends AbstractFOSRestController
         $this->entityManager->flush();
 
         if ($data->isRestartBot()) {
-            // Redeploy bot
             $this->backgroundProcessing->addTask(function () use ($cryptobot) {
                 $this->deployDomain->doDeploy($cryptobot);
             });
@@ -562,5 +465,6 @@ class DashboardController extends AbstractFOSRestController
                 throw new ServiceUnavailableHttpException(60, 'Service unavailable, please try later...', $exception);
             }
         }
+        return null;
     }
 }

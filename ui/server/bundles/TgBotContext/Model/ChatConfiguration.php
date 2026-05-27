@@ -1,17 +1,13 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\TgBotContext\Model;
 
 class ChatConfiguration implements ConfigurationInterface
 {
-    private int $chatId;
-
-    public function __construct(int $chatId)
+    public function __construct(private readonly int $chatId)
     {
-        $this->chatId = $chatId;
     }
 
     public function getChatId(): int

@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace App\Controller\PublicRoute;
 
 use App\Service\IpExtractor;
@@ -27,52 +23,29 @@ use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 use TgBotApi\BotApiBase\BotApi;
 use TgBotApi\BotApiBase\BotApiComplete;
 
-/**
- * @Rest\Route("/public/callback", name="public_callback_")
- */
 class CallbackController extends AbstractFOSRestController
 {
-    private PaymentManager $paymentManager;
-
-    private MessageBuilder $messageBuilder;
-
-    private BotApi $botApi;
-
-    private CryptoBotRepository $cryptoBotRepository;
-
-    private IpExtractor $ipExtractor;
-
-    private DeployDomain $deployDomain;
-
-    private AlertService $alertService;
+    private readonly BotApi $botApi;
 
     public function __construct(
-        PaymentManager $paymentManager,
-        MessageBuilder $messageBuilder,
+        private readonly PaymentManager $paymentManager,
+        private readonly MessageBuilder $messageBuilder,
         BotApiComplete $botApi,
-        CryptoBotRepository $cryptoBotRepository,
-        IpExtractor $ipExtractor,
-        DeployDomain $deployDomain,
-        AlertService $alertService
+        private readonly CryptoBotRepository $cryptoBotRepository,
+        private readonly IpExtractor $ipExtractor,
+        private readonly DeployDomain $deployDomain,
+        private readonly AlertService $alertService
     ) {
-        $this->paymentManager      = $paymentManager;
-        $this->messageBuilder      = $messageBuilder;
         $this->botApi              = $botApi;
-        $this->cryptoBotRepository = $cryptoBotRepository;
-        $this->ipExtractor         = $ipExtractor;
-        $this->deployDomain        = $deployDomain;
-        $this->alertService        = $alertService;
     }
 
     /**
      * @Rest\Route("/oxa", methods={"POST"}, name="oxa")
      * @Rest\View
      *
-     * @param Request $request
      *
-     * @return Response
      */
-    public function postOxaAction(Request $request): Response
+    public function postOxa(Request $request): Response
     {
         $form = $this->createForm(OxaCallbackType::class, new OxaCallback(), [
             'method' => Request::METHOD_POST,
@@ -87,7 +60,6 @@ class CallbackController extends AbstractFOSRestController
             throw new BadRequestHttpException('Invalid request.');
         }
 
-        /** @var OxaCallback $callback */
         $callback = $form->getData();
 
         try {
@@ -96,7 +68,7 @@ class CallbackController extends AbstractFOSRestController
             throw new BadRequestHttpException('Invalid request.', $exception);
         }
 
-        return new Response('OK', 200, [
+        return new Response('OK', Response::HTTP_OK, [
             'Content-Type' => 'text/plain',
         ]);
     }
@@ -105,11 +77,9 @@ class CallbackController extends AbstractFOSRestController
      * @Rest\Route("/telegram", methods={"POST"}, name="telegram")
      * @Rest\View
      *
-     * @param Request $request
      *
-     * @return Response
      */
-    public function postTelegramAction(Request $request): Response
+    public function postTelegram(Request $request): Response
     {
         $form = $this->createForm(OrderMessageType::class, new OrderMessage(), [
             'method' => Request::METHOD_POST,
@@ -123,7 +93,6 @@ class CallbackController extends AbstractFOSRestController
             throw new BadRequestHttpException('Invalid request.');
         }
 
-        /** @var OrderMessage $orderMessage */
         $orderMessage = $form->getData();
 
         if (!$orderMessage->getBot()->isTest()) {
@@ -137,7 +106,7 @@ class CallbackController extends AbstractFOSRestController
             }
         }
 
-        return new Response('OK', 200, [
+        return new Response('OK', Response::HTTP_OK, [
             'Content-Type' => 'text/plain',
         ]);
     }
@@ -146,11 +115,9 @@ class CallbackController extends AbstractFOSRestController
      * @Rest\Route("/error", methods={"POST"}, name="error")
      * @Rest\View
      *
-     * @param Request $request
      *
-     * @return Response
      */
-    public function postErrorAction(Request $request): Response
+    public function postError(Request $request): Response
     {
         $form = $this->createForm(ErrorCallbackType::class, new ErrorCallback(), [
             'method' => Request::METHOD_POST,
@@ -164,18 +131,15 @@ class CallbackController extends AbstractFOSRestController
             throw new BadRequestHttpException('Invalid request.');
         }
 
-        /** @var ErrorCallback $data */
         $data = $form->getData();
 
-        if ($data->stop) {
-            if ($data->bot->getServer()) {
-                $this->deployDomain->doStop(
-                    $data->bot,
-                    $data->bot->getServer(),
-                    '',
-                    false
-                );
-            }
+        if ($data->stop && $data->bot->getServer()) {
+            $this->deployDomain->doStop(
+                $data->bot,
+                $data->bot->getServer(),
+                '',
+                false
+            );
         }
 
         $this->alertService->alert("CallbackController: Bot #{$data->bot->getId()} User {$data->bot->getUser()->getEmail()} - {$data->errorMessage}");
@@ -183,7 +147,7 @@ class CallbackController extends AbstractFOSRestController
         $data->bot->setErrorMessage("[{$this->ipExtractor->extractIp($request)}] {$data->errorMessage}");
         $this->cryptoBotRepository->add($data->bot, true);
 
-        return new Response('OK', 200, [
+        return new Response('OK', Response::HTTP_OK, [
             'Content-Type' => 'text/plain',
         ]);
     }

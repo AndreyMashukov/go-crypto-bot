@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\TgBotContext;
 
 use Bundles\TgBotContext\Model\BasicMessage;
@@ -23,26 +19,21 @@ class MessageBuilder
             ->toOneRow(1)
             ;
 
-        switch ($orderMessage->getOperation()) {
-            case 'SELL':
-                $text = "<b>Trader: {$orderMessage->getBot()->getUser()->getNickname()} ({$cryptoBot->getProvider()})</b>\n\n"
-                    . "<b>{$orderMessage->getSymbol()}</b>\n"
-                    . "Operation: SELL\n"
-                    . "Quantity: {$orderMessage->getAmount()}\n"
-                    . "Price: {$orderMessage->getPrice()}\n"
-                    . $orderMessage->getDetails();
-                break;
-            case 'BUY':
-                $text = "<b>Trader: {$cryptoBot->getUser()->getNickname()} ({$cryptoBot->getProvider()})</b>\n\n"
-                    . "<b>{$orderMessage->getSymbol()}</b>\n"
-                    . "Operation: BUY\n"
-                    . "Quantity: {$orderMessage->getAmount()}\n"
-                    . "Price: {$orderMessage->getPrice()}\n"
-                    . $orderMessage->getDetails();
-                break;
-            default:
-                throw new \BadMethodCallException('Wrong operation given');
-        }
+        $text = match ($orderMessage->getOperation()) {
+            'SELL' => "<b>Trader: {$orderMessage->getBot()->getUser()->getNickname()} ({$cryptoBot->getProvider()})</b>\n\n"
+                . "<b>{$orderMessage->getSymbol()}</b>\n"
+                . "Operation: SELL\n"
+                . "Quantity: {$orderMessage->getAmount()}\n"
+                . "Price: {$orderMessage->getPrice()}\n"
+                . $orderMessage->getDetails(),
+            'BUY' => "<b>Trader: {$cryptoBot->getUser()->getNickname()} ({$cryptoBot->getProvider()})</b>\n\n"
+                . "<b>{$orderMessage->getSymbol()}</b>\n"
+                . "Operation: BUY\n"
+                . "Quantity: {$orderMessage->getAmount()}\n"
+                . "Price: {$orderMessage->getPrice()}\n"
+                . $orderMessage->getDetails(),
+            default => throw new \BadMethodCallException('Wrong operation given'),
+        };
 
         return [
             new BasicMessage($text, $keyboard),
@@ -50,8 +41,6 @@ class MessageBuilder
     }
 
     /**
-     * @param string $alertText
-     *
      * @return BasicMessage[]
      */
     public function getAlertMessages(string $alertText): array

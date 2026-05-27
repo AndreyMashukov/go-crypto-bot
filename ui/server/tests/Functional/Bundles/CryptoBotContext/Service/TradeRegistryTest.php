@@ -1,26 +1,17 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Functional\Bundles\CryptoBotContext\Service;
 
 use App\Tests\RestTestCase;
 use Bundles\CryptoBotContext\Entity\CryptoBot;
 use Bundles\CryptoBotContext\Repository\TradeRepository;
-use Bundles\CryptoBotContext\Service\TradeRegistry;
 use Bundles\OxaPayContext\Entity\Transaction;
 use Bundles\UserContext\Entity\User;
-use PHPUnit\Framework\MockObject\MockObject;
 
-/**
- * @group functional
- */
 class TradeRegistryTest extends RestTestCase
 {
-    /** @var MockObject|TradeRepository */
     private TradeRepository $tradeRepository;
 
+    #[\Override]
     protected function services(): void
     {
         parent::services();
@@ -33,11 +24,6 @@ class TradeRegistryTest extends RestTestCase
      * Should apply dynamic commission percent.
      *
      * @dataProvider profitDataProvider
-     *
-     * @param float $profitUsdt
-     * @param float $tradingMonthlyVolume
-     * @param float $initialBudget
-     * @param float $expectedBudget
      */
     public function testShouldApplyDynamicCommissionPercent(
         float $profitUsdt,
@@ -86,7 +72,6 @@ class TradeRegistryTest extends RestTestCase
                 ],
             ]);
 
-        /** @var TradeRegistry $tradeRegistry */
         $tradeRegistry = self::getContainer()->get('test.trade_registry');
         $tradeRegistry->registerTrade($tradeData, $cryptoBot);
         $this->em->refresh($user);
@@ -95,7 +80,6 @@ class TradeRegistryTest extends RestTestCase
         $transactions = $user->getTransactions();
         $this->assertEquals(1, $transactions->count());
 
-        /** @var Transaction $transaction */
         $transaction = $transactions->first();
         $this->assertInstanceOf(Transaction::class, $transaction);
         $this->assertEquals($initialBudget - $expectedBudget, $transaction->getAmount());

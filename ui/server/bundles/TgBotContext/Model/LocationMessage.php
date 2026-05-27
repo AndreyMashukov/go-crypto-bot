@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\TgBotContext\Model;
 
 use Bundles\TgBotContext\Model\Traits\SendTrait;
@@ -13,24 +9,16 @@ class LocationMessage extends BasicMessage
 {
     use SendTrait;
 
-    private float $lat;
-
-    private float $lon;
-
-    public function __construct(float $lat, float $lon, ?Keyboard $keyboard)
+    public function __construct(private float $lat, private float $lon, ?Keyboard $keyboard)
     {
         parent::__construct('', $keyboard);
-
-        $this->lat = $lat;
-        $this->lon = $lon;
     }
 
     /**
-     * @param BotApiComplete         $bot
-     * @param ConfigurationInterface $configuration
      *
      * @throws \Throwable
      */
+    #[\Override]
     public function send(BotApiComplete $bot, ConfigurationInterface $configuration): void
     {
         $params   = [];

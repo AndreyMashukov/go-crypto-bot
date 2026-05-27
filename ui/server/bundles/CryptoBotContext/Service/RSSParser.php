@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Service;
 
 use Bundles\CryptoBotContext\Entity\RSSArticle;
@@ -14,28 +10,8 @@ use Symfony\Component\HttpFoundation\Request;
 
 class RSSParser
 {
-    private array $rssFeeds;
-
-    private ClientInterface $client;
-
-    private RSSArticleRepository $repository;
-
-    private SentimentContentSplitService $splitService;
-
-    private LoggerInterface $logger;
-
-    public function __construct(
-        array $rssFeeds,
-        ClientInterface $client,
-        RSSArticleRepository $repository,
-        SentimentContentSplitService $splitService,
-        LoggerInterface $logger
-    ) {
-        $this->rssFeeds     = $rssFeeds;
-        $this->client       = $client;
-        $this->repository   = $repository;
-        $this->splitService = $splitService;
-        $this->logger       = $logger;
+    public function __construct(private readonly array $rssFeeds, private readonly ClientInterface $client, private readonly RSSArticleRepository $repository, private readonly SentimentContentSplitService $splitService, private readonly LoggerInterface $logger)
+    {
     }
 
     /**
@@ -53,7 +29,7 @@ class RSSParser
                     ],
                 ]);
                 $xmlFeed  = $response->getBody()->getContents();
-                if (!$xmlFeed) {
+                if ($xmlFeed === '' || $xmlFeed === '0') {
                     continue;
                 }
 
@@ -84,9 +60,7 @@ class RSSParser
 
                     yield new RSSFeedArticle(
                         $url,
-                        $channelItem->title, // todo: title
-                        trim(strip_tags($channelItem->description)), // todo: shortText
-                        $content
+                        $channelItem->title, trim(strip_tags($channelItem->description)), $content
                     );
                 }
             } catch (\Throwable $throwable) {
@@ -130,7 +104,7 @@ class RSSParser
                 ],
             ]);
             $content  = $response->getBody()->getContents();
-            if (!$content) {
+            if ($content === '' || $content === '0') {
                 return [];
             }
 
@@ -140,11 +114,10 @@ class RSSParser
             $list  = $xpath->query($xpathSelector);
             $parts = [];
 
-            /** @var \DOMElement $item */
             foreach ($list as $item) {
                 $contentPart = trim(strip_tags($item->textContent));
 
-                if ($contentPart) {
+                if ($contentPart !== '' && $contentPart !== '0') {
                     $parts[] = $contentPart;
                 }
             }

@@ -1,90 +1,30 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\OxaPayContext\Entity;
 
-use Bundles\OxaPayContext\Repository\PromoCodeRepository;
 use Bundles\UserContext\Entity\User;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
-use Doctrine\ORM\Mapping as ORM;
-use JMS\Serializer\Annotation as Serializer;
 
-/**
- * @ORM\Entity(repositoryClass=PromoCodeRepository::class)
- *
- * @Serializer\ExclusionPolicy(Serializer\ExclusionPolicy::ALL)
- */
 class PromoCode
 {
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(name="pcd_id", type="integer")
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"promocode"})
-     */
     private ?int $id = null;
 
-    /**
-     * @ORM\ManyToOne(targetEntity=User::class)
-     * @ORM\JoinColumn(name="pcd_partner", nullable=false)
-     */
-    private User $partner;
-
-    /**
-     * @ORM\Column(name="pcd_complimentary_budget", type="float")
-     */
     private ?int $complimentaryBudget = 0;
 
-    /**
-     * @ORM\Column(name="pcd_complimentary_signals_days", type="smallint")
-     */
     private ?int $complimentarySignalsDays = 0;
 
-    /**
-     * @ORM\Column(name="pcd_code", type="string", length=20)
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"promocode"})
-     */
-    private string $code;
-
-    /**
-     * @ORM\Column(name="pcd_max_activation_limit", type="integer")
-     */
     private int $maxActivationLimit = 0;
 
-    /**
-     * @ORM\Column(name="pcd_activation_count", type="integer")
-     */
     private int $activationCount = 0;
 
-    /**
-     * @ORM\Column(name="pcd_partner_fee_percent", type="float")
-     */
     private float $partnerFeePercent = 0.00;
 
-    /**
-     * @ORM\Column(name="pcd_active", type="boolean")
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"promocode"})
-     */
     private bool $active = true;
 
-    /**
-     * @ORM\OneToMany(targetEntity=User::class, mappedBy="promoCode")
-     */
     private $users;
 
-    public function __construct(User $partner, string $code)
+    public function __construct(private User $partner, private string $code)
     {
-        $this->partner = $partner;
-        $this->code    = $code;
         $this->users   = new ArrayCollection();
     }
 
@@ -172,9 +112,7 @@ class PromoCode
 
     public function canUse(?User $user): bool
     {
-        unset($user); // unused
-
-        if (!$this->isActive()) {
+        unset($user); if (!$this->isActive()) {
             return false;
         }
 
@@ -205,11 +143,8 @@ class PromoCode
 
     public function removeUser(User $user): self
     {
-        if ($this->users->removeElement($user)) {
-            // set the owning side to null (unless already changed)
-            if ($user->getPromoCode() === $this) {
-                $user->setPromoCode(null);
-            }
+        if ($this->users->removeElement($user) && $user->getPromoCode() === $this) {
+            $user->setPromoCode(null);
         }
 
         return $this;

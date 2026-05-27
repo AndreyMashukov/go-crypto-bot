@@ -1,59 +1,13 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\OxaPayContext\Model;
 
-use JMS\Serializer\Annotation as Serializer;
-
-/**
- * @Serializer\ExclusionPolicy(Serializer\ExclusionPolicy::ALL)
- */
 class Commission
 {
-    /**
-     * @var float
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"commission"})
-     */
-    private float $percent;
-
-    /**
-     * @var float
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"commission"})
-     */
-    private float $minValueUsd;
-
-    /**
-     * @var int
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"commission"})
-     */
-    private int $level;
-
-    /**
-     * @var float
-     *
-     * @Serializer\Expose
-     * @Serializer\Groups(groups={"commission"})
-     */
-    private float $botMonthlyVolume;
-
-    public function __construct(
-        float $percent,
-        float $minValueUsd,
-        int $level,
-        float $botMonthlyVolume
-    ) {
-        $this->percent          = $percent;
-        $this->minValueUsd      = $minValueUsd;
-        $this->level            = $level;
-        $this->botMonthlyVolume = $botMonthlyVolume;
+    public function __construct(private readonly float $percent, private readonly float $minValueUsd, private readonly int $level, private readonly float $botMonthlyVolume)
+    {
     }
 
     public function getPercent(): float

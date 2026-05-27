@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace App\Controller\V1\Admin;
 
 use Bundles\UserContext\Entity\User;
@@ -15,21 +11,10 @@ use Knp\Component\Pager\PaginatorInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Component\HttpFoundation\Request;
 
-/**
- * @Rest\Route("/v1/admin", name="v1_admin_")
- */
 class UserController extends AbstractFOSRestController
 {
-    private UserRepository $repository;
-
-    private PaginatorInterface $paginator;
-
-    public function __construct(
-        UserRepository $repository,
-        PaginatorInterface $paginator
-    ) {
-        $this->repository = $repository;
-        $this->paginator  = $paginator;
+    public function __construct(private readonly UserRepository $repository, private readonly PaginatorInterface $paginator)
+    {
     }
 
     /**
@@ -37,11 +22,9 @@ class UserController extends AbstractFOSRestController
      * @Rest\View(serializerGroups={"admin", "knp_basic"})
      * @IsGranted("ROLE_ADMIN")
      *
-     * @param Request $request
      *
-     * @return PaginationInterface
      */
-    public function getListAction(Request $request): PaginationInterface
+    public function getList(Request $request): PaginationInterface
     {
         $page  = $request->get('page', 1);
         $limit = min((int) $request->get('limit', 50), 200);
@@ -53,13 +36,11 @@ class UserController extends AbstractFOSRestController
      * @Rest\Route("/{user}", name="patch", methods={"PATCH"})
      * @Rest\View(serializerGroups={"admin"})
      *
-     * @param Request $request
-     * @param User    $user
      *
      * @return array|User
      * @IsGranted("ROLE_ADMIN")
      */
-    public function patchAction(Request $request, User $user)
+    public function patch(Request $request, User $user)
     {
         $form = $this->createForm(UserUpdateType::class, $user, [
             'method' => Request::METHOD_PATCH,
@@ -85,12 +66,10 @@ class UserController extends AbstractFOSRestController
      * @Rest\Route("/{user}/freeze/switch", name="put_freeze_switch", methods={"PUT"})
      * @Rest\View(serializerGroups={"admin"})
      *
-     * @param User $user
      * @IsGranted("ROLE_ADMIN")
      *
-     * @return User
      */
-    public function putFreezeSwitchAction(User $user): User
+    public function putFreezeSwitch(User $user): User
     {
         $user->setFreeze(!$user->isFreeze());
         $this->repository->add($user, true);

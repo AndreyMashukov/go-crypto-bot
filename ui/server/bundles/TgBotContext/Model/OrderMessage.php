@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\TgBotContext\Model;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
@@ -12,43 +8,31 @@ class OrderMessage
 {
     /**
      * @Assert\NotNull
-     *
-     * @var null|CryptoBot
      */
     private ?CryptoBot $bot = null;
 
     /**
      * @Assert\NotBlank
-     *
-     * @var null|string
      */
     private ?string $symbol = null;
 
     /**
      * @Assert\NotBlank
-     *
-     * @var null|float
      */
     private ?float $amount = null;
 
     /**
      * @Assert\NotBlank
-     *
-     * @var null|float
      */
     private ?float $price = null;
 
     /**
      * @Assert\NotBlank
-     *
-     * @var null|string
      */
     private ?string $operation = null;
 
     /**
      * @Assert\NotBlank
-     *
-     * @var null|string
      */
     private ?string $dateTime = null;
 

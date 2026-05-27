@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace App\Controller\PublicRoute;
 
@@ -9,25 +8,17 @@ use Bundles\CryptoBotContext\Service\CachedTradeListServiceInterface;
 use FOS\RestBundle\Controller\AbstractFOSRestController;
 use FOS\RestBundle\Controller\Annotations as Rest;
 
-/**
- * @Rest\Route("/public/cryptobot", name="public_crypto_bot_")
- */
 class CryptoBotController extends AbstractFOSRestController
 {
-    private CachedTradeListServiceInterface $tradeListService;
-
-    public function __construct(CachedTradeListServiceInterface $tradeListService)
+    public function __construct(private readonly CachedTradeListServiceInterface $tradeListService)
     {
-        $this->tradeListService = $tradeListService;
     }
 
     /**
      * @Rest\Route("/trades", methods={"GET"}, name="trades")
      * @Rest\View
-     *
-     * @return array
      */
-    public function getTradesAction(): array
+    public function getTrades(): array
     {
         return $this->tradeListService->getPublicTradeList();
     }
@@ -35,10 +26,8 @@ class CryptoBotController extends AbstractFOSRestController
     /**
      * @Rest\Route("/swaps", methods={"GET"}, name="swaps")
      * @Rest\View
-     *
-     * @return array
      */
-    public function getSwapsAction(): array
+    public function getSwaps(): array
     {
         return $this->tradeListService->getSwapList();
     }
@@ -46,10 +35,8 @@ class CryptoBotController extends AbstractFOSRestController
     /**
      * @Rest\Route("/positions", methods={"GET"}, name="positions")
      * @Rest\View
-     *
-     * @return array
      */
-    public function getPositionsAction(): array
+    public function getPositions(): array
     {
         return $this->tradeListService->getPublicPositionList();
     }

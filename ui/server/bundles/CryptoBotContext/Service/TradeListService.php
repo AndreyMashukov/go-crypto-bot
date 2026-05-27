@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Service;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
@@ -13,24 +9,8 @@ use GuzzleHttp\Exception\GuzzleException;
 
 class TradeListService
 {
-    private CryptoBotRepository $repository;
-
-    private CryptoBotService $cryptoBotService;
-
-    private TradeRepository $tradeRepository;
-
-    private PivotService $pivotService;
-
-    public function __construct(
-        CryptoBotRepository $repository,
-        CryptoBotService $cryptoBotService,
-        TradeRepository $tradeRepository,
-        PivotService $pivotService
-    ) {
-        $this->repository       = $repository;
-        $this->cryptoBotService = $cryptoBotService;
-        $this->tradeRepository  = $tradeRepository;
-        $this->pivotService     = $pivotService;
+    public function __construct(private readonly CryptoBotRepository $repository, private readonly CryptoBotService $cryptoBotService, private readonly TradeRepository $tradeRepository, private readonly PivotService $pivotService)
+    {
     }
 
     public function getPublicPositionList(): array
@@ -138,8 +118,8 @@ class TradeListService
             }
 
             foreach ($list as $key => $trade) {
-                $sellPrecision    = mb_strlen(explode('.', ((string) $trade['sell']))[1] ?? 0);
-                $sellQtyPrecision = mb_strlen(explode('.', ((string) $trade['sellQuantity']))[1] ?? 0);
+                $sellPrecision    = mb_strlen((string) (explode('.', ((string) $trade['sell']))[1] ?? 0));
+                $sellQtyPrecision = mb_strlen((string) (explode('.', ((string) $trade['sellQuantity']))[1] ?? 0));
 
                 $list[$key]['buy']         = round($trade['buy'], $sellPrecision);
                 $list[$key]['buyQuantity'] = round($trade['buyQuantity'], $sellQtyPrecision);
@@ -155,12 +135,7 @@ class TradeListService
         usort($tradeList, function (array $a, array $b) {
             $dateA = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $a['close']);
             $dateB = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $b['close']);
-
-            if ($dateA->getTimestamp() === $dateB->getTimestamp()) {
-                return 0;
-            }
-
-            return $dateA->getTimestamp() < $dateB->getTimestamp() ? 1 : -1;
+            return $dateB->getTimestamp() <=> $dateA->getTimestamp();
         });
 
         return \array_slice($tradeList, 0, 40);

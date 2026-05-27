@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\EventSubscriber;
 
 use Bundles\CryptoBotContext\Event\NewTradeEvent;
@@ -15,20 +11,8 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class TradeEventSubscriber implements EventSubscriberInterface
 {
-    private EntityManagerInterface $entityManager;
-
-    private TradeSyncManager $tradeSyncManager;
-
-    private CommissionService $commissionService;
-
-    public function __construct(
-        EntityManagerInterface $entityManager,
-        TradeSyncManager $tradeSyncManager,
-        CommissionService $commissionService
-    ) {
-        $this->entityManager     = $entityManager;
-        $this->tradeSyncManager  = $tradeSyncManager;
-        $this->commissionService = $commissionService;
+    public function __construct(private readonly EntityManagerInterface $entityManager, private readonly TradeSyncManager $tradeSyncManager, private readonly CommissionService $commissionService)
+    {
     }
 
     public static function getSubscribedEvents(): array

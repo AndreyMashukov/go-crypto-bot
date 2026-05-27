@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\OxaPayContext\Command;
 
 use Bundles\CryptoBotContext\Repository\CryptoBotRepository;
@@ -17,13 +13,9 @@ class OxaExpireDedicatedCommand extends Command
 
     protected static $defaultDescription = 'Unset expired dedicated servers from bots';
 
-    private CryptoBotRepository $cryptoBotRepository;
-
-    public function __construct(CryptoBotRepository $cryptoBotRepository)
+    public function __construct(private readonly CryptoBotRepository $cryptoBotRepository)
     {
         parent::__construct(self::$defaultName);
-
-        $this->cryptoBotRepository = $cryptoBotRepository;
     }
 
     protected function configure(): void
@@ -39,7 +31,7 @@ class OxaExpireDedicatedCommand extends Command
             $cryptobot->setDedicated(null);
             $this->cryptoBotRepository->add($cryptobot, true);
             ++$expired;
-            // todo: notify user about expired dedicated server
+
         }
 
         $io->success("Expired: {$expired} dedicated server for bots.");

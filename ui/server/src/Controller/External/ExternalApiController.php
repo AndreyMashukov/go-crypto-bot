@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace App\Controller\External;
 
@@ -12,16 +11,10 @@ use Sensio\Bundle\FrameworkExtraBundle\Configuration\Security;
 use Swagger\Annotations as SWG;
 use Symfony\Component\HttpFoundation\Request;
 
-/**
- * @Rest\Route("/external/api", name="external_api_")
- */
 class ExternalApiController extends AbstractFOSRestController
 {
-    private CryptoTradeConfigRepository $configRepository;
-
-    public function __construct(CryptoTradeConfigRepository $configRepository)
+    public function __construct(private readonly CryptoTradeConfigRepository $configRepository)
     {
-        $this->configRepository = $configRepository;
     }
 
     /**
@@ -66,10 +59,8 @@ class ExternalApiController extends AbstractFOSRestController
      * )
      * @Security("is_granted('ROLE_API')")
      * @SWG\Tag(name="Sentiment Analysis")
-     *
-     * @param Request $request
      */
-    public function getSentimentAction(Request $request): array
+    public function getSentiment(Request $request): array
     {
         $coin = $request->get('coin');
         $list = $this->configRepository->getSentimentList();

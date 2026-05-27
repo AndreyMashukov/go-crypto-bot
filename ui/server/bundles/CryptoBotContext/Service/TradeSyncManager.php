@@ -1,33 +1,14 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Service;
 
+use Bundles\CryptoBotContext\Entity\Server;
 use Bundles\CryptoBotContext\Entity\CryptoBot;
 use Psr\Log\LoggerInterface;
 
 class TradeSyncManager
 {
-    private CryptoBotService $cryptoBotService;
-
-    private TradeRegistry $tradeRegistry;
-
-    private DeployDomain $deployDomain;
-
-    private LoggerInterface $logger;
-
-    public function __construct(
-        CryptoBotService $cryptoBotService,
-        TradeRegistry $tradeRegistry,
-        DeployDomain $deployDomain,
-        LoggerInterface $logger
-    ) {
-        $this->cryptoBotService = $cryptoBotService;
-        $this->tradeRegistry    = $tradeRegistry;
-        $this->deployDomain     = $deployDomain;
-        $this->logger           = $logger;
+    public function __construct(private readonly CryptoBotService $cryptoBotService, private readonly TradeRegistry $tradeRegistry, private readonly DeployDomain $deployDomain, private readonly LoggerInterface $logger)
+    {
     }
 
     public function syncTrades(CryptoBot $cryptoBot, ?callable $onError, bool $allowStop = false): void
@@ -60,7 +41,7 @@ class TradeSyncManager
 
         if ($stop && !$cryptoBot->isStopped()) {
             try {
-                if ($cryptoBot->getServer()) {
+                if ($cryptoBot->getServer() instanceof Server) {
                     $this->deployDomain->doStop(
                         $cryptoBot,
                         $cryptoBot->getServer(),

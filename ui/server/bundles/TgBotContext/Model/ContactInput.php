@@ -1,20 +1,13 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\TgBotContext\Model;
 
 class ContactInput implements Input
 {
-    private string $phone;
-
-    private string $eid;
-
-    public function __construct(string $phone, string $eid)
+    public function __construct(private readonly string $phone, private readonly string $eid)
     {
-        $this->phone = $phone;
-        $this->eid   = $eid;
     }
 
     public function getText(): string

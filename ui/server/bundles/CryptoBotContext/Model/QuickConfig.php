@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Model;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
@@ -13,18 +9,13 @@ class QuickConfig
 {
     /**
      * @Assert\NotNull
-     *
-     * @var null|ExchangeSymbol
      */
     private ?ExchangeSymbol $exchangeSymbol = null;
 
     private bool $restartBot = false;
 
-    private CryptoBot $cryptoBot;
-
-    public function __construct(CryptoBot $cryptoBot)
+    public function __construct(private readonly CryptoBot $cryptoBot)
     {
-        $this->cryptoBot = $cryptoBot;
     }
 
     public function getExchangeSymbol(): ?ExchangeSymbol

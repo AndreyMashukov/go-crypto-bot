@@ -1,31 +1,20 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Model;
 
 use JMS\Serializer\Annotation as Serializer;
 use Symfony\Component\Validator\Constraints as Assert;
 
-/**
- * @Serializer\ExclusionPolicy(Serializer\ExclusionPolicy::ALL)
- */
 class Signal
 {
     /**
      * @Serializer\Expose
      * @Assert\NotNull
-     *
-     * @var null|string
      */
     private ?string $exchange = null;
 
     /**
      * @Serializer\Expose
      * @Assert\NotNull
-     *
-     * @var null|string
      */
     private ?string $symbol = null;
 
@@ -33,8 +22,6 @@ class Signal
      * @Serializer\Expose
      * @Assert\NotNull
      * @Assert\GreaterThan(value="0")
-     *
-     * @var null|float
      */
     private ?float $buyPrice = null;
 
@@ -42,8 +29,6 @@ class Signal
      * @Serializer\Expose
      * @Assert\NotNull
      * @Assert\GreaterThan(value="0")
-     *
-     * @var null|float
      */
     private ?float $percent = null;
 
@@ -52,8 +37,6 @@ class Signal
      * @Serializer\Type("array<Bundles\CryptoBotContext\Model\SignalProfitOption>")
      * @Assert\Valid
      * @Assert\Count(min="1")
-     *
-     * @var array
      */
     private array $profitOptions = [];
 
@@ -62,8 +45,6 @@ class Signal
      * @Serializer\Type("array<Bundles\CryptoBotContext\Model\SignalExtraChargeOption>")
      * @Assert\Valid
      * @Assert\Count(min="1")
-     *
-     * @var array
      */
     private array $extraChargeOptions = [];
 
@@ -71,16 +52,12 @@ class Signal
      * @Serializer\Expose
      * @Assert\NotNull
      * @Assert\GreaterThan(value="0")
-     *
-     * @var null|int
      */
     private ?int $expireTimestamp = null;
 
     /**
      * @Assert\NotNull
      * @Assert\Choice(choices={1, 7, 14, 30})
-     *
-     * @var null|int
      */
     private ?int $periodDays = null;
 
@@ -172,7 +149,6 @@ class Signal
     {
         $minPercent = null;
 
-        /** @var SignalProfitOption $option */
         foreach ($this->getProfitOptions() as $option) {
             if (null === $minPercent) {
                 $minPercent = $option->optionPercent;
@@ -189,7 +165,6 @@ class Signal
     {
         $minSellPrice = null;
 
-        /** @var SignalProfitOption $option */
         foreach ($this->getProfitOptions() as $option) {
             if (null === $minSellPrice) {
                 $minSellPrice = $option->getSellPrice();
@@ -210,7 +185,6 @@ class Signal
     {
         $minSellPrice = null;
 
-        /** @var SignalProfitOption $option */
         foreach ($this->getProfitOptions() as $option) {
             if (null === $minSellPrice) {
                 $minSellPrice = $option->getSellPrice();

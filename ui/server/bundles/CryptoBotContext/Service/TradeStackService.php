@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Service;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
@@ -13,28 +9,8 @@ use JMS\Serializer\SerializationContext;
 
 class TradeStackService
 {
-    private HealthCheckService $healthCheckService;
-
-    private CryptoBotService $cryptoBotService;
-
-    private TradeRepository $tradeRepository;
-
-    private ArrayTransformerInterface $arrayTransformer;
-
-    private PivotService $pivotService;
-
-    public function __construct(
-        HealthCheckService $healthCheckService,
-        CryptoBotService $cryptoBotService,
-        TradeRepository $tradeRepository,
-        ArrayTransformerInterface $arrayTransformer,
-        PivotService $pivotService
-    ) {
-        $this->healthCheckService = $healthCheckService;
-        $this->cryptoBotService   = $cryptoBotService;
-        $this->tradeRepository    = $tradeRepository;
-        $this->arrayTransformer   = $arrayTransformer;
-        $this->pivotService       = $pivotService;
+    public function __construct(private readonly HealthCheckService $healthCheckService, private readonly CryptoBotService $cryptoBotService, private readonly TradeRepository $tradeRepository, private readonly ArrayTransformerInterface $arrayTransformer, private readonly PivotService $pivotService)
+    {
     }
 
     public function getTradeStack(CryptoBot $cryptoBot): array

@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace App\Tests\Unit\Service;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
@@ -14,14 +10,8 @@ use Bundles\CryptoBotContext\Service\TradeListService;
 use Bundles\UserContext\Entity\User;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @group unit
- */
 class TradeListServiceTest extends TestCase
 {
-    /**
-     * Should allow to shuffle list of trades.
-     */
     public function testShouldAllowToShuffleListOfTrades(): void
     {
         $repository       = $this->createMock(CryptoBotRepository::class);
@@ -53,15 +43,12 @@ class TradeListServiceTest extends TestCase
         $cryptoBotService
             ->expects($this->exactly(2))
             ->method('getTradeList')
-            ->willReturnCallback(function () use ($bullets) {
-                return array_shift($bullets);
-            });
+            ->willReturnCallback(fn() => array_shift($bullets));
 
         $pivotService = $this->createMock(PivotService::class);
 
         $listService = new TradeListService($repository, $cryptoBotService, $tradeRepository, $pivotService);
         $trades      = $listService->getPublicTradeList();
-        // file_put_contents(__DIR__ . '/../../_data/Unit/TradeListServiceTest/testShouldAllowToShuffleListOfTrades.json', json_encode($trades));
         $this->assertJsonStringEqualsJsonFile(__DIR__ . '/../../_data/Unit/TradeListServiceTest/testShouldAllowToShuffleListOfTrades.json', json_encode($trades));
     }
 }

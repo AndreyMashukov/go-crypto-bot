@@ -1,23 +1,13 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\TgBotContext\Model;
 
 class InlineInput implements Input
 {
-    private string $text;
-
-    private ?int $messageId;
-
-    private ?string $messageText;
-
-    public function __construct(string $text, ?int $messageId = null, ?string $messageText = null)
+    public function __construct(private readonly string $text, private readonly ?int $messageId = null, private readonly ?string $messageText = null)
     {
-        $this->text        = $text;
-        $this->messageId   = $messageId;
-        $this->messageText = $messageText;
     }
 
     public function getText(): string

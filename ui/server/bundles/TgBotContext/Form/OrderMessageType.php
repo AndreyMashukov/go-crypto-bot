@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\TgBotContext\Form;
 
@@ -17,11 +16,8 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class OrderMessageType extends AbstractType
 {
-    private EntityManagerInterface $entityManager;
-
-    public function __construct(EntityManagerInterface $entityManager)
+    public function __construct(private readonly EntityManagerInterface $entityManager)
     {
-        $this->entityManager = $entityManager;
     }
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -48,6 +44,7 @@ class OrderMessageType extends AbstractType
         ]);
     }
 
+    #[\Override]
     public function getBlockPrefix()
     {
         return '';
@@ -59,7 +56,6 @@ class OrderMessageType extends AbstractType
         $fakeMetadata->setIdentifier(['uuid']);
         $fakeMetadata->fieldMappings['uuid']['type'] = 'string';
         $reflectionProperty                          = new \ReflectionProperty(CryptoBot::class, 'uuid');
-        $reflectionProperty->setAccessible(true);
         $fakeMetadata->reflFields['uuid'] = $reflectionProperty;
 
         return new IdReader($this->entityManager, $fakeMetadata);

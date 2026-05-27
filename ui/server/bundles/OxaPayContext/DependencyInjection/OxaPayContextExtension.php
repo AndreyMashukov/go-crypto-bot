@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\OxaPayContext\DependencyInjection;
 
 use Symfony\Component\Config\FileLocator;
@@ -15,8 +11,6 @@ use Symfony\Component\Yaml\Yaml;
 final class OxaPayContextExtension extends Extension implements PrependExtensionInterface
 {
     /**
-     * {@inheritDoc}
-     *
      * @param array<array> $configs
      *
      * @throws \Exception

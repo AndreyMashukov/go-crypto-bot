@@ -1,10 +1,7 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Command;
 
+use Bundles\CryptoBotContext\Entity\Server;
 use Bundles\CryptoBotContext\Entity\CryptoBot;
 use Bundles\CryptoBotContext\Repository\CryptoBotRepository;
 use Bundles\CryptoBotContext\Service\DeployDomain;
@@ -20,18 +17,11 @@ class BotStopCommand extends Command
 
     protected static $defaultDescription = 'Stop bot';
 
-    private CryptoBotRepository $repository;
-
-    private DeployDomain $deployDomain;
-
     public function __construct(
-        CryptoBotRepository $repository,
-        DeployDomain $deployDomain
+        private readonly CryptoBotRepository $repository,
+        private readonly DeployDomain $deployDomain
     ) {
         parent::__construct(self::$defaultName);
-
-        $this->repository   = $repository;
-        $this->deployDomain = $deployDomain;
     }
 
     protected function configure()
@@ -55,7 +45,7 @@ class BotStopCommand extends Command
         }
 
         try {
-            if ($cryptoBot->getServer()) {
+            if ($cryptoBot->getServer() instanceof Server) {
                 $this->deployDomain->doStop(
                     $cryptoBot,
                     $cryptoBot->getServer(),

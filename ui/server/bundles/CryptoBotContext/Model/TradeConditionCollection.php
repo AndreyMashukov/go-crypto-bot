@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\CryptoBotContext\Model;
 
@@ -13,23 +12,16 @@ class TradeConditionCollection
 {
     /**
      * @Assert\NotNull
-     *
-     * @var null|string
      */
     public ?string $symbol = null;
 
     /**
      * @Assert\Valid
-     *
-     * @var ArrayCollection
      */
     public ArrayCollection $conditions;
 
-    public CryptoBot $cryptobot;
-
-    public function __construct(CryptoBot $cryptobot)
+    public function __construct(public CryptoBot $cryptobot)
     {
         $this->conditions = new ArrayCollection();
-        $this->cryptobot  = $cryptobot;
     }
 }

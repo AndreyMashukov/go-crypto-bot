@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Service;
 
 use Bundles\CryptoBotContext\Exception\SentimentNoRelatedCoinsException;
@@ -18,24 +14,8 @@ class SentimentService
 {
     use SentimentAverageScoreTrait;
 
-    private ClientInterface $client;
-
-    private string $env;
-
-    private LoggerInterface $logger;
-
-    private AlertService $alertService;
-
-    public function __construct(
-        AlertService $alertService,
-        LoggerInterface $logger,
-        ClientInterface $client,
-        string $env
-    ) {
-        $this->client       = $client;
-        $this->env          = $env;
-        $this->logger       = $logger;
-        $this->alertService = $alertService;
+    public function __construct(private AlertService $alertService, private LoggerInterface $logger, private ClientInterface $client, private string $env)
+    {
     }
 
     public function sentimentAnalysis(RSSFeedArticle $article): SentimentResult
@@ -49,7 +29,7 @@ class SentimentService
         $coins = [];
         $texts = $article->getFullText();
 
-        if (!$texts) {
+        if ($texts === []) {
             $texts[] = "{$article->getTitle()}. {$article->getShortText()}";
         }
 

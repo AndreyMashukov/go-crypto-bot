@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\TgBotContext\Model;
 
 use Bundles\TgBotContext\Model\Traits\SendTrait;
@@ -13,21 +9,16 @@ class FileMessage extends BasicMessage
 {
     use SendTrait;
 
-    private string $fileUrl;
-
-    public function __construct(string $message, string $fileUrl, ?Keyboard $keyboard)
+    public function __construct(string $message, private string $fileUrl, ?Keyboard $keyboard)
     {
         parent::__construct($message, $keyboard);
-
-        $this->fileUrl = $fileUrl;
     }
 
     /**
-     * @param BotApiComplete         $bot
-     * @param ConfigurationInterface $configuration
      *
      * @throws \Throwable
      */
+    #[\Override]
     public function send(BotApiComplete $bot, ConfigurationInterface $configuration): void
     {
         $params = [

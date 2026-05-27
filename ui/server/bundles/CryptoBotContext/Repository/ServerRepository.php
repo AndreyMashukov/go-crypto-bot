@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Repository;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
@@ -12,11 +8,6 @@ use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<Server>
- *
- * @method null|Server find($id, $lockMode = null, $lockVersion = null)
- * @method null|Server findOneBy(array $criteria, array $orderBy = null)
- * @method Server[]    findAll()
- * @method Server[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
 class ServerRepository extends ServiceEntityRepository
 {
@@ -45,11 +36,11 @@ class ServerRepository extends ServiceEntityRepository
 
     public function getAvailableServer(CryptoBot $cryptoBot): ?Server
     {
-        if ($cryptoBot->getServer()) {
+        if ($cryptoBot->getServer() instanceof Server) {
             return $cryptoBot->getServer();
         }
 
-        if ($cryptoBot->getDedicated()) {
+        if ($cryptoBot->getDedicated() instanceof Server) {
             return $cryptoBot->getDedicated();
         }
 

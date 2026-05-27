@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\TgBotContext\Model;
 
 use Bundles\TgBotContext\Model\Traits\SendTrait;
@@ -14,21 +10,16 @@ class VideoMessage extends BasicMessage
 {
     use SendTrait;
 
-    private string $videoPath;
-
-    public function __construct(string $message, string $videoPath, ?Keyboard $keyboard)
+    public function __construct(string $message, private string $videoPath, ?Keyboard $keyboard)
     {
         parent::__construct($message, $keyboard);
-
-        $this->videoPath = $videoPath;
     }
 
     /**
-     * @param BotApiComplete         $bot
-     * @param ConfigurationInterface $configuration
      *
      * @throws \Throwable
      */
+    #[\Override]
     public function send(BotApiComplete $bot, ConfigurationInterface $configuration): void
     {
         $params = [

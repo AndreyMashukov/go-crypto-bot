@@ -1,21 +1,11 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace App\Tests\Functional\Controller\V1\Admin;
 
 use App\Tests\RestTestCase;
 use Symfony\Component\HttpFoundation\Request;
 
-/**
- * @group functional
- */
 class UserControllerTest extends RestTestCase
 {
-    /**
-     * Should allow to do CRUD operations.
-     */
     public function testShouldAllowToDoCrudOperations(): void
     {
         $list = $this->deserialize($this->apiRequest($this->getUrl('v1_admin_list', [

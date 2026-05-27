@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\UserContext\EventListener;
 
@@ -15,25 +14,10 @@ use Symfony\Component\HttpKernel\KernelEvents;
 
 class LoginSubscriber implements EventSubscriberInterface
 {
-    private UserProvider $userProvider;
-
-    private EntityManagerInterface $entityManager;
-
-    private IpExtractor $ipExtractor;
-
-    public function __construct(
-        UserProvider $userProvider,
-        EntityManagerInterface $entityManager,
-        IpExtractor $ipExtractor
-    ) {
-        $this->userProvider  = $userProvider;
-        $this->entityManager = $entityManager;
-        $this->ipExtractor   = $ipExtractor;
+    public function __construct(private readonly UserProvider $userProvider, private readonly EntityManagerInterface $entityManager, private readonly IpExtractor $ipExtractor)
+    {
     }
 
-    /**
-     * @return array
-     */
     public static function getSubscribedEvents(): array
     {
         return [
@@ -41,9 +25,6 @@ class LoginSubscriber implements EventSubscriberInterface
         ];
     }
 
-    /**
-     * @param RequestEvent $event
-     */
     public function onKernelRequest(RequestEvent $event)
     {
         $request = $event->getRequest();
@@ -52,7 +33,7 @@ class LoginSubscriber implements EventSubscriberInterface
         $user = $this->userProvider->getCurrentUser();
         if ($user instanceof User) {
             $user->setLastLogin(new \DateTime('now'));
-            if ($userIp) {
+            if ($userIp !== '' && $userIp !== '0') {
                 $user->setLastLoginIp($userIp);
             }
             $this->entityManager->flush();

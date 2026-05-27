@@ -1,22 +1,15 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace App\Tests;
 
+use Lcobucci\JWT\Token\Parser;
 use Bundles\UserContext\Entity\User;
 use Bundles\UserContext\Service\EmailSender;
 use Doctrine\ORM\EntityManagerInterface;
 use Lcobucci\JWT\Encoding\JoseEncoder;
-use Lcobucci\JWT\Token;
-use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Profiler\Profiler;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 class RestTestCase extends WebTestCase
 {
@@ -40,22 +33,19 @@ class RestTestCase extends WebTestCase
 
     protected array $scopes = ['user'];
 
-    /** @var MessageBusInterface|MockObject */
     protected $bus;
 
     protected bool $anonymous = false;
 
     protected bool $overrideUuidSnapshot = false;
 
-    // If you need to regenerate all snapshots,
-    // You can turn it to `true` and run all tests!
     protected bool $fix = false;
 
     protected array $emails = [];
 
     protected function services(): void
     {
-        // todo mock here the service.
+
     }
 
     protected function mockEmails(): void
@@ -86,12 +76,12 @@ class RestTestCase extends WebTestCase
         $this->em = self::getContainer()->get('doctrine.orm.default_entity_manager');
         $this->em->beginTransaction();
 
-        if ($this->username) {
+        if ($this->username !== '' && $this->username !== '0') {
             $user = $this->em->getRepository(User::class)->findOneBy([
                 'username' => $this->username,
             ]);
 
-            if ($user) {
+            if ($user instanceof User) {
                 self::getContainer()->get('test.brute_force_security')->invalidate($user);
             }
         }
@@ -130,7 +120,7 @@ class RestTestCase extends WebTestCase
 
     public function apiPublicRequest(string $uri, string $method = Request::METHOD_GET, array $params = [], array $headers = []): Response
     {
-        if ($this->tracker) {
+        if ($this->tracker !== '' && $this->tracker !== '0') {
             $headers['HTTP_X-TRACKER-ID'] = $this->tracker;
         }
 
@@ -161,7 +151,7 @@ class RestTestCase extends WebTestCase
 
         $this->assertArrayHasKey('access_token', $content);
 
-        $parser    = new Token\Parser(new JoseEncoder());
+        $parser    = new Parser(new JoseEncoder());
         $parsedJWT = $parser->parse($content['access_token']);
         $userData  = $parsedJWT->claims()->get('user');
 
@@ -202,9 +192,7 @@ class RestTestCase extends WebTestCase
         $filePath = "{$dataSetDir}/{$name}.{$ext}";
 
         if (!$this->fix && file_exists($filePath)) {
-            $fixer = function (?string $string) {
-                return preg_replace('/(\s|\b|\n)+/ui', '', $string ?: '');
-            };
+            $fixer = (fn(?string $string) => preg_replace('/(\s|\b|\n)+/ui', '', $string ?: ''));
 
             $expected = \is_array($snapshot)
                 ? json_decode(file_get_contents($filePath), true)
@@ -222,7 +210,9 @@ class RestTestCase extends WebTestCase
         }
 
         file_put_contents($filePath, \is_array($snapshot) ? json_encode($snapshot, $options) : $snapshot);
-        !$this->fix && $this->markTestIncomplete('Snapshot has been created.');
+        if (!$this->fix) {
+            $this->markTestIncomplete('Snapshot has been created.');
+        }
     }
 
     protected function assertJsonSnapshot(?array $json, string $suffix = '')
@@ -241,10 +231,10 @@ class RestTestCase extends WebTestCase
 
         if (!\is_array($data)) {
             $data = explode("\n", $data);
-            $data = array_filter($data, fn ($item) => mb_strlen($item) > 0);
+            $data = array_filter($data, fn ($item) => mb_strlen((string) $item) > 0);
         }
 
-        if (!\is_array($data) || 0 === \count($data)) {
+        if (0 === \count($data)) {
             return $original;
         }
 
@@ -269,8 +259,8 @@ class RestTestCase extends WebTestCase
                 continue;
             }
 
-            if (preg_match('/\/([a-z0-9\._-]+(\/)?)+\.[a-z0-9]+/ui', $item)) {
-                $new[$key] = preg_replace('/\/((\/)?[a-z0-9\._-]+(\/)?)+/ui', '<file-path>', $item);
+            if (preg_match('/\/([a-z0-9\._-]+(\/)?)+\.[a-z0-9]+/ui', (string) $item)) {
+                $new[$key] = preg_replace('/\/((\/)?[a-z0-9\._-]+(\/)?)+/ui', '<file-path>', (string) $item);
 
                 continue;
             }
@@ -293,14 +283,14 @@ class RestTestCase extends WebTestCase
                 continue;
             }
 
-            if (false !== mb_strpos($key, 'date')) {
+            if (false !== mb_strpos((string) $key, 'date')) {
                 $new[$key] = '<date>';
 
                 continue;
             }
 
-            if ($this->overrideUuidSnapshot && preg_match('/[a-z0-9-]{36}/ui', $item)) {
-                $new[$key] = preg_replace('/[a-z0-9-]{36}/ui', '<uuid>', $item);
+            if ($this->overrideUuidSnapshot && preg_match('/[a-z0-9-]{36}/ui', (string) $item)) {
+                $new[$key] = preg_replace('/[a-z0-9-]{36}/ui', '<uuid>', (string) $item);
 
                 continue;
             }
@@ -313,7 +303,7 @@ class RestTestCase extends WebTestCase
 
             $datePattern = '/^20[2-9][0-9]-[0-9]{2}-[0-9]{2}(T|\s+)?[0-9]{2}:[0-9]{2}(:[0-9]{2})?(\+[0-9]{2}:[0-9]{2})?(\.[0-9]+Z?)?$/ui';
 
-            if (preg_match($datePattern, $item)) {
+            if (preg_match($datePattern, (string) $item)) {
                 $new[$key] = '<date>';
 
                 continue;
@@ -322,7 +312,7 @@ class RestTestCase extends WebTestCase
             if (
             preg_match(
                 '/^(?P<first>http(s)?:\/\/[a-z0-9-\.]+(net|ru|com|svt|test))(?P<second>.*)$/ui',
-                $item,
+                (string) $item,
                 $matches
             )
             ) {
@@ -331,7 +321,7 @@ class RestTestCase extends WebTestCase
                 continue;
             }
 
-            if (!preg_match('/^([a-zA-Z]+Id|id)$/u', $key) && !preg_match('/^[a-z0-9-]{36}$/ui', $item)) {
+            if (!preg_match('/^([a-zA-Z]+Id|id)$/u', (string) $key) && !preg_match('/^[a-z0-9-]{36}$/ui', (string) $item)) {
                 $new[$key] = $item;
 
                 continue;
@@ -346,11 +336,7 @@ class RestTestCase extends WebTestCase
             if (!\is_int($item)) {
                 $this->assertMatchesRegularExpression('/^[a-z0-9- ]+$/ui', $item);
 
-                if (preg_match('/^[a-z0-9-]{36}$/ui', $key)) {
-                    $new[$key] = '<id>';
-                } else {
-                    $new[$key] = $item;
-                }
+                $new[$key] = preg_match('/^[a-z0-9-]{36}$/ui', (string) $key) ? '<id>' : $item;
 
                 continue;
             }
@@ -388,7 +374,6 @@ class RestTestCase extends WebTestCase
     protected function sqlProfiled(\Closure $closure, int $expectedCount, string $mode = 'assertEquals')
     {
         static::$client->enableProfiler();
-        /** @var Profiler $profiler */
         $profiler  = self::$container->get('profiler');
 
         try {
@@ -406,11 +391,11 @@ class RestTestCase extends WebTestCase
         }
 
         $result   = $closure();
-        $sqlAfter = $profiler->get('db')->getQueryCount();
+        $profiler->get('db')->getQueryCount();
 
         $offset = 0;
 
-        if ($offset) {
+        if ($offset !== 0) {
             $offset = $sqlBefore - 1;
         }
 

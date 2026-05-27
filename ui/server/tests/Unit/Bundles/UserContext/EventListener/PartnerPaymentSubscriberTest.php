@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Unit\Bundles\UserContext\EventListener;
 
 use Bundles\OxaPayContext\Entity\Payment;
@@ -11,17 +7,12 @@ use Bundles\UserContext\Entity\User;
 use Bundles\UserContext\Event\PaymentCompletedEvent;
 use Bundles\UserContext\EventListener\PartnerPaymentSubscriber;
 use Doctrine\ORM\EntityManagerInterface;
-use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
-/**
- * @group unit
- */
 class PartnerPaymentSubscriberTest extends TestCase
 {
     private PartnerPaymentSubscriber $subscriber;
 
-    /** @var EntityManagerInterface|MockObject */
     private EntityManagerInterface $entityManager;
 
     protected function setUp(): void

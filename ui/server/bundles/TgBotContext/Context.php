@@ -1,15 +1,10 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\TgBotContext;
 
 use Bundles\TgBotContext\Exception\SkipStrategyException;
 use Bundles\TgBotContext\Model\BasicMessage;
 use Bundles\TgBotContext\Model\ConfigurationInterface;
 use Bundles\TgBotContext\Model\Input;
-use Bundles\TgBotContext\Model\MessageInterface;
 use Bundles\TgBotContext\Strategy\StrategyInterface;
 use Psr\Log\LoggerInterface;
 use TgBotApi\BotApiBase\BotApiComplete;
@@ -20,30 +15,23 @@ class Context
 {
     private array $strategies;
 
-    private BotApiComplete $botApi;
+    private readonly BotApiComplete $botApi;
 
-    private LoggerInterface $logger;
-
-    public function __construct(\Traversable $strategies, BotApiComplete $botApi, LoggerInterface $logger)
+    public function __construct(\Traversable $strategies, BotApiComplete $botApi, private readonly LoggerInterface $logger)
     {
         $this->strategies = iterator_to_array($strategies);
         $this->botApi     = $botApi;
-        $this->logger     = $logger;
 
         usort($this->strategies, fn (StrategyInterface $first, StrategyInterface $second) => $first->getPriority() <= $second->getPriority());
     }
 
     /**
-     * @param Input                  $input
-     * @param ConfigurationInterface $configuration
-     *
      * @throws TGException\BadArgumentException
      * @throws TGException\ResponseException
      */
     public function process(Input $input, ConfigurationInterface $configuration): void
     {
         try {
-            /** @var StrategyInterface $instance */
             foreach ($this->strategies as $instance) {
                 if ($instance->canProcess($configuration->getStep(), $input)) {
                     try {
@@ -58,7 +46,6 @@ class Context
                         $output = [$output];
                     }
 
-                    /** @var MessageInterface $item */
                     foreach ($output as $item) {
                         $item->send($this->botApi, $configuration);
                     }

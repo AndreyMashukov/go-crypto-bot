@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Command;
 
 use Bundles\CryptoBotContext\Repository\CryptoBotRepository;
@@ -18,18 +14,11 @@ class BotTradesSyncCommand extends Command
 
     protected static $defaultDescription = 'Sync bots trade list';
 
-    private CryptoBotRepository $repository;
-
-    private TradeSyncManager $tradeSyncManager;
-
     public function __construct(
-        CryptoBotRepository $repository,
-        TradeSyncManager $tradeSyncManager
+        private readonly CryptoBotRepository $repository,
+        private readonly TradeSyncManager $tradeSyncManager
     ) {
         parent::__construct(self::$defaultName);
-
-        $this->repository       = $repository;
-        $this->tradeSyncManager = $tradeSyncManager;
     }
 
     protected function configure(): void

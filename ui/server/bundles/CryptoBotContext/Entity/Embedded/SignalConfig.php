@@ -1,19 +1,10 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Entity\Embedded;
 
 use Doctrine\ORM\Mapping as ORM;
 use JMS\Serializer\Annotation as Serializer;
 use Symfony\Component\Validator\Constraints as Assert;
 
-/**
- * @ORM\Embeddable
- *
- * @Serializer\ExclusionPolicy(Serializer\ExclusionPolicy::ALL)
- */
 class SignalConfig
 {
     public const SELL_PRICE_CORRECTION_MODE_MAX = 'max';
@@ -23,7 +14,6 @@ class SignalConfig
     public const SELL_PRICE_CORRECTION_MODE_EQUAL = 'equal';
 
     /**
-     * @var float
      *
      * @ORM\Column(name="percent_filter", type="float", options={"default": 1.00})
      *
@@ -36,7 +26,6 @@ class SignalConfig
     private float $percentFilter = 1.00;
 
     /**
-     * @var bool
      *
      * @ORM\Column(name="rating_filter", type="boolean", options={"default": 0})
      *
@@ -46,7 +35,6 @@ class SignalConfig
     private bool $ratingFilter = false;
 
     /**
-     * @var bool
      *
      * @ORM\Column(name="avg_buy_filter", type="boolean", options={"default": 0})
      *
@@ -56,7 +44,6 @@ class SignalConfig
     private bool $avgBuyFilter = false;
 
     /**
-     * @var bool
      *
      * @ORM\Column(name="avg_sell_filter", type="boolean", options={"default": 0})
      *
@@ -66,7 +53,6 @@ class SignalConfig
     private bool $avgSellFilter = false;
 
     /**
-     * @var bool
      *
      * @ORM\Column(name="avg_buy_correction", type="boolean", options={"default": 1})
      *
@@ -76,7 +62,6 @@ class SignalConfig
     private bool $avgBuyCorrection = true;
 
     /**
-     * @var bool
      *
      * @ORM\Column(name="avg_sell_correction", type="boolean", options={"default": 0})
      *
@@ -86,7 +71,6 @@ class SignalConfig
     private bool $avgSellCorrection = false;
 
     /**
-     * @var string
      *
      * @ORM\Column(name="sell_price_correction_mode", type="string", length=10, nullable=false, options={"default": "equal"})
      *
@@ -99,7 +83,6 @@ class SignalConfig
     private string $sellPriceCorrectionMode = self::SELL_PRICE_CORRECTION_MODE_EQUAL;
 
     /**
-     * @var int
      *
      * @ORM\Column(name="signal_period_days", type="integer", options={"default": 1})
      *

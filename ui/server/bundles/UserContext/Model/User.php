@@ -1,23 +1,12 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\UserContext\Model;
 
 use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\ORM\Mapping as ORM;
 use Pd\UserBundle\Model\GroupInterface;
 use Pd\UserBundle\Model\ProfileInterface;
 use Pd\UserBundle\Model\UserInterface;
-use Symfony\Component\Validator\Constraints as Assert;
 
-/**
- * User Account.
- *
- * @author Ramazan APAYDIN <apaydin541@gmail.com>
- */
-abstract class User implements UserInterface, \Serializable
+abstract class User implements UserInterface, \Serializable, \Stringable
 {
     public const ROLE_DEFAULT = 'ROLE_USER';
 
@@ -25,83 +14,34 @@ abstract class User implements UserInterface, \Serializable
 
     public const ROLE_ALL_ACCESS = 'ROLE_SUPER_ADMIN';
 
-    /**
-     * @ORM\Column(type="integer")
-     * @ORM\Id
-     * @ORM\GeneratedValue(strategy="AUTO")
-     */
-    protected $id;
+    protected ?int $id = null;
 
-    /**
-     * @ORM\OneToOne(targetEntity="Profile", cascade={"persist", "merge", "remove"})
-     * @ORM\JoinColumn(name="profile_id", referencedColumnName="id")
-     * @Assert\Valid
-     */
-    protected $profile;
+    protected ?\Profile $profile = null;
 
-    /**
-     * @ORM\Column(type="string", length=100)
-     */
-    protected $password;
+    protected ?string $password = null;
 
-    /**
-     * @ORM\Column(type="string", length=100, unique=true)
-     */
-    protected $email;
+    protected ?string $email = null;
 
-    /**
-     * @ORM\Column(type="boolean")
-     */
-    protected $active;
+    protected ?bool $active = true;
 
-    /**
-     * @ORM\Column(type="boolean")
-     */
-    protected $freeze;
+    protected ?bool $freeze = false;
 
-    /**
-     * @ORM\Column(type="datetime", nullable=true)
-     */
-    protected $lastLogin;
+    protected ?\DateTimeInterface $lastLogin = null;
 
-    /**
-     * @ORM\Column(type="string", length=32, nullable=true)
-     */
-    protected $lastLoginIp;
+    protected ?string $lastLoginIp = null;
 
-    /**
-     * @ORM\Column(type="string", length=180, unique=true, nullable=true)
-     */
-    protected $confirmationToken;
+    protected ?string $confirmationToken = null;
 
-    /**
-     * @ORM\Column(type="datetime", nullable=true)
-     */
-    protected $passwordRequestedAt;
+    protected ?\DateTimeInterface $passwordRequestedAt = null;
 
-    /**
-     * @ORM\Column(type="datetime", nullable=true)
-     */
-    protected $createdAt;
+    protected ?\DateTimeInterface $createdAt = null;
 
-    /**
-     * @ORM\Column(type="array")
-     */
     protected $roles;
 
-    /**
-     * @ORM\ManyToMany(targetEntity="Group")
-     * @ORM\JoinTable(name="user_group_tax",
-     *     joinColumns={@ORM\JoinColumn(name="user_id", referencedColumnName="id", onDelete="CASCADE")},
-     *     inverseJoinColumns={@ORM\JoinColumn(name="group_id", referencedColumnName="id", onDelete="CASCADE")}
-     * )
-     */
     protected $groups;
 
     public function __construct()
     {
-        $this->active    = true;
-        $this->freeze    = false;
         $this->roles     = [static::ROLE_DEFAULT];
         $this->createdAt = new \DateTime();
         $this->groups    = new ArrayCollection();
@@ -112,9 +52,9 @@ abstract class User implements UserInterface, \Serializable
         return null;
     }
 
-    public function __toString()
+    public function __toString(): string
     {
-        return $this->getUsername();
+        return (string) $this->getUsername();
     }
 
     public function getId(): int
@@ -254,7 +194,7 @@ abstract class User implements UserInterface, \Serializable
         return $this;
     }
 
-    public function getRoles(): ?array
+    public function getRoles(bool $privateRoles = false): ?array
     {
         $roles      = $this->roles;
         $groupRoles = [[]];

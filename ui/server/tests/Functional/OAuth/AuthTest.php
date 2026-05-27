@@ -1,20 +1,15 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
+// RECTOR-BAN: superglobal access ($_ENV/$_SERVER/$_GET/$_POST/$_REQUEST/$_COOKIE/$_FILES/$_SESSION) and getenv/putenv are forbidden — read env via DI constructor args wired from container configuration; read request via your framework Request object
 namespace App\Tests\Functional\OAuth;
 
+use Lcobucci\JWT\Token\Parser;
 use App\Tests\RestTestCase;
 use Bundles\UserContext\Entity\User;
 use Lcobucci\JWT\Encoding\JoseEncoder;
-use Lcobucci\JWT\Token;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * @group functional
- */
+// RECTOR-BAN: superglobal access ($_ENV/$_SERVER/$_GET/$_POST/$_REQUEST/$_COOKIE/$_FILES/$_SESSION) and getenv/putenv are forbidden — read env via DI constructor args wired from container configuration; read request via your framework Request object
 class AuthTest extends RestTestCase
 {
     public function testShouldAllowToAuth(): void
@@ -43,7 +38,7 @@ class AuthTest extends RestTestCase
 
         $token = $content['access_token'];
 
-        $payload = json_decode(base64_decode(explode('.', $token)[1], true), true);
+        $payload = json_decode(base64_decode(explode('.', (string) $token)[1], true), true);
 
         $this->assertArrayHasKey('aud', $payload);
         $this->assertArrayHasKey('jti', $payload);
@@ -70,7 +65,7 @@ class AuthTest extends RestTestCase
 
         $this->assertArrayHasKey('access_token', $content);
 
-        $parser    = new Token\Parser(new JoseEncoder());
+        $parser    = new Parser(new JoseEncoder());
         $parsedJWT = $parser->parse($content['access_token']);
         $userData  = $parsedJWT->claims()->get('user');
 
@@ -79,11 +74,6 @@ class AuthTest extends RestTestCase
         $this->assertEquals($this->username, $userData['username']);
     }
 
-    /**
-     * Should allow to authorize broker, borrower with same SCOPES.
-     *
-     * @dataProvider dataProviderAuth
-     */
     public function testShouldAllowToAuthorize(array $params, int $code): void
     {
         $url  = $this->getUrl('oauth2_token', []);
@@ -129,9 +119,6 @@ class AuthTest extends RestTestCase
         ];
     }
 
-    /**
-     * Should prevent bruteforce.
-     */
     public function testShouldPreventBruteForce(): void
     {
         $user = $this->em->getRepository(User::class)->findOneBy([

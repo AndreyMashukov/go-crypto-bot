@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Service;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
@@ -17,40 +13,11 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class DeployDomain
 {
-    private DeployService $deployService;
-
-    private CryptoBotService $cryptoBotService;
-
-    private CryptoBotRepository $cryptoBotRepository;
-
-    private ServerRepository $serverRepository;
-
-    private EventDispatcherInterface $eventDispatcher;
-
-    private LoggerInterface $logger;
-
-    private EntityManagerInterface $entityManager;
-
-    public function __construct(
-        DeployService $deployService,
-        CryptoBotService $cryptoBotService,
-        CryptoBotRepository $cryptoBotRepository,
-        ServerRepository $serverRepository,
-        EventDispatcherInterface $eventDispatcher,
-        LoggerInterface $logger,
-        EntityManagerInterface $entityManager
-    ) {
-        $this->deployService             = $deployService;
-        $this->cryptoBotService          = $cryptoBotService;
-        $this->cryptoBotRepository       = $cryptoBotRepository;
-        $this->serverRepository          = $serverRepository;
-        $this->eventDispatcher           = $eventDispatcher;
-        $this->logger                    = $logger;
-        $this->entityManager             = $entityManager;
+    public function __construct(private readonly DeployService $deployService, private readonly CryptoBotService $cryptoBotService, private readonly CryptoBotRepository $cryptoBotRepository, private readonly ServerRepository $serverRepository, private readonly EventDispatcherInterface $eventDispatcher, private readonly LoggerInterface $logger, private readonly EntityManagerInterface $entityManager)
+    {
     }
 
     /**
-     * @param CryptoBot $cryptobot
      *
      * @throws ServersIsOutOfStockException
      * @throws \DomainException
@@ -62,8 +29,7 @@ class DeployDomain
             $cryptobot->setStatus(CryptoBot::STATUS_DEPLOY);
             $this->cryptoBotRepository->add($cryptobot, true);
 
-            // todo: rent server (book)
-            if ($cryptobot->getServer()) {
+            if ($cryptobot->getServer() instanceof Server) {
                 $this->doStop($cryptobot, $cryptobot->getServer(), '', false);
             }
 
@@ -76,10 +42,8 @@ class DeployDomain
             if (!$this->deployService->deploy($cryptobot, $server)) {
                 $port        = $cryptobot->getPort();
                 $containerId = $cryptobot->getContainerId();
-                // Port and container ID is set after deploy, and will be rewritten after refresh.
                 $errorMessage = $cryptobot->getErrorMessage();
 
-                // Refresh, because we can get webhook
                 $this->entityManager->refresh($cryptobot);
                 $cryptobot->setPort($port);
                 $cryptobot->setContainerId($containerId);
@@ -125,7 +89,7 @@ class DeployDomain
             $cryptobot->setStatus(CryptoBot::STATUS_ERROR);
             $this->cryptoBotRepository->add($cryptobot, true);
 
-            throw new \DomainException("Couldn't deploy the bot, please try later");
+            throw new \DomainException("Couldn't deploy the bot, please try later", $exception->getCode(), $exception);
         }
     }
 
@@ -133,7 +97,7 @@ class DeployDomain
     {
         $cryptobot->setErrorMessage(null);
 
-        if ($reason) {
+        if ($reason !== '' && $reason !== '0') {
             $cryptobot->setErrorMessage($reason);
         }
 

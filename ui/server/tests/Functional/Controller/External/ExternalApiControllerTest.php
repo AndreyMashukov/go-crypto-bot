@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Functional\Controller\External;
 
 use App\Tests\RestTestCase;
@@ -13,14 +9,8 @@ use Bundles\UserContext\Entity\User;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * @group functional
- */
 class ExternalApiControllerTest extends RestTestCase
 {
-    /**
-     * Should allow to buy API subscription and get sentiment list.
-     */
     public function testShouldAllowToBuySubscriptionAndGetSentimentList(): void
     {
         $user = $this->em->getRepository(User::class)->findOneBy([
@@ -29,19 +19,13 @@ class ExternalApiControllerTest extends RestTestCase
         $this->assertInstanceOf(User::class, $user);
         $user->setBudget(90);
         $this->em->flush();
-//        $json = $this->deserialize($this->apiRequest($this->getUrl('v1_service_get_list')));
-//        $this->assertJsonSnapshot($json, 'list');
-
-        $response = $this->apiRequest($this->getUrl('external_api_sentiment_list'));
+$response = $this->apiRequest($this->getUrl('external_api_sentiment_list'));
         $this->assertEquals(Response::HTTP_FORBIDDEN, $response->getStatusCode());
 
         $this->deserialize($this->apiRequest($this->getUrl('v1_service_purchase'), Request::METHOD_POST, [
             'code' => PaidServiceManager::API_SUBSCRIPTION_CODE,
         ]), Response::HTTP_NO_CONTENT);
-//        $json = $this->deserialize($this->apiRequest($this->getUrl('v1_service_get_list')));
-//        $this->assertJsonSnapshot($json, 'list_paid');
-
-        $user = $this->em->getRepository(User::class)->findOneBy([
+$user = $this->em->getRepository(User::class)->findOneBy([
             'username' => $this->username,
         ]);
         $this->assertInstanceOf(User::class, $user);

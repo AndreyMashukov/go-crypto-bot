@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Model;
 
 use JMS\Serializer\Annotation as Serializer;
@@ -13,8 +9,6 @@ class SignalExtraChargeOption
     /**
      * @Serializer\Expose
      * @Assert\NotNull
-     *
-     * @var null|int
      */
     public ?int $index = null;
 
@@ -22,8 +16,6 @@ class SignalExtraChargeOption
      * @Serializer\Expose
      * @Assert\NotNull
      * @Assert\LessThan(value="0.00")
-     *
-     * @var null|float
      */
     public ?float $percent = null;
 
@@ -31,8 +23,6 @@ class SignalExtraChargeOption
      * @Serializer\Expose
      * @Assert\NotNull
      * @Assert\GreaterThan(value="0.00")
-     *
-     * @var null|float
      */
     public ?float $buyPrice = null;
 
@@ -40,8 +30,6 @@ class SignalExtraChargeOption
      * @Serializer\Expose
      * @Assert\NotNull
      * @Assert\GreaterThan(value="0.00")
-     *
-     * @var null|float
      */
     public ?float $budgetPercentage = null;
 

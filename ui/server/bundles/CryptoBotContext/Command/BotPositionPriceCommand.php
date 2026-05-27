@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Command;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
@@ -22,26 +18,13 @@ class BotPositionPriceCommand extends Command
 
     protected static $defaultDescription = 'Update position price information';
 
-    private CryptoBotRepository $repository;
-
-    private CryptoBotService $cryptoBotService;
-
-    private LoggerInterface $logger;
-
-    private EntityManagerInterface $entityManager;
-
     public function __construct(
-        CryptoBotRepository $repository,
-        CryptoBotService $cryptoBotService,
-        LoggerInterface $logger,
-        EntityManagerInterface $entityManager
+        private readonly CryptoBotRepository $repository,
+        private readonly CryptoBotService $cryptoBotService,
+        private readonly LoggerInterface $logger,
+        private readonly EntityManagerInterface $entityManager
     ) {
         parent::__construct(self::$defaultName);
-
-        $this->repository       = $repository;
-        $this->cryptoBotService = $cryptoBotService;
-        $this->logger           = $logger;
-        $this->entityManager    = $entityManager;
     }
 
     protected function configure(): void

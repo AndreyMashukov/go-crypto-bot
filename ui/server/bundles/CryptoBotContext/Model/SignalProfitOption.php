@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\CryptoBotContext\Model;
 
 use JMS\Serializer\Annotation as Serializer;
@@ -13,8 +9,6 @@ class SignalProfitOption extends ProfitOption
     /**
      * @Serializer\Expose
      * @Assert\NotNull
-     *
-     * @var null|float
      */
     private ?float $sellPrice = null;
 

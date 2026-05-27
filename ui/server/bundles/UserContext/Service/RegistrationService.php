@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\UserContext\Service;
 
 use Bundles\OxaPayContext\Entity\PromoCode;
@@ -11,7 +7,6 @@ use Bundles\UserContext\Entity\User;
 use Bundles\UserContext\Event\BudgetPurchaseEvent;
 use Bundles\UserContext\Model\Register;
 use Bundles\UserContext\Model\User as UserAlias;
-use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Exception\ORMException;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -20,38 +15,16 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class RegistrationService
 {
-    private UserPasswordHasherInterface $passwordEncoder;
-
-    private ManagerRegistry $registry;
-
-    private ValidatorInterface $validator;
-
-    private EventDispatcherInterface $eventDispatcher;
-
-    private AlertService $alertService;
-
-    public function __construct(
-        ManagerRegistry $registry,
-        UserPasswordHasherInterface $passwordEncoder,
-        ValidatorInterface $validator,
-        EventDispatcherInterface $eventDispatcher,
-        AlertService $alertService
-    ) {
-        $this->passwordEncoder = $passwordEncoder;
-        $this->registry        = $registry;
-        $this->validator       = $validator;
-        $this->eventDispatcher = $eventDispatcher;
-        $this->alertService    = $alertService;
+    public function __construct(private readonly ManagerRegistry $registry, private readonly UserPasswordHasherInterface $passwordEncoder, private readonly ValidatorInterface $validator, private readonly EventDispatcherInterface $eventDispatcher, private readonly AlertService $alertService)
+    {
     }
 
     /**
-     * @param Register $register
-     *
      * @throws ORMException
      */
     public function registerByEmail(Register $register): array
     {
-        $user     = $this->findUser(trim($register->getEmail()));
+        $user     = $this->findUser(trim((string) $register->getEmail()));
         $locale   = $register->getLocale();
         $nickname = $register->getNickname();
 
@@ -67,7 +40,7 @@ class RegistrationService
             $user->setNickname($nickname);
         }
 
-        if (!$user->getId()) {
+        if ($user->getId() === 0) {
             $violations = $this->validator->validate($user);
             if ($violations->count() > 0) {
                 $message = sprintf('[%s] %s', $violations->get(0)->getPropertyPath(), $violations->get(0)->getMessage());
@@ -95,7 +68,6 @@ class RegistrationService
             }
         }
 
-        /** @var EntityManager $manager */
         $manager = $this->registry->getManager();
         $manager->flush();
 
@@ -103,15 +75,12 @@ class RegistrationService
     }
 
     /**
-     * @param string $email
      *
      * @throws ORMException
      *
-     * @return User
      */
     private function findUser(string $email): User
     {
-        /** @var EntityManager $manager */
         $manager = $this->registry
             ->getManager();
 

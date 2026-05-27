@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace App\Controller\PublicRoute;
 
 use Bundles\UserContext\Form\RegisterType;
@@ -17,40 +13,23 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
-/**
- * @Rest\Route("/public/register", name="public_registration_")
- */
 class RegistrationController extends AbstractFOSRestController
 {
     use SecureValidation;
 
-    private RegistrationService $registrationService;
-
-    private string $environment;
-
-    private LoggerInterface $logger;
-
-    private EmailSender $emailSender;
-
-    public function __construct(string $environment, RegistrationService $registrationService, EmailSender $emailSender, LoggerInterface $logger)
+    public function __construct(private string $environment, private RegistrationService $registrationService, private EmailSender $emailSender, private LoggerInterface $logger)
     {
-        $this->registrationService = $registrationService;
-        $this->environment         = $environment;
-        $this->logger              = $logger;
-        $this->emailSender         = $emailSender;
     }
 
     /**
      * @Rest\Route("/code", methods={"POST"}, name="code")
      * @Rest\View
      *
-     * @param Request $request
      *
      * @throws \Exception
-     *
-     * @return array|void
+     * @return mixed[]|null
      */
-    public function postAction(Request $request)
+    public function post(Request $request)
     {
         $form = $this->createForm(RegisterType::class, new Register($request->getLocale()), [
             'method' => Request::METHOD_POST,
@@ -66,7 +45,6 @@ class RegistrationController extends AbstractFOSRestController
             ];
         }
 
-        /** @var Register $register */
         $register = $form->getData();
 
         if (!$this->validateSecret($register)) {
@@ -82,11 +60,12 @@ class RegistrationController extends AbstractFOSRestController
         if ('dev' === $this->environment) {
             $this->logger->debug("code is {$code}");
 
-            return;
+            return null;
         }
 
         $this->emailSender->send(14, [
             'code' => $code,
         ], $user);
+        return null;
     }
 }

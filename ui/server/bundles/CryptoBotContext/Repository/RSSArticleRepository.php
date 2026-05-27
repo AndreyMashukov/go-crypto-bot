@@ -1,7 +1,6 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
+
+declare(strict_types=1);
 
 namespace Bundles\CryptoBotContext\Repository;
 
@@ -11,11 +10,6 @@ use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<RSSArticle>
- *
- * @method null|RSSArticle find($id, $lockMode = null, $lockVersion = null)
- * @method null|RSSArticle findOneBy(array $criteria, array $orderBy = null)
- * @method RSSArticle[]    findAll()
- * @method RSSArticle[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
 class RSSArticleRepository extends ServiceEntityRepository
 {
@@ -74,7 +68,7 @@ EOL;
             ->executeQuery($sql, [$coin])
             ->fetchAllAssociative();
 
-        if (!$data) {
+        if ($data === []) {
             return [];
         }
 

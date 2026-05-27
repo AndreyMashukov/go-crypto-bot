@@ -1,14 +1,8 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace App\DataFixtures;
 
 use Bundles\CryptoBotContext\Entity\CryptoBot;
 use Bundles\CryptoBotContext\Entity\CryptoTradeConfig;
-use Bundles\CryptoBotContext\Entity\Server;
-use Bundles\UserContext\Entity\User;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Bundle\FixturesBundle\FixtureGroupInterface;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
@@ -20,9 +14,7 @@ class CryptoBotFixtures extends Fixture implements FixtureGroupInterface, Depend
 
     public function load(ObjectManager $manager): void
     {
-        /** @var User $user */
         $user = $this->getReference(OAuthFixtures::USER_REFERENCE);
-        /** @var Server $server */
         $server = $this->getReference(ServerFixtures::SERVER_REFERENCE_1);
 
         $user->setSignalSubscriptionExpiresAt(new \DateTimeImmutable('+2 hours'));

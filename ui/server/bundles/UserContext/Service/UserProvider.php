@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\UserContext\Service;
 
 use Symfony\Component\Security\Core\Security;
@@ -11,7 +7,7 @@ use League\Bundle\OAuth2ServerBundle\Security\Authenticator\OAuth2Token;
 
 class UserProvider
 {
-    private Security $security;
+    private readonly Security $security;
 
     public function __construct(Security $security)
     {

@@ -1,8 +1,4 @@
 <?php
-/**
- * This file is private property of the author, keep it secure and do not share anywhere out of the author.
- */
-
 namespace Bundles\UserContext\Service;
 
 use Bundles\UserContext\Entity\User;
@@ -14,11 +10,8 @@ class BruteForceSecurity
 {
     public const MAX_FAIL_AMOUNT = 3;
 
-    private CacheInterface $cache;
-
-    public function __construct(CacheInterface $cache)
+    public function __construct(private readonly CacheInterface $cache)
     {
-        $this->cache = $cache;
     }
 
     public function trackFail(User $user): void

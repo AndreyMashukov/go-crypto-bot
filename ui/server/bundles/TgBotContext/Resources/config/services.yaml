@@ -31,7 +31,7 @@ services:
 
     TgBotApi\BotApiBase\BotApi:
         arguments:
-            $botKey: '__BOT_TOKEN__'
+            $botKey: '%env(TG_BOT_API_KEY)%'
             $apiClient: '@TgBotApi\BotApiBase\ApiClientInterface'
             $normalizer: '@TgBotApi\BotApiBase\NormalizerInterface'
 

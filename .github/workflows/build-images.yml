@@ -1,0 +1,140 @@
+name: build-images
+
+# On every push to main, build the four ui/* deployable images and push
+# them to ghcr.io. Each component has its own job with a path filter, so
+# only what actually changed gets rebuilt.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: ${{ github.repository_owner }}
+
+jobs:
+  changes:
+    name: detect changed components
+    runs-on: ubuntu-latest
+    outputs:
+      backend:    ${{ steps.f.outputs.backend }}
+      frontend:   ${{ steps.f.outputs.frontend }}
+      docs:       ${{ steps.f.outputs.docs }}
+      sentiment:  ${{ steps.f.outputs.sentiment }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: f
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'ui/server/**'
+              - '!ui/server/microservices/**'
+              - '!ui/server/tests/**'
+            frontend:
+              - 'ui/app/**'
+            docs:
+              - 'ui/docs/**'
+            sentiment:
+              - 'ui/server/microservices/sentiment/**'
+
+  backend:
+    name: backend (Symfony)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ui/server
+          file: ui/server/Dockerfile.prod
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/crypto-saas-server:main
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/crypto-saas-server:${{ github.sha }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+  frontend:
+    name: frontend (Nuxt)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ui/app
+          file: ui/app/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/crypto-saas-app:main
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/crypto-saas-app:${{ github.sha }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+
+  docs:
+    name: docs (docsify)
+    needs: changes
+    if: needs.changes.outputs.docs == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ui/docs
+          file: ui/docs/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/crypto-saas-docs:main
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/crypto-saas-docs:${{ github.sha }}
+          cache-from: type=gha,scope=docs
+          cache-to: type=gha,scope=docs,mode=max
+
+  sentiment:
+    name: sentiment (Go + cgo Python)
+    needs: changes
+    if: needs.changes.outputs.sentiment == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ui/server/microservices/sentiment
+          file: ui/server/microservices/sentiment/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/crypto-saas-sentiment:main
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/crypto-saas-sentiment:${{ github.sha }}
+          cache-from: type=gha,scope=sentiment
+          cache-to: type=gha,scope=sentiment,mode=max

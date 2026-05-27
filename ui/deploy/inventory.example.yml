@@ -20,22 +20,35 @@ backend:
     backend-1.example.com:
       project_image: ghcr.io/andreymashukov/crypto-saas-server:main
       project_container: crypto-saas-backend
-      # Per-host overrides for cd-back.yml live here.
+      container_ports: ['127.0.0.1:8094:80']
+      container_memory: 2048M
+      container_networks:
+        - name: bridge
+        - name: redis_net
+      run_doctrine_migrations: true
 
 frontend:
   hosts:
     frontend-1.example.com:
       project_image: ghcr.io/andreymashukov/crypto-saas-app:main
       project_container: crypto-saas-frontend
+      container_ports: ['127.0.0.1:3000:3000']
+      container_memory: 512M
 
 docs:
   hosts:
     docs-1.example.com:
       project_image: ghcr.io/andreymashukov/crypto-saas-docs:main
       project_container: crypto-saas-docs
+      container_ports: ['127.0.0.1:8080:80']
+      container_memory: 256M
 
 sentiment:
   hosts:
     sentiment-1.example.com:
       project_image: ghcr.io/andreymashukov/crypto-saas-sentiment:main
       project_container: crypto-saas-sentiment
+      container_memory: 1024M
+      container_networks:
+        - name: bridge
+        - name: redis_net

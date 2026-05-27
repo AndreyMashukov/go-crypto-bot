@@ -1,0 +1,78 @@
+---
+# Single parameterised deploy playbook. Replaces the four
+# cd-{back,front,docs,sentiment}.yml duplicates.
+#
+# Required per-host vars (set in inventory):
+#   project_image       — full image ref (e.g. ghcr.io/.../crypto-saas-server:main)
+#   project_container   — container name (e.g. crypto-saas-backend)
+#
+# Optional per-host vars:
+#   container_ports         — list, default [] (e.g. ["127.0.0.1:8094:80"])
+#   container_memory        — string, default "1024M"
+#   container_networks      — list, default ["bridge"]
+#   registry_host           — string, default "ghcr.io"
+#   registry_username       — string, default "{{ lookup('env', 'GHCR_USER') }}"
+#   registry_password       — string, default "{{ lookup('env', 'REGISTRY_PASSWORD') }}"
+#   run_doctrine_migrations — bool, default false (set true on backend group)
+#   var_owner               — string, default "www-data" (chowned post-deploy)
+#
+# Optional play-level vars (passed via -e on the command line):
+#   image_tag — appended after ':' if project_image has no tag yet (CI hook)
+
+- hosts: all
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    container_ports:    []
+    container_memory:   '1024M'
+    container_networks:
+      - name: bridge
+    registry_host:      'ghcr.io'
+    registry_username:  '{{ lookup("env", "GHCR_USER") | default("AndreyMashukov", true) }}'
+    registry_password:  '{{ lookup("env", "REGISTRY_PASSWORD") }}'
+    run_doctrine_migrations: false
+    var_owner:          'www-data'
+
+  tasks:
+    - name: Log into container registry
+      community.docker.docker_login:
+        registry: '{{ registry_host }}'
+        username: '{{ registry_username }}'
+        password: '{{ registry_password }}'
+        reauthorize: true
+
+    - name: Pull latest image
+      community.docker.docker_image:
+        name: '{{ project_image }}'
+        source: pull
+        force_source: true
+
+    - name: Recreate container
+      community.docker.docker_container:
+        name: '{{ project_container }}'
+        image: '{{ project_image }}'
+        keep_volumes: true
+        recreate: true
+        restart_policy: unless-stopped
+        state: started
+        ports: '{{ container_ports }}'
+        etc_hosts:
+          host.docker.internal: 172.17.0.1
+        networks: '{{ container_networks }}'
+        memory: '{{ container_memory }}'
+        memory_swappiness: 1
+        log_driver: json-file
+        log_options:
+          max-size: 10m
+          max-file: '5'
+
+    - name: Run Doctrine migrations (backend only)
+      ansible.builtin.command:
+        cmd: docker exec {{ project_container }} bash -c 'bin/console doctrine:migrations:migrate -n'
+      when: run_doctrine_migrations | bool
+      changed_when: true
+
+    - name: Fix var/ ownership (backend only)
+      ansible.builtin.command:
+        cmd: docker exec {{ project_container }} chown -R {{ var_owner }} /srv/www/var
+      when: run_doctrine_migrations | bool
+      changed_when: false

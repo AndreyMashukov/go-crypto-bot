@@ -66,17 +66,21 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -t ed25519,rsa -H $(ansible -i ui/deploy/inventory.yml ${{ inputs.component }} --list-hosts 2>/dev/null | tail -n +2 | tr -d ' ') >> ~/.ssh/known_hosts 2>/dev/null || true
 
+      - name: install required ansible collections
+        run: ansible-galaxy collection install community.docker
+
       - name: run playbook
         env:
           ANSIBLE_HOST_KEY_CHECKING: 'False'
           ANSIBLE_PRIVATE_KEY_FILE: /home/runner/.ssh/deploy_key
           REGISTRY_PASSWORD: ${{ secrets.GHCR_REGISTRY_PASSWORD }}
+          GHCR_USER: ${{ github.repository_owner }}
         run: |
           ansible-playbook \
             -i ui/deploy/inventory.yml \
             -l ${{ inputs.component }} \
             -e "image_tag=${{ inputs.image_tag }}" \
-            ui/deploy/cd-${{ inputs.component }}.yml
+            ui/deploy/cd.yml
 
       - name: wipe inventory + key from runner
         if: always()

@@ -49,7 +49,8 @@
         "symfony/validator": "7.3.*",
         "symfony/yaml": "7.3.*",
         "twig/twig": "^3.26",
-        "unleash/client": "^2.9.283"
+        "unleash/client": "^2.9.283",
+        "amashukov/tg-bot-api-base": "^1.0"
     },
     "config": {
         "allow-plugins": {
@@ -120,5 +121,11 @@
         "symfony/maker-bundle": "^1.67",
         "symfony/stopwatch": "7.3.*",
         "symfony/web-profiler-bundle": "7.3.*"
-    }
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/AndreyMashukov/tg-bot-api-base"
+        }
+    ]
 }

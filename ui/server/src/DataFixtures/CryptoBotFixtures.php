@@ -53,7 +53,7 @@ class CryptoBotFixtures extends Fixture implements FixtureGroupInterface, Depend
         return ['first'];
     }
 
-    public function getDependencies()
+    public function getDependencies(): array
     {
         return [
             OAuthFixtures::class,

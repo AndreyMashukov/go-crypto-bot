@@ -34,7 +34,7 @@ class SubscriptionFixtures extends Fixture implements FixtureGroupInterface, Dep
         return ['first'];
     }
 
-    public function getDependencies()
+    public function getDependencies(): array
     {
         return [
             OAuthFixtures::class,

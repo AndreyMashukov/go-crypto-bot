@@ -20,10 +20,7 @@ class Phone extends Constraint
      */
     public $message = 'Номер {{ value }} невалидный телефонный номер.';
 
-    /**
-     * @return string
-     */
-    public function validatedBy()
+    public function validatedBy(): string
     {
         return static::class . 'Validator';
     }

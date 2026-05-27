@@ -1,5 +1,5 @@
 <?php
-namespace Unit\Bundles\UserContext\EventListener;
+namespace App\Tests\Unit\Bundles\UserContext\EventListener;
 
 use Bundles\OxaPayContext\Entity\Payment;
 use Bundles\OxaPayContext\Entity\PromoCode;

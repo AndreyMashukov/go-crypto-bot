@@ -1,0 +1,41 @@
+---
+# Ansible inventory template. Copy to inventory.yml on the operator
+# machine (it is gitignored), or pass the populated YAML through the
+# HOST_DEPLOY_INVENTORY GitHub Secret on the CI runner — the deploy
+# workflow writes the secret to ui/deploy/inventory.yml just before
+# running ansible-playbook, never committing it.
+#
+# Each group corresponds to one of the cd-*.yml playbooks under
+# ui/deploy/. The same host can appear in multiple groups.
+
+all:
+  vars:
+    ansible_user: deploy
+    ansible_python_interpreter: /usr/bin/python3
+    # Pulled into docker_login by the playbooks.
+    registry_password: '{{ lookup("env", "REGISTRY_PASSWORD") }}'
+
+backend:
+  hosts:
+    backend-1.example.com:
+      project_image: ghcr.io/andreymashukov/crypto-saas-server:main
+      project_container: crypto-saas-backend
+      # Per-host overrides for cd-back.yml live here.
+
+frontend:
+  hosts:
+    frontend-1.example.com:
+      project_image: ghcr.io/andreymashukov/crypto-saas-app:main
+      project_container: crypto-saas-frontend
+
+docs:
+  hosts:
+    docs-1.example.com:
+      project_image: ghcr.io/andreymashukov/crypto-saas-docs:main
+      project_container: crypto-saas-docs
+
+sentiment:
+  hosts:
+    sentiment-1.example.com:
+      project_image: ghcr.io/andreymashukov/crypto-saas-sentiment:main
+      project_container: crypto-saas-sentiment

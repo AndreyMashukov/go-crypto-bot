@@ -1,5 +1,5 @@
 <?php
-namespace Functional\Controller\PublicRoute;
+namespace App\Tests\Functional\Controller\PublicRoute;
 
 use App\Tests\RestTestCase;
 use Bundles\CryptoBotContext\Entity\CryptoTradeConfig;

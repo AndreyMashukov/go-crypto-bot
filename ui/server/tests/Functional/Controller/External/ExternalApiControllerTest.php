@@ -1,5 +1,5 @@
 <?php
-namespace Functional\Controller\External;
+namespace App\Tests\Functional\Controller\External;
 
 use App\Tests\RestTestCase;
 use Bundles\CryptoBotContext\Entity\CryptoTradeConfig;

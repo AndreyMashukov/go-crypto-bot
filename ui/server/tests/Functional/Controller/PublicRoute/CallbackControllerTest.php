@@ -1,5 +1,5 @@
 <?php
-namespace Functional\Controller\PublicRoute;
+namespace App\Tests\Functional\Controller\PublicRoute;
 
 use App\DataFixtures\CryptoBotFixtures;
 use App\Tests\RestTestCase;

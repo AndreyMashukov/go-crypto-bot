@@ -1,0 +1,84 @@
+name: deploy
+
+# Manually triggered. Picks a component (backend / frontend / docs /
+# sentiment) and runs the matching ui/deploy/cd-*.yml playbook against
+# the inventory delivered through GitHub Secrets — production hostnames
+# never live in the repo.
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: Which component to deploy
+        required: true
+        type: choice
+        options:
+          - backend
+          - frontend
+          - docs
+          - sentiment
+      image_tag:
+        description: Container image tag to pull (defaults to main)
+        required: false
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: ${{ inputs.component }} → ${{ inputs.image_tag }}
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-${{ inputs.component }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install Ansible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ansible
+
+      - name: write inventory from secret
+        env:
+          INVENTORY: ${{ secrets.HOST_DEPLOY_INVENTORY }}
+        run: |
+          if [ -z "$INVENTORY" ]; then
+            echo "::error::HOST_DEPLOY_INVENTORY secret is empty. Configure it under repo Settings → Secrets → Actions."
+            exit 1
+          fi
+          printf '%s' "$INVENTORY" > ui/deploy/inventory.yml
+          chmod 600 ui/deploy/inventory.yml
+
+      - name: write SSH key from secret
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::DEPLOY_SSH_KEY secret is empty."
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          printf '%s' "$KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -t ed25519,rsa -H $(ansible -i ui/deploy/inventory.yml ${{ inputs.component }} --list-hosts 2>/dev/null | tail -n +2 | tr -d ' ') >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: run playbook
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: 'False'
+          ANSIBLE_PRIVATE_KEY_FILE: /home/runner/.ssh/deploy_key
+          REGISTRY_PASSWORD: ${{ secrets.GHCR_REGISTRY_PASSWORD }}
+        run: |
+          ansible-playbook \
+            -i ui/deploy/inventory.yml \
+            -l ${{ inputs.component }} \
+            -e "image_tag=${{ inputs.image_tag }}" \
+            ui/deploy/cd-${{ inputs.component }}.yml
+
+      - name: wipe inventory + key from runner
+        if: always()
+        run: |
+          shred -u ui/deploy/inventory.yml ~/.ssh/deploy_key 2>/dev/null || true

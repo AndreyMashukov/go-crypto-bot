@@ -1,5 +1,5 @@
 <?php
-namespace Functional\Bundles\CryptoBotContext\Command;
+namespace App\Tests\Functional\Bundles\CryptoBotContext\Command;
 
 use App\Tests\RestTestCase;
 use Bundles\CryptoBotContext\Command\BotSentimentProcessCommand;

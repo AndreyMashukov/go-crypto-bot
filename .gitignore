@@ -34,3 +34,14 @@ datasets/
 
 # Vendored deps (if ever generated)
 vendor/
+
+# Ansible inventory — production hostnames / SSH user / vault secrets
+# never enter the repo. The shipped *.example file documents the schema;
+# the real one comes from a GitHub Secret on CI runners (HOST_DEPLOY_INVENTORY)
+# or from an out-of-tree path on the operator machine.
+ui/deploy/inventory*
+!ui/deploy/inventory.example.yml
+ui/deploy/group_vars/
+ui/deploy/host_vars/
+ui/deploy/*.vault
+ui/deploy/.vault_password

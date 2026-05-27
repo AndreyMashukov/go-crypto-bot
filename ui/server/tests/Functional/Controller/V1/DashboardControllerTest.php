@@ -1,5 +1,5 @@
 <?php
-namespace Functional\Controller\V1;
+namespace App\Tests\Functional\Controller\V1;
 
 use App\Tests\RestTestCase;
 use Bundles\CryptoBotContext\Entity\CryptoBot;

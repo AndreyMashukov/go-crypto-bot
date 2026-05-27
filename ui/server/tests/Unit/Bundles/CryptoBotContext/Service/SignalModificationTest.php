@@ -1,5 +1,5 @@
 <?php
-namespace Unit\Bundles\CryptoBotContext\Service;
+namespace App\Tests\Unit\Bundles\CryptoBotContext\Service;
 
 use Bundles\CryptoBotContext\Entity\CryptoTradeConfig;
 use Bundles\CryptoBotContext\Entity\Embedded\SignalConfig;

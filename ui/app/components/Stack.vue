@@ -450,7 +450,8 @@ export default {
       const map: any = {};
 
       this.stackItems.forEach((item: any) => {
-        const budget = (this.loadingMap[item.symbol] || {budget: false}).budget;
+        const entry = this.loadingMap[item.symbol];
+        const budget = entry === undefined ? false : entry.budget;
         map[item.symbol] = {
           budget,
         };

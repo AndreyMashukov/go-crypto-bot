@@ -736,7 +736,7 @@ export default defineNuxtComponent({
       availableSymbols: symbolList.map((x) => x.symbol),
       symbolList: symbolList.map((x) => x.symbol),
       stack: [],
-      profits: (profits || []),
+      profits: profits === null || profits === undefined ? [] : profits,
       chart: chartData,
       lastOrders: lastOrders,
       positions: [],
@@ -1106,21 +1106,22 @@ export default defineNuxtComponent({
         operation: operation,
         flag: true,
         symbol: stackItem.symbol,
-        filters: (stackItem[options[operation]] || []).map((x) => {
+        filters: (stackItem[options[operation]] === undefined ? [] : stackItem[options[operation]]).map((x) => {
           if (x.parameter === 'has_signal') {
             x.value = (x.value.toString() === "true" || x.value.toString() === "1");
           }
+          const children = x.children === undefined ? [] : x.children;
 
           return {
             ...x,
-            children: (x.children || []).map((y) => {
+            children: children.map((y) => {
               if (y.parameter === 'has_signal') {
                 y.value = (y.value.toString() === "true" || y.value.toString() === "1");
               }
 
               return {...y, mode: 'single'};
             }),
-            mode: (x.children || []).length > 0 ? 'multi' : 'single',
+            mode: children.length > 0 ? 'multi' : 'single',
           }
         }),
       };
@@ -1145,7 +1146,7 @@ export default defineNuxtComponent({
             if (item.mode === 'multi') {
               return {
                 type: item.type,
-                children: (item.children || []).map((child) => {
+                children: (item.children === undefined ? [] : item.children).map((child) => {
                   return {
                     symbol: child.symbol,
                     parameter: child.parameter,
@@ -1256,8 +1257,10 @@ export default defineNuxtComponent({
       this.settingsDialog.order = position.order;
       this.settingsDialog.tab = 0;
       this.settingsDialog.positionTime = position.positionTime;
-      this.settingsDialog.chargeOptions = (position.order.extraChargeOptions || []);
-      this.settingsDialog.profitOptions = (position.order.profitOptions || []).map((option) => {
+      const extraCharge = position.order.extraChargeOptions === undefined ? [] : position.order.extraChargeOptions;
+      const profit = position.order.profitOptions === undefined ? [] : position.order.profitOptions;
+      this.settingsDialog.chargeOptions = extraCharge;
+      this.settingsDialog.profitOptions = profit.map((option) => {
         return {...option, isTriggerOption: Boolean(option.isTriggerOption)};
       });
       if (this.settingsDialog.chargeOptions.length === 0) {

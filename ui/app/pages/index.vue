@@ -225,11 +225,14 @@ export default defineNuxtComponent({
       positionsArray = (positions.value).concat(positions.value).concat(positions.value)
     }
 
+    const swapsValue = swaps.value === null ? [] : swaps.value;
+    const commissionValue = commission.value === null ? [] : commission.value;
+
     return {
       lastOrders: lastOrders.value,
       positions: positionsArray,
-      swaps: (swaps.value || []),
-      commission: (commission.value || [])
+      swaps: swapsValue,
+      commission: commissionValue,
     };
   },
   data() {
@@ -253,7 +256,7 @@ export default defineNuxtComponent({
         baseURL: config.public.baseUrl,
         server: true,
       }).then(({data: swaps}) => {
-        this.swaps = (swaps.value || []);
+        this.swaps = swaps.value === null ? [] : swaps.value;
       });
     }, 10000);
   },

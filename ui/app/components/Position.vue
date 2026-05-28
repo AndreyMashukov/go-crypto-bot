@@ -335,7 +335,7 @@ export default {
       return 10;
     },
     executedQuantity() {
-      const split = this.position.order.quantity.toString().split('.') || [];
+      const split = this.position.order.quantity.toString().split('.');
 
       if (split.length > 1) {
         return this.position.order.executedQuantity.toFixed(split[1].length);

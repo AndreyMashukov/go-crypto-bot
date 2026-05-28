@@ -452,11 +452,14 @@ export default defineNuxtComponent({
       title: t('bot.header').replace('[botDetails.value.id]', botDetails.value.id),
     })
 
+    const symbolListValue = symbolList.value;
+    const symbols = symbolListValue === null ? [] : symbolListValue.map((x) => x.symbol);
+
     return {
       botDetails: botDetails.value,
       userVm: user.value,
       serverList: serverList.value,
-      symbolList: (symbolList.value || []).map((x) => x.symbol),
+      symbolList: symbols,
     };
   },
   data(): any {
@@ -690,11 +693,13 @@ export default defineNuxtComponent({
     },
     configSettingsDialog(config, index) {
       const options = [];
-      (config.extraChargeOptions || []).forEach((option) => {
+      const extraCharge = config.extraChargeOptions === undefined ? [] : config.extraChargeOptions;
+      extraCharge.forEach((option) => {
         options.push(option);
       });
       const profitOptions = [];
-      (config.profitOptions || []).forEach((option) => {
+      const profit = config.profitOptions === undefined ? [] : config.profitOptions;
+      profit.forEach((option) => {
         profitOptions.push({...option, isTriggerOption: Boolean(option.isTriggerOption)});
       });
 

@@ -8,7 +8,7 @@ export class AuthService {
 
     getToken(): string|null {
       const cookie = useCookie('auth-token');
-      return cookie.value || null;
+      return cookie.value === undefined ? null : cookie.value;
     }
 
     setToken(token: string): void {
@@ -33,7 +33,7 @@ export class AuthService {
 
     getEmail(): string | null {
         const cookie = useCookie('user_email');
-        return cookie.value || null;
+        return cookie.value === undefined ? null : cookie.value;
     }
 
     setEmail(email: string): void {
@@ -50,7 +50,10 @@ export class AuthService {
 
     getPromoCode(): string {
         const cookie = useCookie('promo_code');
-        return cookie.value || '';
+        if (cookie.value === undefined || cookie.value === null) {
+            return '';
+        }
+        return cookie.value;
     }
 
     setPromoCode(promocode: string): void {

@@ -1,8 +1,8 @@
-import {AuthService} from '~/services/auth-service';
+import type {AuthService} from '~/services/auth-service';
 import {Alert} from '~/model/alert';
 import {AlertEvent} from '~/model/alert-event';
-import {EventManager} from '~/services/event-manager';
-import {HTTPMethod} from 'h3';
+import type {EventManager} from '~/services/event-manager';
+import type {HTTPMethod} from 'h3';
 import {rejects} from 'node:assert';
 
 export class HttpClient {
@@ -69,7 +69,7 @@ export class HttpClient {
                     }
 
                     if (message) {
-                        let alertType = Alert.TYPE_ERROR;
+                        const alertType = Alert.TYPE_ERROR;
                         this.eventManager.alert(
                             new AlertEvent(
                                 new Alert(message, alertType),

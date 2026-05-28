@@ -1,15 +1,15 @@
 <template>
   <div class="financial-background">
     <div class="canvas-block">
-      <canvas :id="canvasId"></canvas>
+      <canvas :id="canvasId"/>
     </div>
   </div>
 </template>
 
 <script lang="ts">
 export default {
-  components: {},
   name: "TradeVolumeChart",
+  components: {},
   props: {
     symbol: {
       type: String,
@@ -40,6 +40,19 @@ export default {
       default: () => null,
     },
   },
+  data() {
+    return {
+      updateSubscription: null,
+      chartRef: null,
+    };
+  },
+  computed: {
+    canvasId: {
+      get() {
+        return `canvas-trade-volume-${this.symbol}`;
+      },
+    },
+  },
   unmounted() {
     if (this.updateSubscription) {
       this.updateSubscription.unsubscribe();
@@ -49,7 +62,7 @@ export default {
     }
   },
   mounted() {
-    var ctx = document.getElementById(this.canvasId).getContext('2d');
+    const ctx = document.getElementById(this.canvasId).getContext('2d');
 
     const updateDatasets = () => {
       const datasets = [];
@@ -254,19 +267,6 @@ export default {
     }
 
     this.chartRef = chartRef;
-  },
-  computed: {
-    canvasId: {
-      get() {
-        return `canvas-trade-volume-${this.symbol}`;
-      },
-    },
-  },
-  data() {
-    return {
-      updateSubscription: null,
-      chartRef: null,
-    };
   },
   methods: {}
 }

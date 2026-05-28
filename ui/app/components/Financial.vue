@@ -15,7 +15,7 @@
       </span>
       <h2>{{ symbol }}</h2>
       <span class="current-price"><small>{{$t('financial.current_price')}} </small>{{ currentPrice }}<small>USDT</small></span>
-      <canvas :id="canvasId"></canvas>
+      <canvas :id="canvasId"/>
     </div>
     <v-dialog
         v-model="orderDialog.flag"
@@ -34,11 +34,11 @@
               @click="orderDialog.price = Number((orderDialog.price - priceStep).toFixed(priceLength))"
             >-</v-btn>
             <v-text-field
+              v-model="orderDialog.price"
               class="price-input-value"
               :label="$t('financial.price_label').replace('[orderDialog.operation]', orderDialog.operation)"
               type="number"
-              v-model="orderDialog.price"
-            ></v-text-field>
+            />
             <v-btn
               class="price-btn"
               variant="flat"
@@ -47,7 +47,7 @@
             >+</v-btn>
           </div>
           <div class="price-options">
-            <v-btn size="x-small" v-for="(option, index) in orderDialog.options" :key="index" color="primary" @click="orderDialog.price = option.value">
+            <v-btn v-for="(option, index) in orderDialog.options" :key="index" size="x-small" color="primary" @click="orderDialog.price = option.value">
               {{ option.percent }}
             </v-btn>
           </div>
@@ -63,8 +63,8 @@
 
 <script lang="ts">
 export default {
-  components: {},
   name: "Financial",
+  components: {},
   props: {
     symbol: {
       type: String,
@@ -131,14 +131,6 @@ export default {
       default: () => null,
     }
   },
-  unmounted() {
-    if (this.updateSubscription) {
-      this.updateSubscription.unsubscribe();
-    }
-    if (this.chartRef) {
-      this.chartRef.destroy();
-    }
-  },
 
   setup(props: any, {emit}: any) {
     function onOrder(data: any) {
@@ -149,11 +141,57 @@ export default {
       onOrder,
     }
   },
+  data() {
+    let priceLength = 8;
+    if (this.currentPrice) {
+      const priceSplit = this.currentPrice.toString().split('.');
+      if (priceSplit.length > 1) {
+        priceLength = priceSplit[1].length
+      }
+    }
+
+    const priceStep = Number(Math.pow(10, -1 *priceLength).toFixed(priceLength))
+    let openedOrderPrice = 0.00;
+
+    if (this.orderOpened > 0) {
+      openedOrderPrice = Number(this.orderOpened.toFixed(priceLength));
+    }
+
+    return {
+      openedOrderPrice,
+      priceLength,
+      priceStep,
+      updateSubscription: null,
+      orderDialog: {
+        opened: 0.00,
+        flag: false,
+        operation: '',
+        price: 0.00,
+        options: [],
+      },
+      chartRef: null,
+    };
+  },
+  computed: {
+    canvasId: {
+      get() {
+        return `canvas-${this.symbol}`;
+      },
+    },
+  },
+  unmounted() {
+    if (this.updateSubscription) {
+      this.updateSubscription.unsubscribe();
+    }
+    if (this.chartRef) {
+      this.chartRef.destroy();
+    }
+  },
   mounted() {
-    var ctx = document.getElementById(this.canvasId).getContext('2d');
+    const ctx = document.getElementById(this.canvasId).getContext('2d');
 
     const updateDatasets = () => {
-      var datasets = [
+      const datasets = [
         {
           type: 'candlestick',
           label: this.symbol,
@@ -516,44 +554,6 @@ export default {
     }
 
     this.chartRef = chartRef;
-  },
-  computed: {
-    canvasId: {
-      get() {
-        return `canvas-${this.symbol}`;
-      },
-    },
-  },
-  data() {
-    let priceLength = 8;
-    if (this.currentPrice) {
-      const priceSplit = this.currentPrice.toString().split('.');
-      if (priceSplit.length > 1) {
-        priceLength = priceSplit[1].length
-      }
-    }
-
-    const priceStep = Number(Math.pow(10, -1 *priceLength).toFixed(priceLength))
-    let openedOrderPrice = 0.00;
-
-    if (this.orderOpened > 0) {
-      openedOrderPrice = Number(this.orderOpened.toFixed(priceLength));
-    }
-
-    return {
-      openedOrderPrice,
-      priceLength,
-      priceStep,
-      updateSubscription: null,
-      orderDialog: {
-        opened: 0.00,
-        flag: false,
-        operation: '',
-        price: 0.00,
-        options: [],
-      },
-      chartRef: null,
-    };
   },
   methods: {
     closeOrderDialog() {

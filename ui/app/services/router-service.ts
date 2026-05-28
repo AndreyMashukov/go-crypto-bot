@@ -1,5 +1,5 @@
-import {VueI18n} from "vue-i18n";
-import {Router} from '#vue-router';
+import type {VueI18n} from "vue-i18n";
+import type {Router} from '#vue-router';
 
 export class RouterService {
   constructor(private i18n: VueI18n, private router: Router) {}

@@ -8,18 +8,18 @@
         <v-row>
           <v-col cols="6" class="p-0 py-0">
             <v-select
-                :label="$t('trade_condition.col_label_type')"
                 v-model="tradeFilter.type"
+                :label="$t('trade_condition.col_label_type')"
                 variant="underlined"
                 :rules="[rules.required]"
                 :items="conditions"
                 type="text"
             />
           </v-col>
-          <v-col cols="6" class="p-0 py-0" v-if="canBeMulti">
+          <v-col v-if="canBeMulti" cols="6" class="p-0 py-0">
             <v-select
-                :label="$t('trade_condition.col_label_mode')"
                 v-model="tradeFilter.mode"
+                :label="$t('trade_condition.col_label_mode')"
                 variant="underlined"
                 :rules="[rules.required]"
                 :items="conditionMode"
@@ -35,7 +35,7 @@
             :trade-filter="childFilter"
             class="child-filter-container"
             :symbols="symbols"
-            @onClickRemove="tradeFilter.children.splice(childFilterIndex, 1)"
+            @on-click-remove="tradeFilter.children.splice(childFilterIndex, 1)"
         />
         <div class="parameters">
           <v-btn
@@ -53,15 +53,15 @@
       </v-col>
     </v-row>
     <v-row v-if="tradeFilter.mode === 'single'" :class="canBeMulti? 'filter-item' : 'filter-item-child'">
-      <v-col cols="1" class="p-0 numeric-column" v-if="canBeMulti">
+      <v-col v-if="canBeMulti" cols="1" class="p-0 numeric-column">
         <v-icon :icon="`mdi-numeric-${optionNumber}-box`" color="primary"/>
       </v-col>
       <v-col :cols="canBeMulti ? 10 : 11" class="p-0 py-0">
         <v-row>
           <v-col :cols="canBeMulti ? 3 : 6" class="p-0 py-0">
             <v-select
-                :label="$t('trade_condition.col_label_type')"
                 v-model="tradeFilter.type"
+                :label="$t('trade_condition.col_label_type')"
                 variant="underlined"
                 :rules="[rules.required]"
                 :items="conditions"
@@ -70,18 +70,18 @@
           </v-col>
           <v-col :cols="canBeMulti ? 5 : 6" class="p-0 py-0">
             <v-select
-                :label="$t('trade_condition.col_label_symbol')"
                 v-model="tradeFilter.symbol"
+                :label="$t('trade_condition.col_label_symbol')"
                 variant="underlined"
                 :rules="[rules.required]"
                 :items="symbols"
                 type="text"
             />
           </v-col>
-          <v-col cols="4" class="p-0 py-0" v-if="canBeMulti">
+          <v-col v-if="canBeMulti" cols="4" class="p-0 py-0">
             <v-select
-                :label="$t('trade_condition.col_label_mode')"
                 v-model="tradeFilter.mode"
+                :label="$t('trade_condition.col_label_mode')"
                 variant="underlined"
                 :rules="[rules.required]"
                 :items="conditionMode"
@@ -93,8 +93,8 @@
         <v-row>
           <v-col cols="5" class="p-0 py-0">
             <v-select
-                :label="$t('trade_condition.col_label_parameter')"
                 v-model="tradeFilter.parameter"
+                :label="$t('trade_condition.col_label_parameter')"
                 variant="underlined"
                 :rules="[rules.required]"
                 :items="['price', 'daily_percent', 'position_time_minutes', 'extra_orders_today', 'has_signal', 'sentiment_label', 'sentiment_score']"
@@ -103,8 +103,8 @@
           </v-col>
           <v-col cols="3" class="p-0 py-0">
             <v-select
-                :label="$t('trade_condition.col_label_condition')"
                 v-model="tradeFilter.condition"
+                :label="$t('trade_condition.col_label_condition')"
                 variant="underlined"
                 :rules="[rules.required]"
                 :items="conditionMap[tradeFilter.parameter] || []"
@@ -114,27 +114,27 @@
           <v-col cols="4" class="p-0 py-0">
             <v-text-field
               v-if="inputTypeMap[tradeFilter.parameter] === 'text'"
+              v-model="tradeFilter.value"
               :label="$t('trade_condition.col_label_value')"
               type="text"
-              v-model="tradeFilter.value"
               variant="underlined"
               :rules="[rules.required].concat(inputRules[tradeFilter.parameter])"
               :persistent-hint="!!inputHint[tradeFilter.parameter]"
               :hint="inputHint[tradeFilter.parameter]"
-            ></v-text-field>
+            />
             <v-checkbox
               v-if="inputTypeMap[tradeFilter.parameter] === 'checkbox'"
-              type="text"
               v-model="tradeFilter.value"
+              type="text"
               variant="underlined"
-            ></v-checkbox>
+            />
             <v-select
               v-if="inputTypeMap[tradeFilter.parameter] === 'select'"
-              type="text"
               v-model="tradeFilter.value"
+              type="text"
               :items="selectOptions[tradeFilter.parameter]"
               variant="underlined"
-            ></v-select>
+            />
           </v-col>
         </v-row>
       </v-col>

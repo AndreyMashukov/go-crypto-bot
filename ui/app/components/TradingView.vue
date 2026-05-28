@@ -1,5 +1,6 @@
 <template>
-  <Chart :options="{
+  <Chart
+:options="{
     width: '100%',
     height: '600',
     symbol: `${exchange}:${symbol}`,
@@ -17,10 +18,10 @@
 <script lang="ts">
 import {Chart} from '#components';
 export default {
+  name      : "TradingView",
   components: {
     Chart,
   },
-  name      : "TradingView",
   props: {
     exchange: {
       type: String,

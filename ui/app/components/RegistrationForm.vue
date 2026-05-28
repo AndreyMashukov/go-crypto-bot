@@ -1,19 +1,19 @@
 <template>
   <v-container fluid>
-    <v-form @submit.prevent="signUp" ref="form">
+    <v-form ref="form" @submit.prevent="signUp">
       <v-row>
         <v-col cols="12" lg="6" md="6" sm="6" xs="6" class="mt-0 pt-0">
           <v-text-field
-              :label="$t('registration_form.nickname_label')"
               v-model="nickname"
+              :label="$t('registration_form.nickname_label')"
               variant="solo-filled"
               :rules="[rules.required, rules.nickname]"
           />
         </v-col>
         <v-col cols="12" lg="6" md="6" sm="6" xs="6" class="mt-0 pt-0">
           <v-text-field
-              :label="$t('registration_form.email_label')"
               v-model="email"
+              :label="$t('registration_form.email_label')"
               variant="solo-filled"
               :rules="[rules.required, rules.email]"
           />
@@ -22,21 +22,21 @@
       <v-row>
         <v-col cols="12" lg="6" md="6" sm="6" xs="6" class="mt-0 pt-0">
           <v-text-field
-              :label="$t('registration_form.promocode')"
               v-model="promocode"
+              :label="$t('registration_form.promocode')"
               variant="solo-filled"
-              @update:model-value="checkPromoCode"
               :error="promocodeStatus.error"
               :error-messages="!!promocodeStatus.error ? [promocodeStatus.error] : []"
               :persistent-hint="true"
               :hint="promocodeStatus.valid ? $t('registration_form.promocode_is_valid') : ''"
               :bg-color="promocodeStatus.valid ? 'success' : ''"
               :loading="promocodeStatus.loading"
+              @update:model-value="checkPromoCode"
           />
         </v-col>
       </v-row>
       <div class="text-center">
-        {{$t('registration_form.existing_account')}} <a @click="onGoNext" class="text-blue text-decoration-underline">{{$t('registration_form.login')}}</a>
+        {{$t('registration_form.existing_account')}} <a class="text-blue text-decoration-underline" @click="onGoNext">{{$t('registration_form.login')}}</a>
       </div>
       <v-btn
           :disabled="loading"
@@ -47,7 +47,7 @@
           variant="flat"
           color="primary"
           :text="$t('registration_form.text_btn')"
-      ></v-btn>
+      />
       <v-alert
           v-if="!!errorMessage"
           :title="$t('registration_form.alert_title')"

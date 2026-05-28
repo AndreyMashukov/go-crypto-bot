@@ -1,19 +1,19 @@
 <template>
   <v-container fluid>
-    <v-form @submit.prevent="signIn" ref="form">
+    <v-form ref="form" @submit.prevent="signIn">
       <v-row>
         <v-col cols="12" lg="6" md="6" sm="6" xs="12" class="mt-0 pt-0">
           <v-text-field
-              :label="$t('login_form.email_label')"
               v-model="email"
+              :label="$t('login_form.email_label')"
               variant="solo-filled"
               :rules="[rules.required, rules.email]"
           />
         </v-col>
         <v-col cols="12" lg="6" md="6" sm="6" xs="12" class="mt-0 pt-0">
           <v-text-field
-              :label="$t('login_form.code_label')"
               v-model="password"
+              :label="$t('login_form.code_label')"
               variant="solo-filled"
               :rules="[rules.required]"
               type="password"
@@ -21,7 +21,7 @@
         </v-col>
       </v-row>
       <div class="text-center">
-        {{$t('login_form.forgotten_code')}} <a @click="onGoBack" class="text-blue text-decoration-underline">{{$t('login_form.get_new_code')}}</a>
+        {{$t('login_form.forgotten_code')}} <a class="text-blue text-decoration-underline" @click="onGoBack">{{$t('login_form.get_new_code')}}</a>
       </div>
       <v-btn
           :disabled="loading"
@@ -32,7 +32,7 @@
           variant="flat"
           color="primary"
           :text="$t('login_form.text_btn')"
-      ></v-btn>
+      />
       <v-alert
           v-if="!!errorMessage"
           :title="$t('login_form.alert_title')"

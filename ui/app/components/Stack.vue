@@ -17,7 +17,7 @@
           <th class="stack-column">
             {{$t('stack.column_signal')}}
             <v-tooltip location="top">
-              <template v-slot:activator="{ props }">
+              <template #activator="{ props }">
                 <v-icon v-bind="props" icon="mdi-information-slab-circle-outline" class="cursor-pointer"/>
               </template>
               <span>{{$t('stack.signal_trading_hint')}}</span>
@@ -70,8 +70,8 @@
                   color="success"
                   size="10"
                   hide-details
-                  @change="switchSymbol(stackItem)"
                   :disabled="!availableSymbols.includes(stackItem.symbol) && !stackItem.isEnabled"
+                  @change="switchSymbol(stackItem)"
               />
             </div>
           </td>
@@ -98,7 +98,7 @@
             />
           </td>
           <td class="stack-column text-left">
-            <StackSymbol @click="clickSymbol(stackItem.symbol)" :stack-item="stackItem" :exchange="exchange"/>
+            <StackSymbol :stack-item="stackItem" :exchange="exchange" @click="clickSymbol(stackItem.symbol)"/>
           </td>
           <td class="stack-column rating-td">
             <v-icon v-if="!!stackItem.rating" color="primary" icon="mdi-star" size="small"/>
@@ -106,7 +106,7 @@
             <span v-if="!!stackItem.rating" class="rated">
               {{$t('stack.rating_top_prefix')}}-{{stackItem.rating.rating}}
               <v-tooltip location="top">
-                <template v-slot:activator="{ props }">
+                <template #activator="{ props }">
                   <v-icon v-bind="props" icon="mdi-information" color="primary" class="cursor-pointer" size="small"/>
                 </template>
                 <div>
@@ -135,13 +135,12 @@
                   icon="mdi-cog"
                   :disabled="!stackItem.signalTrading"
                   variant="text"
-                  @click.prevent="signalConfigure(stackItem)"
                   rounded="0"
                   color="primary"
                   elevation="0"
                   class="signal-configure-btn"
-                >
-                </v-btn>
+                  @click.prevent="signalConfigure(stackItem)"
+                />
               </div>
             </div>
           </td>
@@ -155,7 +154,7 @@
               icon="mdi-circle-small"
               :color="stackItem.price > Number(stackItem.rating.avgBuyPrice).toFixed((stackItem.price.toString().split('.')[1] || {length: 2}).length) ? 'red' : 'primary'"
               size="x-large"
-            ></v-icon>
+            />
           </td>
           <td class="stack-column">
             <div v-if="!!stackItem.predictedPrice">
@@ -187,18 +186,18 @@
           </td>
           <td class="stack-column">
             <v-text-field
+              v-model="stackItem.budgetUsdt"
               class="stack-budget-field"
               :label="null"
-              v-model="stackItem.budgetUsdt"
               variant="solo-filled"
               hide-details
               hint="You can change budget here"
               append-inner-icon="mdi-cash"
-              @input="changeBudget(stackItem)"
               :loading="loadingMapValue[stackItem.symbol].budget"
               :disabled="stackItem.isExtraCharge"
               pattern="[0-9]*"
               inputmode="numeric"
+              @input="changeBudget(stackItem)"
             />
           </td>
           <td class="stack-column" :style="{'background-color': stackItem.hasEnoughBalance ? '#1DE9B6FF' : 'rgb(189,47,38)', 'color': stackItem.hasEnoughBalance ? '#000000' : '#FFFFFF'}">
@@ -214,8 +213,8 @@
       </tbody>
     </table>
     <v-dialog
-      persistent
       v-model="signalConfigDialog.active"
+      persistent
       max-width="500px"
       min-width="380px"
       z-index="9999"
@@ -242,8 +241,8 @@
           <v-row>
             <v-col rows="12" lg="6" md="6" sm="6" xs="6">
               <v-select
-                :label="$t('stack.signal_config.labels.signal_period_days')"
                 v-model="signalConfigDialog.config.signalPeriodDays"
+                :label="$t('stack.signal_config.labels.signal_period_days')"
                 variant="underlined"
                 :items="[
                   {title: $t('stack.signal_config.labels.signal_period_days_options.1d'), value: 1},
@@ -252,39 +251,39 @@
                   {title: $t('stack.signal_config.labels.signal_period_days_options.30d'), value: 30},
                  ]"
                 @update:model-value="onSignalConfig(signalConfigDialog.config, signalConfigDialog.stackItem)"
-              ></v-select>
+              />
             </v-col>
           </v-row>
           <h4 class="mb-4">{{$t('stack.signal_config.correction_title')}}</h4>
           <v-row class="mt-2">
             <v-col cols="12" lg="6" md="6" sm="6" xs="6" class="p-0 py-0">
               <v-text-field
+                v-model="signalConfigDialog.config.percentFilter"
                 :label="$t('stack.signal_config.labels.percent_filter')"
                 type="number"
                 min="0.5"
-                v-model="signalConfigDialog.config.percentFilter"
-                @update:model-value="delaySignalUpdate(signalConfigDialog.config, signalConfigDialog.stackItem)"
                 variant="underlined"
-              ></v-text-field>
+                @update:model-value="delaySignalUpdate(signalConfigDialog.config, signalConfigDialog.stackItem)"
+              />
             </v-col>
             <v-col cols="12" lg="6" md="6" sm="6" xs="6" class="p-0 py-0">
               <v-switch
-                :label="$t('stack.signal_config.labels.avg_buy_correction')"
                 v-model="signalConfigDialog.config.avgBuyCorrection"
-                @update:model-value="onSignalConfig(signalConfigDialog.config, signalConfigDialog.stackItem)"
+                :label="$t('stack.signal_config.labels.avg_buy_correction')"
                 color="primary"
                 size="10"
                 hide-details
                 :disabled="!signalConfigDialog.stackItem.rating"
                 class="stack-signal-config-switch"
+                @update:model-value="onSignalConfig(signalConfigDialog.config, signalConfigDialog.stackItem)"
               />
             </v-col>
           </v-row>
           <v-row class="mb-4">
             <v-col cols="12" lg="6" md="6" sm="6" xs="6" class="p-0 py-0">
               <v-select
-                :label="$t('stack.signal_config.labels.sell_price_correction_mode')"
                 v-model="signalConfigDialog.config.sellPriceCorrectionMode"
+                :label="$t('stack.signal_config.labels.sell_price_correction_mode')"
                 variant="underlined"
                 :items="[
                   {title: $t('stack.signal_config.labels.sell_price_correction_mode_options.max'), value: 'max'},
@@ -298,14 +297,14 @@
             </v-col>
             <v-col cols="12" lg="6" md="6" sm="6" xs="6" class="p-0 py-0">
               <v-switch
-                :label="$t('stack.signal_config.labels.avg_sell_correction')"
                 v-model="signalConfigDialog.config.avgSellCorrection"
-                @update:model-value="onSignalConfig(signalConfigDialog.config, signalConfigDialog.stackItem)"
+                :label="$t('stack.signal_config.labels.avg_sell_correction')"
                 color="primary"
                 size="10"
                 hide-details
                 class="stack-signal-config-switch"
                 :disabled="!signalConfigDialog.stackItem.rating"
+                @update:model-value="onSignalConfig(signalConfigDialog.config, signalConfigDialog.stackItem)"
               />
             </v-col>
           </v-row>
@@ -313,37 +312,37 @@
           <v-row class="mb-4 mt-2">
             <v-col cols="12" lg="4" md="4" sm="6" xs="6" class="p-0 py-0">
               <v-switch
-                :label="$t('stack.signal_config.labels.rating_filter')"
                 v-model="signalConfigDialog.config.ratingFilter"
-                @update:model-value="onSignalConfig(signalConfigDialog.config, signalConfigDialog.stackItem)"
+                :label="$t('stack.signal_config.labels.rating_filter')"
                 color="primary"
                 size="10"
                 hide-details
                 class="stack-signal-config-switch"
+                @update:model-value="onSignalConfig(signalConfigDialog.config, signalConfigDialog.stackItem)"
               />
             </v-col>
             <v-col cols="12" lg="4" md="4" sm="6" xs="6" class="p-0 py-0">
               <v-switch
-                :label="$t('stack.signal_config.labels.avg_buy_filter')"
                 v-model="signalConfigDialog.config.avgBuyFilter"
-                @update:model-value="onSignalConfig(signalConfigDialog.config, signalConfigDialog.stackItem)"
+                :label="$t('stack.signal_config.labels.avg_buy_filter')"
                 color="primary"
                 size="10"
                 hide-details
                 class="stack-signal-config-switch"
                 :disabled="!signalConfigDialog.stackItem.rating"
+                @update:model-value="onSignalConfig(signalConfigDialog.config, signalConfigDialog.stackItem)"
               />
             </v-col>
             <v-col cols="12" lg="4" md="4" sm="6" xs="6" class="p-0 py-0">
               <v-switch
-                :label="$t('stack.signal_config.labels.avg_sell_filter')"
                 v-model="signalConfigDialog.config.avgSellFilter"
-                @update:model-value="onSignalConfig(signalConfigDialog.config, signalConfigDialog.stackItem)"
+                :label="$t('stack.signal_config.labels.avg_sell_filter')"
                 color="primary"
                 size="10"
                 hide-details
                 class="stack-signal-config-switch"
                 :disabled="!signalConfigDialog.stackItem.rating"
+                @update:model-value="onSignalConfig(signalConfigDialog.config, signalConfigDialog.stackItem)"
               />
             </v-col>
           </v-row>
@@ -391,28 +390,6 @@ export default {
       default: () => [],
     },
   },
-  data() {
-    return {
-      signalConfigDialog: {
-        active: false,
-        config: {
-          signalPeriodDays: 1,
-          percentFilter: 0.5,
-          ratingFilter: false,
-          avgBuyFilter: false,
-          avgSellFilter: false,
-          avgBuyCorrection: true,
-          avgSellCorrection: false,
-          sellPriceCorrectionMode: 'equal',
-        },
-        stackItem: null,
-      },
-      sortingPoints: this.sorting === 'diff',
-      sortingPercent: this.sorting === 'percent',
-      budgetTimer: null,
-      signalUpdateTimer: null,
-    }
-  },
   setup(props: any, {emit}: any) {
     function onSymbol(symbol: any) {
       emit('onSymbol', symbol);
@@ -446,12 +423,34 @@ export default {
       onSignalConfig,
     }
   },
+  data() {
+    return {
+      signalConfigDialog: {
+        active: false,
+        config: {
+          signalPeriodDays: 1,
+          percentFilter: 0.5,
+          ratingFilter: false,
+          avgBuyFilter: false,
+          avgSellFilter: false,
+          avgBuyCorrection: true,
+          avgSellCorrection: false,
+          sellPriceCorrectionMode: 'equal',
+        },
+        stackItem: null,
+      },
+      sortingPoints: this.sorting === 'diff',
+      sortingPercent: this.sorting === 'percent',
+      budgetTimer: null,
+      signalUpdateTimer: null,
+    }
+  },
   computed: {
     loadingMapValue() {
-      let map: any = {};
+      const map: any = {};
 
       this.stackItems.forEach((item: any) => {
-        let budget = (this.loadingMap[item.symbol] || {budget: false}).budget;
+        const budget = (this.loadingMap[item.symbol] || {budget: false}).budget;
         map[item.symbol] = {
           budget,
         };

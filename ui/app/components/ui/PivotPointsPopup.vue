@@ -1,19 +1,19 @@
 <template>
   <div class="d-inline">
     <v-btn
-      @click="show = true"
       variant="flat"
       elevation="0"
       size="x-small"
       append-icon="mdi-chart-timeline-variant-shimmer"
       color="primary"
       width="100%"
+      @click="show = true"
     >
       PIVOT
     </v-btn>
     <v-dialog
-        persistent
         v-model="show"
+        persistent
         max-width="500px"
         min-width="380px"
         z-index="9999"
@@ -61,8 +61,8 @@
 </template>
 <script lang="ts">
 export default {
-  components: {},
   name: "PivotPointsPopup",
+  components: {},
   props: {
     symbol: {
       type: String,

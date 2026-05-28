@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@amashukov/eslint-plugin-mess-detector@^0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@amashukov/eslint-plugin-mess-detector/-/eslint-plugin-mess-detector-0.1.0.tgz#9d4d047ff93ed28a77076e06f74e049d8ee60dac"
-  integrity sha512-D+7jD6zxJc77Ob78UybobdpUrd6HCTqJ7tkp+Kr3/9MO7MCKb/mQtimQL1KYnrzmVmN0pkMaotokJpZdStJv6w==
+"@amashukov/eslint-plugin-mess-detector@^0.2.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@amashukov/eslint-plugin-mess-detector/-/eslint-plugin-mess-detector-0.2.0.tgz#d7561c8ca9ac0d35901ed6383bd224c5b6058550"
+  integrity sha512-70l/lf8RUUlQSUlxz6MkdJe6seC9+vy2+KAc60f82VDHeZxvbuIH4PwqVSfLotvlr8imyIGwJzgkeJD+9iSQYQ==
   dependencies:
     "@typescript-eslint/utils" "^8.18.0"
     minimatch "^10.0.1"

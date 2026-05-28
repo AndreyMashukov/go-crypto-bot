@@ -1,12 +1,12 @@
 <template>
   <v-menu transition="slide-y-transition">
-    <template v-slot:activator="{ props }">
+    <template #activator="{ props }">
       <v-btn color="primary" v-bind="props" :prepend-icon="getLanguageIcon" rounded="0" class="language-selector">
         <span class="language-desktop">{{ actualLocale }}</span>
       </v-btn>
     </template>
     <v-list>
-      <v-list-item class="language-selector-item" @click="actualLocale = language.code" v-for="(language, name) in availableLocales" :key="name" :prepend-icon="flagMap[language.code]">
+      <v-list-item v-for="(language, name) in availableLocales" :key="name" class="language-selector-item" :prepend-icon="flagMap[language.code]" @click="actualLocale = language.code">
         <v-list-item-title class="language-desktop-selector">
           {{ language.name }}
         </v-list-item-title>
@@ -20,6 +20,16 @@ import England from "~/components/icons/England.vue";
 import Russia from "~/components/icons/Russia.vue";
 export default {
   name: "LanguageSelector",
+  props: {
+    value: {
+      type: String,
+      default: () => '',
+    },
+    locales: {
+      type: Array,
+      default: () => [],
+    },
+  },
   data() {
     return {
       availableLocales: this.locales,
@@ -40,16 +50,6 @@ export default {
       set(locale) {
         this.$i18n.setLocale(locale);
       }
-    },
-  },
-  props: {
-    value: {
-      type: String,
-      default: () => '',
-    },
-    locales: {
-      type: Array,
-      default: () => [],
     },
   },
 }

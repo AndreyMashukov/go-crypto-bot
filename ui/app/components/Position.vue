@@ -27,15 +27,15 @@
         :color="sellPrice > Number(position.rating.avgSellPrice).toFixed(precision) ? 'red' : 'primary'"
         size="small"
         class="position-sell-price-dot"
-      ></v-icon>
+      />
       <small v-if="trader.length > 0">{{ trader }}</small>
-      <div class="position-rating" v-if="isVertical">
+      <div v-if="isVertical" class="position-rating">
         <v-icon v-if="!!position.rating" color="primary" icon="mdi-star" size="small"/>
         <v-icon v-else color="primary" icon="mdi-star-off" size="small"/>
         <span v-if="!!position.rating" class="rated">{{$t('position.rating_top_prefix')}}-{{position.rating.rating}}</span>
         <span v-else>{{$t('position.no_rating')}}</span>
-        <v-tooltip location="top" v-if="!!position.rating">
-          <template v-slot:activator="{ props }">
+        <v-tooltip v-if="!!position.rating" location="top">
+          <template #activator="{ props }">
             <v-icon v-bind="props" icon="mdi-information" color="primary" class="cursor-pointer" size="small"/>
           </template>
           <div>
@@ -68,7 +68,7 @@
               :color="avgPrice > Number(position.rating.avgBuyPrice).toFixed(precision) ? 'red' : 'primary'"
               size="x-large"
               class="position-sell-price-dot"
-          ></v-icon>
+          />
         </div>
         <div>
           <v-icon v-if="!!position.binanceOrder" color="primary" icon="mdi-cart" size="small"/>
@@ -82,7 +82,7 @@
             :color="sellPrice > Number(position.rating.avgSellPrice).toFixed(precision) ? 'red' : 'primary'"
             size="x-large"
             class="position-sell-price-dot"
-          ></v-icon>
+          />
         </div>
         <div>
           <v-icon color="primary" icon="mdi-hand-coin" size="small"/>
@@ -94,8 +94,8 @@
       </div>
     </div>
     <div v-if="showUsedBudget" class="used-budget">
-      <v-icon icon="mdi-lock" color="primary" v-if="position.order.swap" size="x-small"/>
-      <v-icon icon="mdi-check-circle" color="primary" v-else size="x-small"/>
+      <v-icon v-if="position.order.swap" icon="mdi-lock" color="primary" size="x-small"/>
+      <v-icon v-else icon="mdi-check-circle" color="primary" size="x-small"/>
       {{ (position.order.price * position.order.executedQuantity).toFixed(2) }}
       <small>$</small>
     </div>
@@ -122,13 +122,13 @@
       />
     </div>
     <v-btn
-      append-icon="mdi-cog"
       v-if="showBottomBtn"
+      append-icon="mdi-cog"
       color="primary"
       variant="elevated"
       size="x-small"
-      @click.prevent="pressBottomBtn"
       class="w-100"
+      @click.prevent="pressBottomBtn"
     >
       {{ bottomBtnText }}
     </v-btn>
@@ -168,9 +168,9 @@
       </v-btn>
     </div>
     <PivotPointsPopup
+      v-if="showPivots"
       :pivots="position.pivots"
       :precision="precision"
-      v-if="showPivots"
       class="condition-btn"
       :symbol="position.symbol"
     />
@@ -180,30 +180,30 @@
         color="red"
         variant="elevated"
         size="x-small"
-        @click.prevent="cancelManual"
         class="w-100"
         :disabled="!position.manualOrder"
+        @click.prevent="cancelManual"
       >
         {{$t('position.position_btn_manual')}}
       </v-btn>
     </div>
     <div v-if="!position.binanceOrder || Number(position.binanceOrder.executedQty) === 0">
       <v-progress-linear
+          v-if="position.profit > 0"
           class="mt-2"
           height="5px"
           :max="position.targetProfit*1000"
           :model-value="position.profit*1000"
           color="success"
-          v-if="position.profit > 0"
-      ></v-progress-linear>
+      />
       <v-progress-linear
+          v-else
           class="mt-2"
           height="5px"
           max="100"
           value="0"
           color="red"
-          v-else
-      ></v-progress-linear>
+      />
     </div>
     <div v-else>
       <v-progress-linear
@@ -212,7 +212,7 @@
           :max="Number(position.binanceOrder.origQty)*1000"
           :model-value="Number(position.binanceOrder.executedQty)*1000"
           color="info"
-      ></v-progress-linear>
+      />
     </div>
   </div>
 </template>
@@ -281,11 +281,6 @@ export default {
       default: () => false,
     },
   },
-  data() {
-    return {
-      isEnabled: this.position.isEnabled,
-    };
-  },
   setup(props: any, {emit}: any) {
     function onBottomBtn(data: any) {
       emit('onBottomBtn', data);
@@ -307,6 +302,11 @@ export default {
       onFilterClick,
     }
   },
+  data() {
+    return {
+      isEnabled: this.position.isEnabled,
+    };
+  },
   computed: {
     getTargetProfit: {
       get() {
@@ -314,7 +314,7 @@ export default {
       },
     },
     sellPrice() {
-      if (!!this.position.binanceOrder) {
+      if (this.position.binanceOrder) {
         return this.position.binanceOrder.price;
       }
 

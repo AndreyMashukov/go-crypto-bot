@@ -17,7 +17,7 @@
     "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
-    "@amashukov/eslint-plugin-mess-detector": "^0.1.0",
+    "@amashukov/eslint-plugin-mess-detector": "^0.2.0",
     "@nuxt/devtools": "^2.6.5",
     "@nuxt/eslint": "^1.10.0",
     "@nuxtjs/i18n": "^9.5.6",

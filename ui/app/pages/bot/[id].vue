@@ -22,7 +22,7 @@
           type="warning"
           :title="$t('bot.attention_title')"
           :text="$t('bot.attention_text')"
-      ></v-alert>
+      />
       <v-alert
           v-else
           class="mt-0"
@@ -31,7 +31,7 @@
           :title="$t('bot.payment_req_title')"
           :text="$t('bot.payment_req_text')"
       >
-        <template v-slot:append>
+        <template #append>
           <NuxtLink to="/account" class="text-decoration-none">
             <v-btn variant="flat" color="success">
               {{$t('bot.pay_now_btn')}}
@@ -44,34 +44,34 @@
           :loading="dataLoading.stop"
           variant="flat"
           color="red"
-          @click="stopBot"
           class="mb-4 mt-2 mr-4"
           append-icon="mdi-stop"
           :disabled="botDetails.status !== 'running'"
+          @click="stopBot"
       >
         <b>{{$t('bot.stop_btn')}}</b>
       </v-btn>
       <v-btn
+          v-if="botDetails.status !== 'running'"
           :loading="dataLoading.deploy"
           variant="flat"
           color="success"
-          @click="deployBot"
           class="mb-4 mt-2"
           append-icon="mdi-play"
-          v-if="botDetails.status !== 'running'"
           :disabled="!isServicePaid"
+          @click="deployBot"
       >
         <b>{{$t('bot.start_btn')}}</b>
       </v-btn>
       <v-btn
+          v-if="botDetails.status === 'running'"
           :loading="dataLoading.deploy"
           variant="flat"
           color="success"
-          @click="deployBot"
           class="mb-4 mt-2"
           append-icon="mdi-restart"
-          v-if="botDetails.status === 'running'"
           :disabled="!isServicePaid"
+          @click="deployBot"
       >
         <b>{{$t('bot.restart_btn')}}</b>
       </v-btn>
@@ -82,57 +82,57 @@
         border="bottom"
         border-color="info"
       >
-        <template v-slot:text>
+        <template #text>
           {{$t(`bot.documentation.${botDetails.provider}.text`)}} <a class="documentation-link" :href="$t(`bot.documentation.${botDetails.provider}.link.url`)" target="_blank">{{$t(`bot.documentation.${botDetails.provider}.link.text`)}}</a>
         </template>
       </v-alert>
     </div>
     <div class="mb-2">
-      <v-chip prepend-icon="mdi-server" color="primary" v-if="!getDedicatedServer">
+      <v-chip v-if="!getDedicatedServer" prepend-icon="mdi-server" color="primary">
         {{$t('bot.server.shared').replace('[slots]', getAvailableSlots)}}
       </v-chip>
-      <v-chip prepend-icon="mdi-server" color="primary" v-else>
+      <v-chip v-else prepend-icon="mdi-server" color="primary">
         {{$t('bot.server.dedicated').replace('[ip]', getDedicatedServer.ip)}}
       </v-chip>
     </div>
     <h1>{{$t('bot.inst')}} #{{ botDetails.id }}</h1>
-    <v-form @submit.prevent="saveConfig" ref="form" class="mb-4">
+    <v-form ref="form" class="mb-4" @submit.prevent="saveConfig">
       <v-btn :loading="dataLoading.update" variant="flat" color="primary" type="submit" class="mb-4 mt-2 mr-4">{{$t('bot.inst_save_config')}}</v-btn>
       <v-btn :loading="dataLoading.sync" variant="flat" color="warning" class="mb-4 mt-2" append-icon="mdi-sync" @click="syncConfig">{{$t('bot.inst_sync_config')}}</v-btn>
       <v-row class="mt-4">
         <v-col cols="12" lg="6" md="6" sm="6" xs="6" class="mt-0 pt-0">
           <v-text-field
+              v-model="apiKey"
               :label="$t('bot.key_label').replace('[provider]', botDetails.provider)"
               :append-icon="showKey ? 'mdi-eye' : 'mdi-eye-off'"
               :type="showKey ? 'text' : 'password'"
-              @click:append="showKey = !showKey"
-              v-model="apiKey"
               variant="solo-filled"
               :rules="[rules.required]"
               :hint="$t('bot.key_hint').replace('[get_ips]', getIps).replace('[provider]', botDetails.provider)"
               persistent-hint
               aria-autocomplete="none"
+              @click:append="showKey = !showKey"
           />
         </v-col>
         <v-col cols="12" lg="6" md="6" sm="6" xs="6" class="mt-0 pt-0">
           <v-text-field
+              v-model="apiSecret"
               :label="$t('bot.secret_label').replace('[provider]', botDetails.provider)"
               :append-icon="showSecret ? 'mdi-eye' : 'mdi-eye-off'"
               :type="showSecret ? 'text' : 'password'"
-              @click:append="showSecret = !showSecret"
-              v-model="apiSecret"
               variant="solo-filled"
               :rules="[rules.required]"
               :hint="$t('bot.secret_hint').replace('[get_ips]', getIps).replace('[provider]', botDetails.provider)"
               persistent-hint
               aria-autocomplete="none"
+              @click:append="showSecret = !showSecret"
           />
         </v-col>
       </v-row>
 
       <v-btn variant="flat" color="primary" size="small" class="mt-4" @click="addSymbol">{{$t('bot.add_symbol')}}</v-btn>
       <v-row>
-        <v-col cols="12" lg="6" md="12" sm="12" xs="12" v-for="(tradeConfig, index) in cryptoTradeConfigs" :key="`${tradeConfig.symbol}-${index}`" class="mt-0 pt-0">
+        <v-col v-for="(tradeConfig, index) in cryptoTradeConfigs" :key="`${tradeConfig.symbol}-${index}`" cols="12" lg="6" md="12" sm="12" xs="12" class="mt-0 pt-0">
           <div class="pt-4">
             <h3>{{ tradeConfig.symbol }}</h3>
             <v-btn size="small" color="red" class="mt-1" @click="deleteSymbol(tradeConfig, index)">{{$t('bot.delete_btn')}}</v-btn>
@@ -143,12 +143,12 @@
                 :rules="[]"
                 :label="$t('bot.add_symbol_label')"
                 hide-details
-            ></v-switch>
+            />
             <v-row class="mt-4">
               <v-col cols="6" lg="3" md="3" sm="3" xs="3" class="mt-0 pt-0">
                 <v-select
-                    :label="$t('bot.symbol_label')"
                     v-model="tradeConfig.symbol"
+                    :label="$t('bot.symbol_label')"
                     variant="solo-filled"
                     :rules="[rules.required]"
                     :items="symbols"
@@ -160,8 +160,8 @@
               </v-col>
               <v-col cols="6" lg="3" md="3" sm="3" xs="3" class="mt-0 pt-0">
                 <v-text-field
-                    :label="$t('bot.budget_label')"
                     v-model="tradeConfig.usdtLimit"
+                    :label="$t('bot.budget_label')"
                     variant="solo-filled"
                     :rules="[rules.required, rules.min15]"
                     type="number"
@@ -189,8 +189,8 @@
                   <v-row>
                     <v-col cols="6" lg="3" md="3" sm="3" xs="3" class="mt-0 pt-0">
                       <v-text-field
-                          :label="$t('bot.min_price_label')"
                           v-model="tradeConfig.minPriceMinutesPeriod"
+                          :label="$t('bot.min_price_label')"
                           variant="solo-filled"
                           :rules="[rules.required]"
                           type="number"
@@ -201,8 +201,8 @@
                     </v-col>
                     <v-col cols="6" lg="3" md="3" sm="3" xs="3" class="mt-0 pt-0">
                       <v-select
-                          :label="$t('bot.frame_interval_label')"
                           v-model="tradeConfig.frameInterval"
+                          :label="$t('bot.frame_interval_label')"
                           variant="solo-filled"
                           :rules="[rules.required]"
                           :items="['1m', '15m', '30m', '1h', '2h', '4h', '6h', '12h', '1d', '1w', '1M']"
@@ -214,8 +214,8 @@
                     </v-col>
                     <v-col cols="6" lg="3" md="3" sm="3" xs="3" class="mt-0 pt-0">
                       <v-text-field
-                          :label="$t('bot.frame_period_label')"
                           v-model="tradeConfig.framePeriod"
+                          :label="$t('bot.frame_period_label')"
                           variant="solo-filled"
                           :rules="[rules.required, rules.max200]"
                           type="number"
@@ -226,8 +226,8 @@
                     </v-col>
                     <v-col cols="6" lg="3" md="3" sm="3" xs="3" class="mt-0 pt-0">
                       <v-select
-                          :label="$t('bot.check_interval_label')"
                           v-model="tradeConfig.buyPriceHistoryCheckInterval"
+                          :label="$t('bot.check_interval_label')"
                           variant="solo-filled"
                           :rules="[rules.required]"
                           :items="['1s', '1m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w']"
@@ -239,8 +239,8 @@
                     </v-col>
                     <v-col cols="6" lg="3" md="3" sm="3" xs="3" class="mt-0 pt-0">
                       <v-text-field
-                          :label="$t('bot.check_period_label')"
                           v-model="tradeConfig.buyPriceHistoryCheckPeriod"
+                          :label="$t('bot.check_period_label')"
                           variant="solo-filled"
                           :rules="[rules.required, rules.max100]"
                           type="number"
@@ -256,11 +256,11 @@
           </div>
         </v-col>
       </v-row>
-      <v-btn :loading="dataLoading.update" v-if="cryptoTradeConfigs.length >= 2" variant="flat" color="primary" type="submit" class="mt-6">{{$t('bot.save_config_btn')}}</v-btn>
+      <v-btn v-if="cryptoTradeConfigs.length >= 2" :loading="dataLoading.update" variant="flat" color="primary" type="submit" class="mt-6">{{$t('bot.save_config_btn')}}</v-btn>
     </v-form>
     <v-dialog
-        persistent
         v-model="settingsDialog.flag"
+        persistent
         max-width="500px"
         min-width="380px"
         z-index="9999"
@@ -278,49 +278,49 @@
             v-model="settingsDialog.tab"
             bg-color="default"
         >
-          <v-tab v-for="(tab, index) in settingsDialogTabs" :value="index" :key="`tab-${index}`">{{ tab.name }}</v-tab>
+          <v-tab v-for="(tab, index) in settingsDialogTabs" :key="`tab-${index}`" :value="index">{{ tab.name }}</v-tab>
         </v-tabs>
         <v-window v-model="settingsDialog.tab" class="mt-4" style="overflow-y: scroll !important;">
           <v-window-item value="0">
-            <v-form @submit.prevent="saveProfitOptions" ref="form3" class="mt-2">
+            <v-form ref="form3" class="mt-2" @submit.prevent="saveProfitOptions">
               <v-card-text>
                 <v-row
                   v-for="(profitOption, profitOptionIndex) in settingsDialog.profitOptions"
-                  class="mb-0 position-relative"
                   :key="`profit-${profitOptionIndex}`"
+                  class="mb-0 position-relative"
                   :style="{'background-color': profitOption.isTriggerOption ? 'rgba(153,245,150,0.77)' : '#FFFFFF'}"
                 >
                   <v-col cols="1" class="p-0">
                     <v-icon :icon="`mdi-numeric-${profitOptionIndex+1}-box`" color="primary"/>
-                    <v-checkbox color="primary" v-model="profitOption.isTriggerOption" @change="triggerOptionChanged(profitOptionIndex)" class="trigger-option"/>
+                    <v-checkbox v-model="profitOption.isTriggerOption" color="primary" class="trigger-option" @change="triggerOptionChanged(profitOptionIndex)"/>
                   </v-col>
                   <v-col cols="3" class="p-0 py-0">
                     <v-text-field
+                        v-model="profitOption.optionValue"
                         :label="$t('bot.trigger_options_label_1')"
                         type="number"
-                        v-model="profitOption.optionValue"
                         variant="underlined"
                         :rules="[rules.required, rules.positive]"
-                    ></v-text-field>
+                    />
                   </v-col>
                   <v-col cols="3" class="p-0 py-0">
                     <v-select
+                        v-model="profitOption.optionUnit"
                         :label="$t('bot.trigger_options_label_2')"
                         type="text"
-                        v-model="profitOption.optionUnit"
                         :rules="[rules.required]"
                         :items="profitPeriodLabels"
                         variant="underlined"
-                    ></v-select>
+                    />
                   </v-col>
                   <v-col cols="4" class="p-0 py-0">
                     <v-text-field
+                        v-model="profitOption.optionPercent"
                         :label="$t('bot.trigger_options_label_3')"
                         type="number"
-                        v-model="profitOption.optionPercent"
                         variant="underlined"
                         :rules="[rules.required, rules.positive, rules.min05]"
-                    ></v-text-field>
+                    />
                   </v-col>
                   <v-col cols="1" class="p-0">
                     <v-icon icon="mdi-close" color="red" style="margin-left: -10px" @click="settingsDialog.profitOptions.splice(profitOptionIndex, 1)"/>
@@ -345,29 +345,29 @@
             </v-form>
           </v-window-item>
           <v-window-item value="1">
-            <v-form @submit.prevent="saveExtraCharge" ref="form2" class="mt-2">
+            <v-form ref="form2" class="mt-2" @submit.prevent="saveExtraCharge">
               <v-card-text>
-                <v-row v-for="(chargeOption, optionIndex) in settingsDialog.extraChargeOptions" class="mb-0" :key="`charge-${optionIndex}`">
+                <v-row v-for="(chargeOption, optionIndex) in settingsDialog.extraChargeOptions" :key="`charge-${optionIndex}`" class="mb-0">
                   <v-col cols="1" class="p-0">
                     <v-icon :icon="`mdi-numeric-${optionIndex+1}-box`" color="primary"/>
                   </v-col>
                   <v-col cols="5" class="p-0 py-0">
                     <v-text-field
+                        v-model="chargeOption.percent"
                         :label="$t('bot.save_extra_charge_label_1')"
                         type="number"
-                        v-model="chargeOption.percent"
                         variant="underlined"
                         :rules="[rules.required, rules.negative]"
-                    ></v-text-field>
+                    />
                   </v-col>
                   <v-col cols="5" class="p-0 py-0">
                     <v-text-field
+                        v-model="chargeOption.amountUsdt"
                         :label="$t('bot.save_extra_charge_label_2')"
                         type="number"
-                        v-model="chargeOption.amountUsdt"
                         variant="underlined"
                         :rules="[rules.required, rules.min15]"
-                    ></v-text-field>
+                    />
                   </v-col>
                   <v-col cols="1" class="p-0">
                     <v-icon icon="mdi-close" color="red" style="margin-left: -10px" @click="settingsDialog.extraChargeOptions.splice(optionIndex, 1)"/>
@@ -459,8 +459,6 @@ export default defineNuxtComponent({
       serverList: serverList.value,
       symbolList: (symbolList.value || []).map((x) => x.symbol),
     };
-  },
-  mounted() {
   },
   data(): any {
     return {
@@ -561,6 +559,8 @@ export default defineNuxtComponent({
         return this.botDetails.cryptoTradeConfigs.concat(additional);
       },
     },
+  },
+  mounted() {
   },
   methods: {
     triggerOptionChanged(profitOptionIndex) {
@@ -664,7 +664,7 @@ export default defineNuxtComponent({
 
         let index = 0;
         const indexedOptions = this.settingsDialog.extraChargeOptions.map((option) => {
-          let indexVal = index
+          const indexVal = index
           ++index;
 
           return {
@@ -690,11 +690,11 @@ export default defineNuxtComponent({
       });
     },
     configSettingsDialog(config, index) {
-      let options = [];
+      const options = [];
       (config.extraChargeOptions || []).forEach((option) => {
         options.push(option);
       });
-      let profitOptions = [];
+      const profitOptions = [];
       (config.profitOptions || []).forEach((option) => {
         profitOptions.push({...option, isTriggerOption: Boolean(option.isTriggerOption)});
       });

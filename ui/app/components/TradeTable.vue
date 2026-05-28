@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-table height="500px" fixed-header v-if="lastOrders && lastOrders.length > 0">
+    <v-table v-if="lastOrders && lastOrders.length > 0" height="500px" fixed-header>
       <thead>
       <tr>
         <th class="text-left">{{$t('trade_table.nickname')}}</th>
@@ -27,17 +27,17 @@
           <small>{{ item.close }}</small>
         </td>
         <td>
-          <v-chip variant="flat" color="success" size="small" v-if="item.profit >= 0">
+          <v-chip v-if="item.profit >= 0" variant="flat" color="success" size="small">
             +{{ item.profit }}$
           </v-chip>
-          <v-chip variant="flat" color="red" size="small" v-else>
+          <v-chip v-else variant="flat" color="red" size="small">
             -{{ item.profit }}$
           </v-chip>
         </td>
       </tr>
       </tbody>
     </v-table>
-    <div class="mx-auto" v-else>
+    <div v-else class="mx-auto">
       <p>{{$t('trade_table.not_completed_trade')}}</p>
     </div>
   </div>

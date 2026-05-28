@@ -6,14 +6,14 @@
           border="bottom"
           border-color="info"
       >
-        <template v-slot:text>
+        <template #text>
           {{$t(`dashboard.documentation.text`)}} <a class="documentation-link" :href="$t(`dashboard.documentation.link.url`)" target="_blank">{{$t(`dashboard.documentation.link.text`)}}</a>
         </template>
       </v-alert>
     </div>
 
     <v-row v-if="!!positions" class="mb-1">
-      <v-col cols="12" v-if="stack && stack.restartRequired">
+      <v-col v-if="stack && stack.restartRequired" cols="12">
         <v-alert
             type="warning"
             :title="$t('dashboard.restart_required.title')"
@@ -24,9 +24,9 @@
             :loading="dataLoading.deploy"
             variant="flat"
             color="success"
-            @click="deployBot"
             class="mb-4 mt-2"
             append-icon="mdi-restart"
+            @click="deployBot"
         >
           <b>{{$t('bot.restart_btn')}}</b>
         </v-btn>
@@ -37,29 +37,29 @@
             <v-select
               v-model="profitPeriod"
               :items="periodOptions"
-              @update:modelValue="refreshProfit"
               hide-details
               variant="filled"
+              @update:model-value="refreshProfit"
             />
           </div>
           <div class="profit-scroll-horizontal">
             <ProfitItem
+              :key="`${portfolioReport.title}-portfolio`"
               :title="portfolioReport.title"
               :profit="portfolioReport.profit"
               :trades="portfolioReport.trades"
               :trade-volume="portfolioReport.tradeVolume"
-              :key="`${portfolioReport.title}-portfolio`"
               :background-color="portfolioReport.backgroundColor"
               :font-color="portfolioReport.color"
               :avg-percent="portfolioReport.avgPercent"
             />
             <ProfitItem
               v-for="(reportItem, index) in profits"
+              :key="`${reportItem.title}-${index}`"
               :title="reportItem.title"
               :profit="Number(reportItem.profit)"
               :trades="Number(reportItem.trades)"
               :trade-volume="Number(reportItem.tradeVolume)"
-              :key="`${reportItem.title}-${index}`"
               :avg-percent="Number(reportItem.avgPercent)"
             />
           </div>
@@ -68,7 +68,7 @@
       <v-col cols="12" class="available-symbol-list">
         <div v-for="(symbol, index) in availableSymbolList" :key="index" class="symbol-list-item">
           <span class="symbol-title">{{ symbol.symbol }}</span>
-          <v-btn size="x-small" color="primary" @click="addQuickSymbol(symbol)" :loading="quickSymbolLoading[symbol.symbol]">+ ADD</v-btn>
+          <v-btn size="x-small" color="primary" :loading="quickSymbolLoading[symbol.symbol]" @click="addQuickSymbol(symbol)">+ ADD</v-btn>
         </div>
       </v-col>
       <v-col cols="12" class="trade-stack">
@@ -80,22 +80,21 @@
           :has-active-signal-subscription="stack.hasActiveSignalSubscription"
           :loading-map="stackLoadingMap"
           :exchange="currentBot.provider"
-          @onSymbol="onSymbolClick"
-          @onSymbolSwitch="onSymbolSwitch"
-          @onSignalSwitch="onSignalSwitch"
-          @onSortingSwitch="onSortingSwitch"
-          @onFilterClick="onFilterClick"
-          @onBudgetChange="onBudgetChange"
-          @onSignalConfig="onSignalConfig"
+          @on-symbol="onSymbolClick"
+          @on-symbol-switch="onSymbolSwitch"
+          @on-signal-switch="onSignalSwitch"
+          @on-sorting-switch="onSortingSwitch"
+          @on-filter-click="onFilterClick"
+          @on-budget-change="onBudgetChange"
+          @on-signal-config="onSignalConfig"
         />
         <v-progress-linear v-else :indeterminate="true" color="success" height="4px"/>
       </v-col>
       <v-col cols="12" class="positions">
         <Position
-            @click="tab = position.symbol"
-            class="position-item"
             v-for="(position, index) in positionsSorted"
             :key="`pos-${index}-${position.symbol}`"
+            class="position-item"
             :position="position"
             :show-bottom-btn="true"
             :show-used-budget="true"
@@ -103,15 +102,16 @@
             :bottom-btn-text="$t('dashboard.positions_bottom_btn_text')"
             :show-buy-switch="true"
             :show-cancel-manual="true"
+            @click="tab = position.symbol"
             :show-condition-btn="true"
             :show-avg-price="true"
             :show-price-change-speed="true"
             :show-pivots="true"
             :show-sentiment="true"
-            @onCancelManual="onCancelManual(position.symbol)"
-            @onSwitchEnabled="onSymbolSwitch({symbol: position.symbol})"
-            @onBottomBtn="settingsModal(position)"
-            @onFilterClick="onFilterPosClick"
+            @on-cancel-manual="onCancelManual(position.symbol)"
+            @on-switch-enabled="onSymbolSwitch({symbol: position.symbol})"
+            @on-bottom-btn="settingsModal(position)"
+            @on-filter-click="onFilterPosClick"
         />
       </v-col>
       <v-col cols="12" class="trade-stack my-2">
@@ -126,7 +126,7 @@
           v-model="tab"
           bg-color="success"
       >
-        <v-tab v-for="(chart, index) in chartData" :value="chart.symbol" :key="`tab-${index}`">{{ chart.symbol }}</v-tab>
+        <v-tab v-for="(chart, index) in chartData" :key="`tab-${index}`" :value="chart.symbol">{{ chart.symbol }}</v-tab>
       </v-tabs>
       <div v-for="(chart, index) in chartData" :key="`chart-${index}`">
         <div v-if="chart.symbol === tab">
@@ -150,7 +150,7 @@
               :current-price="chart.lastPrice"
               :profit-percent="chart.profit"
               :update-subject="subjectMap[chart.symbol]"
-              @onOrder="sendManualOrder"
+              @on-order="sendManualOrder"
           />
           <h4 class="text-center" style="background-color: #efefef;">{{$t('dashboard.text_price_change_speed')}}</h4>
           <PriceSpeedChart
@@ -189,7 +189,7 @@
         </div>
       </div>
     </div>
-    <v-row class="last-trades mt-2" v-if="!!lastOrders">
+    <v-row v-if="!!lastOrders" class="last-trades mt-2">
       <v-col cols="12">
         <h2>{{$t('dashboard.completed_order_list')}}</h2>
         <TradeTable :last-orders="lastOrders"/>
@@ -204,8 +204,8 @@
       </v-col>
     </v-row>
     <v-dialog
-        persistent
         v-model="filtersDialog.flag"
+        persistent
         max-width="650px"
         min-width="380px"
         z-index="9999"
@@ -216,7 +216,7 @@
         </v-btn>
       </div>
       <v-card v-if="filtersDialog.flag">
-        <v-form @submit.prevent="saveFilters" ref="form5">
+        <v-form ref="form5" @submit.prevent="saveFilters">
           <v-card-title class="mb-3">{{ filtersDialog.operation.toUpperCase() }} <small>{{ filtersDialog.symbol }}</small> {{$t('dashboard.save_filters_only_if')}}</v-card-title>
           <v-card-text>
             <TradeCondition
@@ -227,8 +227,8 @@
                 :option-number="tradeFilterIndex+1"
                 :can-be-multi="true"
                 :symbols="symbolList"
-                @onAddChildren="tradeFilter.children.push({symbol: filtersDialog.symbol, parameter: ($event.parameter || 'price'), condition: null, value: null, type: 'and', mode: 'single' })"
-                @onClickRemove="filtersDialog.filters.splice(tradeFilterIndex, 1)"
+                @on-add-children="tradeFilter.children.push({symbol: filtersDialog.symbol, parameter: ($event.parameter || 'price'), condition: null, value: null, type: 'and', mode: 'single' })"
+                @on-click-remove="filtersDialog.filters.splice(tradeFilterIndex, 1)"
             />
 
             <v-btn size="x-small" class="mb-2 mt-2" color="primary" @click="filtersDialog.filters.push({symbol: filtersDialog.symbol, parameter: 'price', condition: null, value: '0.00', type: 'or', mode: 'single', children: [] })">{{$t('dashboard.save_filters_condition')}}</v-btn>
@@ -243,8 +243,8 @@
       </v-card>
     </v-dialog>
     <v-dialog
-        persistent
         v-model="settingsDialog.flag"
+        persistent
         max-width="500px"
         min-width="380px"
         z-index="9999"
@@ -260,16 +260,16 @@
             v-model="settingsDialog.tab"
             bg-color="default"
         >
-          <v-tab v-for="(tab, index) in settingsDialogTabs" :value="index" :key="`tab-${index}`">{{ tab.name }}</v-tab>
+          <v-tab v-for="(tab, index) in settingsDialogTabs" :key="`tab-${index}`" :value="index">{{ tab.name }}</v-tab>
         </v-tabs>
         <v-window v-model="settingsDialog.tab" class="mt-4" style="overflow-y: scroll !important;">
           <v-window-item value="0">
-            <v-form @submit.prevent="saveProfitSettings" ref="form1" class="mt-2">
+            <v-form ref="form1" class="mt-2" @submit.prevent="saveProfitSettings">
               <v-card-text>
                 <v-row
                   v-for="(profitOption, profitOptionIndex) in settingsDialog.profitOptions"
-                  class="mb-0 position-relative"
                   :key="`profit-${profitOptionIndex}`"
+                  class="mb-0 position-relative"
                   :style="{'background-color': !!settingsDialog.positionTime && (getNumericTime(profitOption) > settingsDialog.positionTime || profitOptionIndex === (settingsDialog.profitOptions.length - 1)) ? 'rgba(153,245,150,0.77)' : 'rgba(244,67,54,0.67)'}"
                 >
                   <v-col cols="1" class="p-0">
@@ -277,31 +277,31 @@
                   </v-col>
                   <v-col cols="3" class="p-0 py-0">
                     <v-text-field
+                        v-model="profitOption.optionValue"
                         :label="$t('dashboard.settings_dialog_label_1')"
                         type="number"
-                        v-model="profitOption.optionValue"
                         variant="underlined"
                         :rules="[rules.required, rules.positive]"
-                    ></v-text-field>
+                    />
                   </v-col>
                   <v-col cols="3" class="p-0 py-0">
                     <v-select
+                        v-model="profitOption.optionUnit"
                         :label="$t('dashboard.settings_dialog_label_2')"
                         type="text"
-                        v-model="profitOption.optionUnit"
                         :rules="[rules.required]"
                         :items="profitPeriodLabels"
                         variant="underlined"
-                    ></v-select>
+                    />
                   </v-col>
                   <v-col cols="4" class="p-0 py-0">
                     <v-text-field
+                        v-model="profitOption.optionPercent"
                         :label="$t('dashboard.settings_dialog_label_3')"
                         type="number"
-                        v-model="profitOption.optionPercent"
                         variant="underlined"
                         :rules="[rules.required, rules.positive, rules.min05]"
-                    ></v-text-field>
+                    />
                   </v-col>
                   <v-col cols="1" class="p-0">
                     <v-icon icon="mdi-close" color="red" style="margin-left: -10px" @click="settingsDialog.profitOptions.splice(profitOptionIndex, 1)"/>
@@ -319,12 +319,12 @@
             </v-form>
           </v-window-item>
           <v-window-item value="1">
-            <v-form @submit.prevent="saveChargeSettings" ref="form" class="mt-2">
+            <v-form ref="form" class="mt-2" @submit.prevent="saveChargeSettings">
               <v-card-text>
                 <v-row
                   v-for="(chargeOption, optionIndex) in settingsDialog.chargeOptions"
-                  class="mb-0"
                   :key="`charge-${optionIndex}`"
+                  class="mb-0"
 
                   :style="{'background-color': !!settingsDialog.positionTime && getExtraBudgetSum(optionIndex) > Math.round(settingsDialog.order.usedExtraBudget) ? 'rgba(153,245,150,0.77)' : 'rgba(244,67,54,0.67)'}"
                 >
@@ -333,21 +333,21 @@
                   </v-col>
                   <v-col cols="5" class="p-0 py-0">
                     <v-text-field
+                        v-model="chargeOption.percent"
                         :label="$t('dashboard.settings_dialog_label_4')"
                         type="number"
-                        v-model="chargeOption.percent"
                         variant="underlined"
                         :rules="[rules.required, rules.negative]"
-                    ></v-text-field>
+                    />
                   </v-col>
                   <v-col cols="5" class="p-0 py-0">
                     <v-text-field
+                        v-model="chargeOption.amountUsdt"
                         :label="$t('dashboard.settings_dialog_label_5')"
                         type="number"
-                        v-model="chargeOption.amountUsdt"
                         variant="underlined"
                         :rules="[rules.required, rules.min15]"
-                    ></v-text-field>
+                    />
                   </v-col>
                   <v-col cols="1" class="p-0">
                     <v-icon icon="mdi-close" color="red" style="margin-left: -10px" @click="settingsDialog.chargeOptions.splice(optionIndex, 1)"/>
@@ -747,36 +747,8 @@ export default defineNuxtComponent({
       swaps: [],
     };
   },
-  mounted() {
-    setTimeout(() => {
-      this.refreshPositions();
-      this.refreshStack();
-      this.refreshAvailableSymbols();
-      this.refreshSwaps();
-    })
-
-    const route = useRoute();
-
-    this.updateSubscription = setInterval(() => {
-      if (!route.params.id) {
-        return;
-      }
-
-      this.refreshChart();
-      this.refreshTrades();
-      this.refreshProfit();
-      this.refreshStack();
-      this.refreshPositions();
-      this.refreshSwaps();
-    }, 10000);
-  },
-  unmounted() {
-    if (this.updateSubscription) {
-      clearInterval(this.updateSubscription);
-    }
-  },
   data(): any {
-    let subjectMap = {}
+    const subjectMap = {}
 
     Object.keys(this.chart).forEach((prop: string) => {
       const symbol = prop.split('-').pop();
@@ -933,6 +905,34 @@ export default defineNuxtComponent({
       },
     },
   },
+  mounted() {
+    setTimeout(() => {
+      this.refreshPositions();
+      this.refreshStack();
+      this.refreshAvailableSymbols();
+      this.refreshSwaps();
+    })
+
+    const route = useRoute();
+
+    this.updateSubscription = setInterval(() => {
+      if (!route.params.id) {
+        return;
+      }
+
+      this.refreshChart();
+      this.refreshTrades();
+      this.refreshProfit();
+      this.refreshStack();
+      this.refreshPositions();
+      this.refreshSwaps();
+    }, 10000);
+  },
+  unmounted() {
+    if (this.updateSubscription) {
+      clearInterval(this.updateSubscription);
+    }
+  },
   methods: {
     ...parseChart,
     deployBot() {
@@ -949,8 +949,8 @@ export default defineNuxtComponent({
         exchangeSymbol: symbol.id,
         restartBot: 0,
       }).then(() => {
-        let message = `Symbol ${symbol.symbol} has been added.`;
-        let alertType = Alert.TYPE_SUCCESS;
+        const message = `Symbol ${symbol.symbol} has been added.`;
+        const alertType = Alert.TYPE_SUCCESS;
 
         this.$services.eventManager.alert(
           new AlertEvent(
@@ -1060,8 +1060,8 @@ export default defineNuxtComponent({
       this.$services.httpClient.securePatchClient(`/v1/dashboard/${route.params.id}/${stackItem.symbol}/update`, {
         signalConfig,
       }).then(() => {
-        let message = `Signal config for '${stackItem.symbol}' is updated`;
-        let alertType = Alert.TYPE_SUCCESS;
+        const message = `Signal config for '${stackItem.symbol}' is updated`;
+        const alertType = Alert.TYPE_SUCCESS;
 
         this.$services.eventManager.alert(
           new AlertEvent(
@@ -1082,8 +1082,8 @@ export default defineNuxtComponent({
       this.$services.httpClient.securePatchClient(`/v1/dashboard/${route.params.id}/${stackItem.symbol}/update`, {
         usdtLimit: Math.max(Number(stackItem.budgetUsdt), 15),
       }).then((data) => {
-        let message = `Budget is changed for ${data.symbol} to: ${data.usdtLimit} USDT`;
-        let alertType = Alert.TYPE_SUCCESS;
+        const message = `Budget is changed for ${data.symbol} to: ${data.usdtLimit} USDT`;
+        const alertType = Alert.TYPE_SUCCESS;
 
         this.$services.eventManager.alert(
           new AlertEvent(
@@ -1167,8 +1167,8 @@ export default defineNuxtComponent({
             }
           }),
         }).then(() => {
-          let message = `${this.$t('dashboard.methods_save_filters')}`;
-          let alertType = Alert.TYPE_SUCCESS;
+          const message = `${this.$t('dashboard.methods_save_filters')}`;
+          const alertType = Alert.TYPE_SUCCESS;
 
           this.$services.eventManager.alert(
             new AlertEvent(
@@ -1184,8 +1184,8 @@ export default defineNuxtComponent({
     },
     onSortingSwitch(sorting: string) {
       this.$services.httpClient.securePutClient(`/v1/dashboard/${this.botId}/stack/${sorting}/sort`).then(() => {
-        let message = `${this.$t('dashboard.methods_sorting')}`;
-        let alertType = Alert.TYPE_SUCCESS;
+        const message = `${this.$t('dashboard.methods_sorting')}`;
+        const alertType = Alert.TYPE_SUCCESS;
 
         this.$services.eventManager.alert(
           new AlertEvent(
@@ -1202,7 +1202,7 @@ export default defineNuxtComponent({
           message = `${this.$t('dashboard.methods_symbol_enabled').replace('[stackItem.symbol]', stackItem.symbol)}`;
         }
 
-        let alertType = Alert.TYPE_SUCCESS;
+        const alertType = Alert.TYPE_SUCCESS;
         this.$services.eventManager.alert(
           new AlertEvent(
             new Alert(message, alertType),
@@ -1218,7 +1218,7 @@ export default defineNuxtComponent({
           message = `${this.$t('dashboard.methods_signal_enabled').replace('[stackItem.symbol]', stackItem.symbol)}`;
         }
 
-        let alertType = Alert.TYPE_SUCCESS;
+        const alertType = Alert.TYPE_SUCCESS;
         this.$services.eventManager.alert(
           new AlertEvent(
             new Alert(message, alertType),
@@ -1229,9 +1229,9 @@ export default defineNuxtComponent({
     },
     onCancelManual(symbol: string) {
       this.$services.httpClient.secureDeleteClient(`/v1/cryptobot/${this.botId}/order/${symbol}`).then(() => {
-        let message = `${this.$t('dashboard.methods_cancel_manual').replace('[symbol]', symbol)}`;
+        const message = `${this.$t('dashboard.methods_cancel_manual').replace('[symbol]', symbol)}`;
 
-        let alertType = Alert.TYPE_SUCCESS;
+        const alertType = Alert.TYPE_SUCCESS;
         this.$services.eventManager.alert(
           new AlertEvent(
             new Alert(message, alertType),
@@ -1242,8 +1242,8 @@ export default defineNuxtComponent({
     },
     sendManualOrder(order) {
       this.$services.httpClient.securePostClient(`/v1/cryptobot/${this.botId}/order`, order).then(() => {
-        let message = `${this.$t('dashboard.methods_send_manual')}`;
-        let alertType = Alert.TYPE_SUCCESS;
+        const message = `${this.$t('dashboard.methods_send_manual')}`;
+        const alertType = Alert.TYPE_SUCCESS;
         this.$services.eventManager.alert(
           new AlertEvent(
             new Alert(message, alertType),
@@ -1350,8 +1350,8 @@ export default defineNuxtComponent({
             };
           }),
         }).then(() => {
-          let message = `${this.$t('dashboard.methods_save_profit')}`;
-          let alertType = Alert.TYPE_SUCCESS;
+          const message = `${this.$t('dashboard.methods_save_profit')}`;
+          const alertType = Alert.TYPE_SUCCESS;
           this.$services.eventManager.alert(
             new AlertEvent(
               new Alert(message, alertType),
@@ -1384,8 +1384,8 @@ export default defineNuxtComponent({
             };
           }),
         }).then(() => {
-          let message = `${this.$t('dashboard.methods_save_charge')}`;
-          let alertType = Alert.TYPE_SUCCESS;
+          const message = `${this.$t('dashboard.methods_save_charge')}`;
+          const alertType = Alert.TYPE_SUCCESS;
           this.$services.eventManager.alert(
             new AlertEvent(
               new Alert(message, alertType),

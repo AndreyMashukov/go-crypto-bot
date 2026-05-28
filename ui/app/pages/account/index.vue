@@ -4,7 +4,8 @@
       class="mx-auto profile-top-image subscription-card-block"
       rounded="0"
     >
-      <Ticker :options="{
+      <Ticker
+:options="{
     colorTheme: 'dark',
     autosize: true,
     symbols: [
@@ -32,16 +33,16 @@
       <v-list-item
         class="text-white"
         :title="`${userVm.nickname}`"
-      ></v-list-item>
+      />
       <v-card
         width="280"
         class="subscription-card"
       >
-        <template v-slot:title>
+        <template #title>
           <div v-if="!!userVm">
             <div>
               <v-tooltip location="top">
-                <template v-slot:activator="{ props }">
+                <template #activator="{ props }">
                   <small>{{$t('account.budget')}} {{ userVm.budget.toFixed(2) }}$</small>&nbsp;
                   <v-icon icon="mdi-information" v-bind="props" :color="'primary'" size="x-small" class="cursor-pointer"/>
                 </template>
@@ -73,7 +74,7 @@
           border="bottom"
           border-color="info"
       >
-        <template v-slot:text>
+        <template #text>
           {{$t(`account.documentation.text`)}} <a class="documentation-link" :href="$t(`account.documentation.link.url`)" target="_blank">{{$t(`account.documentation.link.text`)}}</a>
         </template>
       </v-alert>
@@ -82,7 +83,7 @@
     <v-row class="mt-1">
       <v-col cols="12" lg="8" md="8" sm="12" xs="12">
         <v-row>
-          <v-col cols="12" lg="4" md="6" sm="12" xs="12" v-if="botList.length > 0" v-for="(botInfo, index) in botList" :key="index">
+          <v-col v-for="(botInfo, index) in botList" v-if="botList.length > 0" :key="index" cols="12" lg="4" md="6" sm="12" xs="12">
             <v-card
                 color="teal-lighten-5"
             >
@@ -115,18 +116,18 @@
                     </v-chip>
                   </div>
                   <div>
-                    <v-chip prepend-icon="mdi-server" color="primary" v-if="!botInfo.cryptobot.dedicated" size="x-small">
+                    <v-chip v-if="!botInfo.cryptobot.dedicated" prepend-icon="mdi-server" color="primary" size="x-small">
                       {{$t('account.server.shared')}}
                     </v-chip>
-                    <v-chip prepend-icon="mdi-server" color="primary" v-else  size="x-small">
+                    <v-chip v-else prepend-icon="mdi-server" color="primary"  size="x-small">
                       {{$t('account.server.dedicated').replace('[ip]', botInfo.cryptobot.dedicated.ip)}}
                     </v-chip>
                   </div>
                   <div>
-                    <v-chip prepend-icon="mdi-label-percent" color="grey-darken-4" v-if="!botInfo.commission.percent" size="x-small">
+                    <v-chip v-if="!botInfo.commission.percent" prepend-icon="mdi-label-percent" color="grey-darken-4" size="x-small">
                       {{$t('account.commission.no_commission')}}
                     </v-chip>
-                    <v-chip prepend-icon="mdi-label-percent" color="grey-darken-4" v-else  size="x-small">
+                    <v-chip v-else prepend-icon="mdi-label-percent" color="grey-darken-4"  size="x-small">
                       {{$t('account.commission.has_commission').replace('[percent]', botInfo.commission.percent).replace('[minValueUsd]', botInfo.commission.minValueUsd.toFixed(2))}}
                     </v-chip>
                   </div>
@@ -146,15 +147,15 @@
                     color="primary"
                     variant="flat"
                     :loading="dashboardLoading[botInfo.cryptobot.provider]"
-                    @click="openDashboard(botInfo.cryptobot)"
                     :disabled="botInfo.cryptobot.status !== 'running' || (dashboardLoading['binance'] || dashboardLoading['bybit'])"
+                    @click="openDashboard(botInfo.cryptobot)"
                 >
                   {{$t('account.dashboard_btn')}}
                 </v-btn>
               </v-card-actions>
             </v-card>
           </v-col>
-          <v-col cols="12" lg="4" md="6" sm="12" xs="12" v-if="availableProviderList.length > 0" v-for="(provider, index) in availableProviderList" :key="index">
+          <v-col v-for="(provider, index) in availableProviderList" v-if="availableProviderList.length > 0" :key="index" cols="12" lg="4" md="6" sm="12" xs="12">
             <v-card
                 color="teal-lighten-5"
             >
@@ -189,34 +190,34 @@
                 v-for="paidService in paidServices"
                 :key="paidService.code"
             >
-              <template v-slot:title>
+              <template #title>
                 <div class="paid-service-title">{{$t(`account.paid_services.${paidService.code}.title`)}}</div>
               </template>
-              <template v-slot:subtitle>
+              <template #subtitle>
                 <div>
                   <span class="service-active-until">{{!!paidService.expiresAt ? $t(`account.paid_services.until`).replace('[date]', TimeHelper.getFormatted(paidService.expiresAt)) : $t(`account.paid_services.payment_required`)}}</span>
                 </div>
                 <div>
                   <small>{{$t('account.paid_services.price_subtitle').replace('[days]', paidService.days).replace('[price]', paidService.price)}}</small>
                 </div>
-                <div class="api-docs" v-if="paidService.code === 'api_subscription'">
-                  <div v-html="$t('account.paid_services.api_doc_url')"></div>
+                <div v-if="paidService.code === 'api_subscription'" class="api-docs">
+                  <div v-html="$t('account.paid_services.api_doc_url')"/>
                 </div>
               </template>
-              <template v-slot:prepend>
+              <template #prepend>
                 <v-avatar color="primary">
                   <v-icon color="white">{{$t(`account.paid_services.${paidService.code}.icon`)}}</v-icon>
                 </v-avatar>
               </template>
 
-              <template v-slot:append>
+              <template #append>
                 <v-btn
                   color="primary"
                   variant="text"
                   append-icon="mdi-cart"
                   size="small"
-                  @click="purchaseService(paidService)"
                   :loading="paidServiceStatus.loading"
+                  @click="purchaseService(paidService)"
                 >
                   <span v-if="!paidService.isActive">{{$t(`account.paid_services.buy`)}}</span>
                   <span v-else>{{$t(`account.paid_services.extend`).replace('[days]', paidService.days)}}</span>
@@ -227,24 +228,24 @@
         </v-card>
       </v-col>
     </v-row>
-    <v-dialog width="600" v-model="botSetupDialog">
-      <template v-slot:default="{ isActive }">
-        <v-form @submit.prevent="setupBot(botSetupDialog)" ref="form">
+    <v-dialog v-model="botSetupDialog" width="600">
+      <template #default="{ isActive }">
+        <v-form ref="form" @submit.prevent="setupBot(botSetupDialog)">
           <v-card>
             <v-card-title class="mt-2">{{$t('account.bot_setup_dialog')}}</v-card-title>
             <v-row class="px-4 pt-4">
               <v-col cols="12" lg="12" md="12" sm="12" xs="12" class="mt-0 pt-0">
                 <v-text-field
-                    :label="$t('account.bot_setup_key_label').replace('[provider]', botSetupDialog)"
                     v-model="apiKey"
+                    :label="$t('account.bot_setup_key_label').replace('[provider]', botSetupDialog)"
                     variant="solo-filled"
                     :rules="[rules.required, rules.apiKeyPattern]"
                 />
               </v-col>
               <v-col cols="12" lg="12" md="12" sm="12" xs="12" class="mt-0 pt-0">
                 <v-text-field
-                    :label="$t('account.bot_setup_secret_label').replace('[provider]', botSetupDialog)"
                     v-model="apiSecret"
+                    :label="$t('account.bot_setup_secret_label').replace('[provider]', botSetupDialog)"
                     variant="solo-filled"
                     :rules="[rules.required, rules.apiKeyPattern]"
                 />
@@ -254,37 +255,37 @@
                     type="warning"
                     :title="$t('account.bot_setup_dialog_config_title')"
                     :text="$t('account.bot_setup_dialog_config_text')"
-                ></v-alert>
+                />
               </v-col>
             </v-row>
 
             <v-card-actions class="mt-2">
-              <v-spacer></v-spacer>
+              <v-spacer/>
 
               <v-btn
                   variant="flat"
                   color="primary"
                   :text="$t('account.bot_setup_dialog_setup_btn')"
                   type="submit"
-              ></v-btn>
+              />
               <v-btn
                   variant="text"
                   color="primary"
                   :text="$t('account.bot_setup_dialog_close_btn')"
                   @click="botSetupDialog = false"
-              ></v-btn>
+              />
             </v-card-actions>
           </v-card>
         </v-form>
       </template>
     </v-dialog>
-    <v-dialog width="500" v-model="isBudgetRecharge" persistent>
-      <template v-slot:default="{ isActive }">
+    <v-dialog v-model="isBudgetRecharge" width="500" persistent>
+      <template #default="{ isActive }">
         <v-card class="payment-card">
           <v-card-title class="ml-2 mt-2">
             {{$t('account.buy_sub_recharge')}}
           </v-card-title>
-          <div v-if="!this.awaitingPayment.loading">
+          <div v-if="!awaitingPayment.loading">
             <div class="pay-btn-block">
               <div>
                 <v-btn
@@ -327,7 +328,7 @@
             </div>
           </div>
           <div v-else>
-            <v-progress-linear color="success" v-if="awaitingPayment.loading" indeterminate=""></v-progress-linear>
+            <v-progress-linear v-if="awaitingPayment.loading" color="success" indeterminate=""/>
             <div v-if="!awaitingPayment.status">
               <p class="px-6 py-4">{{$t('account.awaiting_payment')}}</p>
               <div class="pay-btn-block">
@@ -342,23 +343,23 @@
               </div>
             </div>
             <div v-else>
-              <div class="payment-alert text-center" v-if="awaitingPayment.status === 'paid'">
+              <div v-if="awaitingPayment.status === 'paid'" class="payment-alert text-center">
                 <v-icon
                     class="mb-6"
                     color="success"
                     icon="mdi-check-circle-outline"
                     size="128"
-                ></v-icon>
+                />
 
                 <div class="text-h4 font-weight-bold">{{$t('account.payment_is_paid')}}</div>
               </div>
-              <div class="payment-alert text-center" v-if="awaitingPayment.status === 'expired'">
+              <div v-if="awaitingPayment.status === 'expired'" class="payment-alert text-center">
                 <v-icon
                     class="mb-6"
                     color="error"
                     icon="mdi-close-circle-outline"
                     size="128"
-                ></v-icon>
+                />
 
                 <div class="text-h4 font-weight-bold">{{$t('account.payment_is_expired')}}</div>
               </div>
@@ -366,14 +367,14 @@
           </div>
           <HowToBuyBitcoin/>
           <v-card-actions>
-            <v-spacer></v-spacer>
+            <v-spacer/>
 
             <v-btn
               variant="text"
               color="primary"
               :text="$t('account.close_payment_btn')"
               @click="closePayment()"
-            ></v-btn>
+            />
           </v-card-actions>
         </v-card>
       </template>
@@ -387,7 +388,7 @@
             type="success"
             :title="$t('account.setup_bot_title')"
             :text="$t('account.setup_bot_text')"
-        ></v-alert>
+        />
         <v-alert
             v-else
             style="margin-top: 10px;"
@@ -492,7 +493,7 @@ export default defineNuxtComponent({
     },
     availableProviderList: {
       get() {
-        let list = [];
+        const list = [];
 
         Object.keys(this.availableBotMap).forEach((provider) => {
           if (this.availableBotMap[provider]) {
@@ -526,7 +527,7 @@ export default defineNuxtComponent({
         action = this.$t('account.paid_services.action_extend');
       }
 
-      let text = this.$t('account.paid_services.purchase_message')
+      const text = this.$t('account.paid_services.purchase_message')
         .replace('[action]', action)
         .replace('[service]', this.$t(`account.paid_services.${paidService.code}.title`))
         .replace('[days]', paidService.days)

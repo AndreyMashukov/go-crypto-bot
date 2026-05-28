@@ -1,9 +1,9 @@
 <template>
   <v-card class="swap-main">
-    <template v-slot:title>
+    <template #title>
       <div class="swap-id-block">SWAP ID {{swap.action.id}}</div>
     </template>
-    <template v-slot:subtitle>
+    <template #subtitle>
       <small>{{swap.action.startQuantity}}</small> -> <small>{{!!swap.action.endQuantity ? swap.action.endQuantity : '?'}}</small>&nbsp;
       <span v-if="swap.action.status === 'success' && !!swap.action.startQuantity && !!swap.action.endQuantity">
         {{ profitCoin }} <small>{{swap.action.asset}}</small>
@@ -22,8 +22,8 @@
           :swap-id="swap.action.id"
           :swap-status="swap.action.status"
           :balance="swap.balance[swap.action.asset]"
-          :buyPrice="swap.action.priceOneBuy"
-          :sellPrice="swap.action.priceOneSell"
+          :buy-price="swap.action.priceOneBuy"
+          :sell-price="swap.action.priceOneSell"
         />
       </v-col>
       <v-col cols="12" lg="4" md="4" sm="12" xs="12" class="mt-0 pt-0">
@@ -38,8 +38,8 @@
           :swap-id="swap.action.id"
           :swap-status="swap.action.status"
           :balance="swap.balance[swap.action.swapOneSymbol.replace(swap.action.asset, '')]"
-          :buyPrice="swap.action.priceTwoBuy"
-          :sellPrice="swap.action.priceTwoSell"
+          :buy-price="swap.action.priceTwoBuy"
+          :sell-price="swap.action.priceTwoSell"
         />
       </v-col>
       <v-col cols="12" lg="4" md="4" sm="12" xs="12" class="mt-0 pt-0">
@@ -54,8 +54,8 @@
           :swap-id="swap.action.id"
           :swap-status="swap.action.status"
           :balance="swap.balance[swap.action.swapTwoSymbol.replace(swap.action.swapOneSymbol.replace(swap.action.asset, ''), '')]"
-          :buyPrice="swap.action.priceThreeBuy"
-          :sellPrice="swap.action.priceThreeSell"
+          :buy-price="swap.action.priceThreeBuy"
+          :sell-price="swap.action.priceThreeSell"
         />
       </v-col>
     </v-row>
@@ -65,8 +65,8 @@
 import SwapStep from '~/components/ui/SwapStep.vue';
 
 export default {
-  components: {SwapStep},
   name: "Swap",
+  components: {SwapStep},
   props: {
     swap: {
       type: Object,

@@ -9,7 +9,7 @@
         <li>{{$t('index.technical_support')}}</li>
       </ul>
       <div class="start-trade">
-        <v-btn variant="flat" @click="loginNow" size="large" color="secondary">
+        <v-btn variant="flat" size="large" color="secondary" @click="loginNow">
           {{$t('index.trade_now')}}
         </v-btn>
         <v-btn variant="flat" :href="$t('index.documentation_link')" target="_blank" color="info">
@@ -156,7 +156,7 @@
     <v-row class="commission-block">
       <h2>{{$t('commission_table.header')}}</h2>
       <v-col cols="12">
-        <v-table fixed-header v-if="commission && commission.length > 0">
+        <v-table v-if="commission && commission.length > 0" fixed-header>
           <thead>
             <tr>
               <th class="text-left">{{$t('commission_table.level')}}</th>
@@ -237,6 +237,7 @@ export default defineNuxtComponent({
       updateSubscription: null,
     };
   },
+  computed: {},
   mounted() {
     const config = useRuntimeConfig();
     this.updateSubscription = setInterval(() => {
@@ -261,7 +262,6 @@ export default defineNuxtComponent({
       clearInterval(this.updateSubscription);
     }
   },
-  computed: {},
   methods: {
     loginNow() {
       if (this.$services.authService.getToken()) {

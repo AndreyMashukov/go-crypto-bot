@@ -1,20 +1,21 @@
 <template>
   <v-app>
     <v-app-bar :elevation="2" color="teal-darken-4">
-      <template v-slot:title>
-        <nuxt-link class="cursor-pointer" @click="() => {
+      <template #title>
+        <nuxt-link
+class="cursor-pointer" style="text-decoration: none;color: #FFFFFF;" @click="() => {
           $services.routerService.navigate('/')
-        }" style="text-decoration: none;color: #FFFFFF;">
+        }">
           <v-card-title class="site-title">AUTOTRADE.cloud</v-card-title>
           <v-card-subtitle class="site-subtitle">{{$t('default.cloud_crypto_trade')}}</v-card-subtitle>
         </nuxt-link>
       </template>
-      <template v-slot:append>
+      <template #append>
       <div class="language-selector-container">
         <LanguageSelector :value="locale" :locales="availableLocales"/>
       </div>
-        <v-btn icon="mdi-account" @click="clickAccount"></v-btn>
-        <v-btn v-if="isLoggedIn" icon="mdi-logout" @click="logout"></v-btn>
+        <v-btn icon="mdi-account" @click="clickAccount"/>
+        <v-btn v-if="isLoggedIn" icon="mdi-logout" @click="logout"/>
       </template>
     </v-app-bar>
     <div style="margin-top: 68px !important; margin-bottom: 22px !important; box-sizing: border-box;">
@@ -25,8 +26,8 @@
         <a :href="$t('index.documentation_link')" target="_blank">{{$t('index.documentation')}}</a>
       </div>
     </v-bottom-navigation>
-    <v-dialog width="500" v-model="accountDialog">
-      <template v-slot:default="{ isActive }">
+    <v-dialog v-model="accountDialog" width="500">
+      <template #default="{ isActive }">
         <v-card>
           <v-tabs
               v-model="accountDialogTab"
@@ -41,10 +42,10 @@
                 class="pt-2"
             >
               <RegistrationForm
-                @onRegister="onRegister"
-                @onGoNext="accountDialogTab = 2"
                 :loading="registrationProcess"
                 :error-message="registrationError"
+                @on-register="onRegister"
+                @on-go-next="accountDialogTab = 2"
               />
             </v-window-item>
             <v-window-item
@@ -52,25 +53,25 @@
             >
               <v-container fluid>
                 <LoginForm
-                  @onLogin="onLogin"
-                  @onGoBack="accountDialogTab = 1"
                   :loading="loginProcess"
                   :error-message="loginError"
                   :default-email="userEmail"
+                  @on-login="onLogin"
+                  @on-go-back="accountDialogTab = 1"
                 />
               </v-container>
             </v-window-item>
           </v-window>
 
           <v-card-actions>
-            <v-spacer></v-spacer>
+            <v-spacer/>
 
             <v-btn
                 variant="text"
                 color="primary"
                 :text="$t('default.close_form')"
                 @click="closeAccountDialog"
-            ></v-btn>
+            />
           </v-card-actions>
         </v-card>
       </template>
@@ -83,7 +84,7 @@
       >
         {{ snackbar.text }}
 
-        <template v-slot:actions>
+        <template #actions>
           <v-btn
               color="black"
               variant="text"
@@ -104,17 +105,19 @@
             :text="confirmationModal.text"
             :title="confirmationModal.title"
         >
-          <template v-slot:actions>
-            <v-spacer></v-spacer>
+          <template #actions>
+            <v-spacer/>
 
-            <v-btn @click="() => {
+            <v-btn
+@click="() => {
               confirmationModal.close.callback();
               confirmationModal.flag = false;
             }">
               {{confirmationModal.close.text}}
             </v-btn>
 
-            <v-btn color="primary" variant="flat" @click="() => {
+            <v-btn
+color="primary" variant="flat" @click="() => {
               confirmationModal.ok.callback();
               confirmationModal.flag = false;
             }">
@@ -139,7 +142,7 @@ export default defineNuxtComponent({
     const authToken = ctx.$services.authService.getToken();
     let initialData = {};
     if (authToken) {
-      let [{data: cities}, {data: user}] = await Promise.all([
+      const [{data: cities}, {data: user}] = await Promise.all([
         useFetch('/location/list', {
           method: 'GET',
           baseURL: config.public.baseUrl,
@@ -157,7 +160,7 @@ export default defineNuxtComponent({
 
       initialData = {cities, user: user.value};
     } else {
-      let [{data: cities}] = await Promise.all([
+      const [{data: cities}] = await Promise.all([
         useFetch('/location/list', {
           method: 'GET',
           baseURL: config.public.baseUrl,
@@ -213,7 +216,7 @@ export default defineNuxtComponent({
 
     if (route.query.promocode) {
       this.$services.authService.setPromoCode(route.query.promocode.toString());
-      let query = Object.assign({}, route.query);
+      const query = Object.assign({}, route.query);
       delete query.promocode;
       router.replace({query})
     }
@@ -340,7 +343,7 @@ export default defineNuxtComponent({
       this.registrationProcess = true;
       const config = useRuntimeConfig();
 
-      let email = data.email;
+      const email = data.email;
 
       useFetch('/public/register/code', {
         method: 'POST',

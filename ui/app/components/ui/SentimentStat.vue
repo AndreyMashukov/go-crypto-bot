@@ -16,7 +16,7 @@
           max="100"
           :model-value="entity.sentiment.score*100"
           :color="entity.sentiment.label === 'BULLISH' ? 'primary' : (entity.sentiment.label === 'NEUTRAL' ? 'primary' : 'rgb(189,47,38)')"
-      ></v-progress-linear>
+      />
     </div>
     <span v-else>
       <span>NEWS:</span> <small>N/A</small>
@@ -25,8 +25,8 @@
 </template>
 <script lang="ts">
 export default {
-  components: {},
   name: "SentimentStat",
+  components: {},
   props: {
     entity: {
       type: Object,

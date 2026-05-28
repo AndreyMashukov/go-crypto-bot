@@ -1,7 +1,7 @@
 export class TimeHelper {
     static getUtcTime(): number {
-        let date    = new Date();
-        let utcTime = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds());
+        const date    = new Date();
+        const utcTime = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds());
 
         return Math.ceil(utcTime / 1000);
     }

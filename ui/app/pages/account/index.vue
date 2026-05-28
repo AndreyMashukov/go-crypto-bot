@@ -414,10 +414,6 @@ import {Alert} from '~/model/alert';
 import {Confirmation} from '~/model/confirmation';
 import {TimeHelper} from '~/services/time-helper';
 
-// todo: how to buy
-// 1) https://academy.binance.com/en/articles/binance-beginner-s-guide
-// 2) https://www.coinbase.com/en/how-to-buy/bitcoin
-// 3) https://metamask.io/buy-crypto/
 export default defineNuxtComponent({
   components: {HowToBuyBitcoin},
   async asyncData(ctx: any) {
@@ -607,7 +603,6 @@ export default defineNuxtComponent({
           tab.location = payment.value.paymentLink;
           tab.focus();
           this.paymentInProcess = false;
-          // listener...
           this.awaitingPayment.loading = true;
           this.awaitingPayment.paymentLink = payment.value.paymentLink;
 

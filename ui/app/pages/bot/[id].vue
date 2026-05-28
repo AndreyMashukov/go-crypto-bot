@@ -444,7 +444,6 @@ export default defineNuxtComponent({
     ]);
 
     if (!botDetails.value) {
-      // todo: 404 error...
       await ctx.$services.routerService.navigate('/');
       return;
     }

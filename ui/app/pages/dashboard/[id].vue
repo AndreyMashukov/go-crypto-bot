@@ -719,7 +719,6 @@ export default defineNuxtComponent({
     ]);
 
     if (!chartResponse) {
-      // todo: 404 error...
       await ctx.$services.routerService.navigate('/');
       return;
     }

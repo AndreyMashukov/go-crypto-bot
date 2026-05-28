@@ -11,7 +11,6 @@ export class RouterService {
       prefix = `/${this.i18n.locale._value}`
     }
 
-    // Nuxt router works wrong and we get error during page render, this is temporary solution.
     return new Promise((resolve) => {
         setTimeout(() => {
             window.location.href = `${prefix}${path}`;

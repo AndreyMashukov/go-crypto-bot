@@ -16,4 +16,12 @@ export default withNuxt(
     plugins: { 'mess-detector': mess },
     rules: mess.configs.recommended.rules,
   },
+  {
+    files: ['nuxt.config.ts'],
+    rules: {
+      'mess-detector/no-suppression-comments': 'off',
+      'mess-detector/no-env-branch': 'off',
+      'mess-detector/no-process-env-outside-config': 'off',
+    },
+  },
 )

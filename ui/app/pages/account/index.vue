@@ -412,7 +412,7 @@ import HowToBuyBitcoin from '~/components/HowToBuyBitcoin.vue';
 import {AlertEvent} from '~/model/alert-event';
 import {Alert} from '~/model/alert';
 import {Confirmation} from '~/model/confirmation';
-import {TimeHelper} from '~/services/time-helper';
+import * as TimeHelper from '~/services/time-helper';
 
 export default defineNuxtComponent({
   components: {HowToBuyBitcoin},

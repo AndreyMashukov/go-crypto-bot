@@ -17,6 +17,12 @@ export default withNuxt(
     rules: mess.configs.recommended.rules,
   },
   {
+    files: ['**/*.{ts,vue}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'warn',
+    },
+  },
+  {
     files: ['nuxt.config.ts'],
     rules: {
       'mess-detector/no-suppression-comments': 'off',

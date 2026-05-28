@@ -12,7 +12,7 @@
         "ext-iconv": "*",
         "ext-json": "*",
         "ext-libxml": "*",
-        "ext-parallax": "*",
+        "ext-parallax": "^0.2.1",
         "ext-simplexml": "*",
         "baldinof/roadrunner-bundle": "^3.4",
         "aws/aws-sdk-php": "^3.382.2",

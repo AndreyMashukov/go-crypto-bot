@@ -9,10 +9,7 @@ server:
 http:
     address: 0.0.0.0:80
     max_request_size: 1024
-    middleware: [gzip, headers, static]
-    headers:
-        response:
-            X-Powered-By: php-parallax
+    middleware: [gzip, static]
     static:
         dir: public
         forbid: ['.php', '.htaccess', '.env']

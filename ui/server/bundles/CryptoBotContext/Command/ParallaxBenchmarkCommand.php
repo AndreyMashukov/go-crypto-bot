@@ -9,6 +9,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 #[AsCommand(name: 'parallax:benchmark', description: 'Fan-out 23 symbols serially vs through php-parallax and print the speed-up.')]
 final class ParallaxBenchmarkCommand extends Command
@@ -19,6 +20,13 @@ final class ParallaxBenchmarkCommand extends Command
         'BCHUSDT', 'LINKUSDT', 'MATICUSDT', 'DOTUSDT', 'UNIUSDT', 'ETCUSDT',
         'XLMUSDT', 'ATOMUSDT', 'NEARUSDT', 'ZECUSDT', 'SHIBUSDT',
     ];
+
+    public function __construct(
+        #[Autowire(param: 'kernel.project_dir')]
+        private string $projectDir,
+    ) {
+        parent::__construct();
+    }
 
     protected function configure(): void
     {
@@ -53,7 +61,7 @@ final class ParallaxBenchmarkCommand extends Command
         }
         $serialMs = (hrtime(true) - $serialStart) / 1_000_000.0;
 
-        $bootstrap = \dirname(__DIR__, 3) . '/config/parallax_bootstrap.php';
+        $bootstrap = $this->projectDir . '/config/parallax_bootstrap.php';
 
         $parallelStart = hrtime(true);
         $wg            = new \WaitGroup($bootstrap);

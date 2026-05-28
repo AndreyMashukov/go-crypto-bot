@@ -2,18 +2,20 @@
     "name": "amashukov/crypto-saas-server",
     "type": "project",
     "license": "MIT",
-    "description": "SaaS backend for AutoTrade.cloud \u2014 Symfony 7.3 / PHP 8.3.",
+    "description": "SaaS backend for AutoTrade.cloud \u2014 Symfony 7.3 / PHP 8.4 ZTS on RoadRunner.",
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
-        "php": ">=8.3",
+        "php": ">=8.4",
         "ext-ctype": "*",
         "ext-dom": "*",
         "ext-iconv": "*",
         "ext-json": "*",
         "ext-libxml": "*",
+        "ext-parallax": "^0.2.1",
         "ext-simplexml": "*",
-        "aws/aws-sdk-php": "^3.382.1",
+        "baldinof/roadrunner-bundle": "^3.4",
+        "aws/aws-sdk-php": "^3.382.2",
         "beberlei/doctrineextensions": "^1.5",
         "doctrine/doctrine-bundle": "^2.18.2",
         "doctrine/doctrine-migrations-bundle": "^3.7",
@@ -21,7 +23,7 @@
         "flagception/flagception-bundle": "^4.4.2",
         "friendsofsymfony/rest-bundle": "^3.9",
         "gedmo/doctrine-extensions": "^3.22",
-        "guzzlehttp/guzzle": "^7.10.4",
+        "guzzlehttp/guzzle": "^7.10.5",
         "jms/serializer-bundle": "^5.5.2",
         "knplabs/knp-paginator-bundle": "^6.10",
         "nelmio/api-doc-bundle": "^5.10.2",
@@ -48,8 +50,8 @@
         "symfony/twig-bundle": "7.3.*",
         "symfony/validator": "7.3.*",
         "symfony/yaml": "7.3.*",
-        "twig/twig": "^3.26",
-        "unleash/client": "^2.9.283",
+        "twig/twig": "^3.27",
+        "unleash/client": "^2.9.284",
         "amashukov/tg-bot-api-base": "^1.0"
     },
     "config": {
@@ -60,7 +62,7 @@
         },
         "optimize-autoloader": true,
         "platform": {
-            "php": "8.3"
+            "php": "8.4"
         },
         "preferred-install": {
             "*": "dist"
@@ -111,7 +113,7 @@
         "amashukov/rector-php-rules": "^0.2.1",
         "doctrine/doctrine-fixtures-bundle": "^4.3.1",
         "friendsofphp/php-cs-fixer": "^3.95.2",
-        "phpstan/phpstan": "^2.1.56",
+        "phpstan/phpstan": "^2.2.0",
         "phpstan/phpstan-doctrine": "^2.0.22",
         "phpstan/phpstan-symfony": "^2.0.18",
         "phpunit/phpunit": "^11.5.55",

@@ -38,7 +38,3 @@ services:
     Bundles\CryptoBotContext\Service\RSSParser:
         arguments:
             $rssFeeds: '%sentiment_rss%'
-
-    Bundles\CryptoBotContext\Service\SentimentService:
-        arguments:
-            $env: '%kernel.environment%'

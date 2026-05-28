@@ -18,6 +18,12 @@ defaults:
   run:
     working-directory: ui/server
 
+env:
+  # The php-parallax extension is required at runtime but lives only inside
+  # the project's ZTS Docker image; CI runs on shivammathur/setup-php which
+  # is NTS, so composer needs to know not to fail the platform check.
+  COMPOSER_FLAGS: '--prefer-dist --no-progress --no-interaction --ignore-platform-req=ext-parallax'
+
 jobs:
   composer:
     name: composer resolve
@@ -26,16 +32,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.4'
           coverage: none
           tools: composer:v2
           extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
-      - name: resolve deps (lockfile is regenerated until first stable run)
+      - name: resolve deps
         run: |
           if [ -f composer.lock ]; then
-            composer install --prefer-dist --no-progress --no-interaction --ansi
+            composer install $COMPOSER_FLAGS --ansi
           else
-            composer update --prefer-dist --no-progress --no-interaction --no-audit --ansi --no-scripts
+            composer update $COMPOSER_FLAGS --no-scripts --ansi
           fi
 
   cs-fixer:
@@ -46,18 +52,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.4'
           coverage: none
           tools: composer:v2
           extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
-      - run: |
-          if [ -f composer.lock ]; then
-            composer install --prefer-dist --no-progress --no-interaction
-          else
-            composer update --prefer-dist --no-progress --no-interaction --no-scripts --no-audit
-          fi
+      - run: composer install $COMPOSER_FLAGS
       - run: vendor/bin/php-cs-fixer fix --dry-run --diff --config=.php-cs-fixer.dist.php --allow-risky=yes
-        continue-on-error: true
 
   phpstan:
     name: phpstan
@@ -67,18 +67,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.4'
           coverage: none
           tools: composer:v2
           extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
-      - run: |
-          if [ -f composer.lock ]; then
-            composer install --prefer-dist --no-progress --no-interaction
-          else
-            composer update --prefer-dist --no-progress --no-interaction --no-scripts --no-audit
-          fi
+      - run: composer install $COMPOSER_FLAGS
       - run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
-        continue-on-error: true
 
   rector:
     name: rector --dry-run
@@ -88,21 +82,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.4'
           coverage: none
           tools: composer:v2
           extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
-      - run: |
-          if [ -f composer.lock ]; then
-            composer install --prefer-dist --no-progress --no-interaction
-          else
-            composer update --prefer-dist --no-progress --no-interaction --no-scripts --no-audit
-          fi
+      - run: composer install $COMPOSER_FLAGS
       - run: vendor/bin/rector process --dry-run --no-progress-bar
-        continue-on-error: true
 
   phpunit:
-    name: phpunit
+    name: phpunit (functional + unit, MySQL 8.4)
     runs-on: ubuntu-latest
     needs: composer
     services:
@@ -121,18 +109,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.4'
           coverage: none
           tools: composer:v2
           extensions: bcmath, gd, iconv, intl, mbstring, opcache, pcntl, pdo_mysql, sockets, xsl, zip
-      - run: |
-          if [ -f composer.lock ]; then
-            composer install --prefer-dist --no-progress --no-interaction
-          else
-            composer update --prefer-dist --no-progress --no-interaction --no-scripts --no-audit
-          fi
+      - run: composer install $COMPOSER_FLAGS
       - env:
           APP_ENV: test
           DATABASE_URL: mysql://root:root@127.0.0.1:3306/crypto_saas_test?serverVersion=8.4
         run: vendor/bin/phpunit -c phpunit.xml.dist --no-coverage
-        continue-on-error: true

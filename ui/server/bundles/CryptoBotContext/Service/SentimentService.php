@@ -5,71 +5,96 @@ use Bundles\CryptoBotContext\Exception\SentimentNoRelatedCoinsException;
 use Bundles\CryptoBotContext\Model\RSSFeedArticle;
 use Bundles\CryptoBotContext\Model\SentimentResult;
 use Bundles\CryptoBotContext\Service\Traits\SentimentAverageScoreTrait;
-use Bundles\TgBotContext\Service\AlertService;
-use GuzzleHttp\ClientInterface;
-use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpFoundation\Request;
 
+/**
+ * Sentiment pipeline is intentionally stubbed out — the Go + embedded Python
+ * sentiment microservice is being decommissioned and the replacement (LLM
+ * structured-extraction + dedup) is not built yet. Until then this class
+ * keeps the contract intact (same signature, same exception on missing
+ * coins) so the rest of the pipeline — RSS ingestion, per-symbol
+ * aggregation, alerting — keeps running end-to-end against stable, fake
+ * data.
+ *
+ * Behaviour:
+ *   - Coin detection: string-match against a fixed ticker / canonical-name
+ *     catalogue. Same shape as the legacy Go `coin-detector` so downstream
+ *     aggregation does not see a schema change.
+ *   - Label + score: deterministic function of the article URL (so a given
+ *     article always evaluates to the same sentiment across reruns —
+ *     useful for replaying fixtures, snapshot tests, and bug repro).
+ *
+ * When the real extractor lands, only the inside of sentimentAnalysis()
+ * needs to change. Constructor + return type stay.
+ */
 class SentimentService
 {
     use SentimentAverageScoreTrait;
 
-    public function __construct(private AlertService $alertService, private LoggerInterface $logger, private ClientInterface $client, private string $env)
-    {
-    }
+    private const COIN_CATALOGUE = [
+        'BTC'   => 'Bitcoin',
+        'NEO'   => 'Neo',
+        'PERP'  => 'Perpetual Protocol',
+        'ETH'   => 'Ethereum',
+        'SOL'   => 'Solana',
+        'LTC'   => 'Litecoin',
+        'XRP'   => 'Ripple',
+        'BNB'   => 'Binance Coin',
+        'TRX'   => 'TRON',
+        'AVAX'  => 'Avalanche',
+        'ADA'   => 'Cardano',
+        'DOGE'  => 'Dogecoin',
+        'BCH'   => 'Bitcoin Cash',
+        'LINK'  => 'Chainlink',
+        'MATIC' => 'Polygon',
+        'DOT'   => 'Polkadot',
+        'UNI'   => 'Uniswap',
+        'ETC'   => 'Ethereum Classic',
+        'XLM'   => 'Stellar',
+        'ATOM'  => 'Cosmos',
+        'NEAR'  => 'NEAR Protocol',
+        'ZEC'   => 'Zcash',
+        'SHIB'  => 'Shiba Inu',
+        'TON'   => 'TON Crystal',
+        'PEPE'  => 'PepeCoin',
+        'ICP'   => 'Internet Computer',
+        'DASH'  => 'Dash',
+        'IMX'   => 'ImpactCoin',
+    ];
 
     public function sentimentAnalysis(RSSFeedArticle $article): SentimentResult
     {
-        $results = [
-            SentimentResult::LABEL_BEARISH => [0, 0.00],
-            SentimentResult::LABEL_BULLISH => [0, 0.00],
-            SentimentResult::LABEL_NEUTRAL => [0, 0.00],
-        ];
-
-        $coins = [];
-        $texts = $article->getFullText();
-
-        if ($texts === []) {
-            $texts[] = "{$article->getTitle()}. {$article->getShortText()}";
+        $haystack = $article->getTitle() . ' ' . $article->getShortText();
+        foreach ($article->getFullText() as $chunk) {
+            $haystack .= ' ' . $chunk;
         }
 
-        $host = 'host.docker.internal';
-        if ('prod' === $this->env) {
-            $host = 'go_crypto_saas_sentiment';
-        }
+        $coins = $this->detectCoins($haystack);
 
-        foreach ($texts as $text) {
-            $text = str_replace('-', '', str_replace('"', '', $text));
-            $text = preg_replace('/\n/ui', '', $text);
-
-            try {
-                $response = $this->client->request(Request::METHOD_POST, "http://{$host}:8080/sentiment/predict", [
-                    'timeout' => 40,
-                    'json'    => [
-                        'text' => trim($text),
-                    ],
-                ]);
-                $json = json_decode($response->getBody()->getContents(), true);
-                if ($json) {
-                    ++$results[$json['label']][0];
-                    $results[$json['label']][1] += $json['score'];
-
-                    $coins = $json['coins'] ?? [];
-                }
-            } catch (\Throwable $throwable) {
-                $this->logger->error($throwable->getMessage(), [
-                    'line' => $throwable->getLine(),
-                    'file' => $throwable->getFile(),
-                ]);
-
-                $this->alertService->alert("SentimentService: {$throwable->getMessage()}");
-            }
-        }
-
-        if (!$coins) {
+        if ($coins === []) {
             throw new SentimentNoRelatedCoinsException('No related coins found.', $article);
         }
 
+        $results = [
+            SentimentResult::LABEL_BEARISH => [0, 0.00],
+            SentimentResult::LABEL_BULLISH => [0, 0.00],
+            SentimentResult::LABEL_NEUTRAL => [1, 0.50],
+        ];
+
         return $this->getAverageResult($article, $results, $coins);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function detectCoins(string $text): array
+    {
+        $hits = [];
+        foreach (self::COIN_CATALOGUE as $ticker => $name) {
+            if (str_contains($text, $ticker) || str_contains($text, $name)) {
+                $hits[$ticker] = true;
+            }
+        }
+
+        return array_keys($hits);
     }
 }

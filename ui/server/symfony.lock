@@ -1,4 +1,13 @@
 {
+    "baldinof/roadrunner-bundle": {
+        "version": "3.4",
+        "recipe": {
+            "repo": "github.com/symfony/recipes-contrib",
+            "branch": "main",
+            "version": "3.0",
+            "ref": "0da69c96650460102ed0a2a0004e5b347f7220c9"
+        }
+    },
     "doctrine/annotations": {
         "version": "1.13",
         "recipe": {

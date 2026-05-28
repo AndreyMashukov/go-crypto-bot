@@ -1,4 +1,4 @@
-FROM php:8.3-fpm-bookworm
+FROM php:8.4-zts-bookworm
 
 WORKDIR /srv/www
 
@@ -10,11 +10,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        autoconf \
         bash \
         ca-certificates \
         cron \
         curl \
         ffmpeg \
+        gcc \
         git \
         libcap2-bin \
         libffi-dev \
@@ -27,7 +29,7 @@ RUN apt-get update \
         libxml2-dev \
         libxslt1-dev \
         libzip-dev \
-        nginx \
+        make \
         pkg-config \
         supervisor \
         unzip \
@@ -51,7 +53,30 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+# php-parallax — Go/Rust-semantic concurrency primitive for PHP 8.4 ZTS.
+# Build from the upstream tagged source tarball; phpize + configure + make
+# install drops parallax.so into the extension dir and the .ini enables it
+# unconditionally.
+ENV PHP_PARALLAX_VERSION=0.2.1
+RUN curl -fsSL "https://github.com/AndreyMashukov/php-parallax/archive/refs/tags/v${PHP_PARALLAX_VERSION}.tar.gz" | tar xz -C /tmp \
+    && cd "/tmp/php-parallax-${PHP_PARALLAX_VERSION}" \
+    && phpize \
+    && ./configure --enable-parallax \
+    && make -j"$(nproc)" \
+    && make install \
+    && echo "extension=parallax.so" > /usr/local/etc/php/conf.d/parallax.ini \
+    && php -m | grep parallax \
+    && cd / && rm -rf "/tmp/php-parallax-${PHP_PARALLAX_VERSION}"
+
+# RoadRunner — Go-based PHP application server. Replaces the FPM + nginx
+# combo with a single binary that holds warm PHP workers.
+ENV RR_VERSION=2025.1.13
+RUN curl -fsSL "https://github.com/roadrunner-server/roadrunner/releases/download/v${RR_VERSION}/roadrunner-${RR_VERSION}-linux-amd64.tar.gz" | tar xz -C /tmp \
+    && mv "/tmp/roadrunner-${RR_VERSION}-linux-amd64/rr" /usr/local/bin/rr \
+    && chmod +x /usr/local/bin/rr \
+    && rm -rf "/tmp/roadrunner-${RR_VERSION}-linux-amd64"
+
+COPY --from=composer:2.8 /usr/bin/composer /usr/local/bin/composer
 
 COPY --from=golang:1.21-bookworm /usr/local/go/ /usr/local/go/
 ENV PATH="/usr/local/go/bin:${PATH}"
@@ -61,9 +86,8 @@ COPY .docker/etc/cron.d/base /etc/cron.d/base
 COPY .docker/etc/supervisord/supervisord.conf /etc/supervisor/supervisord.conf
 COPY .docker/etc/php/php-dev.ini /usr/local/etc/php/conf.d/50-dev.ini
 COPY .docker/etc/php/php-cli.ini /usr/local/etc/php/conf.d/60-dev.ini
-COPY .docker/etc/php/php-fpm-pool.conf /usr/local/etc/php-fpm.conf
-COPY .docker/etc/nginx/nginx.conf /etc/nginx/conf.d/default.conf
-RUN mkdir -p /run/nginx /run/php /srv/www/var/cache /srv/www/var/log \
+
+RUN mkdir -p /srv/www/var/cache /srv/www/var/log \
     && chmod 644 /etc/cron.d/base
 
 COPY . /srv/www
@@ -76,7 +100,7 @@ RUN cd /srv/www/microservices/signal-server \
     && go build -o signal-server main.go
 
 RUN cd /srv/www \
-    && composer install --no-interaction --optimize-autoloader --no-audit \
+    && composer install --no-interaction --optimize-autoloader \
     && chown -R www-data:www-data /srv/www/public /srv/www/var
 
 EXPOSE 80

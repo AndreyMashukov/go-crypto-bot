@@ -1,39 +1,62 @@
 version: '3.5'
 
+x-bot-env: &bot-env
+  BOT_UUID: '{BOT_UUID_4_HERE}'
+  BOT_EXCHANGE: 'binance'
+  CLICKHOUSE_DSN: 'clickhouse:8123'
+  CLICKHOUSE_PASSWORD: '123456'
+  DATABASE_DSN: 'postgres://go_crypto_bot:go_crypto_bot@postgres:5432/go_crypto_bot?sslmode=disable'
+  REDIS_DSN: 'redis:6379'
+  REDIS_PASSWORD: ''
+  BINANCE_API_KEY: '{BINANCE_API_KEY}'
+  BINANCE_API_SECRET: '{BINANCE_API_SECRET}'
+  BINANCE_API_DSN: 'https://testnet.binance.vision'
+  BINANCE_WS_DSN: 'wss://testnet.binance.vision/ws-api/v3'
+  BINANCE_STREAM_DSN: 'wss://stream.binance.com'
+  BYBIT_API_KEY: ''
+  BYBIT_API_SECRET: ''
+  BYBIT_API_DSN: ''
+  BYBIT_STREAM_DSN: ''
+  MC_DSN: "it should be your own capitalization service here"
+  METRICS_LISTEN_ADDR: ':9101'
+
 services:
-  writer:
+  market-watcher:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: go_crypto_bot
-    environment:
-        BOT_UUID: '{BOT_UUID_4_HERE}'
-        BOT_EXCHANGE: 'binance'
-        CLICKHOUSE_DSN: 'clickhouse:8123'
-        CLICKHOUSE_PASSWORD: '123456'
-        DATABASE_DSN: 'postgres://go_crypto_bot:go_crypto_bot@postgres:5432/go_crypto_bot?sslmode=disable'
-        REDIS_DSN: 'redis:6379'
-        REDIS_PASSWORD: ''
-        BINANCE_API_KEY: '{BINANCE_API_KEY}'
-        BINANCE_API_SECRET: '{BINANCE_API_SECRET}'
-        BINANCE_API_DSN: 'https://testnet.binance.vision'
-        BINANCE_WS_DSN: 'wss://testnet.binance.vision/ws-api/v3'
-        BINANCE_STREAM_DSN: 'wss://stream.binance.com' #'wss://stream.binancefuture.com'
-        BYBIT_API_KEY: ''
-        BYBIT_API_SECRET: ''
-        BYBIT_API_DSN: ''
-        BYBIT_STREAM_DSN: ''
-        MC_DSN: "it should be your own capitalization service here"
-        METRICS_LISTEN_ADDR: ':9101'
+    image: go_crypto_bot:latest
+    container_name: go_crypto_bot_market_watcher
+    command: ["/usr/local/bin/market-watcher"]
+    environment: *bot-env
     networks:
       - bot-net
     ports:
-      - "8090:8080"
       - "9101:9101"
     restart: always
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
+      clickhouse:
+        condition: service_started
+    volumes:
+      - './server:/go/src/app/dev'
+
+  market-trader:
+    image: go_crypto_bot:latest
+    container_name: go_crypto_bot_market_trader
+    command: ["/usr/local/bin/market-trader"]
+    environment: *bot-env
+    networks:
+      - bot-net
+    ports:
+      - "8090:8080"
+    restart: always
+    depends_on:
+      market-watcher:
+        condition: service_started
     volumes:
       - './server:/go/src/app/dev'
 

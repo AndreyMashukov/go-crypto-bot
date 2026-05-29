@@ -545,6 +545,8 @@ func InitServiceContainer() Container {
 		},
 		MCListener:      &mcListener,
 		EventDispatcher: &eventDispatcher,
+		Rdb:             rdb,
+		LatestTicks:     latestTicks,
 	}
 }
 
@@ -574,6 +576,12 @@ type Container struct {
 	OrderBasedStrategy  *strategy.OrderBasedStrategy
 	MarketTradeListener *strategy.MarketTradeListener
 	IsMasterBot         bool
+	// Phase H: exposed so each split-binary main can wire its own
+	// runtime — the trader spins a transport.RedisSubscriber that
+	// pushes received ticks into LatestTicks; the watcher writes
+	// directly through its in-process MarketTradeListener.
+	Rdb         *redis.Client
+	LatestTicks tickstore.Store
 }
 
 func (c *Container) StartHttpServer() {

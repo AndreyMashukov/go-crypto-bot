@@ -15,7 +15,9 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/AndreyMashukov/go-crypto-bot/server/market-watcher/chwriter"
+	"github.com/AndreyMashukov/go-crypto-bot/server/market-watcher/enrichment"
 	"github.com/AndreyMashukov/go-crypto-bot/server/market-watcher/publisher"
+	"github.com/AndreyMashukov/go-crypto-bot/server/shared/tickstore"
 	"github.com/AndreyMashukov/go-crypto-bot/server/shared/transport"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/controller"
@@ -121,6 +123,12 @@ func InitServiceContainer() Container {
 			panic(fmt.Sprintf("Can't initialize bot: %s", botUuid))
 		}
 	}
+
+	// Phase D: rolling-window enrichment + in-process latest-tick store.
+	// Created early so the StrategyFacade and MarketTradeListener can
+	// both reference the same instances by value-capture below.
+	enrichmentStore := enrichment.NewStore()
+	latestTicks := tickstore.NewInMemory()
 
 	formatter := utils.Formatter{}
 	var exchangeApi client.ExchangeAPIInterface
@@ -367,6 +375,7 @@ func InitServiceContainer() Container {
 			DecisionReadStorage: &exchangeRepository,
 			ExchangeRepository:  &exchangeRepository,
 			BotService:          &botService,
+			TickStore:           latestTicks,
 		},
 	}
 
@@ -513,6 +522,8 @@ func InitServiceContainer() Container {
 			ExchangeWSStreamer:  exchangeWSStreamer,
 			CurrentBot:          currentBot,
 			Publisher:           tickPublisher,
+			Enrichment:          enrichmentStore,
+			TickStore:           latestTicks,
 		},
 		MCListener:      &mcListener,
 		EventDispatcher: &eventDispatcher,

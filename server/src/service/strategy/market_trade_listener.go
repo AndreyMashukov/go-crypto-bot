@@ -11,8 +11,10 @@ import (
 
 	"github.com/shopspring/decimal"
 
+	"github.com/AndreyMashukov/go-crypto-bot/server/market-watcher/enrichment"
 	"github.com/AndreyMashukov/go-crypto-bot/server/market-watcher/publisher"
 	tickevent "github.com/AndreyMashukov/go-crypto-bot/server/shared/event"
+	"github.com/AndreyMashukov/go-crypto-bot/server/shared/tickstore"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/event"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
@@ -45,31 +47,63 @@ type MarketTradeListener struct {
 	// pub/sub channel + ClickHouse market_tick table. The legacy decision
 	// path still runs inline; Publisher is a parallel side-effect only.
 	Publisher *publisher.Publisher
+	// Enrichment maintains the rolling kline window per symbol so the
+	// emitted MarketTick carries real Candles + Indicators. Phase D adds
+	// this — earlier phases shipped a skeleton tick with empty Candles.
+	Enrichment *enrichment.Store
+	// TickStore is the in-process latest-tick map the StrategyFacade
+	// reads on the decision path. Watcher writes here right after Emit.
+	TickStore tickstore.Store
 }
 
-// emitMarketTick mirrors a processed kline as a (skeleton) MarketTick on
-// the new pub/sub + ClickHouse pipeline. Candles, indicators, account
-// view, and full order-book metadata get populated in Phase D; for now
-// the watcher publishes Identity + Price view + IngestedAt so the
-// trader-side smoke check has something to subscribe to and the
-// ClickHouse market_tick table starts collecting real rows.
+// emitMarketTick records the kline in the enrichment window, builds a
+// MarketTick carrying Candles + Indicators computed from that window,
+// and fans the tick out to both the network publisher (Redis pub/sub +
+// ClickHouse) and the in-process TickStore that the strategy facade
+// reads on the decision path. OpenPosition + RiskEnvelope stay zero
+// for Phase D; a later phase wires their real sources.
 func (m *MarketTradeListener) emitMarketTick(kLine model.KLine) {
-	if m.Publisher == nil || m.CurrentBot == nil {
+	if m.CurrentBot == nil {
 		return
 	}
-	closePrice := decimal.NewFromFloat(kLine.Close.Value())
+	if m.Enrichment != nil {
+		m.Enrichment.OnKLine(enrichment.KLine{
+			Symbol:    kLine.Symbol,
+			OpenTime:  time.UnixMilli(kLine.OpenTime.Value()).UTC(),
+			Open:      kLine.Open.Value(),
+			High:      kLine.High.Value(),
+			Low:       kLine.Low.Value(),
+			Close:     kLine.Close.Value(),
+			Volume:    kLine.Volume.Value(),
+			Timestamp: time.UnixMilli(kLine.Timestamp.Value()).UTC(),
+		})
+	}
+	var (
+		candles    tickevent.Candles
+		indicators tickevent.Indicators
+	)
+	if m.Enrichment != nil {
+		candles, indicators = m.Enrichment.Snapshot(kLine.Symbol)
+	}
 	tick := tickevent.MarketTick{
 		Exchange:   m.CurrentBot.Exchange,
 		Symbol:     kLine.Symbol,
 		Source:     tickevent.SourceTrade,
 		EventTime:  time.UnixMilli(kLine.Timestamp.Value()).UTC(),
 		IngestedAt: time.Now().UTC(),
-		Price:      closePrice,
+		Price:      decimal.NewFromFloat(kLine.Close.Value()),
 		BestBid:    decimal.Zero,
 		BestAsk:    decimal.Zero,
 		Volume24h:  decimal.Zero,
+		Candles:    candles,
+		Indicators: indicators,
 	}
-	m.Publisher.Emit(context.Background(), tick)
+	if m.Publisher != nil {
+		m.Publisher.Emit(context.Background(), tick)
+	}
+	if m.TickStore != nil {
+		m.TickStore.Set(tick)
+	}
 }
 
 func (m *MarketTradeListener) ListenAll() {

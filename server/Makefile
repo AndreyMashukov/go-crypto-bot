@@ -1,4 +1,4 @@
-.PHONY: fmt vet lint ailint build test check init-db-dev
+.PHONY: fmt vet lint ailint build test check init-db-dev init-ch-dev
 
 # Go targets — module root is this directory.
 
@@ -22,24 +22,25 @@ test:
 
 check: fmt vet build lint ailint test
 
+# Postgres init: applies every migrations/migration_*.sql in numeric order
+# against the dev cluster wired up by docker-compose.yaml.dist (postgres
+# service exposed on host port 5444). Uses PGPASSWORD so the prompt
+# doesn't break a non-interactive `make`.
 init-db-dev:
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_1.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_2.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_3.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_4.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_5.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_6.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_7.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_8.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_9.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_10.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_11.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_12.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_13.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_14.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_15.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_16.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_17.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_18.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_19.sql
-	mysql -u root -pgo_crypto_bot -h 127.0.0.1 -P 3367 -D go_crypto_bot < migrations/migration_20.sql
+	@set -e; \
+	export PGPASSWORD=go_crypto_bot; \
+	for n in $$(ls migrations/migration_*.sql | sed -E 's|.*migration_([0-9]+)\.sql|\1|' | sort -n); do \
+		echo "applying migrations/migration_$$n.sql"; \
+		psql -h 127.0.0.1 -p 5444 -U go_crypto_bot -d go_crypto_bot -v ON_ERROR_STOP=1 -f migrations/migration_$$n.sql; \
+	done
+
+# ClickHouse init: applies the analytics schema (default.trades,
+# default.market_tick) against the clickhouse service exposed by
+# docker-compose.yaml.dist on host port 9123.
+init-ch-dev:
+	@set -e; \
+	for f in migrations/clickhouse/*.sql; do \
+		echo "applying $$f"; \
+		curl -sS --data-binary @$$f 'http://localhost:9123/?user=default&password=123456&database=default'; \
+		echo; \
+	done

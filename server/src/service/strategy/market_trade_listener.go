@@ -1,6 +1,18 @@
 package strategy
 
 import (
+	"context"
+	"log"
+	"math"
+	"runtime"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/shopspring/decimal"
+
+	"github.com/AndreyMashukov/go-crypto-bot/server/market-watcher/publisher"
+	tickevent "github.com/AndreyMashukov/go-crypto-bot/server/shared/event"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/event"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
@@ -9,12 +21,6 @@ import (
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/exchange"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/ml"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
-	"log"
-	"math"
-	"runtime"
-	"strings"
-	"sync"
-	"time"
 )
 
 type MarketTradeListener struct {
@@ -30,6 +36,40 @@ type MarketTradeListener struct {
 	EventDispatcher     *service.EventDispatcher
 
 	ExchangeWSStreamer ExchangeWSStreamer
+
+	// CurrentBot exists so the MarketTick stamp can name its exchange
+	// without reaching back into a repo. Nil-tolerant: the legacy path
+	// runs unchanged when CurrentBot or Publisher is unset (tests).
+	CurrentBot *model.Bot
+	// Publisher fans every observed kline out to the new shared/transport
+	// pub/sub channel + ClickHouse market_tick table. The legacy decision
+	// path still runs inline; Publisher is a parallel side-effect only.
+	Publisher *publisher.Publisher
+}
+
+// emitMarketTick mirrors a processed kline as a (skeleton) MarketTick on
+// the new pub/sub + ClickHouse pipeline. Candles, indicators, account
+// view, and full order-book metadata get populated in Phase D; for now
+// the watcher publishes Identity + Price view + IngestedAt so the
+// trader-side smoke check has something to subscribe to and the
+// ClickHouse market_tick table starts collecting real rows.
+func (m *MarketTradeListener) emitMarketTick(kLine model.KLine) {
+	if m.Publisher == nil || m.CurrentBot == nil {
+		return
+	}
+	closePrice := decimal.NewFromFloat(kLine.Close.Value())
+	tick := tickevent.MarketTick{
+		Exchange:   m.CurrentBot.Exchange,
+		Symbol:     kLine.Symbol,
+		Source:     tickevent.SourceTrade,
+		EventTime:  time.UnixMilli(kLine.Timestamp.Value()).UTC(),
+		IngestedAt: time.Now().UTC(),
+		Price:      closePrice,
+		BestBid:    decimal.Zero,
+		BestAsk:    decimal.Zero,
+		Volume24h:  decimal.Zero,
+	}
+	m.Publisher.Emit(context.Background(), tick)
 }
 
 func (m *MarketTradeListener) ListenAll() {
@@ -99,6 +139,7 @@ func (m *MarketTradeListener) ListenAll() {
 				}
 
 				m.ExchangeRepository.SetCurrentKline(kLine)
+				m.emitMarketTick(kLine)
 				if lastKline != nil && lastKline.Timestamp.GetPeriodToMinute() != kLine.Timestamp.GetPeriodToMinute() {
 					m.EventDispatcher.Dispatch(event.NewKlineReceived{
 						Previous: lastKline,

@@ -4,6 +4,19 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"runtime"
+	"sync"
+	"time"
+
+	"github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/redis/go-redis/v9"
+
+	"github.com/AndreyMashukov/go-crypto-bot/server/market-watcher/chwriter"
+	"github.com/AndreyMashukov/go-crypto-bot/server/market-watcher/publisher"
+	"github.com/AndreyMashukov/go-crypto-bot/server/shared/transport"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/controller"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/event_subscriber"
@@ -15,14 +28,6 @@ import (
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/strategy"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/validator"
-	"github.com/ClickHouse/clickhouse-go/v2"
-	"github.com/redis/go-redis/v9"
-	"log"
-	"net/http"
-	"os"
-	"runtime"
-	"sync"
-	"time"
 )
 
 const BotExchangeBinance = "binance"
@@ -437,6 +442,21 @@ func InitServiceContainer() Container {
 		BotRepository: &botRepository,
 	}
 
+	// MarketTick pipeline (Phase C):
+	// - RedisPublisher writes ticks to ticks.<exchange>.<symbol> for the
+	//   future market-trader subscriber. 20 ms deadline per publish.
+	// - chwriter batches the same ticks into ClickHouse market_tick for
+	//   offline analysis / backtests. Non-blocking enqueue from the hot
+	//   path; the background goroutine handles batching + insert.
+	// Phase H will lift this wiring out of the legacy container into the
+	// market-watcher binary's own main.go.
+	tickRedisPublisher := transport.NewRedisPublisher(rdb, 0)
+	tickCHWriter := chwriter.New(clickhouseDb, chwriter.Config{}, nil)
+	tickPublisher := publisher.New(tickRedisPublisher, tickCHWriter)
+	go func() {
+		_ = tickCHWriter.Run(context.Background())
+	}()
+
 	mcGatewayAddress := ""
 
 	mcListener := exchange.MCListener{
@@ -491,6 +511,8 @@ func InitServiceContainer() Container {
 			PriceCalculator:     &priceCalculator,
 			EventDispatcher:     &eventDispatcher,
 			ExchangeWSStreamer:  exchangeWSStreamer,
+			CurrentBot:          currentBot,
+			Publisher:           tickPublisher,
 		},
 		MCListener:      &mcListener,
 		EventDispatcher: &eventDispatcher,

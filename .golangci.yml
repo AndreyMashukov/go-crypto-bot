@@ -35,8 +35,41 @@ linters:
     - wastedassign
     - errorlint
     - copyloopvar
+    - depguard
 
 linters-settings:
+  depguard:
+    rules:
+      no-trader-imports-watcher:
+        list-mode: lax
+        files:
+          - "**/server/market-trader/**"
+          - "**/server/market-trader/**/*.go"
+        deny:
+          - pkg: github.com/AndreyMashukov/go-crypto-bot/server/market-watcher
+            desc: "market-trader and market-watcher are isolated — talk via shared/transport pub/sub only"
+      no-watcher-imports-trader:
+        list-mode: lax
+        files:
+          - "**/server/market-watcher/**"
+          - "**/server/market-watcher/**/*.go"
+        deny:
+          - pkg: github.com/AndreyMashukov/go-crypto-bot/server/market-trader
+            desc: "market-watcher and market-trader are isolated — talk via shared/transport pub/sub only"
+      no-shared-imports-binaries:
+        list-mode: lax
+        files:
+          - "**/server/shared/**"
+          - "**/server/shared/**/*.go"
+        deny:
+          - pkg: github.com/AndreyMashukov/go-crypto-bot/server/market-watcher
+            desc: "shared/ must not depend on either binary"
+          - pkg: github.com/AndreyMashukov/go-crypto-bot/server/market-trader
+            desc: "shared/ must not depend on either binary"
+          - pkg: github.com/AndreyMashukov/go-crypto-bot/server/src
+            desc: "shared/ must not depend on legacy src/"
+
+
   gocyclo:
     min-complexity: 15
   funlen:

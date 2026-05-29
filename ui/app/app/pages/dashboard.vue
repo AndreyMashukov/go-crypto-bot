@@ -2,7 +2,6 @@
 import { onMounted, onUnmounted } from 'vue'
 import { useBotStore } from '~/stores/bot'
 
-const { t } = useI18n()
 const bot = useBotStore()
 
 let timer: ReturnType<typeof setInterval> | null = null
@@ -19,12 +18,12 @@ onUnmounted(() => {
 
 <template>
   <v-container fluid>
-    <h1 class="text-h5 mb-4">{{ t('dashboard.title') }}</h1>
+    <h1 class="text-h5 mb-4">{{ $t('Bot state') }}</h1>
 
     <v-row>
       <v-col cols="12" md="4">
         <v-card>
-          <v-card-title>{{ t('dashboard.balance') }}</v-card-title>
+          <v-card-title>{{ $t('USDT balance') }}</v-card-title>
           <v-card-text class="text-h4">
             <span v-if="bot.usdtBalance === null">—</span>
             <span v-else>{{ bot.usdtBalance.toFixed(2) }} USDT</span>
@@ -34,20 +33,20 @@ onUnmounted(() => {
 
       <v-col cols="12" md="8">
         <v-card>
-          <v-card-title>{{ t('dashboard.open_positions') }}</v-card-title>
+          <v-card-title>{{ $t('Open positions') }}</v-card-title>
           <v-data-table
             v-if="bot.positions.length > 0"
             :items="bot.positions"
             :headers="[
-              { title: t('orders.symbol'), key: 'symbol' },
-              { title: t('orders.qty'),    key: 'qty' },
-              { title: t('orders.price'),  key: 'avgEntry' },
-              { title: 'PnL',              key: 'unrealizedPnL' },
+              { title: $t('Symbol'), key: 'symbol' },
+              { title: $t('Quantity'), key: 'qty' },
+              { title: $t('Price'), key: 'avgEntry' },
+              { title: 'PnL', key: 'unrealizedPnL' },
             ]"
             density="compact"
             hide-default-footer
           />
-          <v-card-text v-else>{{ t('dashboard.no_data') }}</v-card-text>
+          <v-card-text v-else>{{ $t('No data') }}</v-card-text>
         </v-card>
       </v-col>
     </v-row>
@@ -55,21 +54,21 @@ onUnmounted(() => {
     <v-row class="mt-4">
       <v-col cols="12">
         <v-card>
-          <v-card-title>{{ t('dashboard.recent_trades') }}</v-card-title>
+          <v-card-title>{{ $t('Recent trades') }}</v-card-title>
           <v-data-table
             v-if="bot.recentTrades.length > 0"
             :items="bot.recentTrades"
             :headers="[
-              { title: t('orders.symbol'),     key: 'symbol' },
-              { title: t('orders.side'),       key: 'side' },
-              { title: t('orders.price'),      key: 'price' },
-              { title: t('orders.qty'),        key: 'qty' },
-              { title: t('orders.created_at'), key: 'createdAt' },
+              { title: $t('Symbol'),  key: 'symbol' },
+              { title: $t('Side'),    key: 'side' },
+              { title: $t('Price'),   key: 'price' },
+              { title: $t('Quantity'), key: 'qty' },
+              { title: $t('Created'), key: 'createdAt' },
             ]"
             density="compact"
             :items-per-page="20"
           />
-          <v-card-text v-else>{{ t('dashboard.no_data') }}</v-card-text>
+          <v-card-text v-else>{{ $t('No data') }}</v-card-text>
         </v-card>
       </v-col>
     </v-row>

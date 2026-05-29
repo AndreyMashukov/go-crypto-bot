@@ -50,11 +50,11 @@ stack-up:
 	$(COMPOSE) up -d --build market-watcher market-trader ui-server ui-app
 	@echo
 	@echo "✓ stack up"
-	@echo "  dashboard:   http://localhost:3000"
-	@echo "  bot admin:   http://localhost:8090"
-	@echo "  ui server:   http://localhost:8000/api"
-	@echo "  prometheus:  http://localhost:9090"
-	@echo "  clickhouse:  http://localhost:9123"
+	@echo "  dashboard:   http://localhost:13000"
+	@echo "  bot admin:   http://localhost:18090"
+	@echo "  ui server:   http://localhost:18000/api"
+	@echo "  prometheus:  http://localhost:19090"
+	@echo "  clickhouse:  http://localhost:19123"
 
 stack-down:
 	$(COMPOSE) down

@@ -2,7 +2,6 @@
 import { onMounted, onUnmounted, watch } from 'vue'
 import { useOrdersStore } from '~/stores/orders'
 
-const { t } = useI18n()
 const orders = useOrdersStore()
 
 let timer: ReturnType<typeof setInterval> | null = null
@@ -21,12 +20,12 @@ watch(() => orders.tab, () => orders.load())
 
 <template>
   <v-container fluid>
-    <h1 class="text-h5 mb-4">{{ t('orders.title') }}</h1>
+    <h1 class="text-h5 mb-4">{{ $t('Orders') }}</h1>
 
     <v-tabs :model-value="orders.tab" color="primary" @update:model-value="orders.setTab($event as any)">
-      <v-tab value="active">{{ t('orders.active') }}</v-tab>
-      <v-tab value="pending">{{ t('orders.pending') }}</v-tab>
-      <v-tab value="positions">{{ t('orders.positions') }}</v-tab>
+      <v-tab value="active">{{ $t('Active') }}</v-tab>
+      <v-tab value="pending">{{ $t('Pending') }}</v-tab>
+      <v-tab value="positions">{{ $t('Positions') }}</v-tab>
     </v-tabs>
 
     <v-card class="mt-2">
@@ -34,18 +33,18 @@ watch(() => orders.tab, () => orders.load())
         v-if="orders.items.length > 0"
         :items="orders.items"
         :headers="[
-          { title: t('orders.symbol'),     key: 'symbol' },
-          { title: t('orders.side'),       key: 'side' },
-          { title: t('orders.qty'),        key: 'qty' },
-          { title: t('orders.price'),      key: 'price' },
-          { title: t('orders.status'),     key: 'status' },
-          { title: t('orders.created_at'), key: 'createdAt' },
+          { title: $t('Symbol'),  key: 'symbol' },
+          { title: $t('Side'),    key: 'side' },
+          { title: $t('Quantity'), key: 'qty' },
+          { title: $t('Price'),   key: 'price' },
+          { title: $t('Status'),  key: 'status' },
+          { title: $t('Created'), key: 'createdAt' },
         ]"
         :loading="orders.loading"
         density="compact"
         :items-per-page="50"
       />
-      <v-card-text v-else>{{ t('orders.no_orders') }}</v-card-text>
+      <v-card-text v-else>{{ $t('No orders') }}</v-card-text>
     </v-card>
   </v-container>
 </template>

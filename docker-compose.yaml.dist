@@ -32,7 +32,7 @@ services:
     networks:
       - bot-net
     ports:
-      - "9101:9101"
+      - "19101:9101"
     restart: always
     depends_on:
       postgres:
@@ -52,7 +52,7 @@ services:
     networks:
       - bot-net
     ports:
-      - "8090:8080"
+      - "18090:8080"
     restart: always
     depends_on:
       market-watcher:
@@ -75,7 +75,7 @@ services:
     networks:
       - bot-net
     ports:
-      - "8000:80"
+      - "18000:80"
     restart: always
     depends_on:
       market-trader:
@@ -97,7 +97,7 @@ services:
     networks:
       - bot-net
     ports:
-      - "3000:3000"
+      - "13000:3000"
     restart: always
     depends_on:
       ui-server:
@@ -109,7 +109,7 @@ services:
     networks:
       - bot-net
     ports:
-      - "9090:9090"
+      - "19090:9090"
     volumes:
       - ./.docker/etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
@@ -124,7 +124,7 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     ports:
-      - "5444:5432"
+      - "15444:5432"
     networks:
       - bot-net
     environment:
@@ -158,8 +158,8 @@ services:
       - clickhouse-data:/var/lib/clickhouse
       - ./.docker/data/clickhouse-server:/etc/clickhouse-server
     ports:
-      - "8002:9000"
-      - "9123:8123"
+      - "18002:9000"
+      - "19123:8123"
     ulimits:
       nproc: 65535
       nofile:

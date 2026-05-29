@@ -152,40 +152,25 @@
               :update-subject="subjectMap[chart.symbol]"
               @on-order="sendManualOrder"
           />
-          <h4 class="text-center" style="background-color: #efefef;">{{$t('dashboard.text_price_change_speed')}}</h4>
-          <PriceSpeedChart
-              :symbol="chart.symbol"
-              :avg-price-points="chart.avgPriceChangeSpeed"
-              :min-price-points="chart.minPriceChangeSpeed"
-              :max-price-points="chart.maxPriceChangeSpeed"
-              :update-subject="subjectMap[chart.symbol]"
+          <!--
+            Phase G replaced the four legacy kline-driven chart components
+            (PriceSpeedChart / TradeVolumeChart / MarketCapPriceChart /
+            MarketCapChart) with the single MetricChart primitive backed
+            by Prometheus range queries. Per-symbol PnL + tick-drop are
+            the two most actionable views; more panels get added by
+            editing the PromQL in-place rather than by writing more chart
+            components.
+          -->
+          <MetricChart
+              :query="`pnl_realized_total{symbol=&quot;${chart.symbol}&quot;}`"
+              step="15s"
+              :title="$t('dashboard.text_pnl_realized') || `pnl_realized_total — ${chart.symbol}`"
           />
-          <h4 class="text-center" style="background-color: #efefef;">{{$t('dashboard.text_trade_quantity')}}</h4>
-          <TradeVolumeChart
-              :symbol="chart.symbol"
-              :sell-volume-points="chart.sellTradeVolume"
-              :buy-volume-points="chart.buyTradeVolume"
-              :iceberg-buy-qty="chart.icebergBuyQty"
-              :iceberg-sell-qty="chart.icebergSellQty"
-              :cummulative-volume-points="chart.cummulativeTradeQty"
-              :update-subject="subjectMap[chart.symbol]"
+          <MetricChart
+              :query="`rate(tick_drop_total{symbol=&quot;${chart.symbol}&quot;}[1m])`"
+              step="15s"
+              :title="$t('dashboard.text_tick_drop_rate') || `tick_drop_total rate — ${chart.symbol}`"
           />
-          <div v-if="chart.marketCapPrice.filter((x) => x.y > 0).length > 10">
-            <h4 class="text-center" style="background-color: #efefef;">{{$t('dashboard.text_market_price')}}</h4>
-            <MarketCapPriceChart
-                :symbol="chart.symbol"
-                :market-cap-price-points="chart.marketCapPrice"
-                :update-subject="subjectMap[chart.symbol]"
-            />
-          </div>
-          <div v-if="chart.marketCapValue.filter((x) => x.y > 0).length > 10">
-            <h4 class="text-center" style="background-color: #efefef;">{{$t('dashboard.text_market_capital')}}</h4>
-            <MarketCapChart
-                :symbol="chart.symbol"
-                :market-cap-points="chart.marketCapValue"
-                :update-subject="subjectMap[chart.symbol]"
-            />
-          </div>
         </div>
       </div>
     </div>
@@ -381,9 +366,7 @@ import Position from '~/components/Position.vue';
 import {Alert} from '~/model/alert';
 import {AlertEvent} from '~/model/alert-event';
 import ProfitItem from '~/components/ProfitItem.vue';
-import PriceSpeedChart from '~/components/PriceSpeedChart.vue';
-import MarketCapChart from '~/components/MarketCapChart.vue';
-import MarketCapPriceChart from '~/components/MarketCapPriceChart.vue';
+import MetricChart from '~/components/MetricChart.vue';
 import TradeCondition from '~/components/TradeCondition.vue';
 import Swap from '~/components/ui/Swap.vue';
 
@@ -699,7 +682,7 @@ export default defineNuxtComponent({
   components: {
     Swap,
     TradeCondition,
-    MarketCapPriceChart, MarketCapChart, PriceSpeedChart, ProfitItem, Position, Financial, Stack},
+    MetricChart, ProfitItem, Position, Financial, Stack},
   async asyncData(ctx: any) {
     const authToken = ctx.$services.authService.getToken();
     if (!authToken) {

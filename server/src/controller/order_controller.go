@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
@@ -12,6 +11,7 @@ import (
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/exchange"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/validator"
+	"github.com/redis/go-redis/v9"
 	"net/http"
 	"slices"
 	"strings"
@@ -60,7 +60,7 @@ func (o *OrderController) GetOrderTradeListAction(w http.ResponseWriter, req *ht
 
 	list := o.OrderRepository.GetTrades()
 	encoded, _ := json.Marshal(list)
-	_, _ = fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http.Request) {
@@ -173,7 +173,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 	}
 
 	encoded, _ := json.Marshal(positions)
-	_, _ = fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (o *OrderController) UpdateExtraChargeAction(w http.ResponseWriter, req *http.Request) {
@@ -202,8 +202,6 @@ func (o *OrderController) UpdateExtraChargeAction(w http.ResponseWriter, req *ht
 
 	var options model.UpdateOrderExtraChargeOptions
 
-	// Try to decode the request body into the struct. If there is an error,
-	// respond to the client with the error message and a 400 status code.
 	err := json.NewDecoder(req.Body).Decode(&options)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -250,7 +248,7 @@ func (o *OrderController) UpdateExtraChargeAction(w http.ResponseWriter, req *ht
 	o.OrderExecutor.SetCancelRequest(entity.Symbol)
 	o.ExchangeRepository.DeleteDecision(model.OrderBasedStrategyName, entity.Symbol)
 	encodedRes, _ := json.Marshal(entity)
-	_, _ = fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprint(w, string(encodedRes))
 }
 
 func (o *OrderController) UpdateProfitOptionsAction(w http.ResponseWriter, req *http.Request) {
@@ -279,8 +277,6 @@ func (o *OrderController) UpdateProfitOptionsAction(w http.ResponseWriter, req *
 
 	var options model.UpdateOrderProfitOptions
 
-	// Try to decode the request body into the struct. If there is an error,
-	// respond to the client with the error message and a 400 status code.
 	err := json.NewDecoder(req.Body).Decode(&options)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -341,7 +337,7 @@ func (o *OrderController) UpdateProfitOptionsAction(w http.ResponseWriter, req *
 	o.OrderExecutor.SetCancelRequest(entity.Symbol)
 	o.ExchangeRepository.DeleteDecision(model.OrderBasedStrategyName, entity.Symbol)
 	encodedRes, _ := json.Marshal(entity)
-	_, _ = fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprint(w, string(encodedRes))
 }
 
 func (o *OrderController) GetPendingOrderListAction(w http.ResponseWriter, req *http.Request) {
@@ -398,7 +394,7 @@ func (o *OrderController) GetPendingOrderListAction(w http.ResponseWriter, req *
 	}
 
 	encoded, _ := json.Marshal(pending)
-	_, _ = fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (o *OrderController) GetOrderListAction(w http.ResponseWriter, req *http.Request) {
@@ -421,7 +417,7 @@ func (o *OrderController) GetOrderListAction(w http.ResponseWriter, req *http.Re
 
 	list := o.OrderRepository.GetList()
 	encoded, _ := json.Marshal(list)
-	_, _ = fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (o *OrderController) DeleteCancelExchangeOrderAction(w http.ResponseWriter, req *http.Request) {
@@ -554,8 +550,6 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 
 	var manual model.ManualOrder
 
-	// Try to decode the request body into the struct. If there is an error,
-	// respond to the client with the error message and a 400 status code.
 	err := json.NewDecoder(req.Body).Decode(&manual)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -638,5 +632,5 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 	o.OrderExecutor.SetCancelRequest(tradeLimit.Symbol)
 
 	encoded, _ := json.Marshal(manual)
-	_, _ = fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }

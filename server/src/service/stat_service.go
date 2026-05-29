@@ -16,14 +16,12 @@ func (s *StatService) GetTradeStat(kLine model.KLine, cache bool, full bool) mod
 
 	if cache {
 		if kLine.TradeVolume != nil {
-			// Sell
 			tradesPastPeriod = append(tradesPastPeriod, model.Trade{
 				Symbol:       kLine.Symbol,
 				IsBuyerMaker: true,
 				Quantity:     kLine.TradeVolume.SellQty,
 				Price:        kLine.Close.Value(),
 			})
-			// Buy
 			tradesPastPeriod = append(tradesPastPeriod, model.Trade{
 				Symbol:       kLine.Symbol,
 				IsBuyerMaker: false,

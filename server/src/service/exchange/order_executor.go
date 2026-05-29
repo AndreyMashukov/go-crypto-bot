@@ -8,7 +8,6 @@ import (
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
-	"github.com/AndreyMashukov/go-crypto-bot/server/src/validator"
 	"log"
 	"math"
 	"strings"
@@ -19,34 +18,28 @@ type OrderExecutorInterface interface {
 	BuyExtra(tradeLimit model.TradeLimit, order model.Order, price float64) error
 	Buy(tradeLimit model.TradeLimit, price float64, quantity float64, signal *model.Signal) error
 	Sell(tradeLimit model.TradeLimit, opened model.Order, price float64, quantity float64, isManual bool) error
-	ProcessSwap(order model.Order) bool
-	TrySwap(order model.Order)
 	CheckMinBalance(limit model.TradeLimit, kLine model.KLine) error
 	CalculateSellQuantity(order model.Order) float64
 }
 
 type OrderExecutor struct {
-	TradeStack             BuyOrderStackInterface
-	CurrentBot             *model.Bot
-	TimeService            utils.TimeServiceInterface
-	BalanceService         BalanceServiceInterface
-	Binance                client.ExchangeOrderAPIInterface
-	OrderRepository        repository.OrderStorageInterface
-	ExchangeRepository     repository.ExchangeTradeInfoInterface
-	LossSecurity           LossSecurityInterface
-	PriceCalculator        PriceCalculatorInterface
-	ProfitService          ProfitServiceInterface
-	SwapRepository         repository.SwapBasicRepositoryInterface
-	SwapExecutor           SwapExecutorInterface
-	SwapValidator          validator.SwapValidatorInterface
-	CallbackManager        service.CallbackManagerInterface
-	Formatter              *utils.Formatter
-	BotService             service.BotServiceInterface
-	TurboSwapProfitPercent float64
-	Lock                   map[string]bool
-	TradeLockMutex         sync.RWMutex
-	LockChannel            *chan model.Lock
-	CancelRequestMap       map[string]bool
+	TradeStack         BuyOrderStackInterface
+	CurrentBot         *model.Bot
+	TimeService        utils.TimeServiceInterface
+	BalanceService     BalanceServiceInterface
+	Binance            client.ExchangeOrderAPIInterface
+	OrderRepository    repository.OrderStorageInterface
+	ExchangeRepository repository.ExchangeTradeInfoInterface
+	LossSecurity       LossSecurityInterface
+	PriceCalculator    PriceCalculatorInterface
+	ProfitService      ProfitServiceInterface
+	CallbackManager    service.CallbackManagerInterface
+	Formatter          *utils.Formatter
+	BotService         service.BotServiceInterface
+	Lock               map[string]bool
+	TradeLockMutex     sync.RWMutex
+	LockChannel        *chan model.Lock
+	CancelRequestMap   map[string]bool
 }
 
 func (m *OrderExecutor) BuyExtra(tradeLimit model.TradeLimit, order model.Order, price float64) error {
@@ -133,7 +126,6 @@ func (m *OrderExecutor) BuyExtra(tradeLimit model.TradeLimit, order model.Order,
 
 	executedQty := binanceOrder.GetExecutedQuantity()
 
-	// fill from API
 	extraOrder.ExternalId = &binanceOrder.OrderId
 	extraOrder.ExecutedQuantity = executedQty
 	extraOrder.Price = binanceOrder.Price
@@ -148,7 +140,6 @@ func (m *OrderExecutor) BuyExtra(tradeLimit model.TradeLimit, order model.Order,
 
 	_, err = m.OrderRepository.Create(extraOrder)
 	if err != nil {
-		// remove binance order from cache if we have already had saved in database
 		if strings.Contains(err.Error(), "Duplicate entry") && strings.Contains(err.Error(), "order_external_id_symbol") {
 			m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 		}
@@ -226,13 +217,10 @@ func (m *OrderExecutor) Buy(tradeLimit model.TradeLimit, price float64, quantity
 		return balanceErr
 	}
 
-	// to avoid concurrent map writes
 	m.acquireLock(tradeLimit.Symbol)
 	defer m.releaseLock(tradeLimit.Symbol)
 
 	// todo: commission
-	// You place an order to buy 10 ETH for 3,452.55 USDT each:
-	// Trading fee = 10 ETH * 0.1% = 0.01 ETH
 
 	// todo: check min quantity
 
@@ -271,7 +259,6 @@ func (m *OrderExecutor) Buy(tradeLimit model.TradeLimit, price float64, quantity
 		return err
 	}
 
-	// fill from API
 	order.ExternalId = &binanceOrder.OrderId
 	order.ExecutedQuantity = binanceOrder.GetExecutedQuantity()
 	order.Price = binanceOrder.Price
@@ -282,7 +269,6 @@ func (m *OrderExecutor) Buy(tradeLimit model.TradeLimit, price float64, quantity
 	m.BalanceService.InvalidateBalanceCache(order.GetBaseAsset())
 
 	if err != nil {
-		// remove binance order from cache if we have already had saved in database
 		if strings.Contains(err.Error(), "Duplicate entry") && strings.Contains(err.Error(), "order_external_id_symbol") {
 			m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 		}
@@ -327,12 +313,9 @@ func (m *OrderExecutor) Sell(tradeLimit model.TradeLimit, opened model.Order, pr
 	}
 
 	// todo: commission
-	// Or you place an order to sell 10 ETH for 3,452.55 USDT each:
-	// Trading fee = (10 ETH * 3,452.55 USDT) * 0.1% = 34.5255 USDT
 
 	profit := (price - opened.Price) * quantity
 
-	// loose money control
 	if opened.Price >= price {
 		return errors.New(fmt.Sprintf(
 			"[%s] Bad deal, wait for positive profit: %.6f [o:%.6f, c:%.6f]",
@@ -384,7 +367,6 @@ func (m *OrderExecutor) Sell(tradeLimit model.TradeLimit, opened model.Order, pr
 		return err
 	}
 
-	// fill from API
 	order.ExternalId = &binanceOrder.OrderId
 	order.ExecutedQuantity = binanceOrder.GetExecutedQuantity()
 	order.Price = binanceOrder.Price
@@ -394,7 +376,6 @@ func (m *OrderExecutor) Sell(tradeLimit model.TradeLimit, opened model.Order, pr
 
 	if err != nil {
 		// todo: test 2024/02/02 08:24:29 [XLMUSDT] Error 1062 (23000): Duplicate entry '207993-XLMUSDT' for key 'order_external_id_symbol'
-		// remove binance order from cache if we have already had saved in database
 		if strings.Contains(err.Error(), "Duplicate entry") && strings.Contains(err.Error(), "order_external_id_symbol") {
 			m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 		}
@@ -416,7 +397,6 @@ func (m *OrderExecutor) Sell(tradeLimit model.TradeLimit, opened model.Order, pr
 	closings := m.OrderRepository.GetClosesOrderList(opened)
 	totalExecuted := 0.00
 	commission := 0.00
-	// @see https://www.binance.com/en/fee/trading
 	commission += opened.ExecutedQuantity * 0.0015
 	for _, closeOrder := range closings {
 		if closeOrder.IsClosed() {
@@ -449,65 +429,6 @@ func (m *OrderExecutor) Sell(tradeLimit model.TradeLimit, opened model.Order, pr
 	m.OrderRepository.DeleteBinanceOrder(binanceOrder)
 
 	return nil
-}
-
-func (m *OrderExecutor) ProcessSwap(order model.Order) bool {
-	switch true {
-	case m.BotService.IsSwapEnabled() && order.IsSwap():
-		log.Printf("[%s] Swap Order [%d] Mode: processing...", order.Symbol, order.Id)
-		m.SwapExecutor.Execute(order)
-		return true
-	case m.BotService.IsSwapEnabled():
-		possibleSwap := m.HasSwapOption(&order)
-		if possibleSwap != nil {
-			m.MakeSwap(order, *possibleSwap)
-		}
-
-		swapAction, err := m.SwapRepository.GetActiveSwapAction(order)
-		if err == nil && swapAction.OrderId == order.Id {
-			log.Printf("[%s] Swap Order [%d] Mode: processing...", order.Symbol, order.Id)
-			m.SwapExecutor.Execute(order)
-			return true
-		}
-
-		break
-	}
-
-	return false
-}
-
-func (m *OrderExecutor) TrySwap(order model.Order) {
-	if !m.BotService.IsSwapEnabled() {
-		return
-	}
-
-	swapChain := m.SwapRepository.GetSwapChainCache(order.GetBaseAsset())
-	if swapChain != nil {
-		possibleSwaps := m.SwapRepository.GetSwapChains(order.GetBaseAsset())
-
-		if len(possibleSwaps) == 0 {
-			m.SwapRepository.InvalidateSwapChainCache(order.GetBaseAsset())
-		}
-
-		for _, possibleSwap := range possibleSwaps {
-			violation := m.SwapValidator.Validate(possibleSwap, order)
-
-			if violation == nil {
-				chainCurrentPercent := m.SwapValidator.CalculatePercent(possibleSwap)
-				log.Printf(
-					"[%s] TRY SWAP -> Swap chain [%s] is found for order #%d, initial percent: %.2f, current = %.2f",
-					order.Symbol,
-					swapChain.Title,
-					order.Id,
-					swapChain.Percent,
-					chainCurrentPercent,
-				)
-				m.MakeSwap(order, possibleSwap)
-			} else {
-				log.Printf("TrySwap: %s", violation.Error())
-			}
-		}
-	}
 }
 
 // todo: order has to be Interface
@@ -601,9 +522,6 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 
 			end := m.TimeService.GetNowUnix()
 
-			if m.CheckIsTimeToSwap(binanceOrder, orderManageChannel, control) {
-				return
-			}
 			if m.CheckIsRiskyBuy(tradeLimit, binanceOrder, orderManageChannel, control) {
 				return
 			}
@@ -641,7 +559,6 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 				timer = 0
 				m.TimeService.WaitSeconds(1)
 
-				// check only new timeout
 				if end >= (start+*ttl) && binanceOrder.IsNew() {
 					if m.CheckIsSellExpired(binanceOrder, orderManageChannel, control) {
 						return
@@ -653,7 +570,6 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 				}
 			} else {
 				manualOrder := m.OrderRepository.GetManualOrder(binanceOrder.Symbol)
-				// cancel current immediately on new manual order
 				if manualOrder != nil && manualOrder.Price != binanceOrder.Price {
 					if m.TryCancel(binanceOrder, orderManageChannel, control, func() {}, false) {
 						return
@@ -721,7 +637,6 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 		m.OrderRepository.SetBinanceOrder(binanceOrder)
 
 		if binanceOrder.IsPartiallyFilled() {
-			// Add 5 minutes more if ExecutedQty moves up!
 			if binanceOrder.GetExecutedQuantity() > executedQty {
 				seconds = seconds + (60 * 5)
 			}
@@ -765,31 +680,9 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 		control <- "continue"
 	}
 
-	// If you cancel an order that has already been partially filled,
-	// the cryptocurrency or fiat currency that was used to fill the order
-	// will be returned to your account. The remaining cryptocurrency or fiat
-	// currency will be used to fill other orders that are waiting to be executed.
-	// {
-	//    "symbol": "ETHUSDT",
-	//    "origClientOrderId": "aSUn6e7pktn5fVFuNEb0TK",
-	//    "orderId": 31314,
-	//    "orderListId": -1,
-	//    "clientOrderId": "wnpmGUt6RgoyuZB48NXbFG",
-	//    "transactTime": 1701886419972,
-	//    "price": "2100.93000000",
-	//    "origQty": "0.04750000",
-	//    "executedQty": "0.04670000",
-	//    "cummulativeQuoteQty": "98.11343100",
-	//    "status": "CANCELED",
-	//    "timeInForce": "GTC",
-	//    "type": "LIMIT",
-	//    "side": "BUY",
-	//    "selfTradePreventionMode": "EXPIRE_MAKER"
-	//}
 	cancelOrder, err := m.Binance.CancelOrder(binanceOrder.Symbol, binanceOrder.OrderId)
 
 	if err != nil {
-		// Possible case: {"code": -2011,"msg": "Order was not canceled due to cancel restrictions."}
 		log.Printf("[%s] Cancel failed: %s", binanceOrder.Symbol, err.Error())
 		queryOrder, retryErr := m.Binance.QueryOrder(binanceOrder.Symbol, binanceOrder.OrderId)
 
@@ -802,7 +695,6 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 				return binanceOrder, nil
 			}
 
-			// Just in case of bug...
 			if binanceOrder.IsPartiallyFilled() {
 				log.Printf(
 					"[%s] Order [%s] status is [%s], try again waitExecution...",
@@ -814,7 +706,6 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 				return m.waitExecution(binanceOrder, 120)
 			}
 
-			// Just in case of bug...
 			if binanceOrder.IsNew() {
 				log.Printf(
 					"[%s] Order [%s] status is [%s], try again waitExecution...",
@@ -850,8 +741,6 @@ func (m *OrderExecutor) waitExecution(binanceOrder model.BinanceOrder, seconds i
 	binanceOrder = cancelOrder
 	m.OrderRepository.SetBinanceOrder(binanceOrder)
 	control <- "stop"
-
-	// handle cancel error and get again
 
 	if binanceOrder.HasExecutedQuantity() {
 		log.Printf(
@@ -1051,12 +940,10 @@ func (m *OrderExecutor) CheckIsTimeToCancel(
 				return false
 			}
 
-			// Check is sell price changed
 			newSellPrice, priceErr := m.PriceCalculator.CalculateSell(tradeLimit, *openedBuyPosition)
 			if priceErr == nil {
 				priceDiff := math.Abs(newSellPrice - m.Formatter.FormatPrice(tradeLimit, binanceOrder.Price))
 
-				// Allow 2 points diff
 				if priceDiff > (tradeLimit.MinPrice * 2) {
 					log.Printf(
 						"[%s] Sell Price is changed %.8f -> %.8f diff = %.8f",
@@ -1066,7 +953,6 @@ func (m *OrderExecutor) CheckIsTimeToCancel(
 						priceDiff,
 					)
 
-					// Do cancel operation
 					if m.TryCancel(binanceOrder, orderManageChannel, control, func() {}, true) {
 						return true
 					}
@@ -1114,7 +1000,6 @@ func (m *OrderExecutor) CheckIsTimeToSell(
 
 	openedBuyPosition := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
 
-	// [BUY] Check is it time to sell (maybe we have already partially filled)
 	if openedBuyPosition != nil && binanceOrder.IsPartiallyFilled() && binanceOrder.GetProfitPercent(kline.Close.Value()).Gte(m.ProfitService.GetMinProfitPercent(openedBuyPosition)) {
 		log.Printf(
 			"[%s] Max profit percent reached, current profit is: %.2f, %s [%s] order is cancelled",
@@ -1125,87 +1010,6 @@ func (m *OrderExecutor) CheckIsTimeToSell(
 		)
 		if m.TryCancel(binanceOrder, orderManageChannel, control, func() {}, false) {
 			return true
-		}
-	}
-
-	return false
-}
-
-func (m *OrderExecutor) HasSwapOption(openedBuyPosition *model.Order) *model.SwapChainEntity {
-	swapChain := m.SwapRepository.GetSwapChainCache(openedBuyPosition.GetBaseAsset())
-	if swapChain != nil {
-		possibleSwaps := m.SwapRepository.GetSwapChains(openedBuyPosition.GetBaseAsset())
-
-		if len(possibleSwaps) == 0 {
-			m.SwapRepository.InvalidateSwapChainCache(openedBuyPosition.GetBaseAsset())
-		}
-
-		kline := m.ExchangeRepository.GetCurrentKline(openedBuyPosition.Symbol)
-
-		if kline == nil {
-			return nil
-		}
-
-		for _, possibleSwap := range possibleSwaps {
-			turboSwap := possibleSwap.Percent.Gte(model.Percent(m.TurboSwapProfitPercent))
-			isTimeToSwap := openedBuyPosition.GetPositionTime().GetMinutes() >= m.BotService.GetSwapConfig().OrderTimeTrigger.GetMinutes() && openedBuyPosition.GetProfitPercent(kline.Close.Value(), m.BotService.UseSwapCapital()).Lte(model.Percent(m.BotService.GetSwapConfig().FallPercentTrigger)) && !openedBuyPosition.IsSwap()
-
-			if !turboSwap && !isTimeToSwap {
-				break
-			}
-
-			violation := m.SwapValidator.Validate(possibleSwap, *openedBuyPosition)
-
-			if violation == nil {
-				chainCurrentPercent := m.SwapValidator.CalculatePercent(possibleSwap)
-				log.Printf(
-					"[%s] Swap chain [%s] is found for order #%d, initial percent: %.2f, current = %.2f",
-					openedBuyPosition.Symbol,
-					swapChain.Title,
-					openedBuyPosition.Id,
-					swapChain.Percent,
-					chainCurrentPercent,
-				)
-
-				return &possibleSwap
-			} else {
-				log.Printf("CheckIsTimeToSwap: %s", violation.Error())
-			}
-		}
-	}
-
-	return nil
-}
-
-func (m *OrderExecutor) CheckIsTimeToSwap(
-	binanceOrder *model.BinanceOrder,
-	orderManageChannel chan string,
-	control chan string,
-) bool {
-	if !m.BotService.IsSwapEnabled() {
-		return false
-	}
-
-	kline := m.ExchangeRepository.GetCurrentKline(binanceOrder.Symbol)
-
-	if kline == nil {
-		return false
-	}
-
-	if binanceOrder.IsSell() && binanceOrder.IsNew() {
-		openedBuyPosition := m.OrderRepository.GetOpenedOrderCached(binanceOrder.Symbol, "BUY")
-
-		// Try arbitrage for long orders >= 4 hours and with profit < -1.00%
-		if openedBuyPosition != nil {
-			possibleSwap := m.HasSwapOption(openedBuyPosition)
-			if possibleSwap != nil {
-				swapCallback := func() {
-					m.MakeSwap(*openedBuyPosition, *possibleSwap)
-				}
-				if m.TryCancel(binanceOrder, orderManageChannel, control, swapCallback, true) {
-					return true
-				}
-			}
 		}
 	}
 
@@ -1256,79 +1060,10 @@ func (m *OrderExecutor) CalculateSellQuantity(order model.Order) float64 {
 	}
 
 	if balance > sellQuantity {
-		// User can have own asset which bot is not allowed to sell!
 		return sellQuantity
 	}
 
 	return balance
-}
-
-func (m *OrderExecutor) MakeSwap(order model.Order, swapChain model.SwapChainEntity) {
-	baseAsset := order.GetBaseAsset()
-
-	if baseAsset != swapChain.SwapOne.BaseAsset {
-		log.Printf("[%s] Wrong swap asset given %s, expected %s", order.Symbol, swapChain.SwapOne.BaseAsset, baseAsset)
-
-		return
-	}
-
-	assetBalance, err := m.BalanceService.GetAssetBalance(baseAsset, false)
-
-	if err != nil {
-		return
-	}
-
-	startQuantity := order.GetPositionQuantityWithSwap()
-	if startQuantity > assetBalance {
-		startQuantity = assetBalance
-	}
-
-	swapAction, err := m.SwapRepository.GetActiveSwapAction(order)
-
-	if err == nil {
-		log.Printf("[%s] Swap has already exists: %s", swapChain.SwapOne.BaseAsset, swapAction.Status)
-
-		return
-	}
-
-	// todo: transaction
-	// create swap
-	_, err = m.SwapRepository.CreateSwapAction(model.SwapAction{
-		Id:              0,
-		OrderId:         order.Id,
-		BotId:           m.CurrentBot.Id,
-		SwapChainId:     swapChain.Id,
-		Asset:           baseAsset,
-		Status:          model.SwapActionStatusPending,
-		StartTimestamp:  m.TimeService.GetNowUnix(),
-		StartQuantity:   startQuantity,
-		SwapOneSymbol:   swapChain.SwapOne.GetSymbol(),
-		SwapOnePrice:    swapChain.SwapOne.Price,
-		SwapOneSide:     &swapChain.SwapOne.Operation,
-		SwapTwoSymbol:   swapChain.SwapTwo.GetSymbol(),
-		SwapTwoPrice:    swapChain.SwapTwo.Price,
-		SwapTwoSide:     &swapChain.SwapTwo.Operation,
-		SwapThreeSymbol: swapChain.SwapThree.GetSymbol(),
-		SwapThreePrice:  swapChain.SwapThree.Price,
-		SwapThreeSide:   &swapChain.SwapThree.Operation,
-	})
-
-	if err != nil {
-		log.Printf(
-			"[%s] Swap couldn't be created: %s",
-			swapChain.SwapOne.BaseAsset,
-			err.Error(),
-		)
-
-		return
-	}
-
-	// enable order swap mode
-	order.Swap = true
-	err = m.OrderRepository.Update(order)
-	if err == nil {
-		log.Printf("[%s] Swap order mode enabled [%s]", order.Symbol, swapChain.Title)
-	}
 }
 
 func (m *OrderExecutor) UpdateCommission(balanceBefore float64, order model.Order) {
@@ -1466,7 +1201,6 @@ func (m *OrderExecutor) recoverCommission(order model.Order) {
 func (m *OrderExecutor) CheckBalance(symbol string, priceUsdt float64, quantity float64) error {
 	cached, _ := m.findBinanceOrder(symbol, "BUY", true)
 
-	// Check balance for new order
 	if cached == nil {
 		usdtAvailableBalance, err := m.BalanceService.GetAssetBalance("USDT", true)
 
@@ -1494,7 +1228,6 @@ func (m *OrderExecutor) CheckMinBalance(limit model.TradeLimit, kLine model.KLin
 
 	cached, _ := m.findBinanceOrder(limit.Symbol, "BUY", true)
 
-	// Check balance for new order
 	if cached == nil {
 		usdtAvailableBalance, err := m.BalanceService.GetAssetBalance("USDT", true)
 
@@ -1521,11 +1254,7 @@ func (m *OrderExecutor) HasCancelRequest(symbol string) bool {
 		delete(m.CancelRequestMap, symbol)
 	}(symbol)
 
-	if value {
-		return true
-	}
-
-	return false
+	return value
 }
 
 func (m *OrderExecutor) SetCancelRequest(symbol string) {

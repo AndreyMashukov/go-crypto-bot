@@ -2,12 +2,12 @@ package tests
 
 import (
 	"errors"
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/exchange"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"sync"
 	"testing"
 	"time"
@@ -20,16 +20,11 @@ func TestSellAction(t *testing.T) {
 	binance := new(ExchangeOrderAPIMock)
 	orderRepository := new(OrderStorageMock)
 	exchangeRepository := new(ExchangeTradeInfoMock)
-	swapRepository := new(SwapRepositoryMock)
 	priceCalculator := new(PriceCalculatorMock)
-	swapExecutor := new(SwapExecutorMock)
-	swapValidator := new(SwapValidatorMock)
 	timeService := new(TimeServiceMock)
 	telegramNotificatorMock := new(TelegramNotificatorMock)
 
 	profitServiceMock := new(ProfitServiceMock)
-
-	swapRepository.On("GetSwapChainCache", "ETH").Return(nil)
 
 	lockChannel := make(chan model.Lock)
 
@@ -56,7 +51,6 @@ func TestSellAction(t *testing.T) {
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	botServiceMock := new(BotServiceMock)
-	botServiceMock.On("IsSwapEnabled").Return(true)
 	botServiceMock.On("UseSwapCapital").Return(true)
 
 	orderExecutor := exchange.OrderExecutor{
@@ -71,11 +65,8 @@ func TestSellAction(t *testing.T) {
 		Binance:            binance,
 		OrderRepository:    orderRepository,
 		ExchangeRepository: exchangeRepository,
-		SwapRepository:     swapRepository,
 		PriceCalculator:    priceCalculator,
 		ProfitService:      profitServiceMock,
-		SwapExecutor:       swapExecutor,
-		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
 		BotService:         botServiceMock,
 		LockChannel:        &lockChannel,
@@ -112,22 +103,14 @@ func TestSellAction(t *testing.T) {
 		Symbol: "ETHUSDT",
 		Asks: [][2]model.Number{
 			{
-				{
-					2212.92,
-				},
-				{
-					0.009,
-				},
+				{Value: 2212.92},
+				{Value: 0.009},
 			},
 		},
 		Bids: [][2]model.Number{
 			{
-				{
-					2212.92,
-				},
-				{
-					0.009,
-				},
+				{Value: 2212.92},
+				{Value: 0.009},
 			},
 		},
 	})
@@ -202,14 +185,9 @@ func TestSellFoundFilled(t *testing.T) {
 	binance := new(ExchangeOrderAPIMock)
 	orderRepository := new(OrderStorageMock)
 	exchangeRepository := new(ExchangeTradeInfoMock)
-	swapRepository := new(SwapRepositoryMock)
 	priceCalculator := new(PriceCalculatorMock)
-	swapExecutor := new(SwapExecutorMock)
-	swapValidator := new(SwapValidatorMock)
 	timeService := new(TimeServiceMock)
 	telegramNotificatorMock := new(TelegramNotificatorMock)
-
-	swapRepository.On("GetSwapChainCache", "ETH").Return(nil)
 
 	lockChannel := make(chan model.Lock)
 	lossSecurityMock := new(LossSecurityMock)
@@ -235,7 +213,6 @@ func TestSellFoundFilled(t *testing.T) {
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	botServiceMock := new(BotServiceMock)
-	botServiceMock.On("IsSwapEnabled").Return(true)
 	botServiceMock.On("UseSwapCapital").Return(true)
 
 	orderExecutor := exchange.OrderExecutor{
@@ -250,11 +227,8 @@ func TestSellFoundFilled(t *testing.T) {
 		Binance:            binance,
 		OrderRepository:    orderRepository,
 		ExchangeRepository: exchangeRepository,
-		SwapRepository:     swapRepository,
 		PriceCalculator:    priceCalculator,
 		ProfitService:      profitServiceMock,
-		SwapExecutor:       swapExecutor,
-		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
 		BotService:         botServiceMock,
 		LockChannel:        &lockChannel,
@@ -292,22 +266,14 @@ func TestSellFoundFilled(t *testing.T) {
 		Symbol: "ETHUSDT",
 		Asks: [][2]model.Number{
 			{
-				{
-					2212.92,
-				},
-				{
-					0.009,
-				},
+				{Value: 2212.92},
+				{Value: 0.009},
 			},
 		},
 		Bids: [][2]model.Number{
 			{
-				{
-					2212.92,
-				},
-				{
-					0.009,
-				},
+				{Value: 2212.92},
+				{Value: 0.009},
 			},
 		},
 	})
@@ -371,14 +337,9 @@ func TestSellCancelledInProcess(t *testing.T) {
 	binance := new(ExchangeOrderAPIMock)
 	orderRepository := new(OrderStorageMock)
 	exchangeRepository := new(ExchangeTradeInfoMock)
-	swapRepository := new(SwapRepositoryMock)
 	priceCalculator := new(PriceCalculatorMock)
-	swapExecutor := new(SwapExecutorMock)
-	swapValidator := new(SwapValidatorMock)
 	timeService := new(TimeServiceMock)
 	telegramNotificatorMock := new(TelegramNotificatorMock)
-
-	swapRepository.On("GetSwapChainCache", "ETH").Return(nil)
 
 	lockChannel := make(chan model.Lock)
 	lossSecurityMock := new(LossSecurityMock)
@@ -404,7 +365,6 @@ func TestSellCancelledInProcess(t *testing.T) {
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	botServiceMock := new(BotServiceMock)
-	botServiceMock.On("IsSwapEnabled").Return(true)
 	botServiceMock.On("UseSwapCapital").Return(true)
 
 	orderExecutor := exchange.OrderExecutor{
@@ -419,11 +379,8 @@ func TestSellCancelledInProcess(t *testing.T) {
 		Binance:            binance,
 		OrderRepository:    orderRepository,
 		ExchangeRepository: exchangeRepository,
-		SwapRepository:     swapRepository,
 		PriceCalculator:    priceCalculator,
 		ProfitService:      profitServiceMock,
-		SwapExecutor:       swapExecutor,
-		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
 		BotService:         botServiceMock,
 		LockChannel:        &lockChannel,
@@ -460,22 +417,14 @@ func TestSellCancelledInProcess(t *testing.T) {
 		Symbol: "ETHUSDT",
 		Asks: [][2]model.Number{
 			{
-				{
-					2212.92,
-				},
-				{
-					0.009,
-				},
+				{Value: 2212.92},
+				{Value: 0.009},
 			},
 		},
 		Bids: [][2]model.Number{
 			{
-				{
-					2212.92,
-				},
-				{
-					0.009,
-				},
+				{Value: 2212.92},
+				{Value: 0.009},
 			},
 		},
 	})
@@ -536,14 +485,9 @@ func TestSellQueryFail(t *testing.T) {
 	binance := new(ExchangeOrderAPIMock)
 	orderRepository := new(OrderStorageMock)
 	exchangeRepository := new(ExchangeTradeInfoMock)
-	swapRepository := new(SwapRepositoryMock)
 	priceCalculator := new(PriceCalculatorMock)
-	swapExecutor := new(SwapExecutorMock)
-	swapValidator := new(SwapValidatorMock)
 	timeService := new(TimeServiceMock)
 	telegramNotificatorMock := new(TelegramNotificatorMock)
-
-	swapRepository.On("GetSwapChainCache", "ETH").Return(nil)
 
 	lockChannel := make(chan model.Lock)
 	lossSecurityMock := new(LossSecurityMock)
@@ -569,7 +513,6 @@ func TestSellQueryFail(t *testing.T) {
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	botServiceMock := new(BotServiceMock)
-	botServiceMock.On("IsSwapEnabled").Return(true)
 	botServiceMock.On("UseSwapCapital").Return(true)
 
 	orderExecutor := exchange.OrderExecutor{
@@ -584,11 +527,8 @@ func TestSellQueryFail(t *testing.T) {
 		Binance:            binance,
 		OrderRepository:    orderRepository,
 		ExchangeRepository: exchangeRepository,
-		SwapRepository:     swapRepository,
 		PriceCalculator:    priceCalculator,
 		ProfitService:      profitServiceMock,
-		SwapExecutor:       swapExecutor,
-		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
 		BotService:         botServiceMock,
 		LockChannel:        &lockChannel,
@@ -625,22 +565,14 @@ func TestSellQueryFail(t *testing.T) {
 		Symbol: "ETHUSDT",
 		Asks: [][2]model.Number{
 			{
-				{
-					2212.92,
-				},
-				{
-					0.009,
-				},
+				{Value: 2212.92},
+				{Value: 0.009},
 			},
 		},
 		Bids: [][2]model.Number{
 			{
-				{
-					2212.92,
-				},
-				{
-					0.009,
-				},
+				{Value: 2212.92},
+				{Value: 0.009},
 			},
 		},
 	})
@@ -691,14 +623,9 @@ func TestSellClosingAction(t *testing.T) {
 	binance := new(ExchangeOrderAPIMock)
 	orderRepository := new(OrderStorageMock)
 	exchangeRepository := new(ExchangeTradeInfoMock)
-	swapRepository := new(SwapRepositoryMock)
 	priceCalculator := new(PriceCalculatorMock)
-	swapExecutor := new(SwapExecutorMock)
-	swapValidator := new(SwapValidatorMock)
 	timeService := new(TimeServiceMock)
 	telegramNotificatorMock := new(TelegramNotificatorMock)
-
-	swapRepository.On("GetSwapChainCache", "BTC").Return(nil)
 
 	lockChannel := make(chan model.Lock)
 	lossSecurityMock := new(LossSecurityMock)
@@ -724,7 +651,6 @@ func TestSellClosingAction(t *testing.T) {
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	botServiceMock := new(BotServiceMock)
-	botServiceMock.On("IsSwapEnabled").Return(true)
 	botServiceMock.On("UseSwapCapital").Return(true)
 
 	orderExecutor := exchange.OrderExecutor{
@@ -739,11 +665,8 @@ func TestSellClosingAction(t *testing.T) {
 		Binance:            binance,
 		OrderRepository:    orderRepository,
 		ExchangeRepository: exchangeRepository,
-		SwapRepository:     swapRepository,
 		PriceCalculator:    priceCalculator,
 		ProfitService:      profitServiceMock,
-		SwapExecutor:       swapExecutor,
-		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
 		BotService:         botServiceMock,
 		LockChannel:        &lockChannel,
@@ -780,22 +703,14 @@ func TestSellClosingAction(t *testing.T) {
 		Symbol: "BTCUSDT",
 		Asks: [][2]model.Number{
 			{
-				{
-					43496.99,
-				},
-				{
-					0.009,
-				},
+				{Value: 43496.99},
+				{Value: 0.009},
 			},
 		},
 		Bids: [][2]model.Number{
 			{
-				{
-					43496.99,
-				},
-				{
-					0.009,
-				},
+				{Value: 43496.99},
+				{Value: 0.009},
 			},
 		},
 	})
@@ -870,14 +785,9 @@ func TestSellClosingTrxAction(t *testing.T) {
 	binance := new(ExchangeOrderAPIMock)
 	orderRepository := new(OrderStorageMock)
 	exchangeRepository := new(ExchangeTradeInfoMock)
-	swapRepository := new(SwapRepositoryMock)
 	priceCalculator := new(PriceCalculatorMock)
-	swapExecutor := new(SwapExecutorMock)
-	swapValidator := new(SwapValidatorMock)
 	timeService := new(TimeServiceMock)
 	telegramNotificatorMock := new(TelegramNotificatorMock)
-
-	swapRepository.On("GetSwapChainCache", "TRX").Return(nil)
 
 	lockChannel := make(chan model.Lock)
 	lossSecurityMock := new(LossSecurityMock)
@@ -903,7 +813,6 @@ func TestSellClosingTrxAction(t *testing.T) {
 	lossSecurityMock.On("IsRiskyBuy", mock.Anything, tradeLimit).Return(false)
 
 	botServiceMock := new(BotServiceMock)
-	botServiceMock.On("IsSwapEnabled").Return(true)
 	botServiceMock.On("UseSwapCapital").Return(true)
 
 	orderExecutor := exchange.OrderExecutor{
@@ -918,11 +827,8 @@ func TestSellClosingTrxAction(t *testing.T) {
 		Binance:            binance,
 		OrderRepository:    orderRepository,
 		ExchangeRepository: exchangeRepository,
-		SwapRepository:     swapRepository,
 		PriceCalculator:    priceCalculator,
 		ProfitService:      profitServiceMock,
-		SwapExecutor:       swapExecutor,
-		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
 		BotService:         botServiceMock,
 		LockChannel:        &lockChannel,
@@ -945,8 +851,8 @@ func TestSellClosingTrxAction(t *testing.T) {
 		Symbol:      "TRXUSDT",
 		Side:        "SELL",
 		ExecutedQty: 0.00,
-		OrigQty:     382.1,   //382.5
-		Price:       0.10692, // 0.10457
+		OrigQty:     382.1,
+		Price:       0.10692,
 		Status:      "NEW",
 	}
 	timeService.On("GetNowDateTimeString").Return("2023-12-28 00:52:00")
@@ -959,22 +865,14 @@ func TestSellClosingTrxAction(t *testing.T) {
 		Symbol: "TRXUSDT",
 		Asks: [][2]model.Number{
 			{
-				{
-					0.10692,
-				},
-				{
-					0.009,
-				},
+				{Value: 0.10692},
+				{Value: 0.009},
 			},
 		},
 		Bids: [][2]model.Number{
 			{
-				{
-					0.10692,
-				},
-				{
-					0.009,
-				},
+				{Value: 0.10692},
+				{Value: 0.009},
 			},
 		},
 	})
@@ -1007,8 +905,8 @@ func TestSellClosingTrxAction(t *testing.T) {
 		Symbol:              "TRXUSDT",
 		Side:                "SELL",
 		ExecutedQty:         382.1,
-		OrigQty:             382.1,   //382.5
-		Price:               0.10692, // 0.10457
+		OrigQty:             382.1,
+		Price:               0.10692,
 		Status:              "FILLED",
 		CummulativeQuoteQty: 382.1 * 0.10692,
 	}
@@ -1041,190 +939,6 @@ func TestSellClosingTrxAction(t *testing.T) {
 	assertion.Equal(openedExternalId, *orderRepository.Updated.ExternalId)
 }
 
-func TestCreateSwapAction(t *testing.T) {
-	assertion := assert.New(t)
-
-	profitServiceMock := new(ProfitServiceMock)
-	balanceService := new(BalanceServiceMock)
-	binance := new(ExchangeOrderAPIMock)
-	orderRepository := new(OrderStorageMock)
-	exchangeRepository := new(ExchangeTradeInfoMock)
-	swapRepository := new(SwapRepositoryMock)
-	priceCalculator := new(PriceCalculatorMock)
-	swapExecutor := new(SwapExecutorMock)
-	swapValidator := new(SwapValidatorMock)
-	timeService := new(TimeServiceMock)
-	telegramNotificatorMock := new(TelegramNotificatorMock)
-	lossSecurityMock := new(LossSecurityMock)
-	botServiceMock := new(BotServiceMock)
-	lockChannel := make(chan model.Lock)
-
-	orderExecutor := exchange.OrderExecutor{
-		TradeStack:   &exchange.TradeStack{},
-		LossSecurity: lossSecurityMock,
-		CurrentBot: &model.Bot{
-			Id:      999,
-			BotUuid: uuid.New().String(),
-		},
-		TimeService:        timeService,
-		BalanceService:     balanceService,
-		Binance:            binance,
-		OrderRepository:    orderRepository,
-		ExchangeRepository: exchangeRepository,
-		SwapRepository:     swapRepository,
-		PriceCalculator:    priceCalculator,
-		ProfitService:      profitServiceMock,
-		SwapExecutor:       swapExecutor,
-		SwapValidator:      swapValidator,
-		Formatter:          &utils.Formatter{},
-		BotService:         botServiceMock,
-		LockChannel:        &lockChannel,
-		Lock:               make(map[string]bool),
-		TradeLockMutex:     sync.RWMutex{},
-		CallbackManager:    telegramNotificatorMock,
-	}
-
-	order := model.Order{
-		Id:               777,
-		Symbol:           "BTCUSDT",
-		ExecutedQuantity: 1002.00,
-	}
-
-	swapChain := model.SwapChainEntity{
-		Id: 888,
-		SwapOne: &model.SwapTransitionEntity{
-			BaseAsset:  "BTC",
-			QuoteAsset: "ETH",
-			Price:      1000.00, // fake
-		},
-		SwapTwo: &model.SwapTransitionEntity{
-			BaseAsset:  "ETH",
-			QuoteAsset: "SOL",
-			Price:      100.00, // fake
-		},
-		SwapThree: &model.SwapTransitionEntity{
-			BaseAsset:  "SOL",
-			QuoteAsset: "BTC",
-			Price:      4000.00, // fake
-		},
-	}
-
-	balanceService.On("GetAssetBalance", "BTC", false).Return(2000.00, nil)
-	swapRepository.On("GetActiveSwapAction", order).Return(model.SwapAction{}, errors.New("test!"))
-	timeService.On("GetNowUnix").Return(9999)
-
-	swapId := int64(1)
-	swapRepository.On("CreateSwapAction", mock.Anything).Times(1).Return(&swapId, nil)
-	orderRepository.On("Update", mock.Anything).Return(nil)
-
-	orderExecutor.MakeSwap(order, swapChain)
-
-	assertion.Equal(1002.00, swapRepository.swapAction.StartQuantity)
-	assertion.Equal(1000.00, swapRepository.swapAction.SwapOnePrice)
-	assertion.Equal(100.00, swapRepository.swapAction.SwapTwoPrice)
-	assertion.Equal(4000.00, swapRepository.swapAction.SwapThreePrice)
-	assertion.Equal("BTCETH", swapRepository.swapAction.SwapOneSymbol)
-	assertion.Equal("ETHSOL", swapRepository.swapAction.SwapTwoSymbol)
-	assertion.Equal("SOLBTC", swapRepository.swapAction.SwapThreeSymbol)
-	assertion.Equal("BTC", swapRepository.swapAction.Asset)
-	assertion.Equal(model.SwapActionStatusPending, swapRepository.swapAction.Status)
-	assertion.Equal(order.Id, swapRepository.swapAction.OrderId)
-	assertion.Equal(order.Id, orderRepository.Updated.Id)
-	assertion.True(orderRepository.Updated.Swap)
-}
-
-func TestCreateSwapActionLessBalance(t *testing.T) {
-	assertion := assert.New(t)
-
-	profitServiceMock := new(ProfitServiceMock)
-	balanceService := new(BalanceServiceMock)
-	binance := new(ExchangeOrderAPIMock)
-	orderRepository := new(OrderStorageMock)
-	exchangeRepository := new(ExchangeTradeInfoMock)
-	swapRepository := new(SwapRepositoryMock)
-	priceCalculator := new(PriceCalculatorMock)
-	swapExecutor := new(SwapExecutorMock)
-	swapValidator := new(SwapValidatorMock)
-	timeService := new(TimeServiceMock)
-	telegramNotificatorMock := new(TelegramNotificatorMock)
-	lossSecurityMock := new(LossSecurityMock)
-	botServiceMock := new(BotServiceMock)
-	lockChannel := make(chan model.Lock)
-
-	orderExecutor := exchange.OrderExecutor{
-		TradeStack:   &exchange.TradeStack{},
-		LossSecurity: lossSecurityMock,
-		CurrentBot: &model.Bot{
-			Id:      999,
-			BotUuid: uuid.New().String(),
-		},
-		TimeService:        timeService,
-		BalanceService:     balanceService,
-		Binance:            binance,
-		OrderRepository:    orderRepository,
-		ExchangeRepository: exchangeRepository,
-		SwapRepository:     swapRepository,
-		PriceCalculator:    priceCalculator,
-		ProfitService:      profitServiceMock,
-		SwapExecutor:       swapExecutor,
-		SwapValidator:      swapValidator,
-		Formatter:          &utils.Formatter{},
-		BotService:         botServiceMock,
-		LockChannel:        &lockChannel,
-		Lock:               make(map[string]bool),
-		TradeLockMutex:     sync.RWMutex{},
-		CallbackManager:    telegramNotificatorMock,
-	}
-
-	order := model.Order{
-		Id:               777,
-		Symbol:           "BTCUSDT",
-		ExecutedQuantity: 1002.00,
-	}
-
-	swapChain := model.SwapChainEntity{
-		Id: 888,
-		SwapOne: &model.SwapTransitionEntity{
-			BaseAsset:  "BTC",
-			QuoteAsset: "ETH",
-			Price:      1000.00, // fake
-		},
-		SwapTwo: &model.SwapTransitionEntity{
-			BaseAsset:  "ETH",
-			QuoteAsset: "SOL",
-			Price:      100.00, // fake
-		},
-		SwapThree: &model.SwapTransitionEntity{
-			BaseAsset:  "SOL",
-			QuoteAsset: "BTC",
-			Price:      4000.00, // fake
-		},
-	}
-
-	balanceService.On("GetAssetBalance", "BTC", false).Return(900.00, nil)
-	swapRepository.On("GetActiveSwapAction", order).Return(model.SwapAction{}, errors.New("test!"))
-	timeService.On("GetNowUnix").Return(9999)
-
-	swapId := int64(1)
-	swapRepository.On("CreateSwapAction", mock.Anything).Times(1).Return(&swapId, nil)
-	orderRepository.On("Update", mock.Anything).Return(nil)
-
-	orderExecutor.MakeSwap(order, swapChain)
-
-	assertion.Equal(900.00, swapRepository.swapAction.StartQuantity)
-	assertion.Equal(1000.00, swapRepository.swapAction.SwapOnePrice)
-	assertion.Equal(100.00, swapRepository.swapAction.SwapTwoPrice)
-	assertion.Equal(4000.00, swapRepository.swapAction.SwapThreePrice)
-	assertion.Equal("BTCETH", swapRepository.swapAction.SwapOneSymbol)
-	assertion.Equal("ETHSOL", swapRepository.swapAction.SwapTwoSymbol)
-	assertion.Equal("SOLBTC", swapRepository.swapAction.SwapThreeSymbol)
-	assertion.Equal("BTC", swapRepository.swapAction.Asset)
-	assertion.Equal(model.SwapActionStatusPending, swapRepository.swapAction.Status)
-	assertion.Equal(order.Id, swapRepository.swapAction.OrderId)
-	assertion.Equal(order.Id, orderRepository.Updated.Id)
-	assertion.True(orderRepository.Updated.Swap)
-}
-
 func TestCheckIsTimeToCancel(t *testing.T) {
 	assertion := assert.New(t)
 
@@ -1233,10 +947,7 @@ func TestCheckIsTimeToCancel(t *testing.T) {
 	binance := new(ExchangeOrderAPIMock)
 	orderRepository := new(OrderStorageMock)
 	exchangeRepository := new(ExchangeTradeInfoMock)
-	swapRepository := new(SwapRepositoryMock)
 	priceCalculator := new(PriceCalculatorMock)
-	swapExecutor := new(SwapExecutorMock)
-	swapValidator := new(SwapValidatorMock)
 	timeService := new(TimeServiceMock)
 	telegramNotificatorMock := new(TelegramNotificatorMock)
 	lossSecurityMock := new(LossSecurityMock)
@@ -1255,11 +966,8 @@ func TestCheckIsTimeToCancel(t *testing.T) {
 		Binance:            binance,
 		OrderRepository:    orderRepository,
 		ExchangeRepository: exchangeRepository,
-		SwapRepository:     swapRepository,
 		PriceCalculator:    priceCalculator,
 		ProfitService:      profitServiceMock,
-		SwapExecutor:       swapExecutor,
-		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
 		BotService:         botServiceMock,
 		LockChannel:        &lockChannel,
@@ -1316,10 +1024,7 @@ func TestCheckIsTimeToCancelSamePrice(t *testing.T) {
 	binance := new(ExchangeOrderAPIMock)
 	orderRepository := new(OrderStorageMock)
 	exchangeRepository := new(ExchangeTradeInfoMock)
-	swapRepository := new(SwapRepositoryMock)
 	priceCalculator := new(PriceCalculatorMock)
-	swapExecutor := new(SwapExecutorMock)
-	swapValidator := new(SwapValidatorMock)
 	timeService := new(TimeServiceMock)
 	telegramNotificatorMock := new(TelegramNotificatorMock)
 	lossSecurityMock := new(LossSecurityMock)
@@ -1338,11 +1043,8 @@ func TestCheckIsTimeToCancelSamePrice(t *testing.T) {
 		Binance:            binance,
 		OrderRepository:    orderRepository,
 		ExchangeRepository: exchangeRepository,
-		SwapRepository:     swapRepository,
 		PriceCalculator:    priceCalculator,
 		ProfitService:      profitServiceMock,
-		SwapExecutor:       swapExecutor,
-		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
 		BotService:         botServiceMock,
 		LockChannel:        &lockChannel,
@@ -1386,10 +1088,7 @@ func TestCheckIsTimeToCancelPriceIsMoreThanOrder(t *testing.T) {
 	binance := new(ExchangeOrderAPIMock)
 	orderRepository := new(OrderStorageMock)
 	exchangeRepository := new(ExchangeTradeInfoMock)
-	swapRepository := new(SwapRepositoryMock)
 	priceCalculator := new(PriceCalculatorMock)
-	swapExecutor := new(SwapExecutorMock)
-	swapValidator := new(SwapValidatorMock)
 	timeService := new(TimeServiceMock)
 	telegramNotificatorMock := new(TelegramNotificatorMock)
 	lossSecurityMock := new(LossSecurityMock)
@@ -1408,11 +1107,8 @@ func TestCheckIsTimeToCancelPriceIsMoreThanOrder(t *testing.T) {
 		Binance:            binance,
 		OrderRepository:    orderRepository,
 		ExchangeRepository: exchangeRepository,
-		SwapRepository:     swapRepository,
 		PriceCalculator:    priceCalculator,
 		ProfitService:      profitServiceMock,
-		SwapExecutor:       swapExecutor,
-		SwapValidator:      swapValidator,
 		Formatter:          &utils.Formatter{},
 		BotService:         botServiceMock,
 		LockChannel:        &lockChannel,

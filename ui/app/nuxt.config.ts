@@ -1,53 +1,55 @@
 import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
+
 export default defineNuxtConfig({
+  compatibilityDate: '2025-07-15',
   ssr: true,
+  devtools: { enabled: process.env.NODE_ENV !== 'production' },
   css: [
     '@mdi/font/css/materialdesignicons.min.css',
-    '/public/fonts/Manrope.css',
-    '/public/custom.css',
   ],
   app: {
     head: {
-      script: [
-        {
-          src: "https://cdn.jsdelivr.net/npm/luxon@1.26.0",
-        },
-        {
-          src: "https://cdn.jsdelivr.net/npm/chart.js@3.0.1/dist/chart.js",
-        },
-        {
-          src: "/chartjs-adapter.js",
-        },
-        {
-          src: '/chartjs-chart-financial.js',
-        },
-        {
-          src: 'https://code.jivo.ru/widget/iVTuyV7xP2',
-          async: true,
-        },
+      title: 'go-crypto-bot — admin',
+      meta: [
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'robots', content: 'noindex, nofollow' },
       ],
-    }
+    },
   },
   build: {
-    transpile: ['vuetify', 'vue-flag-icon', 'rxjs'],
+    transpile: ['vuetify'],
   },
   modules: [
-    '@nuxt/eslint',
-    'nuxt-tradingview',
-    'nuxt-delay-hydration',
+    '@pinia/nuxt',
+    '@nuxtjs/i18n',
     (_options, nuxt) => {
       nuxt.hooks.hook('vite:extendConfig', (config) => {
-        // @ts-expect-error
+        config.plugins ||= []
+        // @ts-expect-error vite plugin typing
         config.plugins.push(vuetify({ autoImport: true }))
       })
     },
-    '@nuxtjs/i18n',
-    //...
   ],
-  delayHydration: {
-    // enables nuxt-delay-hydration in dev mode for testing
-    debug: process.env.NODE_ENV === 'development',
-    mode: 'init'
+  i18n: {
+    defaultLocale: 'ru',
+    strategy: 'prefix_except_default',
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'i18n_locale',
+      fallbackLocale: 'ru',
+      redirectOn: 'root',
+    },
+    lazy: true,
+    locales: [
+      { code: 'ru',      language: 'ru-RU', name: 'Русский',  file: 'ru.json' },
+      { code: 'en',      language: 'en-US', name: 'English',  file: 'en.json' },
+      { code: 'de',      language: 'de-DE', name: 'Deutsch',  file: 'de.json' },
+      { code: 'fr',      language: 'fr-FR', name: 'Français', file: 'fr.json' },
+      { code: 'es',      language: 'es-ES', name: 'Español', file: 'es.json' },
+      { code: 'ja',      language: 'ja-JP', name: '日本語',    file: 'ja.json' },
+      { code: 'zh-hans', language: 'zh-CN', name: '简体中文',   file: 'zh-hans.json' },
+      { code: 'ko',      language: 'ko-KR', name: '한국어',    file: 'ko.json' },
+    ],
   },
   vite: {
     vue: {
@@ -56,37 +58,13 @@ export default defineNuxtConfig({
       },
     },
   },
-  nitro: {
-    esbuild: {
-      options: {
-        target: 'esnext'
-      }
-    },
-  },
-  // @ts-ignore
   runtimeConfig: {
+    backend: {
+      apiBase: process.env.BACKEND_API_BASE ?? 'http://ui-server/api',
+    },
     public: {
-      baseUrl: process.env.API_BASE_URL,
-      s3Url: process.env.S3_DSN,
-      clientId: process.env.CLIENT_ID,
-      clientSecret: process.env.CLIENT_SECRET,
-      gtagId: 'GTM-P78QN32D',
-    }
-  },
-  i18n: {
-    strategy: 'prefix_except_default',
-    locales: [
-      {code: 'en', name: 'English'},
-      {code: 'ru', name: 'Русский'},
-    ],
-    defaultLocale: 'en',
-    vueI18n: './i18n.config.ts',
-    detectBrowserLanguage: {
-      useCookie: true,
-      alwaysRedirect: true,
-      cookieKey: 'i18n_redirected',
-      redirectOn: 'root',
-      fallbackLocale: 'en'
+      apiBase: '/api',
+      botUuid: process.env.BOT_UUID ?? '00000000-0000-0000-0000-000000000001',
     },
   },
 })

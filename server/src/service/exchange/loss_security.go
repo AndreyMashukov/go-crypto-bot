@@ -45,7 +45,6 @@ func (l *LossSecurity) IsRiskyBuy(binanceOrder model.BinanceOrder, limit model.T
 
 			cancelFallPercent := model.Percent(model.MinProfitPercent)
 
-			// If falls more than (min - 0.5%) cancel current
 			if fallPercent.Gte(cancelFallPercent) && minPrice-(minPrice*0.005) > kline.Close.Value() {
 				log.Printf(
 					"[%s] Close price RISK detected: %f > %f",

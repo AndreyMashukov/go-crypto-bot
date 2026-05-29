@@ -7,10 +7,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
+	"github.com/redis/go-redis/v9"
 	"log"
 	"os"
 	"slices"
@@ -23,7 +23,6 @@ import (
 type PythonMLBridge struct {
 	DataSetBuilder     *DataSetBuilder
 	ExchangeRepository *repository.ExchangeRepository
-	SwapRepository     *repository.SwapRepository
 	TimeService        *utils.TimeHelper
 	Mutex              *sync.RWMutex
 	LearnLock          *sync.RWMutex
@@ -320,11 +319,11 @@ func (p *PythonMLBridge) StartAutoLearn() {
 				if err != nil {
 					log.Printf("[%s] %s", s, err.Error())
 					p.TimeService.WaitSeconds(60)
-					wg.Add(1) // just to handle negative counter
+					wg.Add(1)
 					continue
 				}
 				p.TimeService.WaitSeconds(3600)
-				wg.Add(1) // just to handle negative counter
+				wg.Add(1)
 			}
 		}(symbol)
 	}

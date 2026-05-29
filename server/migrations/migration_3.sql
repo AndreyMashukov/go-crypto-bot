@@ -1,6 +1,11 @@
-alter table trade_limit add min_profit_percent double not null;
-alter table trade_limit add is_enabled tinyint not null;
-UPDATE trade_limit SET is_enabled = 1, min_profit_percent = 0.6 WHERE id > 0;
-alter table trade_limit add usdt_extra_budget double not null;
-alter table trade_limit add buy_on_fall_percent double not null;
-alter table orders add used_extra_budget double not null;
+alter table trade_limit add column min_profit_percent double precision not null default 0;
+alter table trade_limit add column is_enabled boolean not null default false;
+update trade_limit set is_enabled = true, min_profit_percent = 0.6 where id > 0;
+alter table trade_limit alter column min_profit_percent drop default;
+alter table trade_limit alter column is_enabled drop default;
+alter table trade_limit add column usdt_extra_budget double precision not null default 0;
+alter table trade_limit add column buy_on_fall_percent double precision not null default 0;
+alter table trade_limit alter column usdt_extra_budget drop default;
+alter table trade_limit alter column buy_on_fall_percent drop default;
+alter table orders add column used_extra_budget double precision not null default 0;
+alter table orders alter column used_extra_budget drop default;

@@ -46,8 +46,6 @@ func (t *TradeController) UpdateTradeLimitAction(w http.ResponseWriter, req *htt
 
 	var tradeLimit model.TradeLimit
 
-	// Try to decode the request body into the struct. If there is an error,
-	// respond to the client with the error message and a 400 status code.
 	err := json.NewDecoder(req.Body).Decode(&tradeLimit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -90,7 +88,7 @@ func (t *TradeController) UpdateTradeLimitAction(w http.ResponseWriter, req *htt
 	t.ExchangeRepository.SetTradeLimit(entity)
 
 	encodedRes, _ := json.Marshal(entity)
-	_, _ = fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprint(w, string(encodedRes))
 }
 
 func (t *TradeController) CreateTradeLimitAction(w http.ResponseWriter, req *http.Request) {
@@ -119,8 +117,6 @@ func (t *TradeController) CreateTradeLimitAction(w http.ResponseWriter, req *htt
 
 	var tradeLimit model.TradeLimit
 
-	// Try to decode the request body into the struct. If there is an error,
-	// respond to the client with the error message and a 400 status code.
 	err := json.NewDecoder(req.Body).Decode(&tradeLimit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -161,7 +157,7 @@ func (t *TradeController) CreateTradeLimitAction(w http.ResponseWriter, req *htt
 	t.ExchangeRepository.SetTradeLimit(entity)
 
 	encodedRes, _ := json.Marshal(entity)
-	_, _ = fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprint(w, string(encodedRes))
 }
 
 func (t *TradeController) GetTradeLimitsAction(w http.ResponseWriter, req *http.Request) {
@@ -191,7 +187,7 @@ func (t *TradeController) GetTradeLimitsAction(w http.ResponseWriter, req *http.
 	limits := t.ExchangeRepository.GetTradeLimits()
 
 	encodedRes, _ := json.Marshal(limits)
-	_, _ = fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprint(w, string(encodedRes))
 }
 
 func (t *TradeController) PostSignalAction(w http.ResponseWriter, req *http.Request) {
@@ -220,8 +216,6 @@ func (t *TradeController) PostSignalAction(w http.ResponseWriter, req *http.Requ
 
 	var signal model.Signal
 
-	// Try to decode the request body into the struct. If there is an error,
-	// respond to the client with the error message and a 400 status code.
 	err := json.NewDecoder(req.Body).Decode(&signal)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -280,7 +274,7 @@ func (t *TradeController) GetTradeStackAction(w http.ResponseWriter, req *http.R
 		http.Error(w, "Something went wrong", http.StatusServiceUnavailable)
 		return
 	}
-	_, _ = fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprint(w, string(encodedRes))
 }
 
 func (t *TradeController) SwitchTradeLimitAction(w http.ResponseWriter, req *http.Request) {
@@ -335,7 +329,7 @@ func (t *TradeController) SwitchTradeLimitAction(w http.ResponseWriter, req *htt
 	t.ExchangeRepository.SetTradeLimit(entity)
 
 	encodedRes, _ := json.Marshal(entity)
-	_, _ = fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprint(w, string(encodedRes))
 }
 
 func (t *TradeController) PatchSentimentAction(w http.ResponseWriter, req *http.Request) {
@@ -373,8 +367,6 @@ func (t *TradeController) PatchSentimentAction(w http.ResponseWriter, req *http.
 
 	var sentiment model.SentimentData
 
-	// Try to decode the request body into the struct. If there is an error,
-	// respond to the client with the error message and a 400 status code.
 	err = json.NewDecoder(req.Body).Decode(&sentiment)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -402,5 +394,5 @@ func (t *TradeController) PatchSentimentAction(w http.ResponseWriter, req *http.
 	t.ExchangeRepository.SetTradeLimit(entity)
 
 	encodedRes, _ := json.Marshal(entity)
-	_, _ = fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprint(w, string(encodedRes))
 }

@@ -1,2 +1,2 @@
-ALTER TABLE trade_limit DROP COLUMN buy_on_fall_percent;
-ALTER TABLE trade_limit DROP COLUMN usdt_extra_budget;
+alter table trade_limit drop column buy_on_fall_percent;
+alter table trade_limit drop column usdt_extra_budget;

@@ -11,7 +11,6 @@ type BotServiceInterface interface {
 	IsMasterBot() bool
 	GetTradeStackSorting() string
 	UseSwapCapital() bool
-	GetSwapConfig() model.SwapConfig
 }
 
 type BotService struct {
@@ -23,16 +22,13 @@ func (b *BotService) GetBot() model.Bot {
 	return b.BotRepository.GetCurrentBotCached(b.CurrentBot.Id)
 }
 func (b *BotService) IsSwapEnabled() bool {
-	return b.BotRepository.GetCurrentBotCached(b.CurrentBot.Id).IsSwapEnabled
+	return false
 }
 func (b *BotService) IsMasterBot() bool {
 	return b.BotRepository.GetCurrentBotCached(b.CurrentBot.Id).IsMasterBot
 }
 func (b *BotService) UseSwapCapital() bool {
-	return b.BotRepository.GetCurrentBotCached(b.CurrentBot.Id).SwapConfig.UseSwapCapital
-}
-func (b *BotService) GetSwapConfig() model.SwapConfig {
-	return b.BotRepository.GetCurrentBotCached(b.CurrentBot.Id).SwapConfig
+	return false
 }
 func (b *BotService) GetTradeStackSorting() string {
 	return b.BotRepository.GetCurrentBotCached(b.CurrentBot.Id).TradeStackSorting

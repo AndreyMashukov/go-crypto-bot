@@ -97,8 +97,6 @@ func (o *OrderBasedStrategy) Decide(kLine model.KLine) model.Decision {
 	profitPercent := order.GetProfitPercent(kLine.Close.Value(), o.BotService.UseSwapCapital())
 	extraChargePercent := tradeLimit.GetBuyOnFallPercent(*order, kLine, o.BotService.UseSwapCapital())
 
-	// ATTENTION: We can not do extra buy if CanBuy() is false
-	// It can be the reason of active SELL orders, cancel SELL order when extra buy is possible
 	if profitPercent.Lte(extraChargePercent) {
 		return model.Decision{
 			StrategyName: model.OrderBasedStrategyName,

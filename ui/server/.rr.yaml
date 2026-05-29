@@ -1,0 +1,31 @@
+version: '3'
+
+server:
+    command: 'php public/index.php'
+    relay: pipes
+    env:
+        APP_RUNTIME: Baldinof\RoadRunnerBundle\Runtime\Runtime
+
+http:
+    address: 0.0.0.0:80
+    max_request_size: 1024
+    middleware: [gzip, static]
+    static:
+        dir: public
+        forbid: ['.php', '.htaccess', '.env']
+    uploads:
+        forbid: ['.php', '.exe']
+    pool:
+        num_workers: 4
+        max_jobs: 5000
+        allocate_timeout: 60s
+        destroy_timeout: 60s
+        supervisor:
+            max_worker_memory: 1024
+
+logs:
+    mode: production
+    level: info
+    encoding: console
+    output: stdout
+    err_output: stderr

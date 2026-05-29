@@ -1,0 +1,27 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+  external_labels:
+    bot: 'go-crypto-bot'
+
+scrape_configs:
+  - job_name: 'market-watcher'
+    scrape_interval: 5s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['market-watcher:9101']
+        labels:
+          binary: 'market-watcher'
+
+  - job_name: 'market-trader'
+    scrape_interval: 5s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['market-trader:9101']
+        labels:
+          binary: 'market-trader'
+
+  - job_name: 'prometheus'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['localhost:9090']

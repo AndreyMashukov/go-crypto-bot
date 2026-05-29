@@ -103,13 +103,11 @@ func (t *TradeLimit) GetBuyOnFallPercent(order Order, kLine KLine, withSwap bool
 	buyOnFallPercent := Percent(0.00)
 
 	if len(order.ExtraChargeOptions) > 0 {
-		// sort DESC
 		sort.SliceStable(order.ExtraChargeOptions, func(i int, j int) bool {
 			return order.ExtraChargeOptions[i].Percent > order.ExtraChargeOptions[j].Percent
 		})
 
 		profit := order.GetProfitPercent(kLine.Close.Value(), withSwap)
-		// set first step as default
 		buyOnFallPercent = order.ExtraChargeOptions[0].Percent
 
 		for _, option := range order.ExtraChargeOptions {

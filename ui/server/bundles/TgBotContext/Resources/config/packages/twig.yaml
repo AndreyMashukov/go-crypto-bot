@@ -1,3 +1,0 @@
-twig:
-    paths:
-        '%kernel.project_dir%/bundles/TgBotContext/Resources/templates': tg_bot_context

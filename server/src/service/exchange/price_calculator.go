@@ -40,7 +40,6 @@ func (m *PriceCalculator) CalculateBuy(tradeLimit model.TradeLimit) model.BuyPri
 
 	order := m.OrderRepository.GetOpenedOrderCached(tradeLimit.Symbol, "BUY")
 
-	// Extra charge by current price
 	if order != nil && order.GetProfitPercent(lastKline.Close.Value(), m.BotService.UseSwapCapital()).Lte(tradeLimit.GetBuyOnFallPercent(*order, *lastKline, m.BotService.UseSwapCapital())) {
 		return model.BuyPrice{
 			Price:  m.LossSecurity.BuyPriceCorrection(lastKline.Close.Value(), tradeLimit),
@@ -134,32 +133,9 @@ func (m *PriceCalculator) GetBestFrameBuy(limit model.TradeLimit, marketDepth mo
 }
 
 func (m *PriceCalculator) InterpolatePrice(limit model.TradeLimit) model.Interpolation {
-	asset := strings.ReplaceAll(limit.Symbol, "USDT", "")
-	btcPair, err := m.ExchangeRepository.GetSwapPairsByAssets("BTC", asset)
-
-	interpolation := model.Interpolation{
-		Asset:                asset,
+	return model.Interpolation{
+		Asset:                strings.ReplaceAll(limit.Symbol, "USDT", ""),
 		BtcInterpolationUsdt: 0.00,
 		EthInterpolationUsdt: 0.00,
 	}
-
-	if err == nil {
-		priceXBtc := btcPair.BuyPrice
-		lastKlineBtc := m.ExchangeRepository.GetCurrentKline("BTCUSDT")
-		if lastKlineBtc != nil && !lastKlineBtc.IsPriceExpired() && !btcPair.IsPriceExpired() {
-			interpolation.BtcInterpolationUsdt = m.Formatter.FormatPrice(limit, priceXBtc*lastKlineBtc.Close.Value())
-		}
-	}
-
-	ethPair, err := m.ExchangeRepository.GetSwapPairsByAssets("ETH", asset)
-
-	if err == nil {
-		priceXEth := ethPair.BuyPrice
-		lastKlineEth := m.ExchangeRepository.GetCurrentKline("ETHUSDT")
-		if lastKlineEth != nil && !lastKlineEth.IsPriceExpired() && !ethPair.IsPriceExpired() {
-			interpolation.EthInterpolationUsdt = m.Formatter.FormatPrice(limit, priceXEth*lastKlineEth.Close.Value())
-		}
-	}
-
-	return interpolation
 }

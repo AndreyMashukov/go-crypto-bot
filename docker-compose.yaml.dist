@@ -1,54 +1,143 @@
 version: '3.5'
 
+x-bot-env: &bot-env
+  BOT_UUID: '00000000-0000-0000-0000-000000000001'
+  BOT_EXCHANGE: 'binance'
+  CLICKHOUSE_DSN: 'clickhouse:8123'
+  CLICKHOUSE_PASSWORD: '123456'
+  DATABASE_DSN: 'postgres://go_crypto_bot:go_crypto_bot@postgres:5432/go_crypto_bot?sslmode=disable'
+  REDIS_DSN: 'redis:6379'
+  REDIS_PASSWORD: ''
+  BINANCE_API_KEY: '${BINANCE_API_KEY}'
+  BINANCE_API_SECRET: '${BINANCE_API_SECRET}'
+  BINANCE_API_DSN: 'https://testnet.binance.vision'
+  BINANCE_WS_DSN: 'wss://ws-api.testnet.binance.vision/ws-api/v3'
+  BINANCE_STREAM_DSN: 'wss://stream.testnet.binance.vision'
+  BYBIT_API_KEY: ''
+  BYBIT_API_SECRET: ''
+  BYBIT_API_DSN: ''
+  BYBIT_STREAM_DSN: ''
+  MC_DSN: "it should be your own capitalization service here"
+  METRICS_LISTEN_ADDR: ':9101'
+
 services:
-  writer:
+  market-watcher:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: go_crypto_bot
-    environment:
-        BOT_UUID: '{BOT_UUID_4_HERE}'
-        BOT_EXCHANGE: 'binance'
-        CLICKHOUSE_DSN: 'clickhouse:8123'
-        CLICKHOUSE_PASSWORD: '123456' # .docker/data/clickhouse-server/users.xml:63
-        DATABASE_DSN: 'root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot'
-        REDIS_DSN: 'redis:6379'
-        REDIS_PASSWORD: ''
-        BINANCE_API_KEY: '{BINANCE_API_KEY}'
-        BINANCE_API_SECRET: '{BINANCE_API_SECRET}'
-        BINANCE_API_DSN: 'https://testnet.binance.vision'
-        BINANCE_WS_DSN: 'wss://testnet.binance.vision/ws-api/v3'
-        BINANCE_STREAM_DSN: 'wss://stream.binance.com' #'wss://stream.binancefuture.com'
-        BYBIT_API_KEY: ''
-        BYBIT_API_SECRET: ''
-        BYBIT_API_DSN: ''
-        BYBIT_STREAM_DSN: ''
-        MC_DSN: "it should be your own capitalization service here"
+    image: go_crypto_bot:latest
+    container_name: go_crypto_bot_market_watcher
+    command: ["/usr/local/bin/market-watcher"]
+    environment: *bot-env
     networks:
       - bot-net
     ports:
-      - "8090:8080"
+      - "19101:9101"
     restart: always
     depends_on:
-      - mysql
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      clickhouse:
+        condition: service_started
     volumes:
       - './server:/go/src/app/dev'
 
-  mysql:
-    platform: linux/x86_64
-    image: mysql:5.7
+  market-trader:
+    image: go_crypto_bot:latest
+    container_name: go_crypto_bot_market_trader
+    command: ["/usr/local/bin/market-trader"]
+    environment: *bot-env
+    networks:
+      - bot-net
+    ports:
+      - "18090:8080"
+    restart: always
+    depends_on:
+      market-watcher:
+        condition: service_started
+    volumes:
+      - './server:/go/src/app/dev'
+
+  ui-server:
+    build:
+      context: ./ui/server
+      dockerfile: Dockerfile
+    image: go_crypto_bot_ui_server:latest
+    container_name: go_crypto_bot_ui_server
+    environment:
+      APP_ENV: 'dev'
+      APP_SECRET: 'closed-perimeter-not-a-secret'
+      REDIS_DSN: 'redis://redis/1'
+      PROMETHEUS_URL: 'http://prometheus:9090'
+      BOT_ADMIN_URL: 'http://market-trader:8080'
+    networks:
+      - bot-net
+    ports:
+      - "18000:80"
+    restart: always
+    depends_on:
+      market-trader:
+        condition: service_started
+      prometheus:
+        condition: service_started
+
+  ui-app:
+    build:
+      context: ./ui/app
+      dockerfile: Dockerfile
+    image: go_crypto_bot_ui_app:latest
+    container_name: go_crypto_bot_ui_app
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      BACKEND_API_BASE: 'http://ui-server/api'
+    networks:
+      - bot-net
+    ports:
+      - "13000:3000"
+    restart: always
+    depends_on:
+      ui-server:
+        condition: service_started
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    restart: unless-stopped
+    networks:
+      - bot-net
+    ports:
+      - "19090:9090"
+    volumes:
+      - ./.docker/etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+
+  postgres:
+    image: postgres:16-alpine
     restart: unless-stopped
     ports:
-      - "3367:3306"
+      - "15444:5432"
     networks:
       - bot-net
     environment:
-      MYSQL_ROOT_PASSWORD: go_crypto_bot
-      MYSQL_DATABASE: go_crypto_bot
-      MYSQL_USER: go_crypto_bot
-      MYSQL_PASSWORD: go_crypto_bot
+      POSTGRES_DB: go_crypto_bot
+      POSTGRES_USER: go_crypto_bot
+      POSTGRES_PASSWORD: go_crypto_bot
     volumes:
-      - mysql-data:/var/lib/mysql
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U go_crypto_bot -d go_crypto_bot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
     # Redis
   redis:
@@ -69,8 +158,8 @@ services:
       - clickhouse-data:/var/lib/clickhouse
       - ./.docker/data/clickhouse-server:/etc/clickhouse-server
     ports:
-      - "8002:9000"
-      - "9123:8123"
+      - "18002:9000"
+      - "19123:8123"
     ulimits:
       nproc: 65535
       nofile:
@@ -84,7 +173,9 @@ networks:
     driver: bridge
 
 volumes:
-  mysql-data:
-    name: go_crypto_bot_mysql_data
+  pg-data:
+    name: go_crypto_bot_pg_data
   clickhouse-data:
     name: go_crypto_bot_clickhouse_data
+  prometheus-data:
+    name: go_crypto_bot_prometheus_data

@@ -68,16 +68,8 @@ func (t *TradeFilterService) IsFilterMatched(filters []model.TradeFilter) bool {
 		}
 	}
 
-	if matchedAnd == len(filters) {
-		return true
-	}
-
-	if matchedOr > 0 {
-		return true
-	}
-
 	// todo: return not matched filters...???
-	return false
+	return matchedAnd == len(filters) || matchedOr > 0
 }
 
 func (t *TradeFilterService) IsValueMatched(filter model.TradeFilter) bool {

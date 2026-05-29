@@ -1,6 +1,0 @@
-{
-    "token_type": "Bearer",
-    "expires_in": "<expires-in>",
-    "access_token": "<access-token>",
-    "refresh_token": "<refresh-token>"
-}

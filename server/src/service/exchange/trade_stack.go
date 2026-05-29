@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
+	"github.com/redis/go-redis/v9"
 	"log"
 	"sort"
 	"strings"
@@ -47,7 +47,6 @@ type TradeStackParams struct {
 }
 
 func (t *TradeStack) CanBuy(limit model.TradeLimit) bool {
-	// Allow to process existing order
 	binanceOrder := t.OrderRepository.GetBinanceOrder(limit.Symbol, "BUY")
 	if binanceOrder != nil {
 		return true
@@ -238,7 +237,6 @@ func (t *TradeStack) ProcessItem(
 		return nil
 	}
 
-	// Skip if order has already opened
 	binanceOrder := t.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
 	if binanceOrder != nil && params.SkipPending {
 		return nil

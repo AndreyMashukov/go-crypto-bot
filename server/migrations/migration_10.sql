@@ -1,17 +1,18 @@
-alter table swap_pair change column last_price buy_price double default 0.00;
-alter table swap_pair add column sell_price double default 0.00;
-UPDATE swap_transition SET operation = 'S' WHERE operation = 'BUY';
-UPDATE swap_transition SET operation = 'BUY' WHERE operation = 'SELL';
-UPDATE swap_transition SET operation = 'SELL' WHERE operation = 'S';
-UPDATE swap_chain SET type = 'SSB' WHERE type = 'BBS';
-# -----
-ALTER TABLE swap_chain ADD COLUMN max_percent double default 0.00;
-ALTER TABLE swap_chain ADD COLUMN max_percent_timestamp int unsigned default null;
-DELETE FROM swap_chain WHERE id NOT IN (select swap_chain_id from swap_action);
-DELETE IGNORE FROM swap_transition WHERE id > 0;
-# -----
-ALTER TABLE orders ADD CONSTRAINT order_external_id_symbol UNIQUE (external_id,symbol);
-# -----
-alter table swap_pair add column sell_volume double unsigned default 0.00;
-alter table swap_pair add column buy_volume double unsigned default 0.00;
-alter table swap_pair add column daily_percent double default 0.00;
+alter table swap_pair rename column last_price to buy_price;
+alter table swap_pair alter column buy_price set default 0.00;
+alter table swap_pair add column sell_price double precision default 0.00;
+update swap_transition set operation = 'S' where operation = 'BUY';
+update swap_transition set operation = 'BUY' where operation = 'SELL';
+update swap_transition set operation = 'SELL' where operation = 'S';
+update swap_chain set type = 'SSB' where type = 'BBS';
+
+alter table swap_chain add column max_percent double precision default 0.00;
+alter table swap_chain add column max_percent_timestamp bigint default null;
+delete from swap_chain where id not in (select swap_chain_id from swap_action);
+delete from swap_transition where id > 0;
+
+alter table orders add constraint order_external_id_symbol unique (external_id, symbol);
+
+alter table swap_pair add column sell_volume double precision default 0.00;
+alter table swap_pair add column buy_volume double precision default 0.00;
+alter table swap_pair add column daily_percent double precision default 0.00;

@@ -70,7 +70,10 @@ func (e *ChartService) GetCharts(symbolFilter []string) []map[string][]any {
 }
 
 func (e *ChartService) ProcessSymbol(symbol string) map[string][]any {
-	kLines := e.ExchangeRepository.KLineList(symbol, true, 200)
+	// Phase E removed the Redis kline history cache. Chart data is
+	// served from Prometheus starting in Phase F; until then the kline
+	// list is empty here so the FE does not crash on the orders branch.
+	kLines := []model.KLine{}
 
 	symbolOrders := make([]model.Order, 0)
 	orderMap := sync.Map{}
@@ -83,7 +86,7 @@ func (e *ChartService) ProcessSymbol(symbol string) map[string][]any {
 		symbolOrders = e.OrderRepository.GetHistoryList(symbol, from, to)
 		for _, symbolOrder := range symbolOrders {
 			date, _ := time.Parse("2006-01-02 15:04:05", symbolOrder.CreatedAt)
-			orderTimestamp := model.TimestampMilli(date.UnixMilli()).GetPeriodToMinute() // convert date to timestamp
+			orderTimestamp := model.TimestampMilli(date.UnixMilli()).GetPeriodToMinute()
 			orderMap.Store(orderTimestamp, symbolOrder)
 		}
 	}
@@ -266,7 +269,7 @@ func (e *ChartService) ProcessSymbol(symbol string) map[string][]any {
 		openedBuyOrder := e.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 		if openedBuyOrder != nil && openedBuyOrder.IsOpened() {
 			date, _ := time.Parse("2006-01-02 15:04:05", openedBuyOrder.CreatedAt)
-			openedOrderTimestamp := date.UnixMilli() // convert date to timestamp
+			openedOrderTimestamp := date.UnixMilli()
 			if openedOrderTimestamp <= kLine.Timestamp.GetPeriodToMinute() {
 				openedBuyPoint.YAxis = openedBuyOrder.Price
 			}

@@ -7,10 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	uuid2 "github.com/google/uuid"
-	"github.com/gorilla/websocket"
-	"github.com/redis/go-redis/v9"
-	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"log"
 	"net/http"
 	"sort"
@@ -18,6 +14,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	uuid2 "github.com/google/uuid"
+	"github.com/gorilla/websocket"
+	"github.com/redis/go-redis/v9"
+
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 )
 
 type ExchangeOrderAPIInterface interface {
@@ -114,12 +116,6 @@ func (b *Binance) Connect(address string) {
 		return
 	}
 
-	// 2023/12/11 05:56:32 [SOLUSDT] QueryOrder: Too much request weight used; current limit is 6000 request weight per 1 MINUTE. Please use WebSocket Streams for live updates to avoid polling the API.
-	// 2023/12/11 05:56:32 [SOLUSDT] Retry query order...
-	// 2023/12/11 05:56:38 [AVAXUSDT] Opened: Way too much request weight used; IP banned until 1702275878212. Please use WebSocket Streams for live updates to avoid bans.
-	// 2023/12/11 05:56:38 read:  websocket: close 1008 (policy violation): disconnected
-
-	// reader channel
 	go func() {
 		for {
 			_, message, err := connection.ReadMessage()
@@ -138,7 +134,6 @@ func (b *Binance) Connect(address string) {
 		}
 	}()
 
-	// writer channel
 	go func() {
 		for {
 			serialized := <-b.SocketWriter
@@ -179,20 +174,12 @@ func (b *Binance) socketRequest(req model.SocketRequest, channel chan []byte) {
 			}
 
 			if strings.Contains(string(msg), req.Id) {
-				//log.Printf("[%s], %s", req.Method, string(msg))
 				channel <- msg
 				return
 			}
 
 			b.Channel <- msg
-			// Give control to another goroutine
 			time.Sleep(time.Millisecond)
-			// Goroutines yield to the scheduler when any of the following happens (may not be a comprehensive list):
-			// - unbuffered chan send/recv
-			// - syscalls (includes file/network reads and writes)
-			// - memory allocation
-			// - time.Sleep() is called
-			// - runtime.Gosched() is called
 		}
 	}(req)
 
@@ -571,20 +558,6 @@ func (b *Binance) LimitOrder(symbol string, quantity float64, price float64, ope
 	socketRequest.Params["side"] = operation
 	socketRequest.Params["type"] = "LIMIT"
 	socketRequest.Params["quantity"] = strconv.FormatFloat(quantity, 'f', -1, 64)
-	// [FOK] - Fill or kill (FOK) is a conditional type of time-in-force order used in
-	// securities trading that instructs a brokerage to execute a
-	// transaction immediately and completely or not at all.
-	// This type of order is most often used by active traders and is usually for a
-	// large quantity of stock. The order must be filled in its entirety or else canceled (killed)
-	// --------
-	// [IOC] - An immediate or cancel order (IOC) is an order to buy or sell a security that attempts
-	// to execute all or part immediately and then cancels any unfilled portion of the order.
-	// An IOC order is one of several "duration," or time in force orders, that investors can use
-	// to specify how long the order remains active in the market and under what conditions the order is canceled.
-	// -------
-	// [GTC] - Good ’til canceled (GTC) describes a type of order that an investor may place to buy or sell
-	// a security that remains active until either the order is filled or the investor cancels it.
-	// Brokerages will typically limit the maximum time you can keep a GTC order open (active) to 90 days.
 	socketRequest.Params["timeInForce"] = timeInForce
 	socketRequest.Params["price"] = strconv.FormatFloat(price, 'f', -1, 64)
 	socketRequest.Params["apiKey"] = b.ApiKey
@@ -601,7 +574,7 @@ func (b *Binance) LimitOrder(symbol string, quantity float64, price float64, ope
 
 		if response.Error.IsNotional() {
 			log.Printf("[%s] Sleep 1 minute", symbol)
-			time.Sleep(time.Minute) // wait one minute
+			time.Sleep(time.Minute)
 		}
 
 		return model.BinanceOrder{}, errors.New(response.Error.GetMessage())

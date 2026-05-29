@@ -4,13 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/rafacas/sysstats"
-	"github.com/redis/go-redis/v9"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/ml"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
+	"github.com/rafacas/sysstats"
+	"github.com/redis/go-redis/v9"
 	"runtime"
 	"time"
 )
@@ -20,7 +20,6 @@ type HealthService struct {
 	BotRepository      *repository.BotRepository
 	PythonMLBridge     *ml.PythonMLBridge
 	DB                 *sql.DB
-	SwapDb             *sql.DB
 	RDB                *redis.Client
 	Ctx                *context.Context
 	Binance            client.ExchangeAPIInterface
@@ -71,10 +70,6 @@ func (h *HealthService) HealthCheck() model.BotHealth {
 	if h.DB.Ping() != nil {
 		dbStatus = model.DbStatusFail
 	}
-	swapDbStatus := model.DbStatusOk
-	if h.SwapDb.Ping() != nil {
-		swapDbStatus = model.DbStatusFail
-	}
 	redisStatus := model.RedisStatusOk
 	if h.RDB.Ping(*h.Ctx).Err() != nil {
 		redisStatus = model.RedisStatusFail
@@ -97,7 +92,6 @@ func (h *HealthService) HealthCheck() model.BotHealth {
 	return model.BotHealth{
 		Bot:           *bot,
 		DbStatus:      dbStatus,
-		SwapDbStatus:  swapDbStatus,
 		BinanceStatus: binanceStatus,
 		MlStatus:      mlStatus,
 		RedisStatus:   redisStatus,

@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/exchange"
+	"github.com/redis/go-redis/v9"
 	"net/http"
 	"strconv"
 	"strings"
@@ -17,7 +17,6 @@ import (
 )
 
 type ExchangeController struct {
-	SwapRepository     *repository.SwapRepository
 	ExchangeRepository *repository.ExchangeRepository
 	ChartService       *service.ChartService
 	RDB                *redis.Client
@@ -41,67 +40,13 @@ func (e *ExchangeController) GetKlineListAction(w http.ResponseWriter, req *http
 		return
 	}
 
-	symbol := strings.TrimPrefix(req.URL.Path, "/kline/list/")
+	_ = strings.TrimPrefix(req.URL.Path, "/kline/list/")
 
-	list := e.ExchangeRepository.KLineList(symbol, true, 200)
-	encoded, _ := json.Marshal(list)
-	fmt.Fprintf(w, string(encoded))
-}
-
-func (e *ExchangeController) GetSwapActionListAction(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Content-Type", "application/json")
-
-	botUuid := req.URL.Query().Get("botUuid")
-
-	if botUuid != e.CurrentBot.BotUuid {
-		http.Error(w, "Forbidden", http.StatusForbidden)
-
-		return
-	}
-
-	actions := e.SwapRepository.GetSwapActions()
-	account := e.BalanceService.GetBalance(false)
-	list := make([]model.SwapContainer, 0)
-	for _, action := range actions {
-		balanceOne := model.Balance{
-			Free:   0.00,
-			Locked: 0.00,
-			Asset:  action.Asset,
-		}
-		if balance, ok := account[balanceOne.Asset]; ok {
-			balanceOne = balance
-		}
-		balanceTwo := model.Balance{
-			Free:   0.00,
-			Locked: 0.00,
-			Asset:  action.Asset,
-		}
-		if balance, ok := account[action.GetAssetTwo()]; ok {
-			balanceTwo = balance
-		}
-		balanceThree := model.Balance{
-			Free:   0.00,
-			Locked: 0.00,
-			Asset:  action.Asset,
-		}
-		if balance, ok := account[action.GetAssetThree()]; ok {
-			balanceThree = balance
-		}
-
-		list = append(list, model.SwapContainer{
-			SwapAction: action,
-			Balance: map[string]model.Balance{
-				action.Asset:           balanceOne,
-				action.GetAssetTwo():   balanceTwo,
-				action.GetAssetThree(): balanceThree,
-			},
-		})
-	}
-
-	encoded, _ := json.Marshal(list)
-	_, _ = fmt.Fprintf(w, string(encoded))
+	// Phase E removed the Redis kline cache. The Prometheus-backed
+	// chart endpoint that replaces this one is added in Phase F; until
+	// then the action returns an empty list so the FE keeps parsing.
+	encoded, _ := json.Marshal([]struct{}{})
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (e *ExchangeController) GetExchangeOrderAction(w http.ResponseWriter, req *http.Request) {
@@ -134,7 +79,7 @@ func (e *ExchangeController) GetExchangeOrderAction(w http.ResponseWriter, req *
 	}
 
 	encoded, _ := json.Marshal(order)
-	_, _ = fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (e *ExchangeController) GetAccountAction(w http.ResponseWriter, req *http.Request) {
@@ -158,7 +103,7 @@ func (e *ExchangeController) GetAccountAction(w http.ResponseWriter, req *http.R
 	account := e.BalanceService.GetBalance(hideZero)
 
 	encoded, _ := json.Marshal(account)
-	_, _ = fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (e *ExchangeController) GetDepthAction(w http.ResponseWriter, req *http.Request) {
@@ -178,7 +123,7 @@ func (e *ExchangeController) GetDepthAction(w http.ResponseWriter, req *http.Req
 
 	list := e.ExchangeRepository.GetDepth(symbol, 20)
 	encoded, _ := json.Marshal(list)
-	fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (e *ExchangeController) GetTradeListAction(w http.ResponseWriter, req *http.Request) {
@@ -198,25 +143,7 @@ func (e *ExchangeController) GetTradeListAction(w http.ResponseWriter, req *http
 
 	list := e.ExchangeRepository.TradeList(symbol)
 	encoded, _ := json.Marshal(list)
-	fmt.Fprintf(w, string(encoded))
-}
-
-func (e *ExchangeController) GetSwapListAction(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Content-Type", "application/json")
-
-	botUuid := req.URL.Query().Get("botUuid")
-
-	if botUuid != e.CurrentBot.BotUuid {
-		http.Error(w, "Forbidden", http.StatusForbidden)
-
-		return
-	}
-
-	list := e.SwapRepository.GetAvailableSwapChains()
-	encoded, _ := json.Marshal(list)
-	fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (e *ExchangeController) GetChartListAction(w http.ResponseWriter, req *http.Request) {
@@ -249,5 +176,5 @@ func (e *ExchangeController) GetChartListAction(w http.ResponseWriter, req *http
 		e.RDB.Set(*e.Ctx, fmt.Sprintf("chart-cache-bot-%d", e.CurrentBot.Id), encoded, time.Second*5)
 	}
 
-	fmt.Fprintf(w, encoded)
+	_, _ = fmt.Fprint(w, encoded)
 }

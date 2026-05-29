@@ -1,44 +1,13 @@
 security:
-    password_hashers:
-        Bundles\UserContext\Entity\User:
-            algorithm: argon2i
-
-    providers:
-        users:
-            entity:
-                class: Bundles\UserContext\Entity\User
-                property: username
-
     firewalls:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
 
-        api_doc:
-            pattern: ^/doc
-            security: false
-
-        api_public:
-            pattern: ^/public
-            security: false
-
-        api:
+        main:
             pattern: ^/
             stateless: true
-            provider: users
-            # Custom authenticators (TG / JWT / ...) wire in here. Empty
-            # for the migration baseline — all /api/* paths fall through
-            # to access_control denial until a real authenticator lands.
+            security: false
 
     access_control:
-        - { path: ^/api/doc$, roles: PUBLIC_ACCESS }
         - { path: ^/, roles: PUBLIC_ACCESS }
-
-when@test:
-    security:
-        password_hashers:
-            Bundles\UserContext\Entity\User:
-                algorithm: auto
-                cost: 4
-                time_cost: 3
-                memory_cost: 10

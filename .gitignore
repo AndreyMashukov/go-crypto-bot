@@ -25,6 +25,10 @@ models/
 results/
 datasets/
 
+# Local docker volume mounts — created by the compose stack, never commit
+.docker/data/clickhouse-server/users.d/
+.docker/data/redis/
+
 # IDE
 .idea/
 .vscode/
@@ -34,6 +38,21 @@ datasets/
 
 # Vendored deps (if ever generated)
 vendor/
+
+# Nuxt / Node build artefacts under ui/app — regenerated on every build
+ui/app/.nuxt/
+ui/app/.output/
+ui/app/node_modules/
+ui/app/test-results/
+ui/app/playwright-report/
+
+# Symfony build artefacts under ui/server — regenerated on every build
+ui/server/var/
+ui/server/vendor/
+
+# Browser caches Playwright drops in the repo if PLAYWRIGHT_BROWSERS_PATH
+# is unset; we always point it at ~/.cache/ms-playwright in CI/dev.
+ui/app/browsers/
 
 # Ansible inventory — production hostnames / SSH user / vault secrets
 # never enter the repo. The shipped *.example file documents the schema;

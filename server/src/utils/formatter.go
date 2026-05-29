@@ -70,14 +70,6 @@ func (m *Formatter) Floor(num float64) int64 {
 }
 
 func (m *Formatter) BinanceIntervalToByBitInterval(interval string) string {
-	// ByBit:
-	// 1 3 5 15 30 60 120 240 360 720 minute
-	// D day
-	// W week
-	// M month
-	// Binance:
-	// 1m 3m 5m 15m 30m 1h 2h 4h 6h 8h 12h
-	// 1d 3d 1w 1M
 	switch interval {
 	case "1m":
 		return "1"
@@ -113,14 +105,6 @@ func (m *Formatter) BinanceIntervalToByBitInterval(interval string) string {
 }
 
 func (m *Formatter) ByBitIntervalToBinanceInterval(interval string) string {
-	// ByBit:
-	// 1 3 5 15 30 60 120 240 360 720 minute
-	// D day
-	// W week
-	// M month
-	// Binance:
-	// 1m 3m 5m 15m 30m 1h 2h 4h 6h 8h 12h
-	// 1d 3d 1w 1M
 	switch interval {
 	case "1":
 		return "1m"
@@ -156,24 +140,6 @@ func (m *Formatter) ByBitIntervalToBinanceInterval(interval string) string {
 }
 
 func (m *Formatter) ByBitStatusToBinanceStatus(status string) string {
-	// ByBit:
-	// - New
-	// - PartiallyFilled
-	// - Untriggered
-	// - Rejected
-	// - PartiallyFilledCanceled
-	// - Filled
-	// - Cancelled
-	// - Triggered
-	// - Deactivated
-	// Binance:
-	// - NEW
-	// - PARTIALLY_FILLED
-	// - FILLED
-	// - CANCELED
-	// - PENDING_CANCEL
-	// - REJECTED
-	// - EXPIRED
 	switch status {
 	case "New":
 		return "NEW"

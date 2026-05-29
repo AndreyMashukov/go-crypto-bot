@@ -45,49 +45,6 @@ func TestDecisionError(t *testing.T) {
 	exchangeRepository.AssertNumberOfCalls(t, "GetTradeLimit", 0)
 }
 
-func TestProcessSwap(t *testing.T) {
-	orderRepository := new(OrderStorageMock)
-	exchangeRepository := new(BaseTradeStorageMock)
-	botService := new(BotServiceMock)
-	strategyFacade := new(StrategyFacadeMock)
-	priceCalculator := new(PriceCalculatorMock)
-	tradeStack := new(BuyOrderStackMock)
-	orderExecutor := new(OrderExecutorMock)
-	binance := new(ExchangePriceAPIMock)
-
-	maker := exchange.MakerService{
-		OrderRepository:    orderRepository,
-		ExchangeRepository: exchangeRepository,
-		BotService:         botService,
-		StrategyFacade:     strategyFacade,
-		PriceCalculator:    priceCalculator,
-		TradeStack:         tradeStack,
-		OrderExecutor:      orderExecutor,
-		Binance:            binance,
-		Formatter:          &utils.Formatter{},
-		CurrentBot: &model.Bot{
-			Id: 1,
-		},
-		HoldScore: 80.00,
-	}
-
-	strategyFacade.On("Decide", "BTCUSDT").Return(model.FacadeResponse{
-		Hold: 0.00,
-		Sell: 0.00,
-		Buy:  0.00,
-	}, nil)
-	order := model.Order{
-		Symbol: "BTCUSDT",
-	}
-	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&order)
-	orderExecutor.On("ProcessSwap", order).Return(true)
-
-	maker.Make("BTCUSDT")
-	exchangeRepository.AssertNumberOfCalls(t, "GetTradeLimit", 0)
-	orderRepository.AssertNumberOfCalls(t, "GetOpenedOrderCached", 1)
-	orderExecutor.AssertNumberOfCalls(t, "ProcessSwap", 1)
-}
-
 func TestHoldDecision(t *testing.T) {
 	orderRepository := new(OrderStorageMock)
 	exchangeRepository := new(BaseTradeStorageMock)
@@ -123,12 +80,10 @@ func TestHoldDecision(t *testing.T) {
 		Symbol: "BTCUSDT",
 	}
 	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&order)
-	orderExecutor.On("ProcessSwap", order).Return(false)
 
 	maker.Make("BTCUSDT")
 	exchangeRepository.AssertNumberOfCalls(t, "GetTradeLimit", 0)
 	orderRepository.AssertNumberOfCalls(t, "GetOpenedOrderCached", 1)
-	orderExecutor.AssertNumberOfCalls(t, "ProcessSwap", 1)
 }
 
 func TestSellOperation(t *testing.T) {
@@ -176,7 +131,6 @@ func TestSellOperation(t *testing.T) {
 		Quantity: 1.00,
 	}
 	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&order)
-	orderExecutor.On("ProcessSwap", order).Return(false)
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(tradeLimit, nil)
 	kline := model.KLine{
 		Symbol: "BTCUSDT",
@@ -230,7 +184,6 @@ func TestSellOperation(t *testing.T) {
 	orderExecutor.AssertNumberOfCalls(t, "BuyExtra", 0)
 	exchangeRepository.AssertNumberOfCalls(t, "GetTradeLimit", 1)
 	orderRepository.AssertNumberOfCalls(t, "GetOpenedOrderCached", 1)
-	orderExecutor.AssertNumberOfCalls(t, "ProcessSwap", 1)
 }
 
 func TestBuyOperation(t *testing.T) {
@@ -334,7 +287,6 @@ func TestBuyOperation(t *testing.T) {
 	orderExecutor.AssertNumberOfCalls(t, "BuyExtra", 0)
 	exchangeRepository.AssertNumberOfCalls(t, "GetTradeLimit", 1)
 	orderRepository.AssertNumberOfCalls(t, "GetOpenedOrderCached", 1)
-	orderExecutor.AssertNumberOfCalls(t, "ProcessSwap", 0)
 }
 
 func TestExtraBuyOperation(t *testing.T) {
@@ -383,7 +335,6 @@ func TestExtraBuyOperation(t *testing.T) {
 	}
 	orderRepository.On("GetBinanceOrder", "BTCUSDT", "BUY").Return(nil)
 	orderRepository.On("GetOpenedOrderCached", "BTCUSDT", "BUY").Return(&order)
-	orderExecutor.On("ProcessSwap", order).Return(false)
 	tradeLimit := model.TradeLimit{
 		Symbol:      "BTCUSDT",
 		IsEnabled:   true,
@@ -451,5 +402,4 @@ func TestExtraBuyOperation(t *testing.T) {
 	orderExecutor.AssertNumberOfCalls(t, "BuyExtra", 1)
 	exchangeRepository.AssertNumberOfCalls(t, "GetTradeLimit", 1)
 	orderRepository.AssertNumberOfCalls(t, "GetOpenedOrderCached", 1)
-	orderExecutor.AssertNumberOfCalls(t, "ProcessSwap", 1)
 }

@@ -1,3 +1,0 @@
-twig:
-    paths:
-        '%kernel.project_dir%/bundles/OxaPayContext/Resources/templates': oxa_pay_context

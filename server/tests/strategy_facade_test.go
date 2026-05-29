@@ -2,12 +2,40 @@ package tests
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
-	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/exchange"
 	"testing"
 	"time"
+
+	"github.com/shopspring/decimal"
+	"github.com/stretchr/testify/assert"
+
+	tickevent "github.com/AndreyMashukov/go-crypto-bot/server/shared/event"
+	"github.com/AndreyMashukov/go-crypto-bot/server/shared/tickbuffer"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/exchange"
 )
+
+func freshTickWithCandles(symbol string) tickevent.MarketTick {
+	now := time.Now().UTC()
+	return tickevent.MarketTick{
+		Exchange:   "binance",
+		Symbol:     symbol,
+		Source:     tickevent.SourceTrade,
+		EventTime:  now,
+		IngestedAt: now,
+		Price:      decimal.NewFromFloat(60000),
+		Candles: tickevent.Candles{
+			Resolution: time.Minute,
+			Series: []tickevent.Candle{
+				{
+					OpenTime: now.Add(-time.Minute),
+					Open:     decimal.NewFromFloat(59999),
+					Close:    decimal.NewFromFloat(60000),
+					Volume:   decimal.NewFromInt(10),
+				},
+			},
+		},
+	}
+}
 
 func TestNotEnoughDecisions(t *testing.T) {
 	assertion := assert.New(t)
@@ -21,6 +49,7 @@ func TestNotEnoughDecisions(t *testing.T) {
 		ExchangeRepository:  exchangeRepository,
 		OrderRepository:     orderStorage,
 		BotService:          botService,
+		MarketBuffer:        tickbuffer.NewInMemory(),
 		MinDecisions:        2.00,
 	}
 
@@ -49,6 +78,7 @@ func TestCantGetTradeLimit(t *testing.T) {
 		ExchangeRepository:  exchangeRepository,
 		OrderRepository:     orderStorage,
 		BotService:          botService,
+		MarketBuffer:        tickbuffer.NewInMemory(),
 		MinDecisions:        2.00,
 	}
 
@@ -70,6 +100,12 @@ func TestCantGetTradeLimit(t *testing.T) {
 	assertion.Equal(999.99, result.Hold)
 }
 
+// Phase D rewrite of the legacy TestCantGetCurrentKline. The invariant
+// is preserved verbatim: when the strategy has no recent price view, the
+// facade returns the kill-switch shape (Hold = DecisionHighestPriorityScore,
+// no Buy/Sell). The symbol of "no recent price view" changed from
+// ExchangeRepository.GetCurrentKline returning nil to MarketBuffer.Latest
+// returning a tick with empty Candles.
 func TestCantGetCurrentKline(t *testing.T) {
 	assertion := assert.New(t)
 
@@ -82,6 +118,7 @@ func TestCantGetCurrentKline(t *testing.T) {
 		ExchangeRepository:  exchangeRepository,
 		OrderRepository:     orderStorage,
 		BotService:          botService,
+		MarketBuffer:        tickbuffer.NewInMemory(),
 		MinDecisions:        2.00,
 	}
 
@@ -99,13 +136,14 @@ func TestCantGetCurrentKline(t *testing.T) {
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(model.TradeLimit{
 		Symbol: "BTCUSDT",
 	}, nil)
-	exchangeRepository.On("GetCurrentKline", "BTCUSDT").Return(nil)
 
 	result, err := strategyFacade.Decide("BTCUSDT")
-	assertion.ErrorContains(err, "[BTCUSDT] Last price is unknown")
+	assertion.ErrorContains(err, "[BTCUSDT] no candles on tick")
 	assertion.Equal(999.99, result.Hold)
 }
 
+// Phase D rewrite of the legacy TestPriceIsExpired. Same shape: a stale
+// tick + a buy-leaning decision set must trip the freshness kill-switch.
 func TestPriceIsExpired(t *testing.T) {
 	assertion := assert.New(t)
 
@@ -113,11 +151,16 @@ func TestPriceIsExpired(t *testing.T) {
 	decisionStorage := new(DecisionReadStorageMock)
 	orderStorage := new(OrderStorageMock)
 	botService := new(BotServiceMock)
+	ticks := tickbuffer.NewInMemory()
+	stale := freshTickWithCandles("BTCUSDT")
+	stale.EventTime = time.Now().UTC().Add(-time.Hour)
+	ticks.Put(stale)
 	strategyFacade := exchange.StrategyFacade{
 		DecisionReadStorage: decisionStorage,
 		ExchangeRepository:  exchangeRepository,
 		OrderRepository:     orderStorage,
 		BotService:          botService,
+		MarketBuffer:        ticks,
 		MinDecisions:        2.00,
 	}
 
@@ -135,12 +178,9 @@ func TestPriceIsExpired(t *testing.T) {
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(model.TradeLimit{
 		Symbol: "BTCUSDT",
 	}, nil)
-	exchangeRepository.On("GetCurrentKline", "BTCUSDT").Return(&model.KLine{
-		UpdatedAt: time.Now().Unix() - 60,
-	})
 
 	result, err := strategyFacade.Decide("BTCUSDT")
-	assertion.ErrorContains(err, "[BTCUSDT] Last price is expired")
+	assertion.ErrorContains(err, "[BTCUSDT] tick is stale")
 	assertion.Equal(999.99, result.Hold)
 }
 
@@ -151,11 +191,14 @@ func TestDropHoldForHighPriority(t *testing.T) {
 	decisionStorage := new(DecisionReadStorageMock)
 	orderStorage := new(OrderStorageMock)
 	botService := new(BotServiceMock)
+	ticks := tickbuffer.NewInMemory()
+	ticks.Put(freshTickWithCandles("BTCUSDT"))
 	strategyFacade := exchange.StrategyFacade{
 		DecisionReadStorage: decisionStorage,
 		ExchangeRepository:  exchangeRepository,
 		OrderRepository:     orderStorage,
 		BotService:          botService,
+		MarketBuffer:        ticks,
 		MinDecisions:        3.00,
 	}
 
@@ -191,9 +234,6 @@ func TestDropHoldForHighPriority(t *testing.T) {
 	exchangeRepository.On("GetTradeLimit", "BTCUSDT").Return(model.TradeLimit{
 		Symbol: "BTCUSDT",
 	}, nil)
-	exchangeRepository.On("GetCurrentKline", "BTCUSDT").Return(&model.KLine{
-		UpdatedAt: time.Now().Unix(),
-	})
 
 	result, err := strategyFacade.Decide("BTCUSDT")
 	assertion.Nil(err)

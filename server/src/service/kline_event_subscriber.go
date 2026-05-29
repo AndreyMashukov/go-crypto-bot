@@ -36,7 +36,6 @@ func (k KLineEventSubscriber) OnNewKlineReceived(eventModel interface{}) {
 		PeriodTo:   model.TimestampMilli(e.Previous.Timestamp.GetPeriodToMinute()),
 	}
 	k.ExchangeRepository.SetTradeVolume(tradeVolume)
-	k.ExchangeRepository.SaveKlineHistory(*e.Previous)
 
 	if k.BotService.IsMasterBot() {
 		_ = k.StatRepository.WriteTradeStat(tradeStat)

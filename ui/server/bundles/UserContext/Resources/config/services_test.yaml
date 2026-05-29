@@ -1,7 +1,0 @@
-services:
-  _defaults:
-    autowire: true
-    autoconfigure: true
-    public: true
-
-  test.brute_force_security: '@Bundles\UserContext\Service\BruteForceSecurity'

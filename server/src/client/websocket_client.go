@@ -3,11 +3,13 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
-	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/gorilla/websocket"
+
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 )
 
 func GetStreamBatch(tradeLimits []model.SymbolInterface, events []string) [][]string {

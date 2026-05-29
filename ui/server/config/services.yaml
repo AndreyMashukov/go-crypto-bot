@@ -1,44 +1,23 @@
-
-
-
-
-
 parameters:
     locale: en
 
 services:
-
     _defaults:
         autowire: true
         autoconfigure: true
 
-
-
     App\:
         resource: '../src/'
         exclude:
-            - '../src/DependencyInjection/'
-            - '../src/Entity/'
             - '../src/Kernel.php'
 
-    Knp\Component\Pager\PaginatorInterface: '@knp_paginator'
-
-    GuzzleHttp\Client:
+    App\Service\Monitoring\PrometheusQuery\PrometheusQueryService:
         arguments:
-            - timeout: 60
-            - connect_timeout: 60
-            - verify: false
+            $prometheusUrl: '%env(PROMETHEUS_URL)%'
 
-    GuzzleHttp\ClientInterface: '@GuzzleHttp\Client'
+    App\Service\Monitoring\PrometheusQuery\PrometheusQueryServiceInterface:
+        alias: App\Service\Monitoring\PrometheusQuery\PrometheusQueryService
 
-    App\Controller\PublicRoute\RegistrationController:
+    App\Service\Bot\BotAdminClient:
         arguments:
-            $environment: '%kernel.environment%'
-
-    App\EventListener\ExceptionListener:
-        tags:
-            - { name: 'kernel.event_listener', event: 'messenger.message_failed', method: 'onMessageFailed', priority: 255 }
-
-    App\Controller\PublicRoute\InternalController:
-        arguments:
-            $internalToken: '%env(INTERNAL_SERVICE_TOKEN)%'
+            $botAdminUrl: '%env(BOT_ADMIN_URL)%'

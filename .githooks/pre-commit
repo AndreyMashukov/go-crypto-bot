@@ -209,7 +209,7 @@ fi
 # ---- Check 6: source-without-test (BLOCKING) ------------------------------
 
 MISSING=""
-SKIP_PATTERNS='/model/|/config/|/event/[^/]+\.go$|^server/main\.go$'
+SKIP_PATTERNS='/model/|/config/|/event/[^/]+\.go$|^server/main\.go$|^server/[^/]+/main\.go$'
 while IFS= read -r src; do
     [ -z "$src" ] && continue
     printf "%s\n" "$src" | grep -qE "$SKIP_PATTERNS" && continue

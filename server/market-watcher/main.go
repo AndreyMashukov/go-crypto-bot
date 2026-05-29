@@ -63,7 +63,11 @@ func run() error {
 	log.Printf("market-watcher [%s] initialised", container.CurrentBot.BotUuid)
 
 	if binance, ok := container.Binance.(*client.Binance); ok {
-		binance.Connect(container.BinanceWSAddr)
+		// Connect retries internally with backoff on handshake failure.
+		// Run it on a goroutine so the rest of the runtime (metrics
+		// endpoint, ClickHouse writer, tick consumers) is not blocked
+		// by a slow exchange handshake at boot.
+		go binance.Connect(container.BinanceWSAddr)
 		binance.APIKeyCheckCompleted = true
 	}
 	if bybit, ok := container.Binance.(*client.ByBit); ok {

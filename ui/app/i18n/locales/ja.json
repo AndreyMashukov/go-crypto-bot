@@ -1,0 +1,67 @@
+{
+  "app": {
+    "title": "go-crypto-bot",
+    "subtitle": "admin panel"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "orders": "Orders",
+    "config": "Configuration",
+    "charts": "Charts"
+  },
+  "dashboard": {
+    "title": "Bot state",
+    "balance": "USDT balance",
+    "open_positions": "Open positions",
+    "recent_trades": "Recent trades",
+    "no_data": "No data",
+    "loading": "Loading..."
+  },
+  "orders": {
+    "title": "Orders",
+    "active": "Active",
+    "pending": "Pending",
+    "positions": "Positions",
+    "symbol": "Symbol",
+    "side": "Side",
+    "qty": "Quantity",
+    "price": "Price",
+    "status": "Status",
+    "created_at": "Created",
+    "actions": "Actions",
+    "cancel": "Cancel",
+    "no_orders": "No orders"
+  },
+  "config": {
+    "title": "Trade limits",
+    "add_limit": "Add pair",
+    "symbol": "Symbol",
+    "usdt_limit": "USDT limit",
+    "min_profit_percent": "Min profit, %",
+    "is_enabled": "Enabled",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm_delete": "Delete trade limit {symbol}?"
+  },
+  "charts": {
+    "title": "Prometheus metrics",
+    "tick_publish_failure": "Tick publish failures",
+    "tick_drop": "Dropped ticks",
+    "pubsub_reconnect": "Pub/sub reconnects",
+    "tick_consume_lag": "Tick consume lag, s",
+    "handle_duration": "Handler duration, s",
+    "order_place_duration": "Order place duration, s",
+    "pnl_realized": "Realized P&L",
+    "position_open_seconds": "Position open, s"
+  },
+  "lang": {
+    "switch": "Change language"
+  },
+  "errors": {
+    "network": "Network error",
+    "unauthorized": "Unauthorized",
+    "not_found": "Not found",
+    "server_error": "Server error"
+  }
+}

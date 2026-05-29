@@ -1,9 +1,0 @@
-doctrine:
-  orm:
-    mappings:
-      OxaPayContext:
-        is_bundle: false
-        type: attribute
-        dir: '%kernel.project_dir%/bundles/OxaPayContext/Entity'
-        prefix: 'Bundles\OxaPayContextBundle\Entity'
-        alias: OxaPayContext

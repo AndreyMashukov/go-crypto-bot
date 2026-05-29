@@ -1,0 +1,67 @@
+{
+  "app": {
+    "title": "go-crypto-bot",
+    "subtitle": "панель администратора"
+  },
+  "nav": {
+    "dashboard": "Дашборд",
+    "orders": "Ордера",
+    "config": "Конфигурация",
+    "charts": "Графики"
+  },
+  "dashboard": {
+    "title": "Состояние бота",
+    "balance": "Баланс USDT",
+    "open_positions": "Открытые позиции",
+    "recent_trades": "Последние сделки",
+    "no_data": "Нет данных",
+    "loading": "Загрузка..."
+  },
+  "orders": {
+    "title": "Ордера",
+    "active": "Активные",
+    "pending": "Ожидающие",
+    "positions": "Позиции",
+    "symbol": "Символ",
+    "side": "Сторона",
+    "qty": "Количество",
+    "price": "Цена",
+    "status": "Статус",
+    "created_at": "Создан",
+    "actions": "Действия",
+    "cancel": "Отменить",
+    "no_orders": "Ордеров нет"
+  },
+  "config": {
+    "title": "Торговые пары",
+    "add_limit": "Добавить пару",
+    "symbol": "Символ",
+    "usdt_limit": "Лимит USDT",
+    "min_profit_percent": "Мин. профит, %",
+    "is_enabled": "Активна",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "confirm_delete": "Удалить торговую пару {symbol}?"
+  },
+  "charts": {
+    "title": "Метрики Prometheus",
+    "tick_publish_failure": "Сбои публикации тика",
+    "tick_drop": "Сброшенные тики",
+    "pubsub_reconnect": "Переподключения pub/sub",
+    "tick_consume_lag": "Задержка обработки тика, сек",
+    "handle_duration": "Время обработки, сек",
+    "order_place_duration": "Время размещения ордера, сек",
+    "pnl_realized": "Реализованный P&L",
+    "position_open_seconds": "Открытие позиции, сек"
+  },
+  "lang": {
+    "switch": "Сменить язык"
+  },
+  "errors": {
+    "network": "Сетевая ошибка",
+    "unauthorized": "Нет доступа",
+    "not_found": "Не найдено",
+    "server_error": "Ошибка сервера"
+  }
+}

@@ -25,6 +25,10 @@ models/
 results/
 datasets/
 
+# Local docker volume mounts — created by the compose stack, never commit
+.docker/data/clickhouse-server/users.d/
+.docker/data/redis/
+
 # IDE
 .idea/
 .vscode/

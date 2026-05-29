@@ -1,37 +1,26 @@
-# Build-time stage
+# Build-time stage — Nuxt 4 / Vue 3.5 / Vuetify 3 / Pinia
 FROM node:22-alpine AS build
 
 ENV HOST=0.0.0.0
 ENV PORT=3000
 ENV TZ=UTC
 
-ARG API_BASE_URL
-ENV API_BASE_URL=${API_BASE_URL}
-ARG CLIENT_ID
-ARG CLIENT_SECRET
-ENV CLIENT_ID=${CLIENT_ID}
-ENV CLIENT_SECRET=${CLIENT_SECRET}
+WORKDIR /app
 
-USER node
-RUN mkdir -p /home/node/app
-WORKDIR /home/node/app
+COPY package.json ./
+RUN corepack enable && corepack prepare yarn@1.22.22 --activate \
+    && yarn install --network-timeout 600000
 
-COPY --chown=node:node package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
-
-COPY --chown=node:node . ./
+COPY . ./
 RUN yarn build
 
 # Run-time stage
 FROM node:22-alpine
 
 ENV NODE_ENV=production
-USER node
-RUN mkdir -p /home/node/app
-WORKDIR /home/node/app
+WORKDIR /app
 
-COPY --chown=node:node nuxt.config.ts package.json yarn.lock ./
-COPY --chown=node:node --from=build /home/node/app/.output ./.output
+COPY --from=build /app/.output ./.output
 
 EXPOSE 3000
 

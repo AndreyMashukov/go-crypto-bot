@@ -1,3 +1,0 @@
-twig:
-    paths:
-        '%kernel.project_dir%/bundles/CryptoBotContext/Resources/templates': crypto_bot_context

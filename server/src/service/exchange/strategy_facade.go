@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/AndreyMashukov/go-crypto-bot/server/shared/tickstore"
+	"github.com/AndreyMashukov/go-crypto-bot/server/shared/tickbuffer"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service"
@@ -26,11 +26,11 @@ type StrategyFacade struct {
 	ExchangeRepository  repository.ExchangeTradeInfoInterface
 	OrderRepository     repository.OrderStorageInterface
 	BotService          service.BotServiceInterface
-	// TickStore is the in-process latest-tick map written by the
-	// watcher's emit path. Phase D replaces the legacy
-	// ExchangeRepository.GetCurrentKline call with TickStore.Latest so
-	// the strategy hot path is no longer coupled to the kline repo.
-	TickStore    tickstore.Store
+	// MarketBuffer is the trader-side coalescing buffer the subscriber
+	// goroutine Puts into; the facade reads Latest to get the merged
+	// view per symbol. Phase I swap: was tickstore.Store (clobber);
+	// now dedup+enrich on every Put.
+	MarketBuffer tickbuffer.MarketTickBufferInterface
 	MinDecisions float64
 }
 
@@ -75,15 +75,15 @@ func (s *StrategyFacade) Decide(symbol string) (model.FacadeResponse, error) {
 		}, fmt.Errorf("[%s] %s", symbol, err.Error())
 	}
 
-	if s.TickStore == nil {
+	if s.MarketBuffer == nil {
 		return model.FacadeResponse{
 			Hold: model.DecisionHighestPriorityScore,
 			Buy:  0.00,
 			Sell: 0.00,
-		}, errors.New("strategy facade: TickStore not wired")
+		}, errors.New("strategy facade: MarketBuffer not wired")
 	}
 
-	tick, ok := s.TickStore.Latest(tradeLimit.Symbol)
+	tick, ok := s.MarketBuffer.Latest(tradeLimit.Symbol)
 	if !ok || len(tick.Candles.Series) == 0 {
 		return model.FacadeResponse{
 			Hold: model.DecisionHighestPriorityScore,

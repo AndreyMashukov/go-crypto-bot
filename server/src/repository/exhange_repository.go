@@ -12,7 +12,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/AndreyMashukov/go-crypto-bot/server/shared/tickstore"
+	"github.com/AndreyMashukov/go-crypto-bot/server/shared/tickbuffer"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
@@ -74,10 +74,12 @@ type ExchangeRepository struct {
 	Formatter        *utils.Formatter
 	Binance          client.ExchangePriceAPIInterface
 	ObjectRepository *ObjectRepository
-	// TickStore is the source of truth for "current price view" after
+	// MarketBuffer is the source of truth for "current price view" after
 	// Phase E. GetCurrentKline derives a model.KLine on demand from the
-	// latest tick; there is no Redis kline cache any more.
-	TickStore tickstore.Store
+	// latest tick; there is no Redis kline cache any more. Phase I
+	// upgraded the field from tickstore.Store (clobber semantics) to
+	// the dedup+enrich tickbuffer.MarketTickBufferInterface.
+	MarketBuffer tickbuffer.MarketTickBufferInterface
 }
 
 func (e *ExchangeRepository) GetSubscribedSymbols() []model.Symbol {
@@ -319,10 +321,10 @@ func (e *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 // touching Redis; Phase H will move them to MarketTick.Candles
 // directly when the legacy src/ tree is cannibalised.
 func (e *ExchangeRepository) GetCurrentKline(symbol string) *model.KLine {
-	if e.TickStore == nil {
+	if e.MarketBuffer == nil {
 		return nil
 	}
-	tick, ok := e.TickStore.Latest(symbol)
+	tick, ok := e.MarketBuffer.Latest(symbol)
 	if !ok {
 		return nil
 	}
@@ -360,10 +362,10 @@ func (e *ExchangeRepository) GetCurrentKline(symbol string) *model.KLine {
 // the function caps at the available window size and returns 0 when
 // no candles are buffered.
 func (e *ExchangeRepository) GetPeriodMinPrice(symbol string, period int64) float64 {
-	if e.TickStore == nil {
+	if e.MarketBuffer == nil {
 		return 0.00
 	}
-	tick, ok := e.TickStore.Latest(symbol)
+	tick, ok := e.MarketBuffer.Latest(symbol)
 	if !ok {
 		return 0.00
 	}

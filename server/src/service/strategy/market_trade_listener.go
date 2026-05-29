@@ -14,7 +14,7 @@ import (
 	"github.com/AndreyMashukov/go-crypto-bot/server/market-watcher/enrichment"
 	"github.com/AndreyMashukov/go-crypto-bot/server/market-watcher/publisher"
 	tickevent "github.com/AndreyMashukov/go-crypto-bot/server/shared/event"
-	"github.com/AndreyMashukov/go-crypto-bot/server/shared/tickstore"
+	"github.com/AndreyMashukov/go-crypto-bot/server/shared/tickbuffer"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/event"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
@@ -51,15 +51,16 @@ type MarketTradeListener struct {
 	// emitted MarketTick carries real Candles + Indicators. Phase D adds
 	// this — earlier phases shipped a skeleton tick with empty Candles.
 	Enrichment *enrichment.Store
-	// TickStore is the in-process latest-tick map the StrategyFacade
-	// reads on the decision path. Watcher writes here right after Emit.
-	TickStore tickstore.Store
+	// MarketBuffer is the in-process tick buffer the StrategyFacade
+	// reads on the decision path. The watcher Puts here right after
+	// Emit; the trader's subscriber Puts what it pulls off pub/sub.
+	MarketBuffer tickbuffer.MarketTickBufferInterface
 }
 
 // emitMarketTick records the kline in the enrichment window, builds a
 // MarketTick carrying Candles + Indicators computed from that window,
 // and fans the tick out to both the network publisher (Redis pub/sub +
-// ClickHouse) and the in-process TickStore that the strategy facade
+// ClickHouse) and the in-process MarketBuffer that the strategy facade
 // reads on the decision path. OpenPosition + RiskEnvelope stay zero
 // for Phase D; a later phase wires their real sources.
 func (m *MarketTradeListener) emitMarketTick(ctx context.Context, kLine model.KLine) {
@@ -101,8 +102,8 @@ func (m *MarketTradeListener) emitMarketTick(ctx context.Context, kLine model.KL
 	if m.Publisher != nil {
 		m.Publisher.Emit(ctx, tick)
 	}
-	if m.TickStore != nil {
-		m.TickStore.Set(tick)
+	if m.MarketBuffer != nil {
+		m.MarketBuffer.Put(tick)
 	}
 }
 

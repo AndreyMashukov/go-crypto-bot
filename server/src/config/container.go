@@ -18,7 +18,7 @@ import (
 	"github.com/AndreyMashukov/go-crypto-bot/server/market-watcher/enrichment"
 	"github.com/AndreyMashukov/go-crypto-bot/server/market-watcher/publisher"
 	"github.com/AndreyMashukov/go-crypto-bot/server/shared/metrics"
-	"github.com/AndreyMashukov/go-crypto-bot/server/shared/tickstore"
+	"github.com/AndreyMashukov/go-crypto-bot/server/shared/tickbuffer"
 	"github.com/AndreyMashukov/go-crypto-bot/server/shared/transport"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/controller"
@@ -125,11 +125,12 @@ func InitServiceContainer() Container {
 		}
 	}
 
-	// Phase D: rolling-window enrichment + in-process latest-tick store.
-	// Created early so the StrategyFacade and MarketTradeListener can
-	// both reference the same instances by value-capture below.
+	// Phase D: rolling-window enrichment + Phase I coalescing tick
+	// buffer. Both are created early so the StrategyFacade and
+	// MarketTradeListener can reference the same instances by
+	// value-capture below.
 	enrichmentStore := enrichment.NewStore()
-	latestTicks := tickstore.NewInMemory()
+	marketBuffer := tickbuffer.NewInMemory()
 
 	formatter := utils.Formatter{}
 	var exchangeApi client.ExchangeAPIInterface
@@ -183,7 +184,7 @@ func InitServiceContainer() Container {
 		Formatter:        &formatter,
 		Binance:          exchangeApi,
 		ObjectRepository: &objectRepository,
-		TickStore:        latestTicks,
+		MarketBuffer:     marketBuffer,
 	}
 
 	marketDepthStrategy := strategy.MarketDepthStrategy{}
@@ -376,7 +377,7 @@ func InitServiceContainer() Container {
 			DecisionReadStorage: &exchangeRepository,
 			ExchangeRepository:  &exchangeRepository,
 			BotService:          &botService,
-			TickStore:           latestTicks,
+			MarketBuffer:        marketBuffer,
 		},
 	}
 
@@ -528,12 +529,12 @@ func InitServiceContainer() Container {
 			CurrentBot:          currentBot,
 			Publisher:           tickPublisher,
 			Enrichment:          enrichmentStore,
-			TickStore:           latestTicks,
+			MarketBuffer:        marketBuffer,
 		},
 		MCListener:      &mcListener,
 		EventDispatcher: &eventDispatcher,
 		Rdb:             rdb,
-		LatestTicks:     latestTicks,
+		MarketBuffer:    marketBuffer,
 		TickCHWriter:    tickCHWriter,
 		BinanceWSAddr:   os.Getenv("BINANCE_WS_DSN"),
 		MetricsAddr:     os.Getenv("METRICS_LISTEN_ADDR"),
@@ -568,10 +569,12 @@ type Container struct {
 	IsMasterBot         bool
 	// Phase H: exposed so each split-binary main can wire its own
 	// runtime — the trader spins a transport.RedisSubscriber that
-	// pushes received ticks into LatestTicks; the watcher writes
+	// Puts received ticks into MarketBuffer; the watcher writes
 	// directly through its in-process MarketTradeListener.
+	// Phase I: MarketBuffer replaces the Phase H tickstore.Store —
+	// per-symbol latest with dedup + enrich on Put.
 	Rdb           *redis.Client
-	LatestTicks   tickstore.Store
+	MarketBuffer  tickbuffer.MarketTickBufferInterface
 	TickCHWriter  *chwriter.TickWriter
 	BinanceWSAddr string
 	MetricsAddr   string

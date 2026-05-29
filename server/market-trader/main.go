@@ -1,7 +1,7 @@
 // Phase H entry point for the market-trader binary.
 //
 // Subscribes to MarketTicks on Redis pub/sub (ticks.*), feeds them
-// into its local tickstore, runs the trading decision loop on top of
+// into its local tickbuffer, runs the trading decision loop on top of
 // the StrategyFacade, and serves the admin HTTP API. Owns zero
 // exchange WebSocket connections; the watcher does all the WS work
 // and publishes ticks for the trader to consume.
@@ -64,7 +64,19 @@ func run() error {
 	defer container.PythonMLBridge.Finalize()
 	container.StartHttpServer()
 
+	if binance, ok := container.Binance.(*client.Binance); ok {
+		// trader owns its own WS API connection for order placement
+		// and account queries (socketRequest path). Run on a goroutine
+		// so the rest of init proceeds while the handshake completes;
+		// the balance check below CheckWait-s until the socket is live.
+		go binance.Connect(container.BinanceWSAddr)
+	}
+
 	log.Printf("market-trader [%s] initialised", container.CurrentBot.BotUuid)
+
+	if err := container.TimeService.WaitSecondsCtx(rootCtx, 5); err != nil {
+		return err
+	}
 
 	usdtBalance, err := container.BalanceService.GetAssetBalance("USDT", false)
 	if err != nil {
@@ -113,7 +125,7 @@ func run() error {
 
 	group.Go(func() error {
 		for tick := range subscriber.Ticks() {
-			container.LatestTicks.Set(tick)
+			container.MarketBuffer.Put(tick)
 		}
 		return nil
 	})

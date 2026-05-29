@@ -29,11 +29,12 @@ RUN apt-get update \
         libxml2-dev \
         libxslt1-dev \
         libzip-dev \
+        libpq-dev \
         make \
         pkg-config \
         supervisor \
         unzip \
-        default-mysql-client \
+        postgresql-client \
         zlib1g-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j"$(nproc)" \
@@ -44,7 +45,7 @@ RUN apt-get update \
         mbstring \
         opcache \
         pcntl \
-        pdo_mysql \
+        pdo_pgsql \
         sockets \
         xsl \
         zip \

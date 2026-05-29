@@ -1,9 +1,9 @@
-create table `object_storage`
+create table object_storage
 (
-    storage_key CHAR(255) primary key,
-    object      JSON         not null,
-    created_at  datetime     not null,
-    updated_at  datetime     not null,
-    bot_id      int unsigned not null,
-    constraint object_storage_bot_id_fk foreign key (bot_id) references `bots` (id)
+    storage_key char(255)   primary key,
+    object      jsonb       not null,
+    created_at  timestamptz not null,
+    updated_at  timestamptz not null,
+    bot_id      bigint      not null,
+    constraint object_storage_bot_id_fk foreign key (bot_id) references bots (id)
 );

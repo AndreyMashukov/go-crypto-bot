@@ -11,7 +11,7 @@ services:
           APP_ENV: 'dev'
           DEPLOY_SERVICE_IP: 'host.docker.internal'
           MESSENGER_TRANSPORT_DSN: 'amqp://crypto-saas:crypto-saas@rabbit:5672/crypto-saas'
-          DATABASE_URL: 'mysql://root:root@mysql:3306/crypto-saas?serverVersion=5.7'
+          DATABASE_URL: 'postgresql://crypto-saas:crypto-saas@postgres:5432/crypto-saas?serverVersion=16&charset=utf8'
           REDIS_DSN: 'redis://redis'
           ACCESS_TOKEN_TTL: 'P1Y'
           BREVO_API_KEY: ''
@@ -30,26 +30,30 @@ services:
         - crypto-saas
       restart: on-failure
       depends_on:
-          - mysql
-          - redis
+          postgres:
+              condition: service_healthy
+          redis:
+              condition: service_started
 #          - rabbit
 
-    # ssh tunnel: ssh {user}@{server_ip} -L3308:127.0.0.1:3306 -i ~/.ssh/{private_key}
-    mysql:
-        image: mysql:8.4
+    postgres:
+        image: postgres:16-alpine
         restart: unless-stopped
         ports:
-            - "3306:3306"
+            - "5432:5432"
         networks:
             - crypto-saas
         environment:
-            MYSQL_ROOT_PASSWORD: root
-            MYSQL_DATABASE: crypto-saas
-            MYSQL_USER: crypto-saas
-            MYSQL_PASSWORD: crypto-saas
+            POSTGRES_DB: crypto-saas
+            POSTGRES_USER: crypto-saas
+            POSTGRES_PASSWORD: crypto-saas
         volumes:
-            - mysql-data:/var/lib/mysql
-            - .docker/etc/mysql/conf:/etc/mysql/mysql.conf.d/mysqld.cnf
+            - pg-data:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U crypto-saas -d crypto-saas"]
+            interval: 5s
+            timeout: 3s
+            retries: 10
 
     redis:
         image: redis:7-alpine
@@ -84,8 +88,8 @@ services:
 #            - ./.docker/rabbitmq/logs/:/var/log/rabbitmq/
 
 volumes:
-    mysql-data:
-        name: crypto-saas_mysql_data
+    pg-data:
+        name: crypto-saas_pg_data
     s3data:
         name: crypto-saas_s3_data
     s3metadata:

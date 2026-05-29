@@ -23,7 +23,6 @@ RUN apt-get update \
         ca-certificates \
         cron \
         curl \
-        default-mysql-client \
         ffmpeg \
         gcc \
         git \
@@ -33,11 +32,13 @@ RUN apt-get update \
         libjpeg-dev \
         libonig-dev \
         libpng-dev \
+        libpq-dev \
         libwebp-dev \
         libxml2-dev \
         libxslt1-dev \
         libzip-dev \
         make \
+        postgresql-client \
         supervisor \
         unzip \
         webp \
@@ -51,7 +52,7 @@ RUN apt-get update \
         mbstring \
         opcache \
         pcntl \
-        pdo_mysql \
+        pdo_pgsql \
         sockets \
         xsl \
         zip \

@@ -1,4 +1,4 @@
-ALTER table trade_limit ADD COLUMN extra_charge_options JSON;
-UPDATE trade_limit SET extra_charge_options = JSON_ARRAY() where id > 0;
-ALTER table orders ADD COLUMN extra_charge_options JSON;
-UPDATE orders SET extra_charge_options = JSON_ARRAY() where id > 0;
+alter table trade_limit add column extra_charge_options jsonb;
+update trade_limit set extra_charge_options = '[]'::jsonb where id > 0;
+alter table orders add column extra_charge_options jsonb;
+update orders set extra_charge_options = '[]'::jsonb where id > 0;

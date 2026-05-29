@@ -2,13 +2,15 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/joho/godotenv"
+
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/config"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/joho/godotenv"
-	"log"
-	"os"
 )
 
 func main() {

@@ -30,7 +30,7 @@ func (b *BotController) GetHealthCheckAction(w http.ResponseWriter, req *http.Re
 	health := b.HealthService.HealthCheck()
 
 	encoded, _ := json.Marshal(health)
-	fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (b *BotController) PutConfigAction(w http.ResponseWriter, req *http.Request) {

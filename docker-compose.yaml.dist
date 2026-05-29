@@ -10,8 +10,8 @@ services:
         BOT_UUID: '{BOT_UUID_4_HERE}'
         BOT_EXCHANGE: 'binance'
         CLICKHOUSE_DSN: 'clickhouse:8123'
-        CLICKHOUSE_PASSWORD: '123456' # .docker/data/clickhouse-server/users.xml:63
-        DATABASE_DSN: 'root:go_crypto_bot@tcp(mysql:3306)/go_crypto_bot'
+        CLICKHOUSE_PASSWORD: '123456'
+        DATABASE_DSN: 'postgres://go_crypto_bot:go_crypto_bot@postgres:5432/go_crypto_bot?sslmode=disable'
         REDIS_DSN: 'redis:6379'
         REDIS_PASSWORD: ''
         BINANCE_API_KEY: '{BINANCE_API_KEY}'
@@ -30,25 +30,29 @@ services:
       - "8090:8080"
     restart: always
     depends_on:
-      - mysql
+      postgres:
+        condition: service_healthy
     volumes:
       - './server:/go/src/app/dev'
 
-  mysql:
-    platform: linux/x86_64
-    image: mysql:5.7
+  postgres:
+    image: postgres:16-alpine
     restart: unless-stopped
     ports:
-      - "3367:3306"
+      - "5444:5432"
     networks:
       - bot-net
     environment:
-      MYSQL_ROOT_PASSWORD: go_crypto_bot
-      MYSQL_DATABASE: go_crypto_bot
-      MYSQL_USER: go_crypto_bot
-      MYSQL_PASSWORD: go_crypto_bot
+      POSTGRES_DB: go_crypto_bot
+      POSTGRES_USER: go_crypto_bot
+      POSTGRES_PASSWORD: go_crypto_bot
     volumes:
-      - mysql-data:/var/lib/mysql
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U go_crypto_bot -d go_crypto_bot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
     # Redis
   redis:
@@ -84,7 +88,7 @@ networks:
     driver: bridge
 
 volumes:
-  mysql-data:
-    name: go_crypto_bot_mysql_data
+  pg-data:
+    name: go_crypto_bot_pg_data
   clickhouse-data:
     name: go_crypto_bot_clickhouse_data

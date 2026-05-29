@@ -34,10 +34,10 @@ func InitServiceContainer() Container {
 		log.Printf("GOMAXPROCS is set to: %d", procs)
 	}
 
-	db, err := sql.Open("mysql", os.Getenv("DATABASE_DSN"))
+	db, err := sql.Open("pgx", os.Getenv("DATABASE_DSN"))
 
 	if err != nil {
-		log.Fatal(fmt.Sprintf("[DB] MySQL can't connect: %s", err.Error()))
+		log.Fatalf("[DB] Postgres can't connect: %s", err.Error())
 	}
 
 	db.SetMaxIdleConns(8)

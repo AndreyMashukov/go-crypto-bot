@@ -106,7 +106,7 @@ func (e *ExchangeRepository) GetTradeLimits() []model.TradeLimit {
 		    tl.trade_filters_extra_charge as TradeFiltersExtraCharge,
 		    tl.sentiment_label as SentimentLabel,
 		    tl.sentiment_score as SentimentScore
-		FROM trade_limit tl WHERE tl.bot_id = ?
+		FROM trade_limit tl WHERE tl.bot_id = $1
 	`, e.CurrentBot.Id)
 	defer res.Close()
 
@@ -174,7 +174,7 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 		    tl.sentiment_label as SentimentLabel,
 		    tl.sentiment_score as SentimentScore
 		FROM trade_limit tl
-		WHERE tl.symbol = ? AND tl.bot_id = ?
+		WHERE tl.symbol = $1 AND tl.bot_id = $2
 	`,
 		symbol,
 		e.CurrentBot.Id,
@@ -207,27 +207,26 @@ func (e *ExchangeRepository) GetTradeLimit(symbol string) (model.TradeLimit, err
 }
 
 func (e *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64, error) {
-	res, err := e.DB.Exec(`
-		INSERT INTO trade_limit SET
-		    symbol = ?,
-		    usdt_limit = ?,
-		    min_price = ?,
-		    min_quantity = ?,
-		    min_notional = ?,
-		    is_enabled = ?,
-		    min_price_minutes_period = ?,
-		    frame_interval = ?,
-		    frame_period = ?,
-		    buy_price_history_check_interval = ?,
-		    buy_price_history_check_period = ?,
-		    extra_charge_options = ?,
-		    profit_options = ?,
-		    trade_filters_buy = ?,
-		    trade_filters_sell = ?,
-		    trade_filters_extra_charge = ?,
-		    sentiment_label = ?,
-		    sentiment_score = ?,
-		    bot_id = ?
+	var lastID int64
+	err := e.DB.QueryRow(`
+		INSERT INTO trade_limit (
+			symbol, usdt_limit, min_price, min_quantity, min_notional,
+			is_enabled, min_price_minutes_period, frame_interval, frame_period,
+			buy_price_history_check_interval, buy_price_history_check_period,
+			extra_charge_options, profit_options,
+			trade_filters_buy, trade_filters_sell, trade_filters_extra_charge,
+			sentiment_label, sentiment_score,
+			bot_id
+		) VALUES (
+			$1, $2, $3, $4, $5,
+			$6, $7, $8, $9,
+			$10, $11,
+			$12, $13,
+			$14, $15, $16,
+			$17, $18,
+			$19
+		)
+		RETURNING id
 	`,
 		limit.Symbol,
 		limit.USDTLimit,
@@ -248,40 +247,38 @@ func (e *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64, e
 		limit.SentimentLabel,
 		limit.SentimentScore,
 		e.CurrentBot.Id,
-	)
+	).Scan(&lastID)
 
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
-	lastId, err := res.LastInsertId()
-
-	return &lastId, err
+	return &lastID, nil
 }
 
 func (e *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 	_, err := e.DB.Exec(`
-		UPDATE trade_limit tl SET
-		    tl.symbol = ?,
-		    tl.usdt_limit = ?,
-		    tl.min_price = ?,
-		    tl.min_quantity = ?,
-		    tl.min_notional = ?,
-		    tl.is_enabled = ?,
-		    tl.min_price_minutes_period = ?,
-		    tl.frame_interval = ?,
-		    tl.frame_period = ?,
-		    tl.buy_price_history_check_interval = ?,
-		    tl.buy_price_history_check_period = ?,
-		    tl.extra_charge_options = ?,
-		    tl.profit_options = ?,
-		    tl.trade_filters_buy = ?,
-		    tl.trade_filters_sell = ?,
-		    tl.trade_filters_extra_charge = ?,
-		    tl.sentiment_label = ?,
-		    tl.sentiment_score = ?
-		WHERE tl.id = ?
+		UPDATE trade_limit SET
+			symbol                            = $1,
+			usdt_limit                        = $2,
+			min_price                         = $3,
+			min_quantity                      = $4,
+			min_notional                      = $5,
+			is_enabled                        = $6,
+			min_price_minutes_period          = $7,
+			frame_interval                    = $8,
+			frame_period                      = $9,
+			buy_price_history_check_interval  = $10,
+			buy_price_history_check_period    = $11,
+			extra_charge_options              = $12,
+			profit_options                    = $13,
+			trade_filters_buy                 = $14,
+			trade_filters_sell                = $15,
+			trade_filters_extra_charge        = $16,
+			sentiment_label                   = $17,
+			sentiment_score                   = $18
+		WHERE id = $19
 	`,
 		limit.Symbol,
 		limit.USDTLimit,

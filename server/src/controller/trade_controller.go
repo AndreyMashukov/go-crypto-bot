@@ -88,7 +88,7 @@ func (t *TradeController) UpdateTradeLimitAction(w http.ResponseWriter, req *htt
 	t.ExchangeRepository.SetTradeLimit(entity)
 
 	encodedRes, _ := json.Marshal(entity)
-	_, _ = fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprint(w, string(encodedRes))
 }
 
 func (t *TradeController) CreateTradeLimitAction(w http.ResponseWriter, req *http.Request) {
@@ -157,7 +157,7 @@ func (t *TradeController) CreateTradeLimitAction(w http.ResponseWriter, req *htt
 	t.ExchangeRepository.SetTradeLimit(entity)
 
 	encodedRes, _ := json.Marshal(entity)
-	_, _ = fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprint(w, string(encodedRes))
 }
 
 func (t *TradeController) GetTradeLimitsAction(w http.ResponseWriter, req *http.Request) {
@@ -187,7 +187,7 @@ func (t *TradeController) GetTradeLimitsAction(w http.ResponseWriter, req *http.
 	limits := t.ExchangeRepository.GetTradeLimits()
 
 	encodedRes, _ := json.Marshal(limits)
-	_, _ = fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprint(w, string(encodedRes))
 }
 
 func (t *TradeController) PostSignalAction(w http.ResponseWriter, req *http.Request) {
@@ -274,7 +274,7 @@ func (t *TradeController) GetTradeStackAction(w http.ResponseWriter, req *http.R
 		http.Error(w, "Something went wrong", http.StatusServiceUnavailable)
 		return
 	}
-	_, _ = fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprint(w, string(encodedRes))
 }
 
 func (t *TradeController) SwitchTradeLimitAction(w http.ResponseWriter, req *http.Request) {
@@ -329,7 +329,7 @@ func (t *TradeController) SwitchTradeLimitAction(w http.ResponseWriter, req *htt
 	t.ExchangeRepository.SetTradeLimit(entity)
 
 	encodedRes, _ := json.Marshal(entity)
-	_, _ = fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprint(w, string(encodedRes))
 }
 
 func (t *TradeController) PatchSentimentAction(w http.ResponseWriter, req *http.Request) {
@@ -394,5 +394,5 @@ func (t *TradeController) PatchSentimentAction(w http.ResponseWriter, req *http.
 	t.ExchangeRepository.SetTradeLimit(entity)
 
 	encodedRes, _ := json.Marshal(entity)
-	_, _ = fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprint(w, string(encodedRes))
 }

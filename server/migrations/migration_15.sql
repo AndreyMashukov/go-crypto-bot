@@ -1,2 +1,2 @@
-ALTER TABLE bots ADD COLUMN is_master_bot TINYINT(1) DEFAULT '0';
-ALTER TABLE bots ADD COLUMN is_swap_enabled TINYINT(1) DEFAULT '0';
+alter table bots add column is_master_bot boolean default false;
+alter table bots add column is_swap_enabled boolean default false;

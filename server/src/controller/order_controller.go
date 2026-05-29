@@ -60,7 +60,7 @@ func (o *OrderController) GetOrderTradeListAction(w http.ResponseWriter, req *ht
 
 	list := o.OrderRepository.GetTrades()
 	encoded, _ := json.Marshal(list)
-	_, _ = fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http.Request) {
@@ -173,7 +173,7 @@ func (o *OrderController) GetPositionListAction(w http.ResponseWriter, req *http
 	}
 
 	encoded, _ := json.Marshal(positions)
-	_, _ = fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (o *OrderController) UpdateExtraChargeAction(w http.ResponseWriter, req *http.Request) {
@@ -248,7 +248,7 @@ func (o *OrderController) UpdateExtraChargeAction(w http.ResponseWriter, req *ht
 	o.OrderExecutor.SetCancelRequest(entity.Symbol)
 	o.ExchangeRepository.DeleteDecision(model.OrderBasedStrategyName, entity.Symbol)
 	encodedRes, _ := json.Marshal(entity)
-	_, _ = fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprint(w, string(encodedRes))
 }
 
 func (o *OrderController) UpdateProfitOptionsAction(w http.ResponseWriter, req *http.Request) {
@@ -337,7 +337,7 @@ func (o *OrderController) UpdateProfitOptionsAction(w http.ResponseWriter, req *
 	o.OrderExecutor.SetCancelRequest(entity.Symbol)
 	o.ExchangeRepository.DeleteDecision(model.OrderBasedStrategyName, entity.Symbol)
 	encodedRes, _ := json.Marshal(entity)
-	_, _ = fmt.Fprintf(w, string(encodedRes))
+	_, _ = fmt.Fprint(w, string(encodedRes))
 }
 
 func (o *OrderController) GetPendingOrderListAction(w http.ResponseWriter, req *http.Request) {
@@ -394,7 +394,7 @@ func (o *OrderController) GetPendingOrderListAction(w http.ResponseWriter, req *
 	}
 
 	encoded, _ := json.Marshal(pending)
-	_, _ = fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (o *OrderController) GetOrderListAction(w http.ResponseWriter, req *http.Request) {
@@ -417,7 +417,7 @@ func (o *OrderController) GetOrderListAction(w http.ResponseWriter, req *http.Re
 
 	list := o.OrderRepository.GetList()
 	encoded, _ := json.Marshal(list)
-	_, _ = fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (o *OrderController) DeleteCancelExchangeOrderAction(w http.ResponseWriter, req *http.Request) {
@@ -632,5 +632,5 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 	o.OrderExecutor.SetCancelRequest(tradeLimit.Symbol)
 
 	encoded, _ := json.Marshal(manual)
-	_, _ = fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }

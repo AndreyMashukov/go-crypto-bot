@@ -4,10 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
-	"github.com/redis/go-redis/v9"
 	"log"
 	"time"
+
+	"github.com/redis/go-redis/v9"
+
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 )
 
 type ObjectRepository struct {
@@ -28,9 +30,9 @@ func (o *ObjectRepository) LoadObject(key string, object interface{}) error {
 
 	var jsonString string
 	err := o.DB.QueryRow(`
-		SELECT 
-			os.object as ObjectJSON
-		FROM object_storage os WHERE os.storage_key = ?
+		SELECT os.object as ObjectJSON
+		FROM object_storage os
+		WHERE os.storage_key = $1
 	`, key).Scan(
 		&jsonString,
 	)
@@ -55,24 +57,20 @@ func (o *ObjectRepository) SaveObject(key string, object interface{}) error {
 		return err
 	}
 
+	now := time.Now().UTC()
+
 	_, err = o.DB.Exec(`
-		INSERT INTO object_storage SET
-		    storage_key = ?,
-			object = ?,
-			created_at = ?,
-			updated_at = ?,
-			bot_id = ?
-		ON DUPLICATE KEY UPDATE 
-			object = ?,
-			updated_at = ?
+		INSERT INTO object_storage (storage_key, object, created_at, updated_at, bot_id)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (storage_key) DO UPDATE SET
+			object     = EXCLUDED.object,
+			updated_at = EXCLUDED.updated_at
 	`,
 		key,
 		jsonString,
-		time.Now(),
-		time.Now(),
+		now,
+		now,
 		o.CurrentBot.Id,
-		jsonString,
-		time.Now(),
 	)
 
 	if err != nil {
@@ -88,7 +86,7 @@ func (o *ObjectRepository) SaveObject(key string, object interface{}) error {
 
 func (o *ObjectRepository) DeleteObject(key string) error {
 	_, err := o.DB.Exec(`
-		DELETE FROM object_storage WHERE storage_key = ? AND bot_id = ?
+		DELETE FROM object_storage WHERE storage_key = $1 AND bot_id = $2
 	`, key, o.CurrentBot.Id)
 
 	o.RDB.Del(*o.Ctx, key)

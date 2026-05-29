@@ -1,6 +1,6 @@
-ALTER TABLE trade_limit ADD COLUMN trade_filters_buy JSON;
-UPDATE trade_limit SET trade_filters_buy = json_array() WHERE id > 0;
-ALTER TABLE trade_limit ADD COLUMN trade_filters_sell JSON;
-UPDATE trade_limit SET trade_filters_sell = json_array() WHERE id > 0;
-ALTER TABLE trade_limit ADD COLUMN trade_filters_extra_charge JSON;
-UPDATE trade_limit SET trade_filters_extra_charge = json_array() WHERE id > 0;
+alter table trade_limit add column trade_filters_buy jsonb;
+update trade_limit set trade_filters_buy = '[]'::jsonb where id > 0;
+alter table trade_limit add column trade_filters_sell jsonb;
+update trade_limit set trade_filters_sell = '[]'::jsonb where id > 0;
+alter table trade_limit add column trade_filters_extra_charge jsonb;
+update trade_limit set trade_filters_extra_charge = '[]'::jsonb where id > 0;

@@ -1,9 +1,7 @@
 doctrine:
     dbal:
         url: '%env(resolve:DATABASE_URL)%'
-
-
-
+        server_version: '16'
 
     orm:
         auto_generate_proxy_classes: true
@@ -21,47 +19,6 @@ doctrine:
                 alias: App
         controller_resolver:
             auto_mapping: false
-        dql:
-            string_functions:
-
-
-
-
-
-                DATEDIFF: DoctrineExtensions\Query\Mysql\DateDiff
-                TIMEDIFF: DoctrineExtensions\Query\Mysql\TimeDiff
-                TIME_TO_SEC: DoctrineExtensions\Query\Mysql\TimeToSec
-                UNIX_TIMESTAMP: DoctrineExtensions\Query\Mysql\UnixTimestamp
-                IF: DoctrineExtensions\Query\Mysql\IfElse
-                CONCAT_WS: DoctrineExtensions\Query\Mysql\ConcatWs
-                CAST: DoctrineExtensions\Query\Mysql\Cast
-                DATE: DoctrineExtensions\Query\Mysql\Date
-                GROUP_CONCAT: DoctrineExtensions\Query\Mysql\GroupConcat
-                HOUR: DoctrineExtensions\Query\Mysql\Hour
-                WEEK: DoctrineExtensions\Query\Mysql\Week
-                MONTH: DoctrineExtensions\Query\Mysql\Month
-                YEAR: DoctrineExtensions\Query\Mysql\Year
-                IFNULL: DoctrineExtensions\Query\Mysql\IfNull
-                REGEXP: DoctrineExtensions\Query\Mysql\Regexp
-                FIELD: DoctrineExtensions\Query\Mysql\Field
-
-
-            numeric_functions:
-
-
-                pi: DoctrineExtensions\Query\Mysql\Pi
-                degrees: DoctrineExtensions\Query\Mysql\Degrees
-                radians: DoctrineExtensions\Query\Mysql\Radians
-                round: DoctrineExtensions\Query\Mysql\Round
-                cos: DoctrineExtensions\Query\Mysql\Cos
-                sin: DoctrineExtensions\Query\Mysql\Sin
-                acos: DoctrineExtensions\Query\Mysql\Acos
-                atan: DoctrineExtensions\Query\Mysql\Atan
-                least: DoctrineExtensions\Query\Mysql\Least
-                power: DoctrineExtensions\Query\Mysql\Power
-                floor: DoctrineExtensions\Query\Mysql\Floor
-
-                ceil: DoctrineExtensions\Query\Mysql\Ceil
 
 when@prod:
     doctrine:

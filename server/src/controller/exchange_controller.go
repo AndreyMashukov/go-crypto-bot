@@ -44,7 +44,7 @@ func (e *ExchangeController) GetKlineListAction(w http.ResponseWriter, req *http
 
 	list := e.ExchangeRepository.KLineList(symbol, true, 200)
 	encoded, _ := json.Marshal(list)
-	fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (e *ExchangeController) GetExchangeOrderAction(w http.ResponseWriter, req *http.Request) {
@@ -77,7 +77,7 @@ func (e *ExchangeController) GetExchangeOrderAction(w http.ResponseWriter, req *
 	}
 
 	encoded, _ := json.Marshal(order)
-	_, _ = fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (e *ExchangeController) GetAccountAction(w http.ResponseWriter, req *http.Request) {
@@ -101,7 +101,7 @@ func (e *ExchangeController) GetAccountAction(w http.ResponseWriter, req *http.R
 	account := e.BalanceService.GetBalance(hideZero)
 
 	encoded, _ := json.Marshal(account)
-	_, _ = fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (e *ExchangeController) GetDepthAction(w http.ResponseWriter, req *http.Request) {
@@ -121,7 +121,7 @@ func (e *ExchangeController) GetDepthAction(w http.ResponseWriter, req *http.Req
 
 	list := e.ExchangeRepository.GetDepth(symbol, 20)
 	encoded, _ := json.Marshal(list)
-	fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (e *ExchangeController) GetTradeListAction(w http.ResponseWriter, req *http.Request) {
@@ -141,7 +141,7 @@ func (e *ExchangeController) GetTradeListAction(w http.ResponseWriter, req *http
 
 	list := e.ExchangeRepository.TradeList(symbol)
 	encoded, _ := json.Marshal(list)
-	fmt.Fprintf(w, string(encoded))
+	_, _ = fmt.Fprint(w, string(encoded))
 }
 
 func (e *ExchangeController) GetChartListAction(w http.ResponseWriter, req *http.Request) {
@@ -174,5 +174,5 @@ func (e *ExchangeController) GetChartListAction(w http.ResponseWriter, req *http
 		e.RDB.Set(*e.Ctx, fmt.Sprintf("chart-cache-bot-%d", e.CurrentBot.Id), encoded, time.Second*5)
 	}
 
-	fmt.Fprintf(w, encoded)
+	_, _ = fmt.Fprint(w, encoded)
 }

@@ -1,2 +1,2 @@
-ALTER TABLE trade_limit ADD COLUMN sentiment_label CHAR(20) DEFAULT NULL;
-ALTER TABLE trade_limit ADD COLUMN sentiment_score double DEFAULT NULL;
+alter table trade_limit add column sentiment_label char(20) default null;
+alter table trade_limit add column sentiment_score double precision default null;

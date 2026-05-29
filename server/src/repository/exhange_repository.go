@@ -331,12 +331,14 @@ func (e *ExchangeRepository) GetCurrentKline(symbol string) *model.KLine {
 	high := closePrice
 	low := closePrice
 	volume := 0.0
+	openTime := tick.EventTime.Truncate(time.Minute)
 	if n := len(tick.Candles.Series); n > 0 {
 		c := tick.Candles.Series[n-1]
 		open, _ = c.Open.Float64()
 		high, _ = c.High.Float64()
 		low, _ = c.Low.Float64()
 		volume, _ = c.Volume.Float64()
+		openTime = c.OpenTime
 	}
 	return &model.KLine{
 		Symbol:    symbol,
@@ -346,7 +348,7 @@ func (e *ExchangeRepository) GetCurrentKline(symbol string) *model.KLine {
 		Close:     model.Price(closePrice),
 		Volume:    model.Volume(volume),
 		Timestamp: model.TimestampMilli(tick.EventTime.UnixMilli()),
-		OpenTime:  model.TimestampMilli(tick.EventTime.Truncate(time.Minute).UnixMilli()),
+		OpenTime:  model.TimestampMilli(openTime.UnixMilli()),
 		UpdatedAt: tick.EventTime.Unix(),
 		Source:    "tick",
 		Interval:  "1m",

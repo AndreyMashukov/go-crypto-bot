@@ -4,9 +4,15 @@
 // implementation lives alongside in this same package.
 //
 // Wire format: leading byte is the schema version, then a msgpack-
-// encoded event.MarketTick. Decoders MUST tolerate unknown trailing
-// fields (msgpack does this by default) so a v2 watcher can roll out
-// ahead of a v1 trader without breaking either side.
+// encoded event.MarketTick.
+//
+// Compatibility rules:
+//   - Additive field changes keep SchemaVersion unchanged. msgpack
+//     ignores unknown trailing fields on decode, so a new field on
+//     MarketTick rolls out without bumping the version.
+//   - Bumping SchemaVersion means a wire-incompatible change. The
+//     trader must be upgraded BEFORE the watcher, otherwise every
+//     incoming tick will be dropped at Decode.
 package transport
 
 import (

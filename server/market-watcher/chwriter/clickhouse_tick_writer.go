@@ -115,11 +115,11 @@ func (w *TickWriter) Run(ctx context.Context) error {
 
 	batch := make([]event.MarketTick, 0, w.batchSize)
 
-	flush := func() {
+	flush := func(parent context.Context) {
 		if len(batch) == 0 {
 			return
 		}
-		insertCtx, cancel := context.WithTimeout(context.Background(), w.insertTimeout)
+		insertCtx, cancel := context.WithTimeout(parent, w.insertTimeout)
 		defer cancel()
 		if err := w.flush(insertCtx, batch); err != nil {
 			if w.OnInsertFailure != nil {
@@ -137,29 +137,31 @@ func (w *TickWriter) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			// Drain whatever is already queued before we hand back.
+			// Drain whatever is already queued before we hand back. The
+			// parent ctx is already cancelled, so flush gets its own
+			// background ctx with the per-insert deadline.
 			for {
 				select {
 				case t := <-w.queue:
 					batch = append(batch, t)
 					if len(batch) >= w.batchSize {
-						flush()
+						flush(context.Background())
 					}
 				default:
-					flush()
+					flush(context.Background())
 					return ctx.Err()
 				}
 			}
 		case <-ticker.C:
-			flush()
+			flush(ctx)
 		case t, ok := <-w.queue:
 			if !ok {
-				flush()
+				flush(ctx)
 				return errors.New("clickhouse tick writer queue closed")
 			}
 			batch = append(batch, t)
 			if len(batch) >= w.batchSize {
-				flush()
+				flush(ctx)
 			}
 		}
 	}

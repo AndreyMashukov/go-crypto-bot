@@ -1,9 +1,12 @@
 package tests
 
 import (
-	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
-	"github.com/stretchr/testify/mock"
+	"context"
 	"sync"
+
+	"github.com/stretchr/testify/mock"
+
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 )
 
 type HttpClientMock struct {
@@ -73,6 +76,12 @@ type TimeServiceMock struct {
 
 func (t *TimeServiceMock) WaitSeconds(seconds int64) {
 	_ = t.Called(seconds)
+}
+
+// WaitSecondsCtx satisfies the interface; ctx is ignored in test doubles.
+func (t *TimeServiceMock) WaitSecondsCtx(_ context.Context, seconds int64) error {
+	_ = t.Called(seconds)
+	return nil
 }
 func (t *TimeServiceMock) WaitMilliseconds(milliseconds int64) {
 	_ = t.Called(milliseconds)

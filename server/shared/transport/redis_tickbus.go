@@ -12,19 +12,21 @@ import (
 )
 
 // RedisPublisher publishes encoded MarketTicks to ticks.<exchange>.<symbol>.
-// Publish has a tight per-call deadline (default 20 ms) so the WS reader
-// never blocks on a slow Redis hop — a stalled publish drops the tick
-// at the metric layer, the next one arrives in milliseconds anyway.
+// Publish has a tight per-call deadline (default 100 ms) so the WS
+// reader never blocks on a slow Redis hop — a stalled publish drops
+// the tick at the metric layer, the next one arrives in milliseconds
+// anyway. 100 ms tolerates a single TCP retransmit; 20 ms (the older
+// default) was tripping on every minor network flap.
 type RedisPublisher struct {
 	rdb            *redis.Client
 	publishTimeout time.Duration
 }
 
 // NewRedisPublisher wires a Redis client into the Publisher seam. Pass
-// publishTimeout=0 for the default 20 ms ceiling.
+// publishTimeout=0 for the default 100 ms ceiling.
 func NewRedisPublisher(rdb *redis.Client, publishTimeout time.Duration) *RedisPublisher {
 	if publishTimeout <= 0 {
-		publishTimeout = 20 * time.Millisecond
+		publishTimeout = 100 * time.Millisecond
 	}
 	return &RedisPublisher{rdb: rdb, publishTimeout: publishTimeout}
 }

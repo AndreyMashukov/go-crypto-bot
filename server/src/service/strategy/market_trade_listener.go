@@ -62,7 +62,7 @@ type MarketTradeListener struct {
 // ClickHouse) and the in-process TickStore that the strategy facade
 // reads on the decision path. OpenPosition + RiskEnvelope stay zero
 // for Phase D; a later phase wires their real sources.
-func (m *MarketTradeListener) emitMarketTick(kLine model.KLine) {
+func (m *MarketTradeListener) emitMarketTick(ctx context.Context, kLine model.KLine) {
 	if m.CurrentBot == nil {
 		return
 	}
@@ -99,130 +99,34 @@ func (m *MarketTradeListener) emitMarketTick(kLine model.KLine) {
 		Indicators: indicators,
 	}
 	if m.Publisher != nil {
-		m.Publisher.Emit(context.Background(), tick)
+		m.Publisher.Emit(ctx, tick)
 	}
 	if m.TickStore != nil {
 		m.TickStore.Set(tick)
 	}
 }
 
-func (m *MarketTradeListener) ListenAll() {
+// ListenAll wires the watcher's per-process goroutine fleet —
+// 8 kline consumers, 1 prediction worker, 1 depth consumer, 1 price-
+// recovery loop, plus the exchange WS streamer. Every loop observes
+// ctx and exits cleanly on cancel.
+func (m *MarketTradeListener) ListenAll(ctx context.Context) {
 	klineChannel := make(chan model.KLine, 1000)
 	predictChannel := make(chan string, 1000)
 	depthChannel := make(chan model.OrderBookModel, 1000)
 
 	predictMap := sync.Map{}
 
-	go func(pMap *sync.Map) {
-		for {
-			symbol := <-predictChannel
-
-			if status, ok := pMap.Load(symbol); ok {
-				log.Printf("[%s] Prediction status: %s, skip", symbol, status)
-				continue
-			}
-			pMap.Store(symbol, "processing")
-
-			predicted, _ := m.PythonMLBridge.Predict(symbol)
-
-			kLine := m.ExchangeRepository.GetCurrentKline(symbol)
-			if predicted > 0.00 {
-				if kLine != nil {
-					m.ExchangeRepository.SaveKLinePredict(predicted, *kLine)
-				}
-				m.ExchangeRepository.SavePredict(predicted, symbol)
-			}
-
-			if kLine != nil {
-				limit := m.ExchangeRepository.GetTradeLimitCached(kLine.Symbol)
-				if limit != nil {
-					interpolation := m.PriceCalculator.InterpolatePrice(*limit)
-					m.ExchangeRepository.SaveInterpolation(interpolation, *kLine)
-				}
-			}
-			pMap.Delete(symbol)
-		}
-	}(&predictMap)
+	go m.runPredictLoop(ctx, predictChannel, &predictMap)
 
 	klineConsumerCount := 8
-
 	for i := 0; i < klineConsumerCount; i++ {
-		go func() {
-			for {
-				afterEach := func() {
-					runtime.GC()
-					runtime.Gosched()
-				}
-
-				kLine := <-klineChannel
-				lastKline := m.ExchangeRepository.GetCurrentKline(kLine.Symbol)
-
-				if lastKline != nil && (lastKline.Timestamp.Gt(kLine.Timestamp) || kLine.IsPriceNotActual() || kLine.IsPriceWrongTimestamp()) {
-					log.Printf(
-						"[%s] (%s) Exchange sent expired stream price. T = %d < %d, UpdAt: %d, Now: %d [%d]",
-						kLine.Symbol,
-						kLine.Source,
-						kLine.Timestamp.Value(),
-						lastKline.Timestamp.Value(),
-						kLine.UpdatedAt,
-						time.Now().Unix(),
-						model.TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute(),
-					)
-					afterEach()
-					continue
-				}
-
-				m.emitMarketTick(kLine)
-				if lastKline != nil && lastKline.Timestamp.GetPeriodToMinute() != kLine.Timestamp.GetPeriodToMinute() {
-					m.EventDispatcher.Dispatch(event.NewKlineReceived{
-						Previous: lastKline,
-						Current:  &kLine,
-					}, event.EventNewKLineReceived)
-				}
-
-				predictChannel <- kLine.Symbol
-				m.ExchangeRepository.SetDecision(m.BaseKLineStrategy.Decide(kLine), kLine.Symbol)
-				m.ExchangeRepository.SetDecision(m.OrderBasedStrategy.Decide(kLine), kLine.Symbol)
-				afterEach()
-			}
-		}()
+		go m.runKlineConsumer(ctx, klineChannel, predictChannel)
 	}
 
-	go func() {
-		for {
-			depth := <-depthChannel
-			depth.UpdatedAt = time.Now().Unix()
-			m.ExchangeRepository.SetDepth(depth, 20, 25)
-		}
-	}()
+	go m.runDepthConsumer(ctx, depthChannel)
 
-	tradeLimitCollection := make([]model.SymbolInterface, 0)
-	hasBtcUsdt := false
-	hasEthUsdt := false
-
-	waitGroup := sync.WaitGroup{}
-	log.Printf("Price history recovery started")
-	for _, limit := range m.ExchangeRepository.GetTradeLimits() {
-		waitGroup.Add(1)
-		tradeLimitCollection = append(tradeLimitCollection, limit)
-
-		// Phase E removed the Redis kline cache; the watcher's enrichment
-		// store fills naturally as live klines arrive. No history
-		// recovery loop is needed.
-		go func(_ model.TradeLimit) {
-			defer waitGroup.Done()
-		}(limit)
-
-		if "BTCUSDT" == limit.GetSymbol() {
-			hasBtcUsdt = true
-		}
-		if "ETHUSDT" == limit.GetSymbol() {
-			hasEthUsdt = true
-		}
-	}
-	waitGroup.Wait()
-
-	log.Printf("Price history recovery finished")
+	tradeLimitCollection, hasBtcUsdt, hasEthUsdt := m.collectTradeLimits()
 	m.EventDispatcher.Enabled = true
 	log.Printf("Event subscribers are enabled")
 
@@ -236,71 +140,185 @@ func (m *MarketTradeListener) ListenAll() {
 	m.ExchangeWSStreamer.StartStream(tradeLimitCollection, klineChannel, depthChannel)
 	log.Printf("WS Price stream started.")
 
-	go func() {
-		for {
-			invalidPriceSymbols := make([]string, 0)
-			for _, limit := range m.ExchangeRepository.GetTradeLimits() {
-				k := m.ExchangeRepository.GetCurrentKline(limit.Symbol)
-				if k == nil || k.IsPriceNotActual() {
-					invalidPriceSymbols = append(invalidPriceSymbols, limit.Symbol)
-				}
-			}
-
-			if len(invalidPriceSymbols) > 0 {
-				log.Printf("Price is invalid for: %s", strings.Join(invalidPriceSymbols, ", "))
-				tickers := m.Binance.GetTickers(invalidPriceSymbols)
-				updated := make([]string, 0)
-
-				for _, t := range tickers {
-					k := m.ExchangeRepository.GetCurrentKline(t.Symbol)
-					currentInterval := model.TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute()
-					if k == nil {
-						k = &model.KLine{
-							Symbol:    t.Symbol,
-							Interval:  "1m",
-							Low:       model.Price(t.Price),
-							Open:      model.Price(t.Price),
-							Close:     model.Price(t.Price),
-							High:      model.Price(t.Price),
-							Timestamp: model.TimestampMilli(0),
-							UpdatedAt: 0,
-							OpenTime:  model.TimestampMilli(model.TimestampMilli(currentInterval).GetPeriodFromMinute()),
-						}
-					}
-
-					if k.IsPriceNotActual() {
-						k.High = model.Price(math.Max(t.Price, k.High.Value()))
-						k.Low = model.Price(math.Min(t.Price, k.Low.Value()))
-						k.Close = model.Price(t.Price)
-
-						if k.Timestamp.GetPeriodToMinute() < currentInterval {
-							k.Timestamp = model.TimestampMilli(currentInterval)
-							k.Open = model.Price(t.Price)
-							k.Close = model.Price(t.Price)
-							k.High = model.Price(t.Price)
-							k.Low = model.Price(t.Price)
-						}
-
-						// todo: update timestamp and recover max, min prices...
-						k.UpdatedAt = time.Now().Unix()
-						k.Source = model.KLineSourceKLineFetch
-						klineChannel <- *k
-						updated = append(updated, k.Symbol)
-					}
-				}
-
-				if len(updated) > 0 {
-					log.Printf("Price updated for: %s", strings.Join(updated, ", "))
-				}
-			}
-			m.TimeService.WaitSeconds(4)
-		}
-	}()
+	go m.runPriceRecovery(ctx, klineChannel)
 	log.Printf("Price recovery watcher started")
 
-	// todo: order book recovery watcher is needed!
+	<-ctx.Done()
+	log.Printf("MarketTradeListener: shutdown signal received: %s", ctx.Err().Error())
+}
 
-	runChannel := make(chan string)
-	runChannel <- "run"
-	log.Panic("Trade Listener Stopped")
+func (m *MarketTradeListener) collectTradeLimits() (symbols []model.SymbolInterface, hasBtcUsdt, hasEthUsdt bool) {
+	limits := m.ExchangeRepository.GetTradeLimits()
+	symbols = make([]model.SymbolInterface, 0, len(limits))
+	for i := range limits {
+		symbols = append(symbols, limits[i])
+		if limits[i].GetSymbol() == "BTCUSDT" {
+			hasBtcUsdt = true
+		}
+		if limits[i].GetSymbol() == "ETHUSDT" {
+			hasEthUsdt = true
+		}
+	}
+	return symbols, hasBtcUsdt, hasEthUsdt
+}
+
+func (m *MarketTradeListener) runPredictLoop(ctx context.Context, predictChannel <-chan string, pMap *sync.Map) {
+	for {
+		var symbol string
+		select {
+		case <-ctx.Done():
+			return
+		case symbol = <-predictChannel:
+		}
+
+		if status, ok := pMap.Load(symbol); ok {
+			log.Printf("[%s] Prediction status: %s, skip", symbol, status)
+			continue
+		}
+		pMap.Store(symbol, "processing")
+
+		predicted, _ := m.PythonMLBridge.Predict(symbol)
+
+		kLine := m.ExchangeRepository.GetCurrentKline(symbol)
+		if predicted > 0.00 {
+			if kLine != nil {
+				m.ExchangeRepository.SaveKLinePredict(predicted, *kLine)
+			}
+			m.ExchangeRepository.SavePredict(predicted, symbol)
+		}
+
+		if kLine != nil {
+			limit := m.ExchangeRepository.GetTradeLimitCached(kLine.Symbol)
+			if limit != nil {
+				interpolation := m.PriceCalculator.InterpolatePrice(*limit)
+				m.ExchangeRepository.SaveInterpolation(interpolation, *kLine)
+			}
+		}
+		pMap.Delete(symbol)
+	}
+}
+
+func (m *MarketTradeListener) runKlineConsumer(ctx context.Context, klineChannel <-chan model.KLine, predictChannel chan<- string) {
+	afterEach := func() {
+		runtime.GC()
+		runtime.Gosched()
+	}
+	for {
+		var kLine model.KLine
+		select {
+		case <-ctx.Done():
+			return
+		case kLine = <-klineChannel:
+		}
+		lastKline := m.ExchangeRepository.GetCurrentKline(kLine.Symbol)
+
+		if lastKline != nil && (lastKline.Timestamp.Gt(kLine.Timestamp) || kLine.IsPriceNotActual() || kLine.IsPriceWrongTimestamp()) {
+			log.Printf(
+				"[%s] (%s) Exchange sent expired stream price. T = %d < %d, UpdAt: %d, Now: %d [%d]",
+				kLine.Symbol,
+				kLine.Source,
+				kLine.Timestamp.Value(),
+				lastKline.Timestamp.Value(),
+				kLine.UpdatedAt,
+				time.Now().Unix(),
+				model.TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute(),
+			)
+			afterEach()
+			continue
+		}
+
+		m.emitMarketTick(ctx, kLine)
+		if lastKline != nil && lastKline.Timestamp.GetPeriodToMinute() != kLine.Timestamp.GetPeriodToMinute() {
+			m.EventDispatcher.Dispatch(event.NewKlineReceived{
+				Previous: lastKline,
+				Current:  &kLine,
+			}, event.EventNewKLineReceived)
+		}
+
+		predictChannel <- kLine.Symbol
+		m.ExchangeRepository.SetDecision(m.BaseKLineStrategy.Decide(kLine), kLine.Symbol)
+		m.ExchangeRepository.SetDecision(m.OrderBasedStrategy.Decide(kLine), kLine.Symbol)
+		afterEach()
+	}
+}
+
+func (m *MarketTradeListener) runDepthConsumer(ctx context.Context, depthChannel <-chan model.OrderBookModel) {
+	for {
+		var depth model.OrderBookModel
+		select {
+		case <-ctx.Done():
+			return
+		case depth = <-depthChannel:
+		}
+		depth.UpdatedAt = time.Now().Unix()
+		m.ExchangeRepository.SetDepth(depth, 20, 25)
+	}
+}
+
+func (m *MarketTradeListener) runPriceRecovery(ctx context.Context, klineChannel chan<- model.KLine) {
+	for {
+		if err := m.TimeService.WaitSecondsCtx(ctx, 4); err != nil {
+			return
+		}
+		limits := m.ExchangeRepository.GetTradeLimits()
+		invalidPriceSymbols := make([]string, 0)
+		for i := range limits {
+			k := m.ExchangeRepository.GetCurrentKline(limits[i].Symbol)
+			if k == nil || k.IsPriceNotActual() {
+				invalidPriceSymbols = append(invalidPriceSymbols, limits[i].Symbol)
+			}
+		}
+
+		if len(invalidPriceSymbols) == 0 {
+			continue
+		}
+		log.Printf("Price is invalid for: %s", strings.Join(invalidPriceSymbols, ", "))
+		tickers := m.Binance.GetTickers(invalidPriceSymbols)
+		updated := m.recoverFromTickers(tickers, klineChannel)
+		if len(updated) > 0 {
+			log.Printf("Price updated for: %s", strings.Join(updated, ", "))
+		}
+	}
+}
+
+func (m *MarketTradeListener) recoverFromTickers(tickers []model.WSTickerPrice, klineChannel chan<- model.KLine) []string {
+	updated := make([]string, 0)
+	for i := range tickers {
+		t := &tickers[i]
+		k := m.ExchangeRepository.GetCurrentKline(t.Symbol)
+		currentInterval := model.TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute()
+		if k == nil {
+			k = &model.KLine{
+				Symbol:    t.Symbol,
+				Interval:  "1m",
+				Low:       model.Price(t.Price),
+				Open:      model.Price(t.Price),
+				Close:     model.Price(t.Price),
+				High:      model.Price(t.Price),
+				Timestamp: model.TimestampMilli(0),
+				UpdatedAt: 0,
+				OpenTime:  model.TimestampMilli(model.TimestampMilli(currentInterval).GetPeriodFromMinute()),
+			}
+		}
+		if !k.IsPriceNotActual() {
+			continue
+		}
+		k.High = model.Price(math.Max(t.Price, k.High.Value()))
+		k.Low = model.Price(math.Min(t.Price, k.Low.Value()))
+		k.Close = model.Price(t.Price)
+
+		if k.Timestamp.GetPeriodToMinute() < currentInterval {
+			k.Timestamp = model.TimestampMilli(currentInterval)
+			k.Open = model.Price(t.Price)
+			k.Close = model.Price(t.Price)
+			k.High = model.Price(t.Price)
+			k.Low = model.Price(t.Price)
+		}
+
+		k.UpdatedAt = time.Now().Unix()
+		k.Source = model.KLineSourceKLineFetch
+		klineChannel <- *k
+		updated = append(updated, k.Symbol)
+	}
+	return updated
 }

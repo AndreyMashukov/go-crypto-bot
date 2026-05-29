@@ -150,7 +150,6 @@ func InitServiceContainer() Container {
 			Connected:            false,
 			Lock:                 &sync.Mutex{},
 		}
-		binanceExchange.Connect(os.Getenv("BINANCE_WS_DSN"))
 		exchangeApi = &binanceExchange
 		break
 	case BotExchangeByBit:
@@ -455,17 +454,15 @@ func InitServiceContainer() Container {
 
 	// MarketTick pipeline (Phase C):
 	// - RedisPublisher writes ticks to ticks.<exchange>.<symbol> for the
-	//   future market-trader subscriber. 20 ms deadline per publish.
+	//   market-trader subscriber.
 	// - chwriter batches the same ticks into ClickHouse market_tick for
-	//   offline analysis / backtests. Non-blocking enqueue from the hot
-	//   path; the background goroutine handles batching + insert.
-	// Phase H will lift this wiring out of the legacy container into the
-	// market-watcher binary's own main.go.
+	//   offline analysis / backtests.
+	// Both seams are constructed here so the same Container can drive
+	// either binary, but the side-effects (chwriter.Run, metrics.Serve,
+	// exchange-WS Connect) are NOT spun up here. Each main wires those
+	// with its own rootCtx so SIGTERM propagates.
 	tickRedisPublisher := transport.NewRedisPublisher(rdb, 0)
 	tickCHWriter := chwriter.New(clickhouseDb, chwriter.Config{}, nil)
-	// Phase F: feed the observability counters from the same seams that
-	// already had logger-only failure handlers. Buffer drops and
-	// publish failures show up on Prometheus immediately.
 	tickCHWriter.OnDrop = func(symbol string) {
 		metrics.TickDrop.WithLabelValues(symbol).Inc()
 	}
@@ -473,16 +470,6 @@ func InitServiceContainer() Container {
 	tickPublisher.OnPublishFailure = func(symbol string, _ error) {
 		metrics.TickPublishFailure.WithLabelValues(symbol).Inc()
 	}
-	go func() {
-		_ = tickCHWriter.Run(context.Background())
-	}()
-	// Phase F: tiny admin HTTP server that exposes /metrics for
-	// Prometheus to scrape. Listens off the trading API port so the
-	// scraper does not need to traverse the user-facing routes.
-	metricsAddr := os.Getenv("METRICS_LISTEN_ADDR")
-	go func() {
-		_ = metrics.Serve(context.Background(), metricsAddr)
-	}()
 
 	mcGatewayAddress := ""
 
@@ -547,6 +534,9 @@ func InitServiceContainer() Container {
 		EventDispatcher: &eventDispatcher,
 		Rdb:             rdb,
 		LatestTicks:     latestTicks,
+		TickCHWriter:    tickCHWriter,
+		BinanceWSAddr:   os.Getenv("BINANCE_WS_DSN"),
+		MetricsAddr:     os.Getenv("METRICS_LISTEN_ADDR"),
 	}
 }
 
@@ -580,8 +570,11 @@ type Container struct {
 	// runtime — the trader spins a transport.RedisSubscriber that
 	// pushes received ticks into LatestTicks; the watcher writes
 	// directly through its in-process MarketTradeListener.
-	Rdb         *redis.Client
-	LatestTicks tickstore.Store
+	Rdb           *redis.Client
+	LatestTicks   tickstore.Store
+	TickCHWriter  *chwriter.TickWriter
+	BinanceWSAddr string
+	MetricsAddr   string
 }
 
 func (c *Container) StartHttpServer() {

@@ -22,10 +22,14 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
+	"golang.org/x/sync/errgroup"
 
+	"github.com/AndreyMashukov/go-crypto-bot/server/shared/metrics"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/config"
 )
+
+const shutdownDeadline = 5 * time.Second
 
 func main() {
 	if err := run(); err != nil {
@@ -59,6 +63,7 @@ func run() error {
 	log.Printf("market-watcher [%s] initialised", container.CurrentBot.BotUuid)
 
 	if binance, ok := container.Binance.(*client.Binance); ok {
+		binance.Connect(container.BinanceWSAddr)
 		binance.APIKeyCheckCompleted = true
 	}
 	if bybit, ok := container.Binance.(*client.ByBit); ok {
@@ -67,30 +72,46 @@ func run() error {
 
 	container.PythonMLBridge.StartAutoLearn()
 
+	group, groupCtx := errgroup.WithContext(rootCtx)
+
+	group.Go(func() error {
+		writerErr := container.TickCHWriter.Run(groupCtx)
+		if writerErr != nil && !errors.Is(writerErr, context.Canceled) {
+			return fmt.Errorf("clickhouse tick writer: %w", writerErr)
+		}
+		return nil
+	})
+
+	group.Go(func() error {
+		serveErr := metrics.Serve(groupCtx, container.MetricsAddr)
+		if serveErr != nil && !errors.Is(serveErr, context.Canceled) {
+			return fmt.Errorf("metrics server: %w", serveErr)
+		}
+		return nil
+	})
+
 	if container.IsMasterBot {
-		go func() {
-			container.MCListener.ListenAll()
-		}()
+		group.Go(func() error {
+			container.MCListener.ListenAll(groupCtx)
+			return nil
+		})
 	}
 
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		container.MarketTradeListener.ListenAll()
-	}()
+	group.Go(func() error {
+		container.MarketTradeListener.ListenAll(groupCtx)
+		return nil
+	})
 
-	select {
-	case <-rootCtx.Done():
-		log.Printf("market-watcher: shutdown signal received: %s", rootCtx.Err().Error())
-	case <-done:
-		log.Println("market-watcher: MarketTradeListener returned unexpectedly")
-	}
+	err := group.Wait()
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownDeadline)
 	defer cancel()
+	container.TickCHWriter.Close()
 	<-shutdownCtx.Done()
-	if errors.Is(shutdownCtx.Err(), context.DeadlineExceeded) {
-		log.Println("market-watcher: shutdown deadline reached, exiting")
+
+	if err != nil && !errors.Is(err, context.Canceled) {
+		return err
 	}
+	log.Println("market-watcher: shutdown complete")
 	return nil
 }

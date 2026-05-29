@@ -1,6 +1,7 @@
 package exchange
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
@@ -15,7 +16,9 @@ type MCListener struct {
 	ExchangeRepository *repository.ExchangeRepository
 }
 
-func (m *MCListener) ListenAll() {
+// ListenAll opens the MC capitalisation WS stream and pumps incoming
+// price events into the exchange repository until ctx cancels.
+func (m *MCListener) ListenAll(ctx context.Context) {
 	if len(m.MSGatewayAddress) == 0 {
 		log.Printf("MC address is not defined.")
 		return
@@ -25,7 +28,12 @@ func (m *MCListener) ListenAll() {
 
 	go func() {
 		for {
-			msg := <-mcChannel
+			var msg []byte
+			select {
+			case <-ctx.Done():
+				return
+			case msg = <-mcChannel:
+			}
 
 			if strings.Contains(string(msg), "@crypto_price_15s@") {
 				var mcEvent model.MCEvent
@@ -41,9 +49,8 @@ func (m *MCListener) ListenAll() {
 
 	m.Listen(m.MSGatewayAddress, mcChannel)
 
-	runChannel := make(chan string)
-	runChannel <- "run"
-	log.Panic("MC Listener Stopped")
+	<-ctx.Done()
+	log.Printf("MCListener: shutdown signal received: %s", ctx.Err().Error())
 }
 
 func (m *MCListener) Listen(address string, tradeChannel chan<- []byte) *websocket.Conn {

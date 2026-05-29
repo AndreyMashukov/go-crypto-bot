@@ -20,11 +20,18 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
+	"golang.org/x/sync/errgroup"
 
+	"github.com/AndreyMashukov/go-crypto-bot/server/shared/metrics"
 	"github.com/AndreyMashukov/go-crypto-bot/server/shared/transport"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/config"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
+)
+
+const (
+	shutdownDeadline = 5 * time.Second
+	startupGrace     = 10 * time.Second
 )
 
 func main() {
@@ -84,30 +91,53 @@ func run() error {
 	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{}))
-	subscriber := transport.NewRedisSubscriber(container.Rdb, "", 16, 256, 10*time.Second, logger)
-	go func() {
-		if err := subscriber.Run(rootCtx); err != nil && !errors.Is(err, context.Canceled) {
-			log.Printf("market-trader: tick subscriber stopped: %s", err.Error())
+	subscriber := transport.NewRedisSubscriber(container.Rdb, transport.PSubscribePattern, 16, 256, 10*time.Second, logger)
+
+	group, groupCtx := errgroup.WithContext(rootCtx)
+
+	group.Go(func() error {
+		serveErr := metrics.Serve(groupCtx, container.MetricsAddr)
+		if serveErr != nil && !errors.Is(serveErr, context.Canceled) {
+			return fmt.Errorf("metrics server: %w", serveErr)
 		}
-	}()
-	go func() {
+		return nil
+	})
+
+	group.Go(func() error {
+		subErr := subscriber.Run(groupCtx)
+		if subErr != nil && !errors.Is(subErr, context.Canceled) {
+			return fmt.Errorf("tick subscriber: %w", subErr)
+		}
+		return nil
+	})
+
+	group.Go(func() error {
 		for tick := range subscriber.Ticks() {
 			container.LatestTicks.Set(tick)
 		}
-	}()
+		return nil
+	})
 
-	container.MakerService.RecoverOrders()
-	container.TimeService.WaitSeconds(10)
-	container.MakerService.StartTrade()
+	group.Go(func() error {
+		container.MakerService.RecoverOrders()
+		waitErr := container.TimeService.WaitSecondsCtx(groupCtx, int64(startupGrace/time.Second))
+		if waitErr != nil {
+			return waitErr
+		}
+		container.MakerService.StartTrade(groupCtx)
+		<-groupCtx.Done()
+		return nil
+	})
 
-	<-rootCtx.Done()
-	log.Printf("market-trader: shutdown signal received: %s", rootCtx.Err().Error())
+	err = group.Wait()
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownDeadline)
 	defer cancel()
 	<-shutdownCtx.Done()
-	if errors.Is(shutdownCtx.Err(), context.DeadlineExceeded) {
-		log.Println("market-trader: shutdown deadline reached, exiting")
+
+	if err != nil && !errors.Is(err, context.Canceled) {
+		return err
 	}
+	log.Println("market-trader: shutdown complete")
 	return nil
 }

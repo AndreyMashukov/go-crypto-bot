@@ -1,6 +1,7 @@
 package exchange
 
 import (
+	"context"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
@@ -392,22 +393,38 @@ func (m *MakerService) UpdateLimits() {
 	}
 }
 
-func (m *MakerService) StartTrade() {
+// StartTrade spawns the per-symbol trading loops and the periodic
+// trade-limit refresher. Each goroutine observes ctx; on cancel they
+// all exit at their next tick boundary.
+func (m *MakerService) StartTrade(ctx context.Context) {
 	go func() {
+		ticker := time.NewTicker(time.Minute * 5)
+		defer ticker.Stop()
+		m.UpdateLimits()
 		for {
-			m.UpdateLimits()
-			time.Sleep(time.Minute * 5)
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				m.UpdateLimits()
+			}
 		}
 	}()
 
 	for _, tradeLimit := range m.ExchangeRepository.GetTradeLimits() {
 		go func(symbol string) {
+			ticker := time.NewTicker(time.Millisecond * 250)
+			defer ticker.Stop()
 			for {
 				m.Make(symbol)
 
 				runtime.GC()
 				runtime.Gosched()
-				time.Sleep(time.Millisecond * 250)
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+				}
 			}
 		}(tradeLimit.Symbol)
 	}

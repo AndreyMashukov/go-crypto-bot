@@ -183,6 +183,7 @@ func InitServiceContainer() Container {
 		Formatter:        &formatter,
 		Binance:          exchangeApi,
 		ObjectRepository: &objectRepository,
+		TickStore:        latestTicks,
 	}
 
 	marketDepthStrategy := strategy.MarketDepthStrategy{}

@@ -70,7 +70,10 @@ func (e *ChartService) GetCharts(symbolFilter []string) []map[string][]any {
 }
 
 func (e *ChartService) ProcessSymbol(symbol string) map[string][]any {
-	kLines := e.ExchangeRepository.KLineList(symbol, true, 200)
+	// Phase E removed the Redis kline history cache. Chart data is
+	// served from Prometheus starting in Phase F; until then the kline
+	// list is empty here so the FE does not crash on the orders branch.
+	kLines := []model.KLine{}
 
 	symbolOrders := make([]model.Order, 0)
 	orderMap := sync.Map{}

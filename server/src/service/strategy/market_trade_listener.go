@@ -172,7 +172,6 @@ func (m *MarketTradeListener) ListenAll() {
 					continue
 				}
 
-				m.ExchangeRepository.SetCurrentKline(kLine)
 				m.emitMarketTick(kLine)
 				if lastKline != nil && lastKline.Timestamp.GetPeriodToMinute() != kLine.Timestamp.GetPeriodToMinute() {
 					m.EventDispatcher.Dispatch(event.NewKlineReceived{
@@ -207,20 +206,11 @@ func (m *MarketTradeListener) ListenAll() {
 		waitGroup.Add(1)
 		tradeLimitCollection = append(tradeLimitCollection, limit)
 
-		go func(l model.TradeLimit) {
+		// Phase E removed the Redis kline cache; the watcher's enrichment
+		// store fills naturally as live klines arrive. No history
+		// recovery loop is needed.
+		go func(_ model.TradeLimit) {
 			defer waitGroup.Done()
-			klineAmount := 0
-			history := m.Binance.GetKLines(l.GetSymbol(), "1m", 200)
-
-			if len(history) > 0 {
-				m.ExchangeRepository.ClearKlineHistory(l.GetSymbol())
-			}
-
-			for _, kline := range history {
-				klineAmount++
-				m.ExchangeRepository.SaveKlineHistory(kline.ToKLine(l.GetSymbol()))
-			}
-			log.Printf("Loaded history %s -> %d klines", l.Symbol, klineAmount)
 		}(limit)
 
 		if "BTCUSDT" == limit.GetSymbol() {

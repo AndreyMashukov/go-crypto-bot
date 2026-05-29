@@ -40,10 +40,12 @@ func (e *ExchangeController) GetKlineListAction(w http.ResponseWriter, req *http
 		return
 	}
 
-	symbol := strings.TrimPrefix(req.URL.Path, "/kline/list/")
+	_ = strings.TrimPrefix(req.URL.Path, "/kline/list/")
 
-	list := e.ExchangeRepository.KLineList(symbol, true, 200)
-	encoded, _ := json.Marshal(list)
+	// Phase E removed the Redis kline cache. The Prometheus-backed
+	// chart endpoint that replaces this one is added in Phase F; until
+	// then the action returns an empty list so the FE keeps parsing.
+	encoded, _ := json.Marshal([]struct{}{})
 	_, _ = fmt.Fprint(w, string(encoded))
 }
 

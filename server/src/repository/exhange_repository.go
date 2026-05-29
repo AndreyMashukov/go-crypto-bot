@@ -6,14 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"strings"
+	"time"
+
+	"github.com/redis/go-redis/v9"
+
+	"github.com/AndreyMashukov/go-crypto-bot/server/shared/tickstore"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
-	"github.com/redis/go-redis/v9"
-	"log"
-	"slices"
-	"strings"
-	"time"
 )
 
 type DecisionReadStorageInterface interface {
@@ -43,9 +45,6 @@ type ExchangeRepositoryInterface interface {
 	CreateTradeLimit(limit model.TradeLimit) (*int64, error)
 	UpdateTradeLimit(limit model.TradeLimit) error
 	GetCurrentKline(symbol string) *model.KLine
-	SetCurrentKline(kLine model.KLine)
-	SaveKlineHistory(kLine model.KLine)
-	KLineList(symbol string, reverse bool, size int64) []model.KLine
 	GetPeriodMinPrice(symbol string, period int64) float64
 	GetDepth(symbol string, limit int64) model.OrderBookModel
 	SetDepth(depth model.OrderBookModel, limit int64, expires int64)
@@ -75,6 +74,10 @@ type ExchangeRepository struct {
 	Formatter        *utils.Formatter
 	Binance          client.ExchangePriceAPIInterface
 	ObjectRepository *ObjectRepository
+	// TickStore is the source of truth for "current price view" after
+	// Phase E. GetCurrentKline derives a model.KLine on demand from the
+	// latest tick; there is no Redis kline cache any more.
+	TickStore tickstore.Store
 }
 
 func (e *ExchangeRepository) GetSubscribedSymbols() []model.Symbol {
@@ -309,167 +312,70 @@ func (e *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 	return nil
 }
 
-func (e *ExchangeRepository) GetKlineKey(symbol string) string {
-	return fmt.Sprintf("current-kline-%s-%d", symbol, e.CurrentBot.Id)
-}
-
+// GetCurrentKline is the Phase E shim. The legacy Redis kline cache is
+// gone; we synthesise a model.KLine from the latest tick the watcher
+// produced. Strategy callers that still take a *model.KLine on their
+// hot path continue to compile and read "current price view" without
+// touching Redis; Phase H will move them to MarketTick.Candles
+// directly when the legacy src/ tree is cannibalised.
 func (e *ExchangeRepository) GetCurrentKline(symbol string) *model.KLine {
-	var kLine model.KLine
-	err := e.ObjectRepository.LoadObject(e.GetKlineKey(symbol), &kLine)
-
-	if err == nil {
-		tradeVolume := e.GetTradeVolume(kLine.Symbol, kLine.Timestamp)
-		if tradeVolume != nil {
-			kLine.TradeVolume = tradeVolume
-		}
-
-		priceChangeSpeed := e.GetPriceChangeSpeed(kLine.Symbol, kLine.Timestamp)
-		if priceChangeSpeed != nil {
-			kLine.PriceChangeSpeed = priceChangeSpeed
-		}
-
-		return &kLine
+	if e.TickStore == nil {
+		return nil
 	}
-
-	return nil
-}
-
-func (e *ExchangeRepository) ClearKlineHistory(symbol string) {
-	e.RDB.Del(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", symbol, e.CurrentBot.Id)).Val()
-}
-
-func (e *ExchangeRepository) SetCurrentKline(kLine model.KLine) {
-	tradeVolume := e.GetTradeVolume(kLine.Symbol, kLine.Timestamp)
-	if tradeVolume != nil {
-		kLine.TradeVolume = tradeVolume
+	tick, ok := e.TickStore.Latest(symbol)
+	if !ok {
+		return nil
 	}
-
-	priceChangeSpeed := e.GetPriceChangeSpeed(kLine.Symbol, kLine.Timestamp)
-	if priceChangeSpeed == nil {
-		priceChangeSpeed = &model.PriceChangeSpeed{
-			Symbol:    kLine.Symbol,
-			Timestamp: model.TimestampMilli(kLine.Timestamp.GetPeriodToMinute()),
-			Changes:   make([]model.PriceChange, 0),
-			MinChange: 0.00,
-			MaxChange: 0.00,
-		}
+	closePrice, _ := tick.Price.Float64()
+	open := closePrice
+	high := closePrice
+	low := closePrice
+	volume := 0.0
+	if n := len(tick.Candles.Series); n > 0 {
+		c := tick.Candles.Series[n-1]
+		open, _ = c.Open.Float64()
+		high, _ = c.High.Float64()
+		low, _ = c.Low.Float64()
+		volume, _ = c.Volume.Float64()
 	}
-
-	prevKline := e.GetCurrentKline(kLine.Symbol)
-	if prevKline != nil {
-		priceChangeSpeedValue := e.GetPriceChangeSpeedItem(kLine, *prevKline)
-		if priceChangeSpeed.MaxChange < priceChangeSpeedValue.PointsPerSecond {
-			priceChangeSpeed.MaxChange = priceChangeSpeedValue.PointsPerSecond
-		}
-		if priceChangeSpeed.MinChange > priceChangeSpeedValue.PointsPerSecond {
-			priceChangeSpeed.MinChange = priceChangeSpeedValue.PointsPerSecond
-		}
-		priceChangeSpeed.Changes = append(priceChangeSpeed.Changes, priceChangeSpeedValue)
-	}
-
-	kLine.PriceChangeSpeed = priceChangeSpeed
-	e.SetPriceChangeSpeed(*priceChangeSpeed)
-
-	_ = e.ObjectRepository.SaveObject(e.GetKlineKey(kLine.Symbol), kLine)
-}
-
-func (e *ExchangeRepository) SaveKlineHistory(kLine model.KLine) {
-	lastKLines := e.KLineList(kLine.Symbol, false, 200)
-
-	for _, lastKline := range lastKLines {
-		if lastKline.Timestamp.PeriodToEq(kLine.Timestamp) {
-			e.RDB.LPop(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id)).Val()
-		}
-	}
-
-	tradeVolume := e.GetTradeVolume(kLine.Symbol, kLine.Timestamp)
-	if tradeVolume != nil {
-		kLine.TradeVolume = tradeVolume
-	}
-
-	priceChangeSpeed := e.GetPriceChangeSpeed(kLine.Symbol, kLine.Timestamp)
-	if priceChangeSpeed == nil {
-		kLine.PriceChangeSpeed = priceChangeSpeed
-	}
-
-	encoded, err := json.Marshal(kLine)
-	if err == nil {
-		e.RDB.LPush(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id), string(encoded))
-		e.RDB.LTrim(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", kLine.Symbol, e.CurrentBot.Id), 0, 2880)
-	} else {
-		log.Printf("[%s] KLine history save error: %s", kLine.Symbol, err.Error())
+	return &model.KLine{
+		Symbol:    symbol,
+		Open:      model.Price(open),
+		High:      model.Price(high),
+		Low:       model.Price(low),
+		Close:     model.Price(closePrice),
+		Volume:    model.Volume(volume),
+		Timestamp: model.TimestampMilli(tick.EventTime.UnixMilli()),
+		OpenTime:  model.TimestampMilli(tick.EventTime.Truncate(time.Minute).UnixMilli()),
+		UpdatedAt: tick.EventTime.Unix(),
+		Source:    "tick",
+		Interval:  "1m",
 	}
 }
 
-func (e *ExchangeRepository) GetPriceChangeSpeedItem(kLine model.KLine, lastKlineOld model.KLine) model.PriceChange {
-	priceChangeSpeed := model.PriceChange{
-		CloseTime:       lastKlineOld.Timestamp,
-		FromPrice:       lastKlineOld.Close.Value(),
-		FromTime:        model.TimestampMilli(lastKlineOld.UpdatedAt * 1000),
-		ToTime:          model.TimestampMilli(kLine.UpdatedAt * 1000),
-		ToPrice:         kLine.Close.Value(),
-		PointsPerSecond: 0.00,
-	}
-
-	tradeLimit := e.GetTradeLimitCached(kLine.Symbol)
-
-	if tradeLimit != nil && lastKlineOld.UpdatedAt != kLine.UpdatedAt {
-		secondsDiff := float64(kLine.UpdatedAt - lastKlineOld.UpdatedAt)
-		pricePointsDiff := (kLine.Close.Value() - lastKlineOld.Close.Value()) / tradeLimit.MinPrice
-
-		if pricePointsDiff != 0.00 {
-			priceChangeSpeed.PointsPerSecond = e.Formatter.ToFixed(pricePointsDiff/secondsDiff, 2)
-		}
-	}
-
-	return priceChangeSpeed
-}
-
-func (e *ExchangeRepository) KLineList(symbol string, reverse bool, size int64) []model.KLine {
-	res := e.RDB.LRange(*e.Ctx, fmt.Sprintf("k-lines-%s-%d", symbol, e.CurrentBot.Id), 0, size).Val()
-	list := make([]model.KLine, 0)
-
-	prevKline := e.GetCurrentKline(symbol)
-	if prevKline != nil {
-		list = append(list, *prevKline)
-	}
-
-	lastTimestamp := int64(0)
-
-	for _, str := range res {
-		var dto model.KLine
-		err := json.Unmarshal([]byte(str), &dto)
-
-		if err != nil {
-			continue
-		}
-
-		if lastTimestamp == dto.Timestamp.GetPeriodToMinute() {
-			continue
-		}
-
-		if lastTimestamp == int64(0) || lastTimestamp > dto.Timestamp.GetPeriodToMinute() {
-			lastTimestamp = dto.Timestamp.GetPeriodToMinute()
-			list = append(list, dto)
-		}
-	}
-
-	if reverse {
-		slices.Reverse(list)
-	}
-
-	return list
-}
-
+// GetPeriodMinPrice walks the tick's Candles snapshot and returns the
+// minimum Low across them. Period names how many candles back to look;
+// the function caps at the available window size and returns 0 when
+// no candles are buffered.
 func (e *ExchangeRepository) GetPeriodMinPrice(symbol string, period int64) float64 {
-	kLines := e.KLineList(symbol, true, period)
+	if e.TickStore == nil {
+		return 0.00
+	}
+	tick, ok := e.TickStore.Latest(symbol)
+	if !ok {
+		return 0.00
+	}
+	series := tick.Candles.Series
+	if int64(len(series)) > period {
+		series = series[int64(len(series))-period:]
+	}
 	minPrice := 0.00
-	for _, kLine := range kLines {
-		if 0.00 == minPrice || kLine.Low.Value() < minPrice {
-			minPrice = kLine.Low.Value()
+	for i := range series {
+		low, _ := series[i].Low.Float64()
+		if minPrice == 0.00 || low < minPrice {
+			minPrice = low
 		}
 	}
-
 	return minPrice
 }
 

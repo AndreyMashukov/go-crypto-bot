@@ -2,9 +2,9 @@ package tests
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/exchange"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )

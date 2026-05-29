@@ -17,7 +17,6 @@ type BotHealth struct {
 	Bot           Bot                 `json:"bot"`
 	MlStatus      string              `json:"mlStatus"`
 	DbStatus      string              `json:"dbStatus"`
-	SwapDbStatus  string              `json:"swapDbStatus"`
 	RedisStatus   string              `json:"redisStatus"`
 	BinanceStatus string              `json:"binanceStatus"`
 	Cores         int                 `json:"cores"`

@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
+	"github.com/redis/go-redis/v9"
 	"log"
 	"os"
 	"time"
@@ -151,7 +151,6 @@ func (b *BotRepository) Update(bot model.Bot) error {
 		return err
 	}
 
-	// Invalidate cache
 	b.RDB.Del(*b.Ctx, b.GetCacheKey(bot.BotUuid))
 
 	return nil

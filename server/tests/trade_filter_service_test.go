@@ -1,9 +1,9 @@
 package tests
 
 import (
-	"github.com/stretchr/testify/assert"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/exchange"
+	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 	"time"
@@ -330,7 +330,7 @@ func TestTradeFilterMatchingExtraOrdersCountToday(t *testing.T) {
 		OrderRepository: orderStorageMock,
 	}
 	orderMap := sync.Map{}
-	orderMap.Store("BTCUSDT", float64(5.00)) // attention, must be float64
+	orderMap.Store("BTCUSDT", float64(5.00))
 	orderStorageMock.On("GetTodayExtraOrderMap").Return(&orderMap)
 	tradeLimit := model.TradeLimit{
 		TradeFiltersBuy: model.TradeFilters{

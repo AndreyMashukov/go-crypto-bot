@@ -37,7 +37,6 @@ func (m *MarketTradeListener) ListenAll() {
 	predictChannel := make(chan string, 1000)
 	depthChannel := make(chan model.OrderBookModel, 1000)
 
-	// Avoid concurrent prediction
 	predictMap := sync.Map{}
 
 	go func(pMap *sync.Map) {
@@ -71,7 +70,6 @@ func (m *MarketTradeListener) ListenAll() {
 		}
 	}(&predictMap)
 
-	// Consumer count for kline channel
 	klineConsumerCount := 8
 
 	for i := 0; i < klineConsumerCount; i++ {
@@ -99,7 +97,6 @@ func (m *MarketTradeListener) ListenAll() {
 					afterEach()
 					continue
 				}
-				//log.Printf("[%s] New Price [%s]: %.8f, T = %d", kLine.Symbol, kLine.Source, kLine.Close, kLine.Timestamp)
 
 				m.ExchangeRepository.SetCurrentKline(kLine)
 				if lastKline != nil && lastKline.Timestamp.GetPeriodToMinute() != kLine.Timestamp.GetPeriodToMinute() {
@@ -174,13 +171,11 @@ func (m *MarketTradeListener) ListenAll() {
 	m.ExchangeWSStreamer.StartStream(tradeLimitCollection, klineChannel, depthChannel)
 	log.Printf("WS Price stream started.")
 
-	// Price recovery watcher
 	go func() {
 		for {
 			invalidPriceSymbols := make([]string, 0)
 			for _, limit := range m.ExchangeRepository.GetTradeLimits() {
 				k := m.ExchangeRepository.GetCurrentKline(limit.Symbol)
-				// If update is not received from WS or price is not actual
 				if k == nil || k.IsPriceNotActual() {
 					invalidPriceSymbols = append(invalidPriceSymbols, limit.Symbol)
 				}
@@ -194,7 +189,6 @@ func (m *MarketTradeListener) ListenAll() {
 				for _, t := range tickers {
 					k := m.ExchangeRepository.GetCurrentKline(t.Symbol)
 					currentInterval := model.TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute()
-					// Recover Kline
 					if k == nil {
 						k = &model.KLine{
 							Symbol:    t.Symbol,
@@ -242,7 +236,6 @@ func (m *MarketTradeListener) ListenAll() {
 	// todo: order book recovery watcher is needed!
 
 	runChannel := make(chan string)
-	// just to keep running
 	runChannel <- "run"
 	log.Panic("Trade Listener Stopped")
 }

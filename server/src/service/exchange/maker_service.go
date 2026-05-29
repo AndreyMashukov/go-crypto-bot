@@ -32,10 +32,6 @@ type MakerService struct {
 func (m *MakerService) Make(symbol string) {
 	openedOrder := m.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 
-	if openedOrder != nil && m.OrderExecutor.ProcessSwap(*openedOrder) {
-		return
-	}
-
 	decision, err := m.StrategyFacade.Decide(symbol)
 
 	if err != nil {
@@ -76,7 +72,6 @@ func (m *MakerService) ProcessBuy(tradeLimit model.TradeLimit) {
 		return
 	}
 
-	// allow process already opened order
 	limitBuy := m.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
 
 	if limitBuy != nil {
@@ -177,7 +172,6 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 		return
 	}
 
-	// allow process already opened order
 	limitBuy := m.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "BUY")
 
 	if limitBuy != nil {
@@ -189,10 +183,6 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 				limitBuy.OrderId,
 				err,
 			)
-
-			if m.BotService.IsSwapEnabled() {
-				m.OrderExecutor.TrySwap(openedOrder)
-			}
 		}
 		return
 	}
@@ -244,7 +234,6 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 	extraChargePercent := tradeLimit.GetBuyOnFallPercent(openedOrder, *lastKline, m.BotService.UseSwapCapital())
 
 	if profit.Lte(extraChargePercent) {
-		// extra buy on current price
 		if price < lastKline.Close.Value() {
 			price = m.Formatter.FormatPrice(tradeLimit, lastKline.Close.Value())
 		}
@@ -252,10 +241,6 @@ func (m *MakerService) ProcessExtraBuy(tradeLimit model.TradeLimit, openedOrder 
 		err := m.OrderExecutor.BuyExtra(tradeLimit, openedOrder, price)
 		if err != nil {
 			log.Printf("[%s] %s", tradeLimit.Symbol, err)
-
-			if m.BotService.IsSwapEnabled() {
-				m.OrderExecutor.TrySwap(openedOrder)
-			}
 		}
 	} else {
 		log.Printf(
@@ -277,7 +262,6 @@ func (m *MakerService) ProcessSell(tradeLimit model.TradeLimit, openedOrder mode
 		return
 	}
 
-	// allow process already opened order
 	limitSell := m.OrderRepository.GetBinanceOrder(tradeLimit.Symbol, "SELL")
 
 	if limitSell != nil {
@@ -360,93 +344,6 @@ func (m *MakerService) tradeLimit(symbol string) *model.TradeLimit {
 	}
 
 	return nil
-}
-
-func (m *MakerService) UpdateSwapPairs() {
-	swapMap := make(map[string][]model.ExchangeSymbol)
-	exchangeInfo, _ := m.Binance.GetExchangeData(make([]string, 0))
-	tradeLimits := m.ExchangeRepository.GetTradeLimits()
-
-	log.Printf("Update swap pairs for %d symbols", len(exchangeInfo.Symbols))
-
-	supportedQuoteAssets := []string{"BTC", "ETH", "BNB", "TRX", "XRP", "EUR", "DAI", "TUSD", "USDC", "AUD", "TRY", "BRL"}
-
-	for _, tradeLimit := range tradeLimits {
-		if !tradeLimit.IsEnabled {
-			continue
-		}
-
-		swapMap[tradeLimit.Symbol] = make([]model.ExchangeSymbol, 0)
-
-		for _, exchangeSymbol := range exchangeInfo.Symbols {
-			if !exchangeSymbol.IsTrading() {
-				continue
-			}
-
-			if exchangeSymbol.Symbol == tradeLimit.Symbol {
-				baseAsset := exchangeSymbol.BaseAsset
-				quoteAsset := exchangeSymbol.QuoteAsset
-
-				for _, exchangeItem := range exchangeInfo.Symbols {
-					if !exchangeItem.IsTrading() {
-						continue
-					}
-
-					if !slices.Contains(supportedQuoteAssets, exchangeItem.QuoteAsset) {
-						continue
-					}
-
-					if exchangeItem.BaseAsset == baseAsset && exchangeItem.QuoteAsset != quoteAsset {
-						swapMap[tradeLimit.Symbol] = append(swapMap[tradeLimit.Symbol], exchangeItem)
-					}
-				}
-			}
-		}
-
-		for _, exchangeItem := range swapMap[tradeLimit.Symbol] {
-			swapPair, err := m.ExchangeRepository.GetSwapPair(exchangeItem.Symbol)
-			if err != nil {
-				swapPair := model.SwapPair{
-					SourceSymbol:   tradeLimit.Symbol,
-					Symbol:         exchangeItem.Symbol,
-					BaseAsset:      exchangeItem.BaseAsset,
-					QuoteAsset:     exchangeItem.QuoteAsset,
-					BuyPrice:       0.00,
-					SellPrice:      0.00,
-					PriceTimestamp: 0,
-					Exchange:       m.CurrentBot.Exchange,
-				}
-
-				for _, filter := range exchangeItem.Filters {
-					if filter.FilterType == "PRICE_FILTER" {
-						swapPair.MinPrice = *filter.MinPrice
-					}
-					if filter.FilterType == "LOT_SIZE" {
-						swapPair.MinQuantity = *filter.MinQuantity
-					}
-					if filter.FilterType == "NOTIONAL" {
-						swapPair.MinNotional = *filter.MinNotional
-					}
-				}
-
-				_, _ = m.ExchangeRepository.CreateSwapPair(swapPair)
-			} else {
-				for _, filter := range exchangeItem.Filters {
-					if filter.FilterType == "PRICE_FILTER" {
-						swapPair.MinPrice = *filter.MinPrice
-					}
-					if filter.FilterType == "LOT_SIZE" {
-						swapPair.MinQuantity = *filter.MinQuantity
-					}
-					if filter.FilterType == "NOTIONAL" {
-						swapPair.MinNotional = *filter.MinNotional
-					}
-				}
-
-				_ = m.ExchangeRepository.UpdateSwapPair(swapPair)
-			}
-		}
-	}
 }
 
 func (m *MakerService) UpdateLimits() {
@@ -541,6 +438,5 @@ func (m *MakerService) RecoverOrders() {
 		}
 	}
 
-	// Wait 5 seconds, here API can update some settings...
 	time.Sleep(time.Second * 5)
 }

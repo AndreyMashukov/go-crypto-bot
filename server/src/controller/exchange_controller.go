@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/exchange"
+	"github.com/redis/go-redis/v9"
 	"net/http"
 	"strconv"
 	"strings"
@@ -17,7 +17,6 @@ import (
 )
 
 type ExchangeController struct {
-	SwapRepository     *repository.SwapRepository
 	ExchangeRepository *repository.ExchangeRepository
 	ChartService       *service.ChartService
 	RDB                *redis.Client
@@ -46,62 +45,6 @@ func (e *ExchangeController) GetKlineListAction(w http.ResponseWriter, req *http
 	list := e.ExchangeRepository.KLineList(symbol, true, 200)
 	encoded, _ := json.Marshal(list)
 	fmt.Fprintf(w, string(encoded))
-}
-
-func (e *ExchangeController) GetSwapActionListAction(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Content-Type", "application/json")
-
-	botUuid := req.URL.Query().Get("botUuid")
-
-	if botUuid != e.CurrentBot.BotUuid {
-		http.Error(w, "Forbidden", http.StatusForbidden)
-
-		return
-	}
-
-	actions := e.SwapRepository.GetSwapActions()
-	account := e.BalanceService.GetBalance(false)
-	list := make([]model.SwapContainer, 0)
-	for _, action := range actions {
-		balanceOne := model.Balance{
-			Free:   0.00,
-			Locked: 0.00,
-			Asset:  action.Asset,
-		}
-		if balance, ok := account[balanceOne.Asset]; ok {
-			balanceOne = balance
-		}
-		balanceTwo := model.Balance{
-			Free:   0.00,
-			Locked: 0.00,
-			Asset:  action.Asset,
-		}
-		if balance, ok := account[action.GetAssetTwo()]; ok {
-			balanceTwo = balance
-		}
-		balanceThree := model.Balance{
-			Free:   0.00,
-			Locked: 0.00,
-			Asset:  action.Asset,
-		}
-		if balance, ok := account[action.GetAssetThree()]; ok {
-			balanceThree = balance
-		}
-
-		list = append(list, model.SwapContainer{
-			SwapAction: action,
-			Balance: map[string]model.Balance{
-				action.Asset:           balanceOne,
-				action.GetAssetTwo():   balanceTwo,
-				action.GetAssetThree(): balanceThree,
-			},
-		})
-	}
-
-	encoded, _ := json.Marshal(list)
-	_, _ = fmt.Fprintf(w, string(encoded))
 }
 
 func (e *ExchangeController) GetExchangeOrderAction(w http.ResponseWriter, req *http.Request) {
@@ -197,24 +140,6 @@ func (e *ExchangeController) GetTradeListAction(w http.ResponseWriter, req *http
 	symbol := strings.TrimPrefix(req.URL.Path, "/trade/list/")
 
 	list := e.ExchangeRepository.TradeList(symbol)
-	encoded, _ := json.Marshal(list)
-	fmt.Fprintf(w, string(encoded))
-}
-
-func (e *ExchangeController) GetSwapListAction(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Content-Type", "application/json")
-
-	botUuid := req.URL.Query().Get("botUuid")
-
-	if botUuid != e.CurrentBot.BotUuid {
-		http.Error(w, "Forbidden", http.StatusForbidden)
-
-		return
-	}
-
-	list := e.SwapRepository.GetAvailableSwapChains()
 	encoded, _ := json.Marshal(list)
 	fmt.Fprintf(w, string(encoded))
 }

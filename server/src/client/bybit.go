@@ -8,13 +8,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/redis/go-redis/v9"
-	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
-	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
 	"log"
 	"slices"
 	"strconv"
 	"time"
+
+	"github.com/redis/go-redis/v9"
+
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
+	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
 )
 
 type ByBit struct {
@@ -203,7 +205,6 @@ func (b *ByBit) GetKLines(symbol string, interval string, limit int64) []model.K
 		kLines = append(kLines, b.Formatter.ByBitHistoryKlineToBinanceHistoryKline(byBitKLine))
 	}
 
-	// Reverse list (Doc: Sort in reverse by startTime)
 	slices.Reverse(kLines)
 
 	return kLines
@@ -304,7 +305,7 @@ func (b *ByBit) GetExchangeData(symbols []string) (*model.ExchangeInfo, error) {
 	return &model.ExchangeInfo{
 		Symbols:    exchangeSymbols,
 		Timezone:   "UTC",
-		RateLimits: make([]model.RateLimit, 0), // unused
+		RateLimits: make([]model.RateLimit, 0),
 		ServerTime: time.Now().UnixMilli(),
 	}, nil
 }

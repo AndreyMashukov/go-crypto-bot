@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/ClickHouse/clickhouse-go/v2"
-	"github.com/redis/go-redis/v9"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/controller"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/event_subscriber"
@@ -17,6 +15,8 @@ import (
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/strategy"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/validator"
+	"github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/redis/go-redis/v9"
 	"log"
 	"net/http"
 	"os"
@@ -44,17 +44,6 @@ func InitServiceContainer() Container {
 	db.SetMaxOpenConns(8)
 	db.SetConnMaxIdleTime(time.Minute)
 	db.SetConnMaxLifetime(time.Minute)
-
-	swapDb, swapErr := sql.Open("mysql", os.Getenv("DATABASE_DSN"))
-
-	swapDb.SetMaxIdleConns(8)
-	swapDb.SetMaxOpenConns(8)
-	swapDb.SetConnMaxIdleTime(time.Minute)
-	swapDb.SetConnMaxLifetime(time.Minute)
-
-	if swapErr != nil {
-		log.Fatal(fmt.Sprintf("[Swap DB] MySQL can't connect: %s", err.Error()))
-	}
 
 	var ctx = context.Background()
 	rdb := redis.NewClient(&redis.Options{
@@ -188,59 +177,12 @@ func InitServiceContainer() Container {
 		ExchangeRepository: &exchangeRepository,
 	}
 
-	var swapStreamListener exchange.SwapStreamListenerInterface
-	swapUpdater := exchange.SwapUpdater{
-		ExchangeRepository: &exchangeRepository,
-		Formatter:          &formatter,
-		Binance:            exchangeApi,
-	}
-	swapRepository := repository.SwapRepository{
-		DB:               swapDb,
-		RDB:              rdb,
-		Ctx:              &ctx,
-		CurrentBot:       currentBot,
-		ObjectRepository: &objectRepository,
-	}
-
-	swapManager := exchange.SwapManager{
-		SwapChainBuilder: &exchange.SwapChainBuilder{},
-		SwapRepository:   &swapRepository,
-		Formatter:        &formatter,
-		SBSSwapFinder: &exchange.SBSSwapFinder{
-			ExchangeRepository:       &exchangeRepository,
-			Formatter:                &formatter,
-			SwapFirstAmendmentSteps:  exchange.SwapFirstAmendmentSteps,
-			SwapSecondAmendmentSteps: exchange.SwapSecondAmendmentSteps,
-			SwapThirdAmendmentSteps:  exchange.SwapThirdAmendmentSteps,
-		},
-		SSBSwapFinder: &exchange.SSBSwapFinder{
-			ExchangeRepository:       &exchangeRepository,
-			Formatter:                &formatter,
-			SwapFirstAmendmentSteps:  exchange.SwapFirstAmendmentSteps,
-			SwapSecondAmendmentSteps: exchange.SwapSecondAmendmentSteps,
-			SwapThirdAmendmentSteps:  exchange.SwapThirdAmendmentSteps,
-		},
-		SBBSwapFinder: &exchange.SBBSwapFinder{
-			ExchangeRepository:       &exchangeRepository,
-			Formatter:                &formatter,
-			SwapFirstAmendmentSteps:  exchange.SwapFirstAmendmentSteps,
-			SwapSecondAmendmentSteps: exchange.SwapSecondAmendmentSteps,
-			SwapThirdAmendmentSteps:  exchange.SwapThirdAmendmentSteps,
-		},
-	}
-
 	switch botExchange {
 	case BotExchangeBinance:
 		exchangeWSStreamer = &strategy.BinanceWSStreamer{
 			SmaTradeStrategy:    &smaStrategy,
 			MarketDepthStrategy: &marketDepthStrategy,
 			ExchangeRepository:  &exchangeRepository,
-		}
-		swapStreamListener = &exchange.BinanceSwapStreamListener{
-			ExchangeRepository: &exchangeRepository,
-			SwapUpdater:        &swapUpdater,
-			SwapRepository:     &swapRepository,
-			SwapManager:        &swapManager,
 		}
 		break
 	case BotExchangeByBit:
@@ -249,13 +191,6 @@ func InitServiceContainer() Container {
 			SmaTradeStrategy:    &smaStrategy,
 			MarketDepthStrategy: &marketDepthStrategy,
 			Formatter:           &formatter,
-		}
-		swapStreamListener = &exchange.BybitSwapStreamListener{
-			ExchangeRepository: &exchangeRepository,
-			SwapUpdater:        &swapUpdater,
-			SwapRepository:     &swapRepository,
-			SwapManager:        &swapManager,
-			Formatter:          &formatter,
 		}
 		break
 	default:
@@ -294,12 +229,6 @@ func InitServiceContainer() Container {
 	botService := service.BotService{
 		CurrentBot:    currentBot,
 		BotRepository: &botRepository,
-	}
-	swapValidator := validator.SwapValidator{
-		Binance:        exchangeApi,
-		SwapRepository: &swapRepository,
-		Formatter:      &formatter,
-		BotService:     &botService,
 	}
 
 	lockTradeChannel := make(chan model.Lock)
@@ -341,7 +270,6 @@ func InitServiceContainer() Container {
 			StatRepository: &statRepository,
 		},
 		ExchangeRepository: &exchangeRepository,
-		SwapRepository:     &swapRepository,
 		TimeService:        &timeService,
 		CurrentBot:         currentBot,
 		RDB:                rdb,
@@ -363,7 +291,6 @@ func InitServiceContainer() Container {
 	}
 
 	exchangeController := controller.ExchangeController{
-		SwapRepository:     &swapRepository,
 		ExchangeRepository: &exchangeRepository,
 		ChartService:       &chartService,
 		RDB:                rdb,
@@ -408,27 +335,12 @@ func InitServiceContainer() Container {
 		PriceCalculator:    &priceCalculator,
 		ProfitService:      &profitService,
 		CallbackManager:    &callbackManager,
-		SwapRepository:     &swapRepository,
-		SwapExecutor: &exchange.SwapExecutor{
-			BalanceService:           &balanceService,
-			SwapRepository:           &swapRepository,
-			OrderRepository:          &orderRepository,
-			Binance:                  exchangeApi,
-			Formatter:                &formatter,
-			TimeService:              &timeService,
-			CurrentBot:               currentBot,
-			SwapFirstAmendmentSteps:  exchange.SwapFirstAmendmentSteps,
-			SwapSecondAmendmentSteps: exchange.SwapSecondAmendmentSteps,
-			SwapThirdAmendmentSteps:  exchange.SwapThirdAmendmentSteps,
-		},
-		SwapValidator:          &swapValidator,
-		Formatter:              &formatter,
-		BotService:             &botService,
-		TurboSwapProfitPercent: 20.00,
-		Lock:                   make(map[string]bool),
-		TradeLockMutex:         sync.RWMutex{},
-		LockChannel:            &lockTradeChannel,
-		CancelRequestMap:       make(map[string]bool),
+		Formatter:          &formatter,
+		BotService:         &botService,
+		Lock:               make(map[string]bool),
+		TradeLockMutex:     sync.RWMutex{},
+		LockChannel:        &lockTradeChannel,
+		CancelRequestMap:   make(map[string]bool),
 	}
 
 	makerService := exchange.MakerService{
@@ -514,7 +426,6 @@ func InitServiceContainer() Container {
 		Binance:            exchangeApi,
 		CurrentBot:         currentBot,
 		DB:                 db,
-		SwapDb:             swapDb,
 		RDB:                rdb,
 		Ctx:                &ctx,
 		TimeService:        &timeService,
@@ -526,7 +437,7 @@ func InitServiceContainer() Container {
 		BotRepository: &botRepository,
 	}
 
-	mcGatewayAddress := "" //os.Getenv("MC_DSN")
+	mcGatewayAddress := ""
 
 	mcListener := exchange.MCListener{
 		MSGatewayAddress:   mcGatewayAddress,
@@ -550,14 +461,12 @@ func InitServiceContainer() Container {
 		BotController:       &botController,
 		HealthService:       &healthService,
 		Db:                  db,
-		DbSwap:              swapDb,
 		CurrentBot:          currentBot,
 		CallbackManager:     &callbackManager,
 		BalanceService:      &balanceService,
 		TimeService:         &timeService,
 		Binance:             exchangeApi,
 		PythonMLBridge:      &pythonMLBridge,
-		SwapRepository:      &swapRepository,
 		ExchangeRepository:  &exchangeRepository,
 		OrderRepository:     &orderRepository,
 		ExchangeController:  &exchangeController,
@@ -565,8 +474,6 @@ func InitServiceContainer() Container {
 		OrderController:     &orderController,
 		MakerService:        &makerService,
 		OrderExecutor:       &orderExecutor,
-		SwapManager:         &swapManager,
-		SwapUpdater:         &swapUpdater,
 		SmaTradeStrategy:    &smaStrategy,
 		MarketDepthStrategy: &marketDepthStrategy,
 		OrderBasedStrategy:  &orderBasedStrategy,
@@ -585,12 +492,6 @@ func InitServiceContainer() Container {
 			EventDispatcher:     &eventDispatcher,
 			ExchangeWSStreamer:  exchangeWSStreamer,
 		},
-		MarketSwapListener: &exchange.MarketSwapListener{
-			ExchangeRepository: &exchangeRepository,
-			TimeService:        &timeService,
-			SwapManager:        &swapManager,
-			SwapStreamListener: swapStreamListener,
-		},
 		MCListener:      &mcListener,
 		EventDispatcher: &eventDispatcher,
 	}
@@ -603,14 +504,12 @@ type Container struct {
 	BotController       *controller.BotController
 	HealthService       *service.HealthService
 	Db                  *sql.DB
-	DbSwap              *sql.DB
 	CurrentBot          *model.Bot
 	CallbackManager     *service.CallbackManager
 	BalanceService      *exchange.BalanceService
 	TimeService         *utils.TimeHelper
 	Binance             client.ExchangeAPIInterface
 	PythonMLBridge      *ml.PythonMLBridge
-	SwapRepository      *repository.SwapRepository
 	ExchangeRepository  *repository.ExchangeRepository
 	OrderRepository     *repository.OrderRepository
 	ExchangeController  *controller.ExchangeController
@@ -618,25 +517,19 @@ type Container struct {
 	OrderController     *controller.OrderController
 	MakerService        *exchange.MakerService
 	OrderExecutor       *exchange.OrderExecutor
-	SwapManager         *exchange.SwapManager
-	SwapUpdater         *exchange.SwapUpdater
 	SmaTradeStrategy    *strategy.SmaTradeStrategy
 	MarketDepthStrategy *strategy.MarketDepthStrategy
 	BaseKLineStrategy   *strategy.BaseKLineStrategy
 	OrderBasedStrategy  *strategy.OrderBasedStrategy
 	MarketTradeListener *strategy.MarketTradeListener
-	MarketSwapListener  *exchange.MarketSwapListener
 	IsMasterBot         bool
 }
 
 func (c *Container) StartHttpServer() {
 	// todo: use GIN http server
-	// configure controllers
 	http.HandleFunc("/kline/list/", c.ExchangeController.GetKlineListAction)
 	http.HandleFunc("/depth/", c.ExchangeController.GetDepthAction)
 	http.HandleFunc("/trade/list/", c.ExchangeController.GetTradeListAction)
-	http.HandleFunc("/swap/list", c.ExchangeController.GetSwapListAction)
-	http.HandleFunc("/swap/action/list", c.ExchangeController.GetSwapActionListAction)
 	http.HandleFunc("/account", c.ExchangeController.GetAccountAction)
 	http.HandleFunc("/exchange/order/", c.ExchangeController.GetExchangeOrderAction)
 	http.HandleFunc("/chart/list", c.ExchangeController.GetChartListAction)
@@ -659,7 +552,6 @@ func (c *Container) StartHttpServer() {
 	http.HandleFunc("/health/check", c.BotController.GetHealthCheckAction)
 	http.HandleFunc("/bot/update", c.BotController.PutConfigAction)
 
-	// Start HTTP server!
 	go func() {
 		_ = http.ListenAndServe(":8080", nil)
 	}()
@@ -671,11 +563,6 @@ func (c *Container) PingDB() {
 			err := c.Db.Ping()
 			if err != nil {
 				log.Printf("[DB] Connection ping error: %s", err.Error())
-			}
-
-			err = c.DbSwap.Ping()
-			if err != nil {
-				log.Printf("[Swap DB] Connection ping error: %s", err.Error())
 			}
 
 			time.Sleep(time.Second * 30)

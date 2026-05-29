@@ -75,7 +75,6 @@ func (s *StrategyFacade) Decide(symbol string) (model.FacadeResponse, error) {
 		}, errors.New(fmt.Sprintf("[%s] Last price is unknown", symbol))
 	}
 
-	// Do not buy if price expired
 	if kline.IsPriceExpired() && buyScore > sellScore {
 		return model.FacadeResponse{
 			Hold: model.DecisionHighestPriorityScore,
@@ -84,7 +83,6 @@ func (s *StrategyFacade) Decide(symbol string) (model.FacadeResponse, error) {
 		}, errors.New(fmt.Sprintf("[%s] Last price is expired", symbol))
 	}
 
-	// Drop HOLD value for high priority sell/buy operations
 	if sellScore == model.DecisionHighestPriorityScore || buyScore == model.DecisionHighestPriorityScore {
 		holdScore = 0.00
 	}

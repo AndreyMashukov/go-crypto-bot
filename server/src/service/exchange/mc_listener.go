@@ -2,9 +2,9 @@ package exchange
 
 import (
 	"encoding/json"
-	"github.com/gorilla/websocket"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
+	"github.com/gorilla/websocket"
 	"log"
 	"strings"
 	"time"
@@ -23,7 +23,6 @@ func (m *MCListener) ListenAll() {
 
 	mcChannel := make(chan []byte)
 
-	// existing swaps real time monitoring
 	go func() {
 		for {
 			msg := <-mcChannel
@@ -43,9 +42,8 @@ func (m *MCListener) ListenAll() {
 	m.Listen(m.MSGatewayAddress, mcChannel)
 
 	runChannel := make(chan string)
-	// just to keep running
 	runChannel <- "run"
-	log.Panic("Swap Listener Stopped")
+	log.Panic("MC Listener Stopped")
 }
 
 func (m *MCListener) Listen(address string, tradeChannel chan<- []byte) *websocket.Conn {

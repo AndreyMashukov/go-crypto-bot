@@ -2,11 +2,11 @@ package strategy
 
 import (
 	"encoding/json"
-	"github.com/gorilla/websocket"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
+	"github.com/gorilla/websocket"
 	"log"
 	"os"
 	"strings"

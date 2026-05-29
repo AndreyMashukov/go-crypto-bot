@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/joho/godotenv"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/config"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/joho/godotenv"
 	"log"
 	"os"
 )
@@ -25,7 +25,6 @@ func main() {
 	container.PingDB()
 
 	defer container.Db.Close()
-	defer container.DbSwap.Close()
 	container.PythonMLBridge.Initialize()
 	defer container.PythonMLBridge.Finalize()
 	container.StartHttpServer()
@@ -61,11 +60,6 @@ func main() {
 	container.MakerService.RecoverOrders()
 
 	if container.IsMasterBot {
-		container.MakerService.UpdateSwapPairs()
-		go func() {
-			container.MarketSwapListener.ListenAll()
-		}()
-
 		go func() {
 			container.MCListener.ListenAll()
 		}()

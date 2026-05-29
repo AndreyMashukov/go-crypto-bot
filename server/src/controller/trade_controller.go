@@ -46,8 +46,6 @@ func (t *TradeController) UpdateTradeLimitAction(w http.ResponseWriter, req *htt
 
 	var tradeLimit model.TradeLimit
 
-	// Try to decode the request body into the struct. If there is an error,
-	// respond to the client with the error message and a 400 status code.
 	err := json.NewDecoder(req.Body).Decode(&tradeLimit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -119,8 +117,6 @@ func (t *TradeController) CreateTradeLimitAction(w http.ResponseWriter, req *htt
 
 	var tradeLimit model.TradeLimit
 
-	// Try to decode the request body into the struct. If there is an error,
-	// respond to the client with the error message and a 400 status code.
 	err := json.NewDecoder(req.Body).Decode(&tradeLimit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -220,8 +216,6 @@ func (t *TradeController) PostSignalAction(w http.ResponseWriter, req *http.Requ
 
 	var signal model.Signal
 
-	// Try to decode the request body into the struct. If there is an error,
-	// respond to the client with the error message and a 400 status code.
 	err := json.NewDecoder(req.Body).Decode(&signal)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -373,8 +367,6 @@ func (t *TradeController) PatchSentimentAction(w http.ResponseWriter, req *http.
 
 	var sentiment model.SentimentData
 
-	// Try to decode the request body into the struct. If there is an error,
-	// respond to the client with the error message and a 400 status code.
 	err = json.NewDecoder(req.Body).Decode(&sentiment)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

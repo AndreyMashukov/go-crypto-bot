@@ -25,7 +25,6 @@ linters:
     - noctx
     - nilerr
     - nilnil
-    - exportloopref
     - nakedret
     - forbidigo
     - dupl

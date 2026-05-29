@@ -6,24 +6,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
+	"github.com/redis/go-redis/v9"
 	"log"
 	"slices"
 	"strings"
 	"time"
 )
-
-type SwapPairRepositoryInterface interface {
-	CreateSwapPair(swapPair model.SwapPair) (*int64, error)
-	UpdateSwapPair(swapPair model.SwapPair) error
-	GetSwapPairs() []model.SwapPair
-	GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair
-	GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair
-	GetSwapPair(symbol string) (model.SwapPair, error)
-}
 
 type DecisionReadStorageInterface interface {
 	GetDecisions(symbol string) []model.Decision
@@ -41,10 +32,7 @@ type ExchangeTradeInfoInterface interface {
 type BaseTradeStorageInterface interface {
 	GetCurrentKline(symbol string) *model.KLine
 	GetTradeLimits() []model.TradeLimit
-	CreateSwapPair(swapPair model.SwapPair) (*int64, error)
-	GetSwapPair(symbol string) (model.SwapPair, error)
 	GetTradeLimit(symbol string) (model.TradeLimit, error)
-	UpdateSwapPair(swapPair model.SwapPair) error
 	UpdateTradeLimit(limit model.TradeLimit) error
 }
 
@@ -53,12 +41,6 @@ type ExchangeRepositoryInterface interface {
 	GetTradeLimits() []model.TradeLimit
 	GetTradeLimit(symbol string) (model.TradeLimit, error)
 	CreateTradeLimit(limit model.TradeLimit) (*int64, error)
-	CreateSwapPair(swapPair model.SwapPair) (*int64, error)
-	UpdateSwapPair(swapPair model.SwapPair) error
-	GetSwapPairs() []model.SwapPair
-	GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair
-	GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair
-	GetSwapPair(symbol string) (model.SwapPair, error)
 	UpdateTradeLimit(limit model.TradeLimit) error
 	GetCurrentKline(symbol string) *model.KLine
 	SetCurrentKline(kLine model.KLine)
@@ -83,9 +65,6 @@ type ExchangePriceStorageInterface interface {
 	GetDepth(symbol string, limit int64) model.OrderBookModel
 	SetDepth(depth model.OrderBookModel, limit int64, expires int64)
 	GetPredict(symbol string) (float64, error)
-	GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair
-	GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair
-	GetSwapPairsByAssets(quoteAsset string, baseAsset string) (model.SwapPair, error)
 }
 
 type ExchangeRepository struct {
@@ -281,368 +260,6 @@ func (e *ExchangeRepository) CreateTradeLimit(limit model.TradeLimit) (*int64, e
 	return &lastId, err
 }
 
-func (e *ExchangeRepository) CreateSwapPair(swapPair model.SwapPair) (*int64, error) {
-	res, err := e.DB.Exec(`
-		INSERT INTO swap_pair SET
-		    source_symbol = ?,
-		    symbol = ?,
-		    base_asset = ?,
-		    quote_asset = ?,
-		    buy_price = ?,
-		    sell_price = ?,
-		    price_timestamp = ?,
-		    min_notional = ?,
-		    min_quantity = ?,
-		    min_price = ?,
-		    sell_volume = ?,
-		    buy_volume = ?,
-		    daily_percent = ?,
-		    exchange = ?
-	`,
-		swapPair.SourceSymbol,
-		swapPair.Symbol,
-		swapPair.BaseAsset,
-		swapPair.QuoteAsset,
-		swapPair.BuyPrice,
-		swapPair.SellPrice,
-		swapPair.PriceTimestamp,
-		swapPair.MinNotional,
-		swapPair.MinQuantity,
-		swapPair.MinPrice,
-		swapPair.SellVolume,
-		swapPair.BuyVolume,
-		swapPair.DailyPercent,
-		e.CurrentBot.Exchange,
-	)
-
-	if err != nil {
-		log.Printf("CreateSwapPair: %s", err.Error())
-		return nil, err
-	}
-
-	lastId, err := res.LastInsertId()
-
-	return &lastId, err
-}
-
-func (e *ExchangeRepository) UpdateSwapPair(swapPair model.SwapPair) error {
-	_, err := e.DB.Exec(`
-		UPDATE swap_pair sp SET
-		    sp.source_symbol = ?,
-		    sp.symbol = ?,
-		    sp.base_asset = ?,
-		    sp.quote_asset = ?,
-		    sp.buy_price = ?,
-		    sp.sell_price = ?,
-		    sp.price_timestamp = ?,
-		    sp.min_notional = ?,
-		    sp.min_quantity = ?,
-		    sp.min_price = ?,
-		    sp.sell_volume = ?,
-		    sp.buy_volume = ?,
-		    sp.daily_percent = ?,
-		    sp.exchange = ?
-		WHERE sp.id = ? AND sp.exchange = ?
-	`,
-		swapPair.SourceSymbol,
-		swapPair.Symbol,
-		swapPair.BaseAsset,
-		swapPair.QuoteAsset,
-		swapPair.BuyPrice,
-		swapPair.SellPrice,
-		swapPair.PriceTimestamp,
-		swapPair.MinNotional,
-		swapPair.MinQuantity,
-		swapPair.MinPrice,
-		swapPair.SellVolume,
-		swapPair.BuyVolume,
-		swapPair.DailyPercent,
-		swapPair.Exchange,
-		swapPair.Id,
-		e.CurrentBot.Exchange,
-	)
-
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	return nil
-}
-
-func (e *ExchangeRepository) GetSwapPairs() []model.SwapPair {
-	res, err := e.DB.Query(`
-		SELECT
-		    sp.id as Id,
-		    sp.source_symbol as SourceSymbol,
-		    sp.symbol as Symbol,
-		    sp.base_asset as BaseAsset,
-		    sp.quote_asset as QuoteAsset,
-		    sp.buy_price as BuyPrice,
-		    sp.sell_price as SellPrice,
-		    sp.price_timestamp as PriceTimestamp,
-		    sp.min_notional as MinNotional,
-		    sp.min_quantity as MinQuantity,
-		    sp.min_price as MinPrice,
-		    sp.sell_volume as SellVolume,
-		    sp.buy_volume as BuyVolume,
-		    sp.daily_percent as DailyPercent,
-		    sp.exchange as Exchange
-		FROM swap_pair sp WHERE sp.exchange = ?
-	`, e.CurrentBot.Exchange)
-	defer res.Close()
-
-	if err != nil {
-		log.Fatalf("GetSwapPairs: %s", err.Error())
-	}
-
-	list := make([]model.SwapPair, 0)
-
-	for res.Next() {
-		var swapPair model.SwapPair
-		err := res.Scan(
-			&swapPair.Id,
-			&swapPair.SourceSymbol,
-			&swapPair.Symbol,
-			&swapPair.BaseAsset,
-			&swapPair.QuoteAsset,
-			&swapPair.BuyPrice,
-			&swapPair.SellPrice,
-			&swapPair.PriceTimestamp,
-			&swapPair.MinNotional,
-			&swapPair.MinQuantity,
-			&swapPair.MinPrice,
-			&swapPair.SellVolume,
-			&swapPair.BuyVolume,
-			&swapPair.DailyPercent,
-			&swapPair.Exchange,
-		)
-
-		if err != nil {
-			log.Fatalf("GetSwapPairs: %s", err.Error())
-		}
-
-		list = append(list, swapPair)
-	}
-
-	return list
-}
-
-func (e *ExchangeRepository) GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair {
-	res, err := e.DB.Query(`
-		SELECT
-		    sp.id as Id,
-		    sp.source_symbol as SourceSymbol,
-		    sp.symbol as Symbol,
-		    sp.base_asset as BaseAsset,
-		    sp.quote_asset as QuoteAsset,
-		    sp.buy_price as BuyPrice,
-		    sp.sell_price as SellPrice,
-		    sp.price_timestamp as PriceTimestamp,
-		    sp.min_notional as MinNotional,
-		    sp.min_quantity as MinQuantity,
-		    sp.min_price as MinPrice,
-		    sp.sell_volume as SellVolume,
-		    sp.buy_volume as BuyVolume,
-		    sp.daily_percent as DailyPercent,
-		    sp.exchange as Exchange
-		FROM swap_pair sp 
-		WHERE sp.base_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price AND sp.exchange = ?
-	`, baseAsset, e.CurrentBot.Exchange)
-	defer res.Close()
-
-	if err != nil {
-		log.Fatalf("GetSwapPairsByBaseAsset: %s", err.Error())
-	}
-
-	list := make([]model.SwapPair, 0)
-
-	for res.Next() {
-		var swapPair model.SwapPair
-		err := res.Scan(
-			&swapPair.Id,
-			&swapPair.SourceSymbol,
-			&swapPair.Symbol,
-			&swapPair.BaseAsset,
-			&swapPair.QuoteAsset,
-			&swapPair.BuyPrice,
-			&swapPair.SellPrice,
-			&swapPair.PriceTimestamp,
-			&swapPair.MinNotional,
-			&swapPair.MinQuantity,
-			&swapPair.MinPrice,
-			&swapPair.SellVolume,
-			&swapPair.BuyVolume,
-			&swapPair.DailyPercent,
-			&swapPair.Exchange,
-		)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		list = append(list, swapPair)
-	}
-
-	return list
-}
-
-func (e *ExchangeRepository) GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair {
-	res, err := e.DB.Query(`
-		SELECT
-		    sp.id as Id,
-		    sp.source_symbol as SourceSymbol,
-		    sp.symbol as Symbol,
-		    sp.base_asset as BaseAsset,
-		    sp.quote_asset as QuoteAsset,
-		    sp.buy_price as BuyPrice,
-		    sp.sell_price as SellPrice,
-		    sp.price_timestamp as PriceTimestamp,
-		    sp.min_notional as MinNotional,
-		    sp.min_quantity as MinQuantity,
-		    sp.min_price as MinPrice,
-		    sp.sell_volume as SellVolume,
-		    sp.buy_volume as BuyVolume,
-		    sp.daily_percent as DailyPercent,
-		    sp.exchange as Exchange
-		FROM swap_pair sp 
-		WHERE sp.quote_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price AND sp.exchange = ?
-	`, quoteAsset, e.CurrentBot.Exchange)
-	defer res.Close()
-
-	if err != nil {
-		log.Fatalf("GetSwapPairsByQuoteAsset: %s", err.Error())
-	}
-
-	list := make([]model.SwapPair, 0)
-
-	for res.Next() {
-		var swapPair model.SwapPair
-		err := res.Scan(
-			&swapPair.Id,
-			&swapPair.SourceSymbol,
-			&swapPair.Symbol,
-			&swapPair.BaseAsset,
-			&swapPair.QuoteAsset,
-			&swapPair.BuyPrice,
-			&swapPair.SellPrice,
-			&swapPair.PriceTimestamp,
-			&swapPair.MinNotional,
-			&swapPair.MinQuantity,
-			&swapPair.MinPrice,
-			&swapPair.SellVolume,
-			&swapPair.BuyVolume,
-			&swapPair.DailyPercent,
-			&swapPair.Exchange,
-		)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		list = append(list, swapPair)
-	}
-
-	return list
-}
-
-func (e *ExchangeRepository) GetSwapPairsByAssets(quoteAsset string, baseAsset string) (model.SwapPair, error) {
-	// todo: cache...
-
-	var swapPair model.SwapPair
-	err := e.DB.QueryRow(`
-		SELECT
-		    sp.id as Id,
-		    sp.source_symbol as SourceSymbol,
-		    sp.symbol as Symbol,
-		    sp.base_asset as BaseAsset,
-		    sp.quote_asset as QuoteAsset,
-		    sp.buy_price as BuyPrice,
-		    sp.sell_price as SellPrice,
-		    sp.price_timestamp as PriceTimestamp,
-		    sp.min_notional as MinNotional,
-		    sp.min_quantity as MinQuantity,
-		    sp.min_price as MinPrice,
-		    sp.sell_volume as SellVolume,
-		    sp.buy_volume as BuyVolume,
-		    sp.daily_percent as DailyPercent,
-		    sp.exchange as Exchange
-		FROM swap_pair sp 
-		WHERE sp.quote_asset = ? AND sp.base_asset = ? AND sp.buy_price > sp.min_price AND sp.sell_price > sp.min_price AND sp.exchange = ?
-	`, quoteAsset, baseAsset, e.CurrentBot.Exchange).Scan(
-		&swapPair.Id,
-		&swapPair.SourceSymbol,
-		&swapPair.Symbol,
-		&swapPair.BaseAsset,
-		&swapPair.QuoteAsset,
-		&swapPair.BuyPrice,
-		&swapPair.SellPrice,
-		&swapPair.PriceTimestamp,
-		&swapPair.MinNotional,
-		&swapPair.MinQuantity,
-		&swapPair.MinPrice,
-		&swapPair.SellVolume,
-		&swapPair.BuyVolume,
-		&swapPair.DailyPercent,
-		&swapPair.Exchange,
-	)
-
-	if err != nil {
-		return swapPair, err
-	}
-
-	return swapPair, nil
-}
-
-func (e *ExchangeRepository) GetSwapPair(symbol string) (model.SwapPair, error) {
-	var swapPair model.SwapPair
-	err := e.DB.QueryRow(`
-		SELECT
-		    sp.id as Id,
-		    sp.source_symbol as SourceSymbol,
-		    sp.symbol as Symbol,
-		    sp.base_asset as BaseAsset,
-		    sp.quote_asset as QuoteAsset,
-		    sp.buy_price as BuyPrice,
-		    sp.sell_price as SellPrice,
-		    sp.price_timestamp as PriceTimestamp,
-		    sp.min_notional as MinNotional,
-		    sp.min_quantity as MinQuantity,
-		    sp.min_price as MinPrice,
-		    sp.sell_volume as SellVolume,
-		    sp.buy_volume as BuyVolume,
-		    sp.daily_percent as DailyPercent,
-		    sp.exchange as Exchange
-		FROM swap_pair sp
-		WHERE sp.symbol = ? AND sp.exchange = ?
-	`,
-		symbol, e.CurrentBot.Exchange,
-	).Scan(
-		&swapPair.Id,
-		&swapPair.SourceSymbol,
-		&swapPair.Symbol,
-		&swapPair.BaseAsset,
-		&swapPair.QuoteAsset,
-		&swapPair.BuyPrice,
-		&swapPair.SellPrice,
-		&swapPair.PriceTimestamp,
-		&swapPair.MinNotional,
-		&swapPair.MinQuantity,
-		&swapPair.MinPrice,
-		&swapPair.SellVolume,
-		&swapPair.BuyVolume,
-		&swapPair.DailyPercent,
-		&swapPair.Exchange,
-	)
-
-	if err != nil {
-		log.Printf("GetSwapPairsByQuoteAsset: %s", err.Error())
-		return swapPair, err
-	}
-
-	return swapPair, nil
-}
-
 func (e *ExchangeRepository) UpdateTradeLimit(limit model.TradeLimit) error {
 	_, err := e.DB.Exec(`
 		UPDATE trade_limit tl SET
@@ -826,17 +443,14 @@ func (e *ExchangeRepository) KLineList(symbol string, reverse bool, size int64) 
 		var dto model.KLine
 		err := json.Unmarshal([]byte(str), &dto)
 
-		// Skip errors
 		if err != nil {
 			continue
 		}
 
-		// Skip duplicates
 		if lastTimestamp == dto.Timestamp.GetPeriodToMinute() {
 			continue
 		}
 
-		// Restore consistency
 		if lastTimestamp == int64(0) || lastTimestamp > dto.Timestamp.GetPeriodToMinute() {
 			lastTimestamp = dto.Timestamp.GetPeriodToMinute()
 			list = append(list, dto)
@@ -864,18 +478,15 @@ func (e *ExchangeRepository) GetPeriodMinPrice(symbol string, period int64) floa
 
 func (e *ExchangeRepository) SetDepth(depth model.OrderBookModel, limit int64, expires int64) {
 	if len(depth.Asks) == 0 || len(depth.Bids) == 0 {
-		// Recover from cache
 		res := e.RDB.Get(*e.Ctx, fmt.Sprintf("depth-%s-%d", depth.Symbol, limit)).Val()
 
 		if len(res) > 0 {
 			var prevDepth model.OrderBookModel
 			err := json.Unmarshal([]byte(res), &prevDepth)
 			if err == nil {
-				// Recover empty Asks
 				if len(depth.Asks) == 0 && len(prevDepth.Asks) > 0 {
 					depth.Asks = prevDepth.Asks
 				}
-				// Recover empty Bids
 				if len(depth.Bids) == 0 && len(prevDepth.Bids) > 0 {
 					depth.Bids = prevDepth.Bids
 				}

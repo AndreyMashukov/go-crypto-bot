@@ -118,7 +118,6 @@ func (o *Order) GetAvailableExtraBudget(kLine KLine, withSwap bool) float64 {
 
 	if len(o.ExtraChargeOptions) > 0 {
 		availableExtraBudget = 0.00
-		// sort DESC
 		sort.SliceStable(o.ExtraChargeOptions, func(i int, j int) bool {
 			return o.ExtraChargeOptions[i].Percent > o.ExtraChargeOptions[j].Percent
 		})

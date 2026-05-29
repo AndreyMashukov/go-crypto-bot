@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/repository"
@@ -12,6 +11,7 @@ import (
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/service/exchange"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/utils"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/validator"
+	"github.com/redis/go-redis/v9"
 	"net/http"
 	"slices"
 	"strings"
@@ -202,8 +202,6 @@ func (o *OrderController) UpdateExtraChargeAction(w http.ResponseWriter, req *ht
 
 	var options model.UpdateOrderExtraChargeOptions
 
-	// Try to decode the request body into the struct. If there is an error,
-	// respond to the client with the error message and a 400 status code.
 	err := json.NewDecoder(req.Body).Decode(&options)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -279,8 +277,6 @@ func (o *OrderController) UpdateProfitOptionsAction(w http.ResponseWriter, req *
 
 	var options model.UpdateOrderProfitOptions
 
-	// Try to decode the request body into the struct. If there is an error,
-	// respond to the client with the error message and a 400 status code.
 	err := json.NewDecoder(req.Body).Decode(&options)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -554,8 +550,6 @@ func (o *OrderController) PostManualOrderAction(w http.ResponseWriter, req *http
 
 	var manual model.ManualOrder
 
-	// Try to decode the request body into the struct. If there is an error,
-	// respond to the client with the error message and a 400 status code.
 	err := json.NewDecoder(req.Body).Decode(&manual)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

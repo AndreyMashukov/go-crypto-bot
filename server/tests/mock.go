@@ -1,8 +1,8 @@
 package tests
 
 import (
-	"github.com/stretchr/testify/mock"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/model"
+	"github.com/stretchr/testify/mock"
 	"sync"
 )
 
@@ -21,93 +21,6 @@ func (h *HttpClientMock) Get(url string, headers map[string]string) ([]byte, err
 
 type ExchangeRepositoryMock struct {
 	mock.Mock
-}
-
-func (m *ExchangeRepositoryMock) CreateSwapPair(swapPair model.SwapPair) (*int64, error) {
-	args := m.Called(swapPair)
-	id := int64(args.Int(1))
-	return &id, args.Error(0)
-}
-func (m *ExchangeRepositoryMock) UpdateSwapPair(swapPair model.SwapPair) error {
-	args := m.Called(swapPair)
-	return args.Error(0)
-}
-func (m *ExchangeRepositoryMock) GetSwapPairs() []model.SwapPair {
-	args := m.Called()
-	return args.Get(0).([]model.SwapPair)
-}
-func (m *ExchangeRepositoryMock) GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair {
-	args := m.Called(baseAsset)
-	return args.Get(0).([]model.SwapPair)
-}
-func (m *ExchangeRepositoryMock) GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair {
-	args := m.Called(quoteAsset)
-	return args.Get(0).([]model.SwapPair)
-}
-func (m *ExchangeRepositoryMock) GetSwapPair(symbol string) (model.SwapPair, error) {
-	args := m.Called(symbol)
-	return args.Get(0).(model.SwapPair), args.Error(1)
-}
-
-type SwapRepositoryMock struct {
-	mock.Mock
-	savedChain model.SwapChainEntity
-	swapAction model.SwapAction
-}
-
-func (m *SwapRepositoryMock) GetSwapChain(hash string) (model.SwapChainEntity, error) {
-	args := m.Called(hash)
-	return args.Get(0).(model.SwapChainEntity), args.Error(1)
-}
-func (m *SwapRepositoryMock) CreateSwapChain(swapChain model.SwapChainEntity) (*int64, error) {
-	m.savedChain = swapChain
-	args := m.Called(swapChain)
-	id := int64(args.Int(0))
-	return &id, args.Error(1)
-}
-func (m *SwapRepositoryMock) UpdateSwapChain(swapChain model.SwapChainEntity) error {
-	args := m.Called(swapChain)
-	return args.Error(0)
-}
-func (m *SwapRepositoryMock) SaveSwapChainCache(asset string, entity model.SwapChainEntity) {
-	m.Called(asset, entity)
-}
-func (m *SwapRepositoryMock) GetSwapPairBySymbol(symbol string) (model.SwapPair, error) {
-	args := m.Called(symbol)
-	return args.Get(0).(model.SwapPair), args.Error(1)
-}
-func (s *SwapRepositoryMock) GetActiveSwapAction(order model.Order) (model.SwapAction, error) {
-	args := s.Called(order)
-	return args.Get(0).(model.SwapAction), args.Error(1)
-}
-func (s *SwapRepositoryMock) UpdateSwapAction(action model.SwapAction) error {
-	s.swapAction = action
-	args := s.Called(action)
-	return args.Error(0)
-}
-func (s *SwapRepositoryMock) GetSwapChainById(id int64) (model.SwapChainEntity, error) {
-	args := s.Called(id)
-	return args.Get(0).(model.SwapChainEntity), args.Error(1)
-}
-func (s *SwapRepositoryMock) InvalidateSwapChainCache(asset string) {
-	_ = s.Called(asset)
-}
-func (s *SwapRepositoryMock) GetSwapChainCache(asset string) *model.SwapChainEntity {
-	args := s.Called(asset)
-	entity := args.Get(0)
-	if nil == entity {
-		return nil
-	}
-	return entity.(*model.SwapChainEntity)
-}
-func (s *SwapRepositoryMock) GetSwapChains(baseAsset string) []model.SwapChainEntity {
-	args := s.Called(baseAsset)
-	return args.Get(0).([]model.SwapChainEntity)
-}
-func (s *SwapRepositoryMock) CreateSwapAction(action model.SwapAction) (*int64, error) {
-	s.swapAction = action
-	args := s.Called(action)
-	return args.Get(0).(*int64), args.Error(1)
 }
 
 type OrderUpdaterMock struct {
@@ -190,18 +103,6 @@ func (e *ExchangePriceStorageMock) GetCurrentKline(symbol string) *model.KLine {
 	}
 
 	return nil
-}
-func (e *ExchangePriceStorageMock) GetSwapPairsByBaseAsset(baseAsset string) []model.SwapPair {
-	args := e.Called(baseAsset)
-	return args.Get(0).([]model.SwapPair)
-}
-func (e *ExchangePriceStorageMock) GetSwapPairsByQuoteAsset(quoteAsset string) []model.SwapPair {
-	args := e.Called(quoteAsset)
-	return args.Get(0).([]model.SwapPair)
-}
-func (e *ExchangePriceStorageMock) GetSwapPairsByAssets(quoteAsset string, baseAsset string) (model.SwapPair, error) {
-	args := e.Called(quoteAsset, baseAsset)
-	return args.Get(0).(model.SwapPair), args.Error(1)
 }
 func (e *ExchangePriceStorageMock) GetPeriodMinPrice(symbol string, period int64) float64 {
 	args := e.Called(symbol, period)
@@ -406,27 +307,6 @@ func (p *PriceCalculatorMock) GetDepth(symbol string, limit int64) model.OrderBo
 	return args.Get(0).(model.OrderBookModel)
 }
 
-type SwapExecutorMock struct {
-	mock.Mock
-}
-
-func (p *SwapExecutorMock) Execute(order model.Order) {
-	_ = p.Called(order)
-}
-
-type SwapValidatorMock struct {
-	mock.Mock
-}
-
-func (s *SwapValidatorMock) Validate(entity model.SwapChainEntity, order model.Order) error {
-	args := s.Called(entity, order)
-	return args.Error(0)
-}
-func (s *SwapValidatorMock) CalculatePercent(entity model.SwapChainEntity) model.Percent {
-	args := s.Called(entity)
-	return args.Get(0).(model.Percent)
-}
-
 type TelegramNotificatorMock struct {
 	mock.Mock
 }
@@ -517,10 +397,6 @@ func (b *BotServiceMock) UseSwapCapital() bool {
 	args := b.Called()
 	return args.Get(0).(bool)
 }
-func (b *BotServiceMock) GetSwapConfig() model.SwapConfig {
-	args := b.Called()
-	return args.Get(0).(model.SwapConfig)
-}
 
 type BuyOrderStackMock struct {
 	mock.Mock
@@ -557,22 +433,9 @@ func (e *BaseTradeStorageMock) GetTradeLimits() []model.TradeLimit {
 	args := e.Called()
 	return args.Get(0).([]model.TradeLimit)
 }
-func (e *BaseTradeStorageMock) CreateSwapPair(swapPair model.SwapPair) (*int64, error) {
-	args := e.Called(swapPair)
-	id := int64(args.Int(1))
-	return &id, args.Error(0)
-}
-func (e *BaseTradeStorageMock) GetSwapPair(symbol string) (model.SwapPair, error) {
-	args := e.Called(symbol)
-	return args.Get(0).(model.SwapPair), args.Error(1)
-}
 func (e *BaseTradeStorageMock) GetTradeLimit(symbol string) (model.TradeLimit, error) {
 	args := e.Called(symbol)
 	return args.Get(0).(model.TradeLimit), args.Error(1)
-}
-func (e *BaseTradeStorageMock) UpdateSwapPair(swapPair model.SwapPair) error {
-	args := e.Called(swapPair)
-	return args.Error(0)
 }
 func (e *BaseTradeStorageMock) UpdateTradeLimit(limit model.TradeLimit) error {
 	args := e.Called(limit)
@@ -603,13 +466,6 @@ func (o *OrderExecutorMock) Buy(tradeLimit model.TradeLimit, price float64, quan
 func (o *OrderExecutorMock) Sell(tradeLimit model.TradeLimit, opened model.Order, price float64, quantity float64, isManual bool) error {
 	args := o.Called(tradeLimit, opened, price, quantity, isManual)
 	return args.Error(0)
-}
-func (o *OrderExecutorMock) ProcessSwap(order model.Order) bool {
-	args := o.Called(order)
-	return args.Get(0).(bool)
-}
-func (o *OrderExecutorMock) TrySwap(order model.Order) {
-	_ = o.Called(order)
 }
 func (o *OrderExecutorMock) CheckMinBalance(limit model.TradeLimit, kLine model.KLine) error {
 	args := o.Called(limit, kLine)

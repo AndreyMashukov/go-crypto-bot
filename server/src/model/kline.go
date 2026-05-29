@@ -132,8 +132,6 @@ func (k *KLine) Includes(ticker MiniTicker) bool {
 }
 
 func (k *KLine) Update(ticker MiniTicker, source string) KLine {
-	// WARNING!!!
-	// This is daily ticker price, we can use only `ticker.Close` for minute KLines!
 	currentInterval := TimestampMilli(time.Now().UnixMilli()).GetPeriodToMinute()
 	if k.Timestamp.GetPeriodToMinute() < currentInterval {
 		return KLine{

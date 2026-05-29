@@ -83,7 +83,7 @@ func (e *ChartService) ProcessSymbol(symbol string) map[string][]any {
 		symbolOrders = e.OrderRepository.GetHistoryList(symbol, from, to)
 		for _, symbolOrder := range symbolOrders {
 			date, _ := time.Parse("2006-01-02 15:04:05", symbolOrder.CreatedAt)
-			orderTimestamp := model.TimestampMilli(date.UnixMilli()).GetPeriodToMinute() // convert date to timestamp
+			orderTimestamp := model.TimestampMilli(date.UnixMilli()).GetPeriodToMinute()
 			orderMap.Store(orderTimestamp, symbolOrder)
 		}
 	}
@@ -266,7 +266,7 @@ func (e *ChartService) ProcessSymbol(symbol string) map[string][]any {
 		openedBuyOrder := e.OrderRepository.GetOpenedOrderCached(symbol, "BUY")
 		if openedBuyOrder != nil && openedBuyOrder.IsOpened() {
 			date, _ := time.Parse("2006-01-02 15:04:05", openedBuyOrder.CreatedAt)
-			openedOrderTimestamp := date.UnixMilli() // convert date to timestamp
+			openedOrderTimestamp := date.UnixMilli()
 			if openedOrderTimestamp <= kLine.Timestamp.GetPeriodToMinute() {
 				openedBuyPoint.YAxis = openedBuyOrder.Price
 			}

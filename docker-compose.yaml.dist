@@ -24,16 +24,35 @@ services:
         BYBIT_API_DSN: ''
         BYBIT_STREAM_DSN: ''
         MC_DSN: "it should be your own capitalization service here"
+        METRICS_LISTEN_ADDR: ':9101'
     networks:
       - bot-net
     ports:
       - "8090:8080"
+      - "9101:9101"
     restart: always
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - './server:/go/src/app/dev'
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    restart: unless-stopped
+    networks:
+      - bot-net
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./.docker/etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
 
   postgres:
     image: postgres:16-alpine
@@ -92,3 +111,5 @@ volumes:
     name: go_crypto_bot_pg_data
   clickhouse-data:
     name: go_crypto_bot_clickhouse_data
+  prometheus-data:
+    name: go_crypto_bot_prometheus_data

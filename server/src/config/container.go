@@ -17,6 +17,7 @@ import (
 	"github.com/AndreyMashukov/go-crypto-bot/server/market-watcher/chwriter"
 	"github.com/AndreyMashukov/go-crypto-bot/server/market-watcher/enrichment"
 	"github.com/AndreyMashukov/go-crypto-bot/server/market-watcher/publisher"
+	"github.com/AndreyMashukov/go-crypto-bot/server/shared/metrics"
 	"github.com/AndreyMashukov/go-crypto-bot/server/shared/tickstore"
 	"github.com/AndreyMashukov/go-crypto-bot/server/shared/transport"
 	"github.com/AndreyMashukov/go-crypto-bot/server/src/client"
@@ -462,9 +463,25 @@ func InitServiceContainer() Container {
 	// market-watcher binary's own main.go.
 	tickRedisPublisher := transport.NewRedisPublisher(rdb, 0)
 	tickCHWriter := chwriter.New(clickhouseDb, chwriter.Config{}, nil)
+	// Phase F: feed the observability counters from the same seams that
+	// already had logger-only failure handlers. Buffer drops and
+	// publish failures show up on Prometheus immediately.
+	tickCHWriter.OnDrop = func(symbol string) {
+		metrics.TickDrop.WithLabelValues(symbol).Inc()
+	}
 	tickPublisher := publisher.New(tickRedisPublisher, tickCHWriter)
+	tickPublisher.OnPublishFailure = func(symbol string, _ error) {
+		metrics.TickPublishFailure.WithLabelValues(symbol).Inc()
+	}
 	go func() {
 		_ = tickCHWriter.Run(context.Background())
+	}()
+	// Phase F: tiny admin HTTP server that exposes /metrics for
+	// Prometheus to scrape. Listens off the trading API port so the
+	// scraper does not need to traverse the user-facing routes.
+	metricsAddr := os.Getenv("METRICS_LISTEN_ADDR")
+	go func() {
+		_ = metrics.Serve(context.Background(), metricsAddr)
 	}()
 
 	mcGatewayAddress := ""

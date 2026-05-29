@@ -42,3 +42,8 @@ services:
     App\Controller\PublicRoute\InternalController:
         arguments:
             $internalToken: '%env(INTERNAL_SERVICE_TOKEN)%'
+
+    App\Service\Monitoring\PrometheusQuery\PrometheusQueryServiceInterface:
+        class: App\Service\Monitoring\PrometheusQuery\PrometheusQueryService
+        arguments:
+            $prometheusUrl: '%env(PROMETHEUS_URL)%'

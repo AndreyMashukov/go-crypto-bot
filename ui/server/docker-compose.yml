@@ -12,6 +12,7 @@ services:
           DEPLOY_SERVICE_IP: 'host.docker.internal'
           MESSENGER_TRANSPORT_DSN: 'amqp://crypto-saas:crypto-saas@rabbit:5672/crypto-saas'
           DATABASE_URL: 'postgresql://crypto-saas:crypto-saas@postgres:5432/crypto-saas?serverVersion=16&charset=utf8'
+          PROMETHEUS_URL: 'http://prometheus:9090'
           REDIS_DSN: 'redis://redis'
           ACCESS_TOKEN_TTL: 'P1Y'
           BREVO_API_KEY: ''
